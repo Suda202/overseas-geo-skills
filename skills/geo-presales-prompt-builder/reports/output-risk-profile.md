@@ -2,13 +2,13 @@
 
 | 风险 | 自检 |
 |---|---|
-| 静默少题或机械均分 | 校验各 Topic 实际配额、聚合配额与最终题数一致，并强制整批不超过 60；10–25/Topic 只告警，不为达标凑题。 |
+| 静默少题或机械均分 | 校验各 Topic 实际配额、聚合配额与最终题数一致，并强制整批不超过 50；题量按 Attribute 价值和内容增量分配，不为达标凑题。 |
 | 仍依赖旧属性配置 | 只消费系统接口提交的评测 Case 原始业务字段；不生成 Attribute Pool 或 Attribute ID。 |
 | 把优先级误写成属性类型 | P1 / P2 / P3 只表示 Attribute 在当前 Topic 下的优先级；不使用“入围属性”“比较属性”“补充属性”等分类名。 |
-| Verification 太笼统 | 每 Topic 直接按需选择 3–5 条 Case 信息，逐项要求 Yes / No / Unknown 与依据。 |
+| Verification 默认关闭 | 售前 v8 的 Verification 与 Accuracy 配额固定为 0；需要事实核验时另立合同，不污染默认题库。 |
 | 竞品控制变量漂移 | 每 Topic 对每个适用竞品各生成一题，多条 Competitor 除竞品名称外保持完全同构。 |
-| 售前情绪范围膨胀 | 每 Topic 只保留一条目标品牌 Evaluation；竞品情绪矩阵留给售后生词。 |
-| Discovery 被诊断附加题挤压 | 每个 Topic 强制 Discovery 严格超过 50%；1/2/3 个适用竞品时至少为 5/6/7 条。 |
+| 售前情绪范围膨胀 | 每 Topic 固定生成 Category Awareness `1`、Evaluation `1+n`，Evaluation 覆盖目标品牌与全部适用竞品，并保持每题单品牌。 |
+| Discovery 被诊断附加题挤压 | 每个 Topic 的 Discovery 至少 5 条并覆盖全部 P1；品类主题原则上至少 5 条品类称呼或核心入口，总题量不超过 50。 |
 | Verification 污染正式可见度 | `analysis_type=visibility`，同时强制 `formal_visibility_eligible=false`。 |
 | Accuracy 重复联网核验 | 只复制上游已核验的三字段并做确定性校验；禁止调用 `web-access` 或自行补值。 |
 | 旧字段反客为主 | v8 用自由 `tags` 承接诊断、品牌范围和 Attribute；`analysis_type + formal_visibility_eligible` 独立分流，旧 `diagnosis_intent` 只读兼容。 |

@@ -4,11 +4,11 @@
     "inputs": [
       "brand and product",
       "overseas market and locale",
-      "one to three confirmed Topics",
+      "one to three evidence-backed Topics with explicit customer-confirmation status",
       "Edgelight-style customer pain-point use-case product-feature and boundary Case fields",
       "three formal competitors",
       "existing English question bank",
-      "six common diagnostic Intent Tags with Attribute-driven per-Topic counts and a 60-Prompt batch cap",
+      "Discovery-first generation with at least five Prompts per Topic and a 50-Prompt batch cap",
       "free Tags for Branded or Non-Branded scope, Attributes, and custom analysis"
     ],
     "trigger_actions": [
@@ -19,7 +19,7 @@
       "reject educational questions without brand recommendations",
       "validate one-to-three Topic actual totals and six Intent Tag counts",
       "validate free Tags, brand scope, and Attribute Tag coverage",
-      "generate one customer-clear target-brand Evaluation Prompt per Topic",
+      "supplement customer-clear Evaluation only when requested, preserving Discovery",
       "preserve GEO and AEO terminology coverage",
       "生成海外 GEO 英文问题库",
       "修复售前监测 Prompt",
@@ -43,9 +43,8 @@
       "attribute-driven allocation summary",
       "derived Attribute-Topic coverage",
       "free Tags and Branded or Non-Branded coverage",
-      "batch Validation coverage",
+      "generation stage and research/customer-confirmation handoff",
       "analysis type and formal visibility eligibility summary",
-      "target-brand Evaluation coverage summary",
       "repair log",
       "quality report"
     ]
@@ -90,8 +89,11 @@
         ,"批量 validation"
         ,"不依赖 target attributes"
         ,"不同 topic 题量可以不同"
-        ,"总量不超过 60 条"
-        ,"60 条海外 geo"
+        ,"总量不超过 50 条"
+        ,"50 条海外 geo"
+        ,"先确定发现型"
+        ,"discovery first"
+        ,"每 topic 至少 5"
       ]
     }
   },

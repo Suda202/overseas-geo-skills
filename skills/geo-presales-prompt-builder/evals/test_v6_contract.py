@@ -22,7 +22,7 @@ def base_config(topic_count: int = 1) -> dict:
         "品牌名称": "Edgelight",
         "业务模式": "B2B",
         "品类": "LED 显示屏制造商与商业显示解决方案提供商",
-        "垂直行业": "商业 AV 零售与商业地产 企业设施 舞台与体育场馆",
+        "目标企业画像": "商业 AV 零售与商业地产 企业设施 舞台与体育场馆",
         "目标客户 1": "商业 AV 集成商与 LED 显示屏分销商——关注参数 集成与服务",
         "目标客户 2": "零售 商业地产与品牌体验团队——关注视觉效果 可靠性与项目成本",
         "目标客户 3": "企业 政企园区与会议设施团队——关注清晰度 文件与维护",
@@ -37,6 +37,9 @@ def base_config(topic_count: int = 1) -> dict:
         "产品特性 4": "项目设计 安装调试 文件 认证与售后服务",
         "差异化优势": "20 多年 LED 领域经验，五座全球生产基地，产品销往 50 多个国家并获得 100 多项国际认证",
         "适用边界": "只采购 LED 照明、驱动电源、控制器或不需要 LED 显示屏完整方案的客户",
+        "购买标准": "像素间距与画质 结构与安装适配 认证与文件 交付与售后能力",
+        "集成与兼容": "与内容控制 播放与控制系统对接",
+        "信任与合规": "国际认证与合规文件 项目验收要求",
         "主题 1（宽泛）": "LED 显示屏制造商与商业显示解决方案提供商",
         "主题 2（细分）": "面向企业与商业空间的固定安装 LED 显示解决方案",
         "主题 3（细分）": "面向裸眼 3D 舞台与场馆体验的创意沉浸式 LED 显示屏",
@@ -274,16 +277,28 @@ class V6ContractTests(unittest.TestCase):
         self.assertIn("Case fields must contain at least one 痛点 n field", joined)
         self.assertIn("validation_items must contain 3 to 5", joined)
 
-    def test_v6_allows_blank_vertical_industry_only_for_b2c(self) -> None:
+    def test_v6_requires_b2b_fields_only_for_b2b(self) -> None:
         data = valid_v6_bank()
-        data["config"]["case_fields"]["业务模式"] = "B2C"
-        data["config"]["case_fields"]["垂直行业"] = ""
+        case_fields = data["config"]["case_fields"]
+        case_fields["业务模式"] = "B2C"
+        for field in MODULE.V6_B2B_REQUIRED_CASE_FIELDS:
+            case_fields.pop(field, None)
         errors, _, _ = MODULE.validate(data)
         self.assertEqual([], errors)
 
-        data["config"]["case_fields"]["业务模式"] = "B2B"
+        case_fields["业务模式"] = "B2B"
         errors, _, _ = MODULE.validate(data)
-        self.assertTrue(any("垂直行业 must be non-empty" in error for error in errors), errors)
+        self.assertTrue(
+            any("目标企业画像 must be present" in error for error in errors), errors
+        )
+
+    def test_v6_rejects_b2b_fields_in_a_pure_b2c_case(self) -> None:
+        data = valid_v6_bank()
+        data["config"]["case_fields"]["业务模式"] = "B2C"
+        errors, _, _ = MODULE.validate(data)
+        self.assertTrue(
+            any("must be omitted in a pure B2C Case" in error for error in errors), errors
+        )
 
     def test_v6_allows_blank_supplementary_content_but_requires_the_field(self) -> None:
         data = valid_v6_bank()

@@ -8,7 +8,7 @@
   ],
   "should_trigger": [
     {
-      "text": "按评测集 Case 里的目标客户、痛点、使用场景、产品特性和 1–3 个主题，依据各 Topic 的 Attribute 信息量弹性生成、整批不超过 60 条海外 GEO 售前诊断英文问题，并检查自然度和实际配额。",
+      "text": "按评测集 Case 里的目标客户、痛点、使用场景、产品特性和 1–3 个主题，依据各 Topic 的 Attribute 信息量弹性生成、整批不超过 50 条海外 GEO 售前诊断英文问题，并检查自然度和实际配额。",
       "family": "overseas_presales_question_bank"
     },
     {
@@ -32,12 +32,16 @@
       "family": "brand_evaluation_prompt"
     },
     {
-      "text": "生词直接消费现有 Case 字段，按 1–3 个主题生成；各 Topic 按 Attribute 价值决定发现题数量，每个适用竞品一题，并各保留一条批量验证、评价和品类认知，不再依赖 target_attributes。",
+      "text": "先用现有 Case 与客户确认资料确定发现型问题，每 Topic 至少 5 条，整批最多 50 条；竞品和评价以后再补，不要求完整属性库。",
       "family": "diagnostic_intent_and_compatibility_mapping"
     },
     {
       "text": "生成 Prompt 时把六类诊断意图、Branded/Non-Branded 和要分析的 Attribute 都放进自由 Tags，并让同一 Attribute 能跨 Topic 聚合。",
       "family": "topic_attribute_free_tags"
+    },
+    {
+      "text": "发现型题组已经确认，只补一条目标品牌评价，不要重写原来的发现型问题。",
+      "family": "supplement_preserving_discovery"
     }
   ],
   "should_not_trigger": [

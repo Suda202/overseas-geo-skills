@@ -7,16 +7,20 @@
     "tags_summary",
     "brand_scope_tag_summary",
     "attribute_tag_coverage_summary",
-    "verification_item_source_coverage",
-    "batch_verification_coverage",
     "analysis_type_routing_summary",
     "formal_visibility_eligibility_summary",
-    "target_brand_evaluation_summary",
     "default_intent_tag_matrix",
     "competitor_policy_summary",
-    "formal_competitor_question_coverage",
-    "competitor_isomorphism_summary",
+    "generation_stage",
+    "research_and_customer_confirmation_handoff",
     "rejected_or_repaired_questions",
     "quality_report"
-  ]
+  ],
+  "conditional_artifacts": {
+    "diagnostic_supplement": [
+      "actual_supplemental_intent_counts",
+      "existing_discovery_preservation_check",
+      "applicable_competitor_and_template_review"
+    ]
+  }
 }

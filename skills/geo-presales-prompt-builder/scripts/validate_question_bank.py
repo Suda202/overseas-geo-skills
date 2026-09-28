@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import copy
+import argparse
 import re
 import sys
 import unicodedata
@@ -22,7 +23,7 @@ V7_SCHEMA_VERSION = "overseas-geo-question-bank/v7"
 V8_SCHEMA_VERSION = "overseas-geo-question-bank/v8"
 DEFAULT_GENERATION_SCHEMA_VERSION = V8_SCHEMA_VERSION
 V6_MAX_TOTAL = 60
-V8_MAX_TOTAL = 75
+V8_MAX_TOTAL = 50
 V6_PER_TOPIC_QUOTAS = {
     "discovery": 14,
     "competitor": 3,
@@ -59,9 +60,12 @@ V6_REQUIRED_CASE_FIELDS = {
     "品牌名称",
     "业务模式",
     "品类",
-    "垂直行业",
+    "目标企业画像",
     "差异化优势",
     "适用边界",
+    "购买标准",
+    "集成与兼容",
+    "信任与合规",
     "官方域名",
     "竞品 1",
     "竞品 1 官网域名",
@@ -71,12 +75,17 @@ V6_REQUIRED_CASE_FIELDS = {
     "竞品 3 官网域名",
     "补充内容",
 }
+# 选填字段：允许出现，但缺失不报错。
+V6_OPTIONAL_CASE_FIELDS = {"地理与市场"}
+# B2B 专属字段：B2B 与 B2B / B2C 必填，纯 B2C 必须省略。
+V6_B2B_REQUIRED_CASE_FIELDS = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
 V6_NUMBERED_CASE_FIELDS = ("目标客户", "痛点", "使用场景", "产品特性")
 V6_NUMBERED_CASE_FIELD = re.compile(r"^(?:目标客户|痛点|使用场景|产品特性)\s+\d+$")
 V6_TOPIC_CASE_FIELD = re.compile(r"^主题\s+[1-3]（(?:宽泛|细分)）$")
 V6_ATTRIBUTE_SOURCE_FIELD = re.compile(
-    r"^(?:品类|垂直行业|目标客户\s+\d+|痛点\s+\d+|使用场景\s+\d+|"
-    r"产品特性\s+\d+|差异化优势|适用边界|补充内容)$"
+    r"^(?:品类|目标企业画像|目标客户\s+\d+|痛点\s+\d+|使用场景\s+\d+|"
+    r"产品特性\s+\d+|差异化优势|适用边界|购买标准|集成与兼容|信任与合规|"
+    r"地理与市场|补充内容)$"
 )
 V6_RETIRED_FIELDS = {
     "target_attributes",
@@ -892,6 +901,8 @@ def _validate_v7_attribute_plan(
     case_fields: dict,
     errors: list[str],
     warnings: list[str],
+    *,
+    lightweight: bool = False,
 ) -> dict[str, dict[str, list[dict]]]:
     """Validate the Topic-scoped P1/P2/P3 plan that must precede v7 Prompt writing."""
 
@@ -932,16 +943,16 @@ def _validate_v7_attribute_plan(
             if not isinstance(entries, list):
                 errors.append(f"{entry_prefix} must be an array")
                 entries = []
-            if priority == "P1" and not 3 <= len(entries) <= 5:
+            if priority == "P1" and not lightweight and not 3 <= len(entries) <= 5:
                 errors.append(f"{entry_prefix} must contain 3 to 5 shortlist attributes")
-            if priority == "P2":
+            if priority == "P2" and not lightweight:
                 if len(entries) > 10:
                     errors.append(f"{entry_prefix} must not exceed 10 P2 attributes")
                 elif len(entries) < 5:
                     warnings.append(
                         f"{entry_prefix} contains fewer than the recommended 5 P2 attributes"
                     )
-            if priority == "P3" and len(entries) > 10:
+            if priority == "P3" and not lightweight and len(entries) > 10:
                 errors.append(f"{entry_prefix} must not exceed 10 P3 attributes")
 
             validated_entries: list[dict] = []
@@ -955,6 +966,8 @@ def _validate_v7_attribute_plan(
                     if priority == "P1"
                     else V7_ATTRIBUTE_ENTRY_FIELDS
                 )
+                if lightweight and priority == "P1" and "verification_statement" not in entry:
+                    expected_fields = V7_ATTRIBUTE_ENTRY_FIELDS
                 if set(entry) != expected_fields:
                     errors.append(
                         f"{item_prefix} must contain exactly {sorted(expected_fields)}"
@@ -982,7 +995,7 @@ def _validate_v7_attribute_plan(
                     case_fields[source_field]
                 ).strip():
                     errors.append(f"{item_prefix}.source_value must equal its Case field")
-                if priority == "P1" and not str(
+                if priority == "P1" and (not lightweight or "verification_statement" in entry) and not str(
                     entry.get("verification_statement") or ""
                 ).strip():
                     errors.append(f"{item_prefix}.verification_statement must be non-empty")
@@ -1065,7 +1078,57 @@ def _convert_v8_quota_map(
     return converted
 
 
-def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
+def _validate_discovery_inheritance(data: dict, baseline: object) -> list[str]:
+    """A diagnostic supplement must retain the original Discovery snapshot."""
+    if not isinstance(baseline, dict):
+        return ["BASELINE diagnostic supplements require the original bank via --baseline"]
+    baseline_config = baseline.get("config")
+    if (
+        baseline.get("schema_version") != V8_SCHEMA_VERSION
+        or not isinstance(baseline_config, dict)
+        or baseline_config.get("generation_stage", "discovery") != "discovery"
+    ):
+        return ["BASELINE must be the original Discovery v8 or unstaged historical v8 bank"]
+    baseline_errors, _, _ = validate_v8(baseline)
+    if baseline_errors:
+        return [f"BASELINE invalid: {error}" for error in baseline_errors]
+
+    errors: list[str] = []
+    config = data.get("config", {})
+    for field in ("case_fields", "brand_name", "official_domain", "category_label", "topics"):
+        if config.get(field) != baseline_config.get(field):
+            errors.append(f"BASELINE supplement must preserve config.{field}")
+    if config.get("locale", "en") != baseline_config.get("locale", "en"):
+        errors.append("BASELINE supplement must preserve locale")
+    original_rows = [
+        row for row in baseline["questions"]
+        if "Intent: Discovery" in row.get("tags", [])
+    ]
+    current_rows = {
+        row.get("question_id"): row
+        for row in data.get("questions", [])
+        if isinstance(row, dict) and isinstance(row.get("question_id"), str)
+    }
+    immutable_fields = (
+        "topic_id", "intent_key", "user_question", "zh_translation",
+        "monitoring_prompt", "tags", "analysis_type", "formal_visibility_eligible",
+    )
+    for original in original_rows:
+        question_id = original["question_id"]
+        current = current_rows.get(question_id)
+        if current is None:
+            errors.append(f"BASELINE missing original Discovery {question_id}")
+            continue
+        changed = [
+            field for field in immutable_fields
+            if current.get(field) != original.get(field)
+        ]
+        if changed:
+            errors.append(f"BASELINE Discovery {question_id} changed fields {changed}")
+    return errors
+
+
+def validate_v8(data: dict, baseline: dict | None = None) -> tuple[list[str], list[str], dict]:
     """Validate v8 free Tags while reusing the proven v7 generation-role gates."""
     errors: list[str] = []
     warnings: list[str] = []
@@ -1076,6 +1139,14 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
     if not isinstance(questions, list):
         return ["SCHEMA questions must be an array in v8"], warnings, {}
 
+    # Missing stage keeps historical full-bank validation, never infers a pass
+    # from missing question types. New Discovery-first banks declare the stage.
+    generation_stage = config.get("generation_stage", "diagnostic")
+    if not isinstance(generation_stage, str) or generation_stage not in ("discovery", "diagnostic"):
+        return ["CONFIG generation_stage must equal discovery or diagnostic"], warnings, {}
+    if baseline is not None or (generation_stage == "diagnostic" and "generation_stage" in config):
+        errors.extend(_validate_discovery_inheritance(data, baseline))
+
     for location, value in (("DATA", data), ("CONFIG", config)):
         retired = sorted(set(value) & V8_RETIRED_FIELDS)
         if retired:
@@ -1084,6 +1155,7 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
     adapted = copy.deepcopy(data)
     adapted["schema_version"] = V7_SCHEMA_VERSION
     adapted_config = adapted.get("config", {})
+    adapted_config.pop("generation_stage", None)
     raw_quotas = config.get("quotas")
     if not isinstance(raw_quotas, dict):
         errors.append("CONFIG quotas must be an object in v8")
@@ -1123,6 +1195,7 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
     raw_plans = config.get("attribute_plan")
     attributes_by_topic: dict[str, dict[str, str]] = {}
     p1_by_topic: dict[str, list[str]] = {}
+    excluded_by_topic: dict[str, dict[str, str]] = {}
     if isinstance(raw_plans, list):
         for plan in raw_plans:
             if not isinstance(plan, dict):
@@ -1151,6 +1224,17 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
                 for entry in p1_entries
                 if isinstance(entry, dict) and str(entry.get("attribute") or "").strip()
             ]
+            raw_excluded = plan.get("excluded")
+            excluded_lookup: dict[str, str] = {}
+            if isinstance(raw_excluded, list):
+                for entry in raw_excluded:
+                    if not isinstance(entry, dict):
+                        continue
+                    candidate = str(entry.get("candidate") or "").strip()
+                    key = normalize_human_label(candidate)
+                    if key:
+                        excluded_lookup[key] = candidate
+            excluded_by_topic[topic_id] = excluded_lookup
 
     competitor_names = []
     selection = config.get("competitor_selection")
@@ -1235,8 +1319,15 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
         if any(not name for name in attribute_names):
             errors.append(f"{prefix}.tags Attribute labels must be non-empty")
         topic_attributes = attributes_by_topic.get(topic_id, {})
+        topic_excluded = excluded_by_topic.get(topic_id, {})
         for name in attribute_names:
-            if normalize_human_label(name) not in topic_attributes:
+            key = normalize_human_label(name)
+            if key in topic_excluded:
+                errors.append(
+                    f"{prefix}.tags Attribute {name!r} is an excluded candidate in this Topic; "
+                    "a Prompt Attribute must reference P1/P2/P3, never an excluded or accuracy_only candidate"
+                )
+            elif key not in topic_attributes:
                 errors.append(
                     f"{prefix}.tags Attribute {name!r} must exist in the current Topic attribute_plan"
                 )
@@ -1262,6 +1353,8 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
         require_attribute_plan=True,
         flexible_topic_quotas=True,
         fixed_v8_presales_quotas=True,
+        discovery_only=generation_stage == "discovery",
+        staged_generation="generation_stage" in config,
     )
     errors.extend(
         error.replace(" in v6", " in v8").replace(" v6 ", " v8 ").replace(" in v7", " in v8")
@@ -1286,6 +1379,7 @@ def validate_v8(data: dict) -> tuple[list[str], list[str], dict]:
             )
 
     if summary:
+        summary["generation_stage"] = generation_stage
         role_counts = summary.pop("diagnosis_intent", {})
         topic_role_counts = summary.pop("topic_diagnosis_intent", {})
         summary["default_intent_tags"] = {
@@ -1309,6 +1403,8 @@ def validate_v6(
     require_attribute_plan: bool = False,
     flexible_topic_quotas: bool = False,
     fixed_v8_presales_quotas: bool = False,
+    discovery_only: bool = False,
+    staged_generation: bool = False,
 ) -> tuple[list[str], list[str], dict]:
     """Validate the variable-topic, Edgelight-Case-field-driven question bank."""
 
@@ -1345,19 +1441,20 @@ def validate_v6(
         field_name = str(field)
         if not (
             field_name in V6_REQUIRED_CASE_FIELDS
+            or field_name in V6_OPTIONAL_CASE_FIELDS
             or V6_NUMBERED_CASE_FIELD.fullmatch(field_name)
             or V6_TOPIC_CASE_FIELD.fullmatch(field_name)
         ):
             errors.append(f"CONFIG unsupported Case field {field_name!r}")
+    case_mode = str(case_fields.get("业务模式") or "").strip()
     for field in sorted(V6_REQUIRED_CASE_FIELDS):
+        if field in V6_B2B_REQUIRED_CASE_FIELDS and case_mode == "B2C":
+            if field in case_fields:
+                errors.append(f"CONFIG Case field {field} must be omitted in a pure B2C Case")
+            continue
         if field not in case_fields:
             errors.append(f"CONFIG Case field {field} must be present")
         elif field == "补充内容":
-            continue
-        elif (
-            field == "垂直行业"
-            and str(case_fields.get("业务模式") or "").strip() == "B2C"
-        ):
             continue
         elif not str(case_fields.get(field) or "").strip():
             errors.append(f"CONFIG Case field {field} must be non-empty")
@@ -1438,7 +1535,10 @@ def validate_v6(
 
     topic_count = len(raw_topics)
     attribute_plans = (
-        _validate_v7_attribute_plan(config, topics, case_fields, errors, warnings)
+        _validate_v7_attribute_plan(
+            config, topics, case_fields, errors, warnings,
+            lightweight=staged_generation,
+        )
         if require_attribute_plan
         else {}
     )
@@ -1519,7 +1619,14 @@ def validate_v6(
             errors.append(f"{quota_path} values must be integers")
             topic_quota = dict(V6_PER_TOPIC_QUOTAS)
         else:
-            if topic_quota["discovery"] < 1:
+            if staged_generation:
+                if any(count < 0 for count in topic_quota.values()):
+                    errors.append(f"{quota_path} counts must be non-negative")
+                if sum(topic_quota.values()) < 5:
+                    errors.append(f"{quota_path} must contain at least 5 Prompts per Topic")
+            elif fixed_v8_presales_quotas and topic_quota["discovery"] < 5:
+                errors.append(f"{quota_path}.discovery must be at least 5")
+            elif topic_quota["discovery"] < 1:
                 errors.append(f"{quota_path}.discovery must be at least 1")
             fixed_counts = {
                 "competitor": applicable_competitor_count,
@@ -1534,8 +1641,10 @@ def validate_v6(
                 ),
                 "category_awareness": 1,
             }
-            if fixed_v8_presales_quotas:
-                fixed_counts["discovery"] = 23 - 2 * applicable_competitor_count
+            if discovery_only:
+                fixed_counts = {intent: 0 for intent in fixed_counts}
+            elif staged_generation:
+                fixed_counts = {"verification": 0, "accuracy": 0}
             for intent, fixed_count in fixed_counts.items():
                 if topic_quota[intent] != fixed_count:
                     errors.append(f"{quota_path}.{intent} must remain {fixed_count}")
@@ -1552,9 +1661,6 @@ def validate_v6(
                         "non-Discovery Prompts"
                     )
         expected_topic_quotas[topic_id] = dict(topic_quota)
-        if fixed_v8_presales_quotas and sum(topic_quota.values()) != 25:
-            errors.append(f"{quota_path} must total exactly 25 Prompts for {topic_id}")
-
     expected_intent_counter: Counter = Counter()
     for topic_quota in expected_topic_quotas.values():
         expected_intent_counter.update(topic_quota)
@@ -1790,6 +1896,8 @@ def validate_v6(
 
     if len(questions) != expected_total:
         errors.append(f"COUNT expected {expected_total}, got {len(questions)}")
+    if staged_generation and not questions:
+        errors.append("COUNT staged question bank must not be empty")
     if len(questions) > max_total:
         errors.append(f"COUNT batch total must not exceed {max_total}")
     duplicate_texts = sorted(text for text, count in normalized_questions.items() if text and count > 1)
@@ -1800,16 +1908,16 @@ def validate_v6(
         check_quota(errors, f"topic.{topic_id}", topic_counts[topic_id], expected_topic_quotas[topic_id])
         expected_competitor_coverage = Counter({
             name: 1 for name in expected_competitors_by_topic.get(topic_id, [])
-        })
-        if competitor_coverage[topic_id] != expected_competitor_coverage:
+        }) if not discovery_only else Counter()
+        if not staged_generation and competitor_coverage[topic_id] != expected_competitor_coverage:
             errors.append(
                 f"COVERAGE topic.{topic_id}.competitors must cover each applicable competitor exactly once"
             )
-        if fixed_v8_presales_quotas:
+        if fixed_v8_presales_quotas and not staged_generation:
             expected_evaluation_coverage = Counter({
                 name: 1
                 for name in [brand, *expected_competitors_by_topic.get(topic_id, [])]
-            })
+            }) if not discovery_only else Counter()
             if evaluation_coverage[topic_id] != expected_evaluation_coverage:
                 errors.append(
                     f"COVERAGE topic.{topic_id}.evaluations must cover the target and each "
@@ -2116,13 +2224,13 @@ def validate_v5(data: dict) -> tuple[list[str], list[str], dict]:
     return errors, warnings, summary
 
 
-def validate(data: dict) -> tuple[list[str], list[str], dict]:
+def validate(data: dict, baseline: dict | None = None) -> tuple[list[str], list[str], dict]:
     errors: list[str] = []
     warnings: list[str] = []
     config = data.get("config") or {}
     schema_version = str(data.get("schema_version") or config.get("schema_version") or "").strip()
     if schema_version == V8_SCHEMA_VERSION:
-        return validate_v8(data)
+        return validate_v8(data, baseline)
     if schema_version == V7_SCHEMA_VERSION:
         return validate_v6(data, require_attribute_plan=True)
     if schema_version == V6_SCHEMA_VERSION:
@@ -3125,16 +3233,20 @@ def validate(data: dict) -> tuple[list[str], list[str], dict]:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("Usage: python3 scripts/validate_question_bank.py <question-bank.json>", file=sys.stderr)
-        return 2
-    path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("bank", type=Path)
+    parser.add_argument("--baseline", type=Path, help="Original Discovery bank for diagnostic supplements")
+    args = parser.parse_args()
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(args.bank.read_text(encoding="utf-8"))
+        baseline = (
+            json.loads(args.baseline.read_text(encoding="utf-8"))
+            if args.baseline else None
+        )
     except (OSError, json.JSONDecodeError) as exc:
         print(json.dumps({"valid": False, "errors": [str(exc)]}, indent=2))
         return 2
-    errors, warnings, summary = validate(data)
+    errors, warnings, summary = validate(data, baseline)
     print(json.dumps({"valid": not errors, "errors": errors, "warnings": warnings, "summary": summary}, indent=2))
     return 1 if errors else 0
 

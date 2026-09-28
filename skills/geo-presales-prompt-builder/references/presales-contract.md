@@ -6,14 +6,14 @@ v8 直接接受系统接口提交的评测 Case 中文业务字段，不要求 `
 
 | 基础字段 | 可编号字段 | 主题与竞品字段 | 补充字段 |
 |---|---|---|---|
-| `公司名`、`业务 / 产品名称`、`品牌名称`、`业务模式`、`品类`、`垂直行业` | `目标客户 1…n`、`痛点 1…n`、`使用场景 1…n`、`产品特性 1…n` | `主题 1…n（宽泛/细分）`（1–3 个）、`官方域名`、三组 `竞品 n` 与 `竞品 n 官网域名` | `差异化优势`、`适用边界`、`补充内容` |
+| `公司名`、`业务 / 产品名称`、`品牌名称`、`业务模式`、`品类`、`目标企业画像` | `目标客户 1…n`、`痛点 1…n`、`使用场景 1…n`、`产品特性 1…n` | `主题 1…n（宽泛/细分）`（1–3 个）、`官方域名`、三组 `竞品 n` 与 `竞品 n 官网域名` | `差异化优势`、`适用边界`、`购买标准`、`集成与兼容`、`信任与合规`、`地理与市场`、`补充内容` |
 
 **格式兼容说明**：Prompt Builder 同时接受以下两种接口输入格式：
 - **单字段合并格式**：`痛点`、`使用场景`、`产品特性`、`目标客户` 各为一个字段，多个值用 `，` 分隔；`主题` 为一个字段，1–3 个主题用 `，` 分隔，不带类型标注。
 - **编号字段格式**（历史兼容）：`痛点 1…n`、`使用场景 1…n` 等分字段；`主题 1…n（宽泛/细分）`，括号标注仅作理解提示，不输出到 v8 字段。
-若两种格式混合出现，以实际内容语义为准，不因字段名格式报错。
+若两种格式混合出现，以实际内容语义为准。构建 JSON 时将合并多值展开为上述编号格式写入 `config.case_fields`，并让 `source_field/source_value` 回指展开后的值；在交接记录保留原 Record 与合并字段。validator 校验的是该规范化产物，不直接接受未展开的 Base Record。此为序列化适配，不是要求客户另填一套业务字段。
 
-括号中的”宽泛/细分”只帮助理解 Topic，不输出 `topic_type`。品牌、品类、至少一个 Topic、官方域名以及三组竞品名称和官网域名为硬必填；纯 `B2C` 的垂直行业允许留空。`补充内容`字段必须保留但允许为空；为空时三组正式竞品默认适用于全部 Topic。其余业务字段必须足以为每 Topic 派生 3–5 个 P1 属性；P2 少于建议的 5 个时可保留现有数量并报告信息缺口，不得虚构补齐。
+括号中的“宽泛/细分”只帮助理解 Topic，不输出 `topic_type`。上游通常产出 1 个 Coverage + 2 个 Depth，证据不足时保留 1 + 1；单 Topic 输入仍受支持。品牌、品类、至少一个 Topic、官方域名以及三组竞品名称和官网域名为硬必填；`目标企业画像`、`购买标准`、`集成与兼容`、`信任与合规` 只服务 B2B，纯 `B2C` 必须整行省略。`补充内容`必须保留但允许为空；为空时三组正式竞品适用于全部 Topic。业务字段与研究证据应支持每 Topic 至少 5 个独立发现型意图，不要求凑 3–5 个属性或完整客户旅程。
 
 Accuracy 默认配额为 0，不需要上游事实包，也不产生 `fact_value / official_source_url / fact_checked_at`。如用户明确要求 Accuracy，先单独确认事实核验输入和产物合同，不把 Case 声明直接当成已核验真值。
 
@@ -26,15 +26,20 @@ Accuracy 默认配额为 0，不需要上游事实包，也不产生 `fact_value
 ## 固定结构
 
 - `schema_version=overseas-geo-question-bank/v8`
-- 1–3 个 Topic；每 Topic 固定 25 题，整批总量为 25/50/75。
-- 当前 Topic 适用竞品数为 `n`（1–3）时，六类 Intent 固定为 Discovery `23 - 2n`、Competitor `n`、Verification `0`、Accuracy `0`、Evaluation `1 + n`、Category Awareness `1`。
-- Competitor 覆盖每个适用竞品各一条；Evaluation 覆盖目标品牌一条与每个适用竞品各一条；Discovery 在覆盖 P1 的前提下用独立购买问题补足固定配额。
-- `quotas.per_topic` 保存未单列 Topic 共用的配额，`quotas.topic_overrides` 只在 Topic 的适用竞品数不同时使用。`quotas.intent_tags` 必须等于所有 Topic 配额之和。
-- 每 Topic 的正式可见度题按实际 Discovery 与一条 Category Awareness 统计，不预设固定数量。
+- 1–3 个 Topic，总题量不得超过 50。
+- 新产物显式写 `config.generation_stage`：默认 `discovery` 只含 Discovery，其他五类配额为 0；按需补题时用 `diagnostic`，竞品、评价和品类认知数量按实际需求填写，无固定配额。Verification / Accuracy 仍为 0，单独走已确认的验证合同。
+- 每 Topic 至少 5 条、整批（含后补题）不超过 50。先确定独立发现型意图，不靠同义改写、品牌名替换或复制字段凑数。6/8/8 只是首轮分配示例。
+- 补充题不改变已有 Discovery 的 ID、题面或来源；若需修改，必须留变更记录，不能把前后题当同一监测样本。
+- `quotas.per_topic` 保存未被 `topic_overrides` 单列 Topic 共用的默认实际配额；`topic_overrides` 表达不同 Topic 的实际差异，不只用于适用竞品数不同的情形。`quotas.intent_tags` 必须等于各 Topic 实际配额之和。`expected_total` 必须等于最终题数。
+- 正式可见度指标只统计 Discovery；后端管线 eligibility 与指标分母不是一回事，见共享映射。
 - v8 不包含 `diagnosis_intent`、逐题 `attributes`、`topic_type`、`question_type`、`funnel_intent`、`decision_stage`、`metric_scopes`、`attribute_pool`、`attribute_id`、`attribute_ids` 或 `priority_attribute_ids`。
 - v8 必须包含 Builder 派生的 `attribute_plan`；每 Topic 恰好一项，同一 Attribute 和源字段允许被多个 Topic 使用，不做唯一归属。
 
-v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_object_type / category_label / official_domain / derived_field_sources / topics / attribute_plan / expected_total / quotas / competitor_selection / locale`。拒绝 `target_audiences / pain_points / use_cases` 等平行输入字段及其他未声明配置，避免绕过评测集 Case 字段。
+v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_object_type / category_label / official_domain / derived_field_sources / topics / attribute_plan / expected_total / quotas / competitor_selection / locale / generation_stage`。拒绝平行业务字段。客户确认文档、市场、研究证据、版本和 QA 状态放独立交接文件，不塞入该配置。
+
+`generation_stage` 只接受 `discovery / diagnostic`，不能从实际题型猜测阶段。历史 v8 未声明阶段时仍沿用原规则：Discovery 至少 5，Competitor `n`，Evaluation `1+n`，Category Awareness `1`，Verification / Accuracy `0`；保持旧缺题检查。新产物必须显式声明阶段，不能仅删字段伪造历史合同。
+
+显式 `diagnostic` 是对原题库的补充，验证时必须通过 `--baseline` 提供原始 Discovery 或未声明阶段的历史 v8。Python 调用使用 `validate(data, baseline)`。原 Case、Topic、语言与所有原 Discovery 的 ID、题面、翻译、Tags、意图键和分析路由必须保留；缺失或改写均失败。若需要实质校正，走新版本 Discovery/售后维护流程，而不是伪装成纯补题。
 
 `locale` 可选，默认 `en`，取值必须是 [语言注册表](locale-templates.json) 中已登记的键。它只决定**题面语言**：`user_question / monitoring_prompt` 使用该语言的文字，Evaluation 与 Category Awareness 由注册表里该语言的固定模板生成；因为 `category_label` 与 Topic 文本会嵌入这两类题面，非 `en` 题库应把这两个显示名改写成该语言。Case 字段、Tags 与翻译保持原有写法。非 `en` 题库应在每题保留 `en_translation`，便于与英文基线对照。
 
@@ -43,16 +48,16 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 ## `attribute_plan` 合同
 
 - 每个 Topic 恰好一项，只包含 `topic_id / priorities / excluded`。
-- `priorities` 恰好包含 `P1 / P2 / P3`：P1 必须 3–5 个，P2 建议 5–10 个且不得超过 10，P3 允许 0–10 个。
+- `priorities` 恰好包含 `P1 / P2 / P3`，新分阶段产物按实际需要填写且均可为空，不设数量配额。未声明阶段的历史合同保留 P1 3–5、P2 建议 5–10、P3 0–10。
 - P1 / P2 / P3 表示 Attribute 在当前 Topic 下的优先级，不是 Attribute 类型或 Prompt 优先级；这些分档属于本项目的生成合同，不是 Profound 原始分类。
-- P1 每项恰好包含 `attribute / source_field / source_value / decision_reason / verification_statement`；P2/P3 不包含 `verification_statement`。
+- 各项含 `attribute / source_field / source_value / decision_reason`；P1 的 `verification_statement` 在新阶段可省略，继承时若保留须非空；历史合同必须有该字段。P2/P3 不包含它。
 - `excluded` 可为空；每项包含 `candidate / source_field / source_value / reason / route`，`route` 只允许 `exclude` 或 `accuracy_only`。
 - 当前 Topic 的 `validation_items` 和 Verification 的 Attribute Tags 与 P1 的强绑定已随 Verification 配额归 0 暂停使用；完整示例见 [属性规划](attribute-planning.md)。
 - **下游后果**：后端 `attribute_diagnostics` 原本依赖 Validation 样本，配额归 0 后 `validation_question_ids` 为空，只能从配对 Discovery（「是否被主动推荐」）与 Evaluation（「是否知道」）派生；派生不出时后端须提交全 `unknown`。这是采集端与后端的事实来源，本 Skill 只负责让题库如实反映「没有 Verification 题」，不补题、不在题库里预留 Validation 字段。
 
 ## Case / Topic 示例骨架
 
-下列片段专门展示 Case、Topic、配额和竞品字段，为缩短篇幅省略了 v8 必填的 `attribute_plan`；完整题库必须按上述合同补全。
+下列是未声明阶段的历史完整诊断片段，只供旧数据读取；省略了必填的 `attribute_plan`。新发现型的配额示例见下文，不照抄该片段的题型数量。
 
 ```json
 {
@@ -64,7 +69,10 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
       "品牌名称": "Edgelight",
       "业务模式": "B2B",
       "品类": "LED 显示屏制造商与商业显示解决方案提供商",
-      "垂直行业": "商业 AV 零售与商业地产 企业设施 舞台与体育场馆",
+      "目标企业画像": "商业 AV 零售与商业地产 企业设施 舞台与体育场馆",
+      "购买标准": "像素间距与画质 结构与安装适配 认证与文件 交付与售后能力",
+      "集成与兼容": "与内容控制 播放与控制系统对接",
+      "信任与合规": "国际认证与合规文件 项目验收要求",
       "目标客户 1": "商业 AV 集成商与 LED 显示屏分销商——关注参数 集成与服务",
       "目标客户 2": "零售 商业地产与品牌体验团队——关注视觉效果 可靠性与项目成本",
       "目标客户 3": "企业 政企园区与会议设施团队——关注清晰度 文件与维护",
@@ -120,10 +128,13 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
         "source_value": "面向裸眼 3D 舞台与场馆体验的创意沉浸式 LED 显示屏"
       }
     ],
-    "expected_total": 75,
+    "expected_total": 41,
     "quotas": {
-      "intent_tags": {"Intent: Discovery": 51, "Intent: Competitor": 9, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 12, "Intent: Category Awareness": 3},
-      "per_topic": {"Intent: Discovery": 17, "Intent: Competitor": 3, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 4, "Intent: Category Awareness": 1}
+      "intent_tags": {"Intent: Discovery": 17, "Intent: Competitor": 9, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 12, "Intent: Category Awareness": 3},
+      "per_topic": {"Intent: Discovery": 5, "Intent: Competitor": 3, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 4, "Intent: Category Awareness": 1},
+      "topic_overrides": {
+        "topic_1": {"Intent: Discovery": 7, "Intent: Competitor": 3, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 4, "Intent: Category Awareness": 1}
+      }
     },
     "competitor_selection": {
       "status": "frozen",
@@ -141,6 +152,22 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 
 `formal_competitors[].topic_ids` 为可选字段。省略时表示该竞品适用于全部 Topic；Case 的补充内容声明局部边界时必须填写非空 Topic ID 数组。例如 Botslab 使用 `70mai → [topic_1]`、`Reolink → [topic_2]`、`aosu → [topic_2]`。三组竞品仍是 Case 级正式集合，但 Competitor 题按 Topic 子集生成。
 
+新发现型配置片段（其余 Case、Topic、规划字段沿用已有合同）：
+
+```json
+{
+  "generation_stage": "discovery",
+  "expected_total": 22,
+  "quotas": {
+    "intent_tags": {"Intent: Discovery": 22, "Intent: Competitor": 0, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 0, "Intent: Category Awareness": 0},
+    "per_topic": {"Intent: Discovery": 8, "Intent: Competitor": 0, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 0, "Intent: Category Awareness": 0},
+    "topic_overrides": {
+      "topic_1": {"Intent: Discovery": 6, "Intent: Competitor": 0, "Intent: Verification": 0, "Intent: Accuracy": 0, "Intent: Evaluation": 0, "Intent: Category Awareness": 0}
+    }
+  }
+}
+```
+
 生成 Builder 派生的 `attribute_plan`，但不生成 Attribute ID 或单独的逐题属性字段。同一 Attribute 与 `source_field / source_value` 可以出现在多个 Topic 中；逐题通过 Attribute Tag 关联，默认不读取 Accuracy 事实包。
 
 ## 每题字段
@@ -149,7 +176,7 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 
 - `question_id`：全批唯一。
 - `topic_id`：回指 1–3 个正式 Topic；不附带 `topic_type`。
-- `tags`：非空字符串数组；默认至少包含一个 `Intent: …` 和一个 `Brand Scope: …`，按题面需要包含零个或多个 `Attribute: …`，也允许增加其他自由 Tag。
+- `tags`：非空字符串数组；新题默认至少包含一个 `Intent: …`、一个 `Brand Scope: …` 和一个 `Prompt Task: …`，按题面需要包含零个或多个 `Attribute: …`，也允许增加其他自由 Tag。历史题库缺少 Task 标签不因此失效；`Prompt Task` 只描述买家任务，不改变分析路由。
 - `analysis_type`：按 v8 的 Prompt 生成角色填写。
 - `formal_visibility_eligible`：按 v8 的 Prompt 生成角色填写，决定是否进入正式可见度题集。
 - `intent_key`：全批唯一，不能只换措辞伪造新意图。
@@ -164,7 +191,7 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 
 | 命名空间 | 默认值与规则 |
 |---|---|
-| `Intent: …` | 每题恰好一个常用生成角色：`Discovery / Competitor / Verification / Accuracy / Evaluation / Category Awareness`。六类数量必须符合固定 Topic 配额；仍可添加其他非默认自定义 Intent Tag。 |
+| `Intent: …` | 每题恰好一个常用生成角色：`Discovery / Competitor / Verification / Accuracy / Evaluation / Category Awareness`。六类数量必须符合每 Topic 写入的实际配额；仍可添加其他非默认自定义 Intent Tag。 |
 | `Brand Scope: …` | 每题恰好一个。题面出现目标品牌或正式竞品时为 `Branded`，否则为 `Non-Branded`；以实际题面为准。 |
 | `Attribute: …` | 零个或多个；名称必须来自当前 Topic 的 `attribute_plan`。Discovery 的 Attribute Tags 整批覆盖全部 P1；同名 Attribute 可跨 Topic。 |
 
@@ -181,9 +208,9 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 | `Intent: Evaluation` | `sentiment` | `false` |
 | `Intent: Category Awareness` | 空 | `true` |
 
-每 Topic 的正式可见度题为实际 Discovery，再加一条 Category Awareness。Competitor 只统计情感，不进入正式 Visibility、声量、排名、Share of Voice 或聚合引用指标。v8 不要求 `metric_scopes`；Tags 只是聚合维度，兼容适配器即使产生旧字段，也不得改变核心路由。
+报告侧正式可见度与聚合引用指标只统计 Discovery；Category Awareness 仅有后端管线 eligibility，不进入这些指标。Competitor 只统计情感。v8 不要求 `metric_scopes`；Tags 只是聚合维度，不改变核心路由。
 
-品牌边界：Discovery 与 Category Awareness 不出现目标品牌或任何正式竞品；Competitor 出现目标品牌和恰好一个正式竞品；Evaluation 每题只出现一个品牌，并在每 Topic 内分别覆盖目标品牌和每个适用竞品恰好一次；不得使用不适用于当前 Topic 的竞品。Evaluation 须把 Topic 转写为具体业务范围或场景；只限制英文 Prompt 正文：`user_question / monitoring_prompt` 及 CSV `query` 不得出现独立单词 `topic`。中文翻译、CSV `topic` 列及其他元数据不受此限制。
+品牌边界：Discovery 与 Category Awareness 不出现品牌；Competitor 出现目标品牌和恰好一个当前 Topic 适用竞品；Evaluation 每题只出现一个目标品牌或适用竞品，没有新产物的逐品牌覆盖配额。Evaluation 使用具体业务范围，英文题面不出现元词 `topic`；中文翻译和元数据不受此限制。
 
 ## CSV 固定字段导出
 

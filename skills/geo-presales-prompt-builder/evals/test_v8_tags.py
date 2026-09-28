@@ -118,6 +118,63 @@ def valid_v8_bank(topic_count: int = 1) -> dict:
     return data
 
 
+def flexible_v8_bank(
+    discovery_by_topic: dict[str, int] | None = None,
+) -> dict:
+    """Build a compact three-Topic v8 bank with Topic-specific Discovery quotas."""
+    data = valid_v8_bank(3)
+    discovery_by_topic = discovery_by_topic or {
+        "topic_1": 8,
+        "topic_2": 7,
+        "topic_3": 6,
+    }
+    retained = []
+    seen_discoveries = {topic_id: 0 for topic_id in discovery_by_topic}
+    for row in data["questions"]:
+        if "Intent: Discovery" not in row["tags"]:
+            retained.append(row)
+            continue
+        topic_id = row["topic_id"]
+        seen_discoveries[topic_id] += 1
+        if seen_discoveries[topic_id] <= discovery_by_topic[topic_id]:
+            retained.append(row)
+    data["questions"] = retained
+
+    def quota(discovery: int) -> dict[str, int]:
+        return {
+            "Intent: Discovery": discovery,
+            "Intent: Competitor": 3,
+            "Intent: Verification": 0,
+            "Intent: Accuracy": 0,
+            "Intent: Evaluation": 4,
+            "Intent: Category Awareness": 1,
+        }
+
+    default_discovery = discovery_by_topic["topic_1"]
+    topic_quotas = {
+        topic_id: quota(discovery)
+        for topic_id, discovery in discovery_by_topic.items()
+    }
+    data["config"]["quotas"] = {
+        "intent_tags": {
+            intent_tag: sum(
+                topic_quota[intent_tag] for topic_quota in topic_quotas.values()
+            )
+            for intent_tag in quota(default_discovery)
+        },
+        "per_topic": quota(default_discovery),
+        "topic_overrides": {
+            topic_id: topic_quota
+            for topic_id, topic_quota in topic_quotas.items()
+            if topic_id != "topic_1"
+        },
+    }
+    data["config"]["expected_total"] = sum(
+        sum(topic_quota.values()) for topic_quota in topic_quotas.values()
+    )
+    return data
+
+
 class V8TagsTests(unittest.TestCase):
     def test_v8_accepts_free_tags_and_uses_no_diagnosis_intent_field(self) -> None:
         data = valid_v8_bank(2)
@@ -382,88 +439,62 @@ class V8TagsTests(unittest.TestCase):
             errors,
         )
 
-    def test_v8_rejects_uneven_attribute_driven_topic_counts(self) -> None:
-        data = valid_v8_bank(3)
-        discovery_limits = {"topic_1": 12, "topic_2": 10, "topic_3": 10}
-        seen = {topic_id: 0 for topic_id in discovery_limits}
-        retained = []
-        for row in data["questions"]:
-            if "Intent: Discovery" not in row["tags"]:
-                retained.append(row)
-                continue
-            topic_id = row["topic_id"]
-            seen[topic_id] += 1
-            if seen[topic_id] <= discovery_limits[topic_id]:
-                retained.append(row)
-        data["questions"] = retained
-
-        def quota(discovery: int) -> dict[str, int]:
-            return {
-                "Intent: Discovery": discovery,
-                "Intent: Competitor": 3,
-                "Intent: Verification": 0,
-                "Intent: Accuracy": 0,
-                "Intent: Evaluation": 1,
-                "Intent: Category Awareness": 1,
-            }
-
-        data["config"]["quotas"] = {
-            "intent_tags": {
-                "Intent: Discovery": 32,
-                "Intent: Competitor": 9,
-                "Intent: Verification": 0,
-                "Intent: Accuracy": 0,
-                "Intent: Evaluation": 3,
-                "Intent: Category Awareness": 3,
-            },
-            "per_topic": quota(12),
-            "topic_overrides": {
-                "topic_2": quota(10),
-                "topic_3": quota(10),
-            },
-        }
-        data["config"]["expected_total"] = 50
-
+    def test_v8_accepts_three_topics_with_custom_discovery_quotas_at_or_below_50(self) -> None:
+        data = flexible_v8_bank()
         errors, warnings, summary = MODULE.validate(data)
-        self.assertTrue(any("must remain 4" in error or "must total exactly 25" in error for error in errors), errors)
-
-    def test_v8_requires_discovery_to_match_fixed_quota(self) -> None:
-        data = valid_v8_bank()
-        discoveries = [
-            row for row in data["questions"] if "Intent: Discovery" in row["tags"]
-        ]
-        remove_ids = {row["question_id"] for row in discoveries[6:]}
-        data["questions"] = [
-            row for row in data["questions"] if row["question_id"] not in remove_ids
-        ]
-        data["config"]["quotas"]["per_topic"]["Intent: Discovery"] = 6
-        data["config"]["quotas"]["intent_tags"]["Intent: Discovery"] = 6
-        data["config"]["expected_total"] = 12
-
-        errors, _, _ = MODULE.validate(data)
-        self.assertTrue(any("must remain 17" in error or "must total exactly 25" in error for error in errors), errors)
-
-    def test_v8_topic_quota_is_a_hard_25_question_contract(self) -> None:
-        data = valid_v8_bank()
-        source = next(
-            row for row in data["questions"] if "Intent: Discovery" in row["tags"]
+        self.assertEqual([], errors)
+        self.assertEqual([], warnings)
+        self.assertEqual(45, summary["total"])
+        self.assertEqual(
+            {"topic 1": 8, "topic 2": 7, "topic 3": 6},
+            {
+                topic_id: counts["Intent: Discovery"]
+                for topic_id, counts in summary["topic_default_intent_tags"].items()
+            },
         )
-        for index in range(15, 22):
-            row = dict(source)
-            row["question_id"] = f"Q-topic_1-D{index:02d}"
-            row["intent_key"] = f"topic_1-discovery-D{index:02d}"
-            row["user_question"] = (
-                "Which LED display solution providers should buyers consider for "
-                f"an additional distinct requirement {index}?"
-            )
-            row["monitoring_prompt"] = row["user_question"]
-            data["questions"].append(row)
-        data["config"]["quotas"]["per_topic"]["Intent: Discovery"] = 21
-        data["config"]["quotas"]["intent_tags"]["Intent: Discovery"] = 21
-        data["config"]["expected_total"] = 27
 
+    def test_v8_rejects_batch_total_above_50(self) -> None:
+        data = flexible_v8_bank({
+            "topic_1": 10,
+            "topic_2": 9,
+            "topic_3": 8,
+        })
         errors, _, _ = MODULE.validate(data)
-        self.assertTrue(any("must remain 17" in error or "must total exactly 25" in error for error in errors), errors)
+        self.assertTrue(any("must not exceed 50" in error for error in errors), errors)
+
+    def test_v8_requires_at_least_five_discovery_prompts_per_topic(self) -> None:
+        data = flexible_v8_bank({
+            "topic_1": 8,
+            "topic_2": 4,
+            "topic_3": 6,
+        })
+        errors, _, _ = MODULE.validate(data)
+        self.assertTrue(
+            any("topic_overrides.topic 2.discovery must be at least 5" in error for error in errors),
+            errors,
+        )
+
+    def test_v8_requires_competitor_evaluation_and_category_awareness_per_competitor_count(self) -> None:
+        for intent_tag, expected_count in (
+            ("Intent: Competitor", 3),
+            ("Intent: Evaluation", 4),
+            ("Intent: Category Awareness", 1),
+        ):
+            with self.subTest(intent_tag=intent_tag):
+                data = flexible_v8_bank()
+                data["config"]["quotas"]["per_topic"][intent_tag] = expected_count - 1
+                data["config"]["quotas"]["intent_tags"][intent_tag] -= 1
+                errors, _, _ = MODULE.validate(data)
+                self.assertTrue(
+                    any(f".{intent_tag.split(': ', 1)[1].lower().replace(' ', '_')} must remain {expected_count}" in error for error in errors),
+                    errors,
+                )
+
+    def test_v8_legacy_25_per_topic_bank_remains_valid(self) -> None:
+        errors, warnings, summary = MODULE.validate(valid_v8_bank(2))
+        self.assertEqual([], errors)
+        self.assertEqual([], warnings)
+        self.assertEqual(50, summary["total"])
 
     def test_v8_csv_uses_the_upload_diagnosis_intent_column(self) -> None:
         headers = MODULE.V8_CSV_HEADERS
