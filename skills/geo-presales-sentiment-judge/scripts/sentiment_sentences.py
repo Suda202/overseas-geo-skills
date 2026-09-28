@@ -219,11 +219,28 @@ def in_sentiment_scope(question: dict) -> bool:
     return isinstance(analysis, str) and "sentiment" in analysis
 
 
+CRAWL_STEM_RE = re.compile(r"^(\d{4})(?:-r(\d+))?$")
+
+
+def parse_crawl_stem(path: str) -> tuple[int, int | None]:
+    """Parse <NNNN>.json or <NNNN>-r<RR>.json into (question idx, repeat)."""
+    stem = os.path.splitext(os.path.basename(path))[0]
+    match = CRAWL_STEM_RE.fullmatch(stem)
+    if not match:
+        raise SystemExit(
+            f"采集文件名无法解析题号/重复序号：{path}；"
+            "期望 <NNNN>.json 或 <NNNN>-r<RR>.json"
+        )
+    return int(match.group(1)), int(match.group(2)) if match.group(2) is not None else None
+
+
 def iter_crawl_files(crawl_dir: str):
-    """Yield (platform, region, idx, path) in deterministic path order.
+    """Yield (platform, region, idx, repeat, path) in deterministic path order.
 
     ``region`` is the ``<REGION>`` directory in ``scraper.<platform>/<REGION>/
     <NNNN>.json`` (e.g. MY / SG). Layouts without a region directory yield None.
+    ``repeat`` is None for legacy <NNNN>.json files, or the integer RR from
+    <NNNN>-r<RR>.json repeat-sampling files.
     """
     files = sorted(
         glob.glob(os.path.join(crawl_dir, "scraper.*", "*", "*.json"))
@@ -236,8 +253,8 @@ def iter_crawl_files(crawl_dir: str):
         parts = rel.split(os.sep)
         platform = parts[0].split(".", 1)[1]
         region = parts[1] if len(parts) >= 3 else None
-        idx = int(os.path.splitext(os.path.basename(path))[0])
-        yield platform, region, idx, path
+        idx, repeat = parse_crawl_stem(path)
+        yield platform, region, idx, repeat, path
 
 
 def resolve_brands(args: argparse.Namespace) -> list[dict]:
@@ -265,7 +282,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
     mentioned_answers = 0
     distinct_units = 0
     brand_answers: collections.Counter = collections.Counter()
-    for platform, region, idx, path in iter_crawl_files(args.crawl_dir):
+    for platform, region, idx, repeat, path in iter_crawl_files(args.crawl_dir):
         if not 1 <= idx <= len(questions):
             mismatches.append(f"{platform} {idx:04d}: 编号超出题库范围 1..{len(questions)}")
             continue
@@ -295,6 +312,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
                     "platform": platform,
                     "region": region,
                     "idx": idx,
+                    "repeat": repeat,
                     "question_id": question.get("question_id"),
                     "intent": question_intent(question),
                     "brand": brand["name"],
@@ -389,11 +407,10 @@ def cmd_compute(args: argparse.Namespace) -> None:
     if denom == 0:
         raise SystemExit("没有任何正负句；无法计算正向率（0/0 属于无样本，须如实报告）")
 
-    # 键必须含 region：采集按 scraper.<platform>/<REGION>/NNNN.json 分层，
-    # idx 是区域内编号，同一平台的港/新同题回答 idx 相同，
-    # 只用 (platform, idx) 会把两地回答合并、低报含正负句的回答数
-    # （实测 Trip.Biz 港新报 38、实为 52）。region 缺失时回落空串，不改变旧数据行为。
-    docs_with_pg = {(u.get("region", ""), u["platform"], u["idx"]) for u in extracted}
+    # 键必须含 region 与 repeat：采集按 scraper.<platform>/<REGION>/NNNN.json 分层，
+    # idx 是区域内编号，同一平台的港/新同题回答 idx 相同；重复采样还需区分 repeat。
+    docs_with_pg = {(u.get("region", ""), u["platform"], u["idx"], u.get("repeat"))
+                    for u in extracted}
     print(f"情绪样本回答 {meta.get('scope_answers', '?')} 条")
     print(f"  提到品牌的回答 {meta.get('mentioned_answers', '?')} 条")
     print(f"  含正负句的回答 {len(docs_with_pg)} 条")
@@ -529,6 +546,7 @@ def cmd_claims_assemble(args: argparse.Namespace) -> None:
         out.append({
             "unit_index": unit_index,
             "idx": unit.get("idx"),
+            "repeat": unit.get("repeat"),
             "region": unit.get("region"),
             "platform": unit.get("platform"),
             "question_id": unit.get("question_id"),
@@ -623,7 +641,7 @@ def cmd_claims_metrics(args: argparse.Namespace) -> None:
         brands = [args.brand]
 
     def answer_key(c: dict) -> tuple:
-        return (c.get("region", ""), c.get("platform", ""), c.get("idx"))
+        return (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"))
 
     # 回答内去重：同品牌 × 同 semantic claim 在一条回答里只算一次（按 claim 文本兜底）
     signal_keys: set[tuple] = set()

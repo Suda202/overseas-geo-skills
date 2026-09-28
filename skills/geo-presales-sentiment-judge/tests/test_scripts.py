@@ -125,6 +125,35 @@ class MultiBrandExtractTests(unittest.TestCase):
             # region comes from scraper.<platform>/<REGION>/<NNNN>.json
             self.assertTrue(all(u["region"] == "MY" for u in payload["units"]))
 
+    def test_repeat_sampling_files_extract_as_separate_units(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            bank = os.path.join(root, "bank.csv")
+            with open(bank, "w", newline="", encoding="utf-8") as fh:
+                writer = csv.writer(fh)
+                writer.writerow(BANK_CSV_HEADER)
+                writer.writerow(BANK_CSV_ROW)
+            crawl = os.path.join(root, "crawl")
+            outdir = os.path.join(crawl, "scraper.chatgpt", "SG")
+            os.makedirs(outdir)
+            for repeat in range(1, 6):
+                json.dump({"status": "success", "task_result": {
+                    "prompt": BANK_CSV_ROW[0],
+                    "result_text": f"Bewinch repeat {repeat} is mentioned."}},
+                    open(os.path.join(outdir, f"0001-r{repeat:02d}.json"), "w"))
+            out = os.path.join(root, "units.json")
+            proc = run("extract", "--bank", bank, "--crawl-dir", crawl,
+                       "--aliases", "Bewinch", "--brand", "Bewinch", "--output", out)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            payload = json.load(open(out))
+            units = payload["units"]
+            self.assertEqual(5, len(units))
+            self.assertEqual([1, 2, 3, 4, 5], [u["repeat"] for u in units])
+            self.assertTrue(all(u["idx"] == 1 for u in units))
+            self.assertTrue(all(u["question_id"] == "0001" for u in units))
+            self.assertEqual(5, payload["meta"]["scope_answers"])
+            self.assertEqual(5, payload["meta"]["unit_count"])
+            self.assertEqual(5, payload["meta"]["distinct_unit_count"])
+
     def test_question_recovered_from_rawurl_is_verified(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             bank, lexicon, crawl = make_lexicon_case(root, prompt_mode="rawurl")

@@ -108,6 +108,32 @@ class ClaimLayerAggregationTests(unittest.TestCase):
         self.assertEqual(3, block["summary"]["pos"])
         self.assertEqual(1, block["summary"]["neg"])
 
+    def test_dedupe_keeps_same_claim_across_repeats(self):
+        claims = [
+            dict(self.claims()[0], repeat=1),
+            dict(self.claims()[0], repeat=1, claim="免安装 "),
+            dict(self.claims()[0], repeat=2),
+        ]
+        block = MODULE.build_claims_sentiment(claims, ["A"], lambda u: True, "A")
+        self.assertEqual(2, block["summary"]["total"])
+        self.assertEqual(2, block["summary"]["pos"])
+
+    def test_answer_sentiment_filters_question_repeat(self):
+        units = [
+            {"platform": "chatgpt", "region": "SG", "idx": 1, "repeat": 1,
+             "question_id": "0001", "brand": "A", "unit": "repeat one"},
+            {"platform": "chatgpt", "region": "SG", "idx": 1, "repeat": 2,
+             "question_id": "0001", "brand": "A", "unit": "repeat two"},
+        ]
+        merged = {"positive": [0, 1], "negative": []}
+        judged = {"A": {"positive": [{"idx": 0}, {"idx": 1}], "negative": []}}
+        all_claims = {"A": {"pos": [{"label": "安装便捷", "indices": [0, 1]}], "neg": []}}
+        result = MODULE.build_answer_sentiment(
+            units, merged, ["A"], all_claims, judged, "0001-r02", "SG", "chatgpt")
+        self.assertEqual(1, len(result["brands"]))
+        self.assertEqual([{"label": "安装便捷", "sentence": "repeat two"}],
+                         result["brands"][0]["pos_claims"])
+
     def test_theme_matrix_cell_is_attribute_description(self):
         block = MODULE.build_claims_sentiment(self.claims(), ["A"], lambda u: True, "A")
         cell = block["theme_matrix"]["matrix"]["安装与部署"]["A"]

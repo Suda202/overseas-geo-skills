@@ -310,7 +310,7 @@ def _verify_claim_metrics(claims: list[dict], brands: list[str], target: str,
         direction = c.get("sentiment") or ""
         if direction not in ("positive", "negative"):
             continue
-        key = (brand, (c.get("region", ""), c.get("platform", ""), c.get("idx")),
+        key = (brand, (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat")),
                _norm_claim_text(c.get("claim")), direction)
         if key in seen:
             continue
@@ -335,6 +335,28 @@ def _verify_claim_metrics(claims: list[dict], brands: list[str], target: str,
     print(f"口径对账通过：{len(expected.get('by_brand') or {})} 个品牌与 claims-metrics 一致")
 
 
+def _norm_qid_repeat(value) -> tuple[str, int | None]:
+    """Split detail/report question id into (base question_id, repeat)."""
+    text = str(value or "").strip()
+    match = re.fullmatch(r"(\d+)(?:-r(\d+))?", text)
+    if not match:
+        return text, None
+    return match.group(1).zfill(4), int(match.group(2)) if match.group(2) is not None else None
+
+
+def _qid_with_repeat(question_id, repeat) -> str:
+    qid = str(question_id or "").strip()
+    if qid.isdigit():
+        qid = qid.zfill(4)
+    if repeat is None:
+        return qid
+    return f"{qid}-r{int(repeat):02d}"
+
+
+def _answer_key_text(region, platform, question_id, repeat) -> str:
+    return f"{region}|{platform}|{_qid_with_repeat(question_id, repeat)}"
+
+
 def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
                            target: str) -> dict | None:
     """按 Claim 层的 Claim 信号口径聚合（2026-09-20 设计定稿）。
@@ -351,7 +373,7 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
         return None
 
     def answer_key(c: dict) -> tuple:
-        return (c.get("region", ""), c.get("platform", ""), c.get("idx"))
+        return (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"))
 
     seen: set[tuple] = set()
     per_brand_attr: dict[tuple, int] = {}
@@ -376,7 +398,10 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
             per_brand_attr.get((brand, c.get("attribute") or "", direction), 0) + 1
         per_brand_theme[(brand, c.get("theme") or "", direction)] = \
             per_brand_theme.get((brand, c.get("theme") or "", direction), 0) + 1
-        per_answer.setdefault(f"{c.get('region','')}|{c.get('platform','')}|{c.get('idx')}", []).append({
+        answer_id = str(c.get('idx'))
+        if c.get('repeat') is not None:
+            answer_id = f"{answer_id}-r{int(c.get('repeat')):02d}"
+        per_answer.setdefault(f"{c.get('region','')}|{c.get('platform','')}|{answer_id}", []).append({
             "brand": c.get("brand"),
             "claim": c.get("claim"),
             "attribute": c.get("attribute"),
@@ -578,10 +603,14 @@ def build_answer_sentiment(units: list[dict], merged: dict, brands: list[str],
                 for inner_idx in group.get("indices") or []:
                     label_of[(brand, direction, inner_idx)] = group.get("label") or ""
 
+    base_qid, repeat = _norm_qid_repeat(qid)
     out_brands: dict[str, dict] = {}
     for pos_i in sorted(judged_set):
         unit = units[pos_i]
-        if (str(unit.get("question_id")) != qid
+        unit_qid, embedded_repeat = _norm_qid_repeat(unit.get("question_id"))
+        unit_repeat = embedded_repeat if embedded_repeat is not None else unit.get("repeat")
+        if (unit_qid != base_qid
+                or unit_repeat != repeat
                 or unit.get("region") != region
                 or unit.get("platform") != platform_internal):
             continue
@@ -766,7 +795,7 @@ def main() -> int:
             direction = c.get("sentiment")
             if direction not in ("positive", "negative"):
                 continue
-            dedupe_key = (c.get("region", ""), c.get("platform", ""), c.get("idx"),
+            dedupe_key = (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
                           _norm_claim_text(c.get("claim")))
             if dedupe_key in seen_target:
                 continue
@@ -813,8 +842,9 @@ def main() -> int:
             internal = PLATFORM_INTERNAL.get(platform_display) if platform_display else None
             if not (region and internal and qid):
                 continue
+            base_qid, repeat = _norm_qid_repeat(qid)
             detail_value["sentiment"] = payload_by_answer.get(
-                f"{region}|{internal}|{qid}", {"brands": []})
+                _answer_key_text(region, internal, base_qid, repeat), {"brands": []})
 
     if claims:
         grouped: dict[str, dict[str, dict]] = defaultdict(
@@ -825,12 +855,13 @@ def main() -> int:
             direction = c.get("sentiment")
             if brand not in brands or direction not in ("positive", "negative"):
                 continue
-            key = (brand, c.get("region", ""), c.get("platform", ""), c.get("idx"),
+            key = (brand, c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
                    _norm_claim_text(c.get("claim")))
             if key in seen_drawer:
                 continue
             seen_drawer.add(key)
-            answer_key = f"{c.get('region','')}|{c.get('platform','')}|{c.get('question_id','')}"
+            answer_key = _answer_key_text(c.get('region', ''), c.get('platform', ''),
+                                          c.get('question_id', ''), c.get('repeat'))
             bucket = "pos_claims" if direction == "positive" else "neg_claims"
             grouped[answer_key][brand][bucket].append({
                 # 抽屉展示具体的 claim（逐回答的观点），attribute 另存备查
