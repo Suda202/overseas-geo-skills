@@ -19,7 +19,7 @@
 ## 自检路径
 
 1. 运行 `scripts/validate_case.py` 检查字段、数量、语言与 URL。
-2. 确认主题只按 `references/topic-generation-reference.md` 生成，没有调用或复制旧 Topic Builder 的规则；每条 Case 只包含一条产品线和恰好两个 Topic；Coverage 表达核心品类，Depth 仅增加一个同产品线受众、任务或场景限定。每个 Topic 都能独立承载一组 Prompts，跨 Topic 能力留给 Attribute，诊断意图与品牌范围留给 Tags。
+2. 确认主题只按 `references/topic-generation-reference.md` 生成，没有调用或复制旧 Topic Builder 的规则；每条 Case 只包含一条产品线和 2–3 个 Topic。默认是 Coverage 加两个同产品线、不同买方场景的 Depth Topic；第二个 Depth 证据不足时可为 1+1。每个 Topic 都能独立承载至少 5 个发现型购买意图，跨 Topic 能力留给 Attribute，诊断意图与品牌范围留给 Tags。
 3. 竞品输入不足 3 组或尚未核验购买集合时，确认已经调用 `overseas-geo-competitor-research`，且只把 `same_purchase_set_eligible=true` 的冻结 `formal_competitors` 写回 Case。
 4. 人工确认每条使用场景是任务表达，每条差异化优势是具体输入假设。
 5. 若保留补充内容，逐句回答：这条信息为何不能写入已有字段，它会改变哪类问题设计？回答不出则删除。

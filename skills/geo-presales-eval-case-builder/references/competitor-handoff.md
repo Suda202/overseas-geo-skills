@@ -19,7 +19,7 @@ Topic-only 模式不补齐竞品，除非用户同时要求完成整个 Case。
 - `target.description` ← 品类、痛点、使用场景、产品特性、差异化优势和适用边界的简洁合并
 - `target.target_users` ← 目标客户
 - `topic` ← “主题”字段中的第一个主题；主题尚未生成时不得先运行竞品研究
-- `market`、`current_date` ← 系统固定参数和运行日期，不写入最终 Case
+- `market` ← 现有执行上下文中的目标市场；`current_date` ← 运行日期；两者都不写入最终 Case
 - `known_competitors` ← 用户已提供的 0–3 个名称、官网和别名
 
 ## 输出写回

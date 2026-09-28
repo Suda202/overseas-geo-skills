@@ -7,7 +7,10 @@
     {"text": "给海外售前报告输入评测集追加一个品牌 Case，补充内容没有必要就别写。", "family": "append_case"},
     {"text": "把这个品牌的品类、目标客户、痛点、场景、特性、主题和竞品归一化成表单输入。", "family": "normalize_case"},
     {"text": "只调整现有 Case 的三个监测主题，按垂直行业、痛点、场景和产品特性重新判断拆分。", "family": "topic_maintenance"},
-    {"text": "生成这个品牌的评测集 Case，但客户没有提供任何竞品，请自动研究并补齐三个竞品和官网。", "family": "case_with_zero_competitors"}
+    {"text": "生成这个品牌的评测集 Case，但客户没有提供任何竞品，请自动研究并补齐三个竞品和官网。", "family": "case_with_zero_competitors"},
+    {"text": "先从公开买方需求研究这个产品线，再建 Case 和预填客户确认文档；每个 Topic 要能支撑至少五个不同发现型购买意图。", "family": "discovery_first_case_with_confirmation_doc"},
+    {"text": "离线整理这个 Case 的研究假设、主题和客户待确认项，不要写飞书。", "family": "offline_case_confirmation_draft"},
+    {"text": "只更新现有 Case 的 Topic，并同步已有客户确认文档里对应的主题和证据假设，不要重复完整 onboarding。", "family": "topic_only_customer_doc_update"}
   ],
   "should_not_trigger": [
     {"text": "只研究一下这个品牌有哪些海外竞品并自动补足三个，不生成 Case。", "family": "competitor_research_only"},
