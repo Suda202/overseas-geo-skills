@@ -1,0 +1,13 @@
+[
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_after_sales_signal_cannot_be_formal_ready",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_conflicting_explicit_and_inherited_intent_fails",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_discovery_stage_rejects_later_intents",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_formal_baseline_metadata_cannot_bypass_lifecycle",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_formal_topic_requires_five_prompts",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_hypothesis_topic_can_remain_below_five",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_inherited_intent_and_brand_scope_tags_are_normalized",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_required_question_fields_and_bad_stage_fail_cleanly",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_staged_inherited_long_topic_name_is_accepted",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_trial_run_range_accepts_three_to_five",
+  "scripts/test_validate_after_sales_set.py::ValidateAfterSalesSetTests::test_trial_run_range_rejects_out_of_range_counts"
+]

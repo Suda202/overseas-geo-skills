@@ -138,5 +138,41 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertIn("generation_stage must be one of", result.stdout)
 
 
+    def test_trial_run_range_accepts_three_to_five(self) -> None:
+        for planned, valid in ((3, 3), (4, 3), (5, 5)):
+            with self.subTest(planned_runs=planned, valid_runs=valid):
+                data = staged_bank(5, "locked")
+                data["config"]["customer_confirmation"] = {
+                    "status": "confirmed",
+                    "scope_status": "confirmed",
+                    "prompt_set_status": "confirmed",
+                }
+                data["config"]["trial"] = {
+                    "status": "passed",
+                    "planned_runs": planned,
+                    "valid_runs": valid,
+                    "evidence_refs": ["trial/run-1.json"],
+                }
+                result = validate(data)
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_trial_run_range_rejects_out_of_range_counts(self) -> None:
+        data = staged_bank(5, "locked")
+        data["config"]["customer_confirmation"] = {
+            "status": "confirmed",
+            "scope_status": "confirmed",
+            "prompt_set_status": "confirmed",
+        }
+        data["config"]["trial"] = {
+            "status": "passed",
+            "planned_runs": 2,
+            "valid_runs": 2,
+            "evidence_refs": ["trial/run-1.json"],
+        }
+        result = validate(data)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("planned_runs must be an integer between 3 and 5", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

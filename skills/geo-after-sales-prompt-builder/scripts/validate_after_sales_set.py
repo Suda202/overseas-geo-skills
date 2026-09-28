@@ -7,9 +7,9 @@ shape checks. New Discovery/Diagnostic artifacts opt into stage-aware checks.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
-import sys
 from collections import Counter
 from pathlib import Path
 
@@ -63,13 +63,49 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
     return ""
 
 
-def main() -> int:
-    if len(sys.argv) not in {2, 3}:
-        print("usage: validate_after_sales_set.py BANK.json [MONITORING.csv]")
-        return 2
+def monitored_set(data: dict) -> str:
+    config = data.get("config") or {}
+    topics = [
+        (topic.get("topic_id"), topic.get("topic"))
+        for topic in config.get("topics") or []
+    ]
+    fields = (
+        "question_id",
+        "topic_id",
+        "user_question",
+        "monitoring_prompt",
+        "zh_translation",
+        "region",
+        "intent",
+        "intent_key",
+        "tags",
+        "analysis_type",
+        "formal_visibility_eligible",
+    )
+    questions = []
+    for row in data.get("questions") or []:
+        selected = {field: row.get(field) for field in fields}
+        if isinstance(selected["tags"], list):
+            selected["tags"] = sorted(selected["tags"], key=str)
+        questions.append(selected)
+    return json.dumps(
+        {
+            "topics": sorted(topics, key=lambda topic: (str(topic[0]), str(topic[1]))),
+            "questions": sorted(questions, key=lambda row: str(row["question_id"])),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
 
-    json_path = Path(sys.argv[1])
-    data = json.loads(json_path.read_text(encoding="utf-8"))
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("bank", type=Path)
+    parser.add_argument("monitoring_csv", type=Path, nargs="?")
+    parser.add_argument("--previous", type=Path, help="Previous monitoring set for version checks")
+    args = parser.parse_args()
+
+    data = json.loads(args.bank.read_text(encoding="utf-8"))
     errors: list[str] = []
     config = data.get("config") or {}
     topics = config.get("topics") or []
@@ -181,10 +217,30 @@ def main() -> int:
     if lifecycle in {"customer_confirmed", "locked", "formal_baseline", "active"}:
         if confirmation.get("status") not in {"confirmed", "locked"}:
             fail("customer confirmation is required before formal-ready lifecycle states", errors)
+        if confirmation.get("scope_status") != "confirmed":
+            fail("customer_confirmation.scope_status must be confirmed before trial", errors)
+    if lifecycle in {"locked", "formal_baseline", "active"}:
+        if confirmation.get("prompt_set_status") != "confirmed":
+            fail("customer_confirmation.prompt_set_status must be confirmed after trial", errors)
 
     prompt_version = config.get("prompt_version")
     if lifecycle in {"locked", "formal_baseline", "active"} and not str(prompt_version or "").strip():
         fail("prompt_version is required before formal baseline", errors)
+
+    trial = config.get("trial") or {}
+    if trial or lifecycle in {"locked", "formal_baseline", "active"}:
+        planned = trial.get("planned_runs")
+        if not isinstance(planned, int) or not 3 <= planned <= 5:
+            fail("trial.planned_runs must be an integer between 3 and 5", errors)
+    if trial.get("status") in {"running", "passed"} and confirmation.get("scope_status") != "confirmed":
+        fail("customer_confirmation.scope_status must be confirmed before trial", errors)
+    if lifecycle in {"locked", "formal_baseline", "active"}:
+        valid = trial.get("valid_runs")
+        ceiling = trial.get("planned_runs") if isinstance(trial.get("planned_runs"), int) else 5
+        if trial.get("status") != "passed" or not isinstance(valid, int) or not 3 <= valid <= ceiling:
+            fail("locked set requires 3 to 5 valid trial runs", errors)
+        if not trial.get("evidence_refs"):
+            fail("locked set requires trial.evidence_refs", errors)
 
     baseline = config.get("baseline") or {}
     formal_collection = baseline.get("status") in {"formal", "active"}
@@ -198,21 +254,22 @@ def main() -> int:
         fail("formal baseline metadata requires prompt_version", errors)
     if lifecycle == "formal_baseline" and baseline.get("status") not in {"formal", "active"}:
         fail("formal_baseline lifecycle requires baseline.status formal or active", errors)
+    if baseline or lifecycle == "formal_baseline":
+        if baseline.get("window_days") != 3:
+            fail("baseline.window_days must be 3", errors)
+        if baseline.get("runs_per_day") != 1:
+            fail("baseline.runs_per_day must be 1", errors)
     if formal_collection:
-        if baseline.get("window_days") not in {7, 14}:
-            fail("formal baseline window_days must be 7 or diagnosed 14", errors)
         if baseline.get("calendar_days") is not True:
             fail("formal baseline must use consecutive calendar days", errors)
-        if baseline.get("window_days") == 14 and not str(
-            baseline.get("anomaly_diagnosis") or ""
-        ).strip():
-            fail("14-day baseline requires anomaly_diagnosis", errors)
         if not str(baseline.get("conditions_key") or "").strip():
             fail("formal baseline requires conditions_key", errors)
         if baseline.get("valid_samples_only") is not True:
             fail("formal baseline must compare valid samples only", errors)
         if baseline.get("failures_as_zero") is True:
             fail("collection failures must not be counted as zero", errors)
+        if not prompt_version or baseline.get("prompt_version") != prompt_version:
+            fail("baseline.prompt_version must match config.prompt_version", errors)
 
     collection = config.get("collection_config") or {}
     if baseline.get("status") in {"formal", "active"}:
@@ -221,10 +278,29 @@ def main() -> int:
                 fail(f"formal baseline requires collection_config.{field}", errors)
         if not collection.get("platforms"):
             fail("formal baseline requires collection_config.platforms", errors)
+        for row in questions:
+            if row.get("region") != collection.get("market"):
+                fail(
+                    f"{row.get('question_id')}: region does not match collection_config.market",
+                    errors,
+                )
 
-    if len(sys.argv) == 3:
-        csv_path = Path(sys.argv[2])
-        with csv_path.open(encoding="utf-8-sig", newline="") as handle:
+    if args.previous:
+        previous = json.loads(args.previous.read_text(encoding="utf-8"))
+        previous_collection = (previous.get("config") or {}).get("collection_config") or {}
+        if any(
+            collection.get(field) and previous_collection.get(field)
+            and collection[field] != previous_collection[field]
+            for field in ("market", "language")
+        ):
+            fail("previous bank must use the same market and language", errors)
+        if monitored_set(data) != monitored_set(previous):
+            old_version = (previous.get("config") or {}).get("prompt_version")
+            if not prompt_version or old_version == prompt_version:
+                fail("prompt_version must change when the monitored set changes", errors)
+
+    if args.monitoring_csv:
+        with args.monitoring_csv.open(encoding="utf-8-sig", newline="") as handle:
             rows = list(csv.DictReader(handle))
         expected = {"query", "question_zh", "topic", "region", "intent", "tags", "cadence"}
         if rows and set(rows[0]) != expected:
