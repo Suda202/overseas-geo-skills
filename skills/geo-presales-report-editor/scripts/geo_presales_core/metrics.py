@@ -153,6 +153,23 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
 
     total_mentions = sum(mention_counts.values())
     voice_values = {object_id: _percent(count, total_mentions) for object_id, count in mention_counts.items()}
+    linked_values = {}
+    for obj in all_objects(config):
+        object_id = obj["object_id"]
+        mentioned_answers = [answer for answer in discovery if _object(answer, object_id)["mentioned"]]
+        linked = [
+            answer for answer in mentioned_answers
+            if any(citation.get("matched_official_object_id") == object_id for citation in answer["citations"])
+        ]
+        # 官网链接率（2026-09-29，对应 Aleyda Solis 三层框架的「带链接的引用率」）：
+        # 被提及的 Discovery 回答里，正文至少引用一次该对象官网的比例。分母是「提及」而不是
+        # 全部回答——它回答「提到了品牌时，AI 有没有拿官网当依据」，与引用份额（官网引用
+        # 次数 ÷ 全部引用次数）是两个问题。未提及但引用了官网的回答属于「被检索未提及」，不在此列。
+        linked_values[object_id] = _percent(len(linked), len(mentioned_answers))
+        linked_values[object_id]["included_answer_ids"] = [item["answer_id"] for item in linked]
+        linked_values[object_id]["unlinked_answer_ids"] = [
+            item["answer_id"] for item in mentioned_answers if item not in linked
+        ]
     for obj in all_objects(config):
         object_metrics[obj["object_id"]] = {
             "object_id": obj["object_id"],
@@ -161,6 +178,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "mention_rate": mention_values[obj["object_id"]],
             "share_of_voice": voice_values[obj["object_id"]],
             "average_rank": rank_values[obj["object_id"]],
+            "linked_mention_rate": linked_values[obj["object_id"]],
         }
 
     mentioned_target = [answer for answer in sentiment_answers if _object(answer, target_id)["mentioned"]]
@@ -258,6 +276,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
         "mention_rate": _benchmark(config["objects"], mention_values, True),
         "share_of_voice": _benchmark(config["objects"], voice_values, True),
         "average_rank": _benchmark(config["objects"], rank_values, False),
+        "linked_mention_rate": _benchmark(config["objects"], linked_values, True),
     }
     target_metrics = object_metrics[target_id]
     directions = []
@@ -361,6 +380,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "raw_count": len(raw_citations),
             "normalized_dedup_count": len(deduped),
             "official_share": official_share,
+            "linked_mention_rate": linked_values[target_id],
             "source_type_distribution": source_distribution,
             "top_domains": top_domains,
             "top_pages": top_pages,
@@ -382,6 +402,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "positive_sentiment_denominator": "有效 Sentiment 回答中已完成判断的目标品牌正向与负向评价之和；排除中性",
             "citation_scope": "diagnostic_intent=discovery",
             "official_citation_denominator": "有效 Discovery 回答产生的原始引用记录",
+            "linked_mention_denominator": "提及该对象的有效 Discovery 回答；分子为其中正文至少引用一次该对象官网的回答",
             "source_type_denominator": "Discovery 引用按 answer_id 与 canonical_url 组合去重",
             "registrable_domain_resolver": "纯标准库常见多级域名后缀规则 v1",
         },

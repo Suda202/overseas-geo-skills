@@ -148,12 +148,15 @@
       ["提及率排名", k.mention_rank, "按提及率由高到低在当前品牌集合中的位置。"],
       ["声量份额", k.share_of_voice, "监测对象提及量 ÷ 全部纳入品牌的提及量之和。"],
       ["平均提及位置", k.average_rank, "监测对象被提及时的平均位置。数值越小，表示位置越靠前。"],
-      ["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"]
+      ["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"],
+      ["官网链接率", k.linked_mention_rate, "监测对象被提及的回答中，同时引用了其官网的回答占比。偏低说明 AI 提到了品牌，却没有拿官网作依据。各平台给链接的方式不同，宜按平台分开看。",
+        (k.linked_mention_counts && String(k.linked_mention_counts).split("/")[1] !== "0") ? "被提及 " + String(k.linked_mention_counts).split("/")[1] + " 次，其中 " + String(k.linked_mention_counts).split("/")[0] + " 次带官网引用" : ""]
     ];
     el.innerHTML = items.map(function (row) {
       return '<div class="kpi"><span class="label">' + esc(row[0]) +
         '<button type="button" class="info" aria-label="查看' + esc(row[0]) + '含义" data-tip="' + esc(row[2]) + '">i</button>' +
-        '</span><strong class="value">' + esc(row[1] || "—") + "</strong></div>";
+        '</span><strong class="value">' + esc(row[1] || "—") + "</strong>" +
+        (row[3] ? '<span class="compare">' + esc(row[3]) + "</span>" : "") + "</div>";
     }).join("");
   }
 

@@ -309,6 +309,8 @@ class Recomputer:
         raw_citations = 0
         target_citations = 0
         own_citations: Counter = Counter()
+        # 官网链接率：被提及的回答里正文引用过自家官网的回答数（分子）
+        linked_answers: Counter = Counter()
         answer_unique_total = 0
         table_row_markers = 0
         unique_citation_urls: set[str] = set()
@@ -335,6 +337,7 @@ class Recomputer:
                                     self._rank_of(market, platform_dir, qid,
                                                   target["object_id"], repeat))
                             seen_in_answer = set()
+                            cited_owners = set()
                             for citation in self.citations(market, platform_dir, qid, repeat):
                                 raw_citations += 1
                                 if citation.get("in_table_row"):
@@ -345,10 +348,14 @@ class Recomputer:
                                     unique_citation_urls.add(citation["canonical_url"])
                                 owner = self._official_owner(citation["host"])
                                 if owner:
+                                    cited_owners.add(owner)
                                     own_citations[owner] += 1
                                     if owner == "target":
                                         target_citations += 1
                             answer_unique_total += len(seen_in_answer)
+                            for object_id in mentioned:
+                                if object_id in cited_owners:
+                                    linked_answers[object_id] += 1
 
         total_mentions = sum(mention_counts.values())
         target_mentions = mention_counts.get("target", 0)
@@ -396,6 +403,8 @@ class Recomputer:
                 "citation_share": (_pct(own_citations.get(object_id, 0) / raw_citations)
                                    if raw_citations else "—"),
                 "mention_count": count,
+                "linked_mention_rate": (_pct(linked_answers.get(object_id, 0) / count)
+                                        if count else "—"),
             }
 
         return {
@@ -403,6 +412,9 @@ class Recomputer:
             "mention_rate": _pct(target_mentions / discovery_answers) if discovery_answers else "—",
             "share_of_voice": _pct(target_mentions / total_mentions) if total_mentions else "—",
             "official_share": _pct(target_citations / raw_citations) if raw_citations else "—",
+            "linked_mention_rate": (_pct(linked_answers.get("target", 0) / target_mentions)
+                                    if target_mentions else "—"),
+            "linked_mention_counts": f"{linked_answers.get('target', 0)}/{target_mentions}",
             "average_rank": (f"{sum(target_ranks) / len(target_ranks):.1f}"
                              if target_ranks else "—"),
             "mention_rank": str(rank_lookup["target"]),
@@ -586,9 +598,21 @@ def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[st
     if len(slc.get("records") or []) != expected["records"]:
         out.append(f"{key}: records 条数 {len(slc.get('records') or [])} != 期望 {expected['records']}")
     for field in ("mention_rate", "share_of_voice", "official_share", "average_rank",
-                  "mention_rank"):
+                  "mention_rank", "linked_mention_rate"):
         if not _close(kpis.get(field), expected[field]):
             out.append(f"{key}: kpis.{field} {kpis.get(field)!r} != 复算 {expected[field]!r}")
+    if kpis.get("linked_mention_counts") != expected["linked_mention_counts"]:
+        out.append(f"{key}: kpis.linked_mention_counts {kpis.get('linked_mention_counts')!r} "
+                   f"!= 复算 {expected['linked_mention_counts']!r}")
+    for row in slc.get("competition_all") or []:
+        peer = expected["object_stats"].get(str(row.get("name") or "").strip())
+        if peer is None or "linked_mention_rate" not in row:
+            continue
+        actual = row["linked_mention_rate"]
+        actual = "—" if actual is None else _pct(actual)
+        if not _close(actual, peer["linked_mention_rate"]):
+            out.append(f"{key}: competition_all[{row.get('name')}].linked_mention_rate "
+                       f"{actual!r} != 复算 {peer['linked_mention_rate']!r}")
 
     competition = slc.get("competition") or {}
     mention = competition.get("mention") or []
@@ -791,6 +815,10 @@ def _mutations(base: dict):
                lambda n: n.__setitem__("share_of_voice", "40.0%")),
         mutate(f"把 {key_a} 引用份额改高", ["slices", key_a, "kpis"],
                lambda n: n.__setitem__("official_share", "20.0%")),
+        mutate(f"把 {key_a} 官网链接率改成 77.0%", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("linked_mention_rate", "77.0%")),
+        mutate(f"把 {key_b} 官网链接率分子分母改成 99/99", ["slices", key_b, "kpis"],
+               lambda n: n.__setitem__("linked_mention_counts", "99/99")),
         mutate(f"把 {key_b} 平均提及位置改成 1.2", ["slices", key_b, "kpis"],
                lambda n: n.__setitem__("average_rank", "1.2")),
         mutate(f"把 {key_a} 提及率排名改成 1", ["slices", key_a, "kpis"],
