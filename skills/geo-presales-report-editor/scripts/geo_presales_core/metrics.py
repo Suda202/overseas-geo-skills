@@ -161,7 +161,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             answer for answer in mentioned_answers
             if any(citation.get("matched_official_object_id") == object_id for citation in answer["citations"])
         ]
-        # 官网链接率（2026-09-29，对应 Aleyda Solis 三层框架的「带链接的引用率」）：
+        # 带官网的提及率（2026-09-29，对应 Aleyda Solis 三层框架的「带链接的引用率」）：
         # 被提及的 Discovery 回答里，正文至少引用一次该对象官网的比例。分母是「提及」而不是
         # 全部回答——它回答「提到了品牌时，AI 有没有拿官网当依据」，与引用份额（官网引用
         # 次数 ÷ 全部引用次数）是两个问题。未提及但引用了官网的回答属于「被检索未提及」，不在此列。

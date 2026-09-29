@@ -489,19 +489,3 @@
   color: var(--quiet);
   margin-top: 1px;
 }
-
-/* 核心洞察 KPI 由 5 项增至 6 项（2026-09-29 新增官网链接率）：
-   原型 report.css 按 5 列写死；这里覆盖为 6 列，并修正窄屏两列布局下
-   「最后一项占满整行」的规则——6 项是偶数，占满会让第 5 项落单。 */
-.kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
-@media(max-width:1080px){
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@media(max-width:880px){
-  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .kpi:last-child{grid-column:auto;border-left:1px solid var(--line-2);padding-left:16px}
-}
-@media(max-width:480px){
-  .kpis{grid-template-columns:1fr}
-  .kpi:last-child{border-left:0;padding-left:0}
-}

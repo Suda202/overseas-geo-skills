@@ -309,7 +309,7 @@ class Recomputer:
         raw_citations = 0
         target_citations = 0
         own_citations: Counter = Counter()
-        # 官网链接率：被提及的回答里正文引用过自家官网的回答数（分子）
+        # 带官网的提及率：被提及的回答里正文引用过自家官网的回答数（分子）
         linked_answers: Counter = Counter()
         answer_unique_total = 0
         table_row_markers = 0
@@ -815,9 +815,9 @@ def _mutations(base: dict):
                lambda n: n.__setitem__("share_of_voice", "40.0%")),
         mutate(f"把 {key_a} 引用份额改高", ["slices", key_a, "kpis"],
                lambda n: n.__setitem__("official_share", "20.0%")),
-        mutate(f"把 {key_a} 官网链接率改成 77.0%", ["slices", key_a, "kpis"],
+        mutate(f"把 {key_a} 带官网的提及率改成 77.0%", ["slices", key_a, "kpis"],
                lambda n: n.__setitem__("linked_mention_rate", "77.0%")),
-        mutate(f"把 {key_b} 官网链接率分子分母改成 99/99", ["slices", key_b, "kpis"],
+        mutate(f"把 {key_b} 带官网的提及率分子分母改成 99/99", ["slices", key_b, "kpis"],
                lambda n: n.__setitem__("linked_mention_counts", "99/99")),
         mutate(f"把 {key_b} 平均提及位置改成 1.2", ["slices", key_b, "kpis"],
                lambda n: n.__setitem__("average_rank", "1.2")),

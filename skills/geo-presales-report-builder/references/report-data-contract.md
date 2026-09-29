@@ -176,4 +176,4 @@
 - 正式可见度只用 Discovery 意图。情绪样本用 `analysis_type` 含 sentiment 的题。
 - 声量份额分母 = 全部纳入对象的提及次数之和；纳入对象 = 目标品牌 + 3 个配置竞品 + 开放品牌词表命中的品牌。
 - 空答案（正文为空）不进入任何分母。
-- `kpis.linked_mention_rate`（官网链接率）= 目标品牌被提及的有效 Discovery 回答中，正文至少有一个 pill 指向其官网的回答数 ÷ 目标品牌被提及的有效 Discovery 回答数；`linked_mention_counts` 以 `分子/分母` 给出。未被提及时为 `—` 与 `0/0`。`competition_all[].linked_mention_rate` 是各对象按同一口径的小数值（无提及为 `null`）。它与 `official_share`（官网引用次数 ÷ 全部引用次数）分母不同、回答不同问题，不得互相换算。各平台给链接的方式不同，跨平台比较看平台切片，不拿「全部平台」切片的数去比单个平台。
+- `kpis.linked_mention_rate`（带官网的提及率）= 目标品牌被提及的有效 Discovery 回答中，正文至少有一个 pill 指向其官网的回答数 ÷ 目标品牌被提及的有效 Discovery 回答数；`linked_mention_counts` 以 `分子/分母` 给出。未被提及时为 `—` 与 `0/0`。`competition_all[].linked_mention_rate` 是各对象按同一口径的小数值（无提及为 `null`）。它与 `official_share`（官网引用次数 ÷ 全部引用次数）分母不同、回答不同问题，不得互相换算。各平台给链接的方式不同，跨平台比较看平台切片，不拿「全部平台」切片的数去比单个平台。这三个字段只供统计与下游读取，`render_report.slim_for_html` 会把它们剥掉，不进售前 HTML。

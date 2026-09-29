@@ -306,6 +306,11 @@ def slim_for_html(data: dict) -> dict:
     for slice_value in slim.get("slices", {}).values():
         for record in slice_value.get("records", []):
             record.pop("brands", None)
+        # 带官网的提及率只供统计与下游读取，不进售前 HTML（Suda 2026-09-29）。
+        for field in ("linked_mention_rate", "linked_mention_counts"):
+            (slice_value.get("kpis") or {}).pop(field, None)
+        for row in slice_value.get("competition_all", []):
+            row.pop("linked_mention_rate", None)
     return slim
 
 

@@ -1096,7 +1096,7 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
             "share_of_voice": fmt_pct(target["share_of_voice"]),
             "average_rank": fmt_num(target["average_rank"]),
             "official_share": fmt_pct(metrics["citations"]["official_share"]["raw"]),
-            # 官网链接率：被提及的 Discovery 回答里正文引用过官网的占比（口径见 core metrics）。
+            # 带官网的提及率：被提及的 Discovery 回答里正文引用过官网的占比（口径见 core metrics）。
             # 分子/分母随值一起给，前端显示「n/N」——提及次数少时百分比会大幅跳动。
             "linked_mention_rate": fmt_pct(target["linked_mention_rate"]),
             "linked_mention_counts": (f"{target['linked_mention_numerator']}/"
@@ -2109,7 +2109,7 @@ def main(argv=None) -> int:
         print(f"  {region or '全部国家'}: 提及率 {kpi['mention_rate']}  排名 {kpi['mention_rank']}  "
               f"声量份额 {kpi['share_of_voice']}  平均位置 {kpi['average_rank']}  "
               f"引用份额 {kpi['official_share']}  "
-              f"官网链接率 {kpi['linked_mention_rate']}（{kpi['linked_mention_counts']}）  "
+              f"带官网的提及率 {kpi['linked_mention_rate']}（{kpi['linked_mention_counts']}）  "
               f"(有效答案 {counts['valid_answers']}/{counts['answers']}，"
               f"discovery {counts['discovery_answers']})")
     return 0
