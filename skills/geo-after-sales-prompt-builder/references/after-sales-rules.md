@@ -226,6 +226,21 @@ When the matrix is absent, do **not** report the emptiness as a finding that com
 
 While judging, split the gap and state which applies: **evidence gap** (the capability exists but is not published — the fix is a page) versus **capability gap** (the capability is absent — the fix is investment). That split is the most actionable line in the document and it is invisible from the verdict alone.
 
+**Check factual accuracy during the same research pass — do not wait for Accuracy Prompts to find errors.** For every factual P1 (and every factual P2 that carries Prompts) — attributes with one checkable right answer, such as installation requirement, dimensions, availability in a market, price band, certification, warranty, eligibility, or corporate ownership — run two checks while filling `相对竞品`:
+
+1. **Public-layer consistency.** Do the official site, marketplace and retailer listings, reviews, and third-party profiles state the same fact (model names, specs, prices, scope)? Conflicting public sources are the main reason AI gets a fact wrong.
+2. **Answer-layer statement.** In the collected answers, what does AI actually say about this fact for the brand — correct, wrong, outdated, conflated with another entity (Edgelight vs Edgelit), or missing a remedy the brand does offer (CAU's foundation pathway)?
+
+Write what you find into that row's `备注` / `还缺什么` as evidence for the client to confirm; do not report it as an accuracy percentage — presales samples are too small, and the ground truth is the client's to settle. Subjective appraisals ("easy to use", "good value") are not facts; they belong to sentiment and recommendation, not here.
+
+**Only a few of those rows become Accuracy Prompts.** Research finds what is wrong and why; monitoring only tracks known risk points and whether fixes land. Convert a row into an Accuracy Prompt only when all hold:
+
+- a wrong answer would change shortlisting or purchase (typically a P1 or gating fact; a shared category fact every competitor also has does not qualify unless it gates entry);
+- the discovery answers cannot show whether AI knows it (the brand is rarely or never mentioned there), **or** the answer layer already states it wrongly or outdatedly, **or** the fact recently changed (new model, rename, repricing) so AI is likely stale;
+- the client has confirmed the right answer and an official source page exists — without that, keep it on the pending-confirmation list, not in the Prompt set.
+
+Facts that already appear correctly and frequently in discovery answers need no Accuracy Prompt. Expect roughly two to five per market; ask the fact directly and name the brand (e.g. "Does Bewinch G3 require plumbing installation?"). The client-confirmed answer is the scoring truth for that Prompt.
+
 **The category observation Topic doubles as a diagnostic.** Research suggests roughly 15% of categories already have a clear winner. Where one exists, put the effort into the depth Topics and keep the category Topic as the baseline instrument; where none exists, the category Topic is itself a winnable battlefield. It has to be measured either way, so the extra judgement costs almost nothing.
 
 ### How Attributes Are Derived
@@ -326,7 +341,7 @@ after-sales Prompts: use them only with an explicit evidence contract.
 | Competitor | Whom AI picks in a head-to-head | Returns a verdict, not a both-sides answer; needs a use case and a comparison ask |
 | Evaluation | How AI appraises the brand or a competitor on a stated scope | Returns an appraisal; this is where sentiment is read per attribute |
 | Verification | Whether AI even knows the brand holds a specific capability | Yes/No/Unknown per attribute; distinguishes a comprehension gap from a trust gap |
-| Accuracy | Whether what AI says about the brand is factually correct | Needs official sources; not part of routine expansion |
+| Accuracy | Whether what AI says about the brand is factually correct | Only for factual rows that pass the accuracy gate in *Topic and Attribute Selection Criteria*; needs a client-confirmed answer and official source; not part of routine expansion |
 | Category Awareness | How AI frames the category itself — table stakes and evaluation criteria | Category-level read; never carries target-brand visibility |
 
 Verification and Profound's `Validation` are the same task under two names — keep our label, and do not read a "no" there as a visibility failure. Our Evaluation covers both Profound's `Sentiment` and its appraisal prompts; Category Awareness covers its `Market Perception`.

@@ -3,7 +3,7 @@ name: geo-after-sales-prompt-builder
 description: Build or maintain evidence-backed after-sales GEO monitoring Topics and Prompts, including Discovery-first handoff, evidence correction, versioning, and collection plans. Use for ongoing monitoring-set expansion, refinement, deduplication, and retirement; do not use for presales coverage, crawler execution unless explicitly requested, metric calculation, report writing, or automatic competitor discovery.
 metadata:
   author: Overseas GEO Project
-  version: "1.10.1"
+  version: "1.11.0"
 ---
 
 # GEO After-Sales Prompt Builder
@@ -189,6 +189,7 @@ Apply this mapping:
    - Competitor: one-to-one comparison only when a new competitor, region, dimension, USP, or material gap justifies it.
    - Category Awareness: low-frequency observation; add only for a new category concept, trend, or changed buying standard.
    - Verification and Accuracy: only when the project already has an explicit evidence contract; do not create them by default. Capability validation is an alias for Verification.
+   - Accuracy errors are found during attribute-pool research, not by Prompts: for each factual P1 (and factual P2 carrying Prompts) check public-layer consistency and what the answer layer actually states, and record findings in the row for client confirmation. Only rows where a wrong answer changes the purchase, the discovery answers cannot show the fact (or already state it wrongly/outdatedly), and the client has confirmed the right answer with an official source become Accuracy Prompts — typically two to five per market. See after-sales-rules.md → *Topic and Attribute Selection Criteria*.
    - For the first staged set, use Discovery only: draft the Discovery group
      first, then add the other intents as the situation requires, each for its
      own evidence-backed purpose — never to satisfy a role quota or fill a slot.

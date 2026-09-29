@@ -66,7 +66,7 @@ Use the sections that fit the task; do not force all of them into a small update
    - `相对竞品`: 优势 / 持平 / 劣势 / 待确认. Add a short evidence note when needed.
    - `优先级`: our initial action priority, not the customer's vote and not the final optimization priority after baseline.
    - `还缺什么`: specific material needed from the brand party; omit or leave blank when no material is needed.
-   - `备注`: evidence and caveats we found. Keep it factual and short.
+   - `备注`: evidence and caveats we found. Keep it factual and short. For factual attributes, also note where public sources conflict or AI answers state the fact wrongly or outdatedly (quote the wrong claim and its platform), so the brand party can confirm the right answer.
    - `客户确认`: write-what-to-change only.
 
    For multi-market work, add the market only when it changes the buyer
