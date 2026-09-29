@@ -35,7 +35,7 @@ Use the sections that fit the task; do not force all of them into a small update
    Adapt the wording by buyer type:
    - **B2B:** first-party sales/procurement/contract/renewal records usually outweigh public evidence.
    - **B2C hardware/consumer:** public reviews, community language, ecommerce Q&A and third-party reviews may carry the buyer-language layer; internal returns, service tickets, warranty terms and test data remain crucial for relative-competitor judgement.
-   - Public absence means `待确认`, not `无优势`; ask what material the brand party can provide.
+   - Public absence is **not** `无优势` — but it is also **not** `待确认` until the external comparison has actually been run: the answer layer first, then the competitors' own public pages (spec sheets, certification pages, service terms), then third-party material. `待确认` is reserved for what stays undetermined *after* that pass; name the material that would settle it, and ask the brand party for that. A verdict reached by comparison is ours to defend, and the client's internal records then either confirm it or upgrade it.
 
 3. **品牌事实【请核对】**
 
@@ -77,13 +77,14 @@ Use the sections that fit the task; do not force all of them into a small update
 
 5. **Priority Rules**
 
-   Use `购买影响 × 相对竞品 × 业务重点` for the initial attribute priority.
+   Before any answers are collected, set the initial attribute priority from `购买影响` × `业务重点`, reading `相对竞品` together with its gap type: a `劣势` that is only unpublished (证据缺口) is the most movable row, not a weak one.
 
    | Condition | Initial priority |
    |---|---|
    | 高影响 + 优势, or core scope/table-stakes recognition that must enter the candidate set | P1 |
    | 高影响 + 持平 | P1 when the first task is to make a new/unknown product recognized; otherwise P2 |
-   | 高影响 + 劣势 | P3 or baseline-only; do not create a standalone Depth Topic to fight a structural loss |
+   | 高影响 + 劣势，证据缺口（有能力但没公开） | P1 or P2 by business emphasis — publishing the material is the fastest available move |
+   | 高影响 + 劣势，能力缺口（确实没有） | P3 or baseline-only; do not create a standalone Depth Topic to fight a structural loss |
    | 高影响 + 待确认 | 待定 / P2 pending evidence; ask for evidence instead of silently downgrading |
    | 中影响 | Usually P3 unless it is a confirmed strategic priority with evidence |
    | 低影响 | P3 or excluded |
@@ -93,7 +94,7 @@ Use the sections that fit the task; do not force all of them into a small update
    - P3 rows remain visible so the brand party can disagree, but P3 attributes do **not** get first-batch Prompts.
    - Only P1/P2 attributes normally carry first-stage Discovery Prompts.
    - `待确认` means the evidence is missing, not that the attribute is weak.
-   - Final operational priority after the three-day baseline adds measured AI Gap and optimizability; do not backfill those columns before collection.
+   - Once a gap has been measured, re-rank with the operational formula in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes* (购买影响 × 当前认知差距 × 可影响性); do not backfill the measured-gap leg before collection.
 
 6. **监测主题与问题 / 提示词【请核对】**
 

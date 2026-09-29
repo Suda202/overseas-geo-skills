@@ -62,7 +62,6 @@ Each question should contain:
 - `user_question`
 - `zh_translation`
 - `monitoring_prompt` equal to `user_question`
-- `tags`
 - `analysis_type`
 - `formal_visibility_eligible`
 - `intent_key`
@@ -170,7 +169,11 @@ The project-compatible baseline is:
 
 For a new after-sales consumer, prefer an explicit adapter with:
 
-`query,question_zh,topic,region,intent,tags,cadence`
+`query,question_zh,topic,region,intent` — required.
+
+`tags` and `cadence` may be appended when the receiving pipeline wants them, and
+omitted when it does not. A delivered CSV that drops them is valid; the validator
+only requires the five core columns and rejects columns it does not recognise.
 
 Do not silently mix the two column contracts. State which adapter is being delivered.
 
@@ -234,8 +237,8 @@ Before delivery:
 1. The chosen scope and stage are explicit. The recommended first-stage shape is one category observation Topic plus two same-product buying-scenario Topics; two Topics can be justified.
 2. Topic names are short and each Prompt maps to exactly one Topic.
 3. A customer-confirmed, locked, or formal Topic has at least five Prompts. A shorter hypothesis Topic is marked for merge, Tag treatment, or evidence completion rather than padded with rewrites. Topic counts may differ; no equalization is required.
-4. Every Prompt has Topic, Region, Intent, Tags, a query in the market's selected language, and a Chinese translation.
-5. Intent and Region are not duplicated inside Tags.
+4. Every Prompt has Topic, Region, and Intent, a query in the market's selected language, and a Chinese translation.
+5. Tags, when used, do not repeat Topic, Intent, or Region, and carry a dimension those fields do not.
 6. Competitor Prompts are one-to-one, use only frozen applicable competitors, and do not enter the natural Discovery count.
 7. Category Awareness is low-frequency and not duplicated across every Topic without a reason; it is not the category observation Topic.
 8. Prompt text is unique after normalization and semantically reviewed for duplicates.
@@ -307,6 +310,7 @@ Before delivery:
 31. Each group has a diagnostic business question, possible action and
     `core`/`experimental`/`monitoring` role; refresh decisions record a
     business or evidence trigger rather than an automatic expiry.
+32. **Every plan Attribute is either carried by a Prompt or says why not.** The validator fails on an Attribute with no carrying Prompt and no `no_carrier_reason` (it also accepts a legacy `demoted_reason`), and it fails when such an Attribute is ranked P1 — P1 means "optimise this first", which is impossible for a dimension nothing measures. Record the reason on the row itself: `no_carrier_reason` is a short string a reader can act on ("its Topic was dropped as unmovable; the Attribute is product-selection shaped and has no home Topic"), never a placeholder. Dropping a Topic deletes its Prompts but leaves its Attributes in the plan, so run this check **after every Topic change**, not only before delivery.
 
 Run the validator against the market's set and, for changes, its prior version:
 

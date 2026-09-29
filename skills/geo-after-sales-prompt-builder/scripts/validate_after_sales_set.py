@@ -163,8 +163,10 @@ def main() -> int:
             fail(f"{question_id}: monitoring_prompt is required", errors)
         elif row.get("monitoring_prompt") != row.get("user_question"):
             fail(f"{question_id}: monitoring_prompt mismatch", errors)
-        if not row.get("tags"):
-            fail(f"{question_id}: tags must be non-empty", errors)
+        # `tags` is optional. Empty means "nothing to add beyond the other
+        # fields"; a `Prompt Task:` / `Intent:` tag restating the intent is
+        # neither required nor rejected, so inherited presales v8 rows still
+        # normalise through `normalized_intent`.
         query_key = " ".join(user_question.casefold().split())
         if query_key in normalized_queries:
             fail(f"{row.get('question_id')}: duplicate query", errors)
@@ -174,6 +176,47 @@ def main() -> int:
         intent != "Discovery" for intent in role_counts if intent
     ):
         fail("discovery stage must contain Discovery Prompts only", errors)
+
+    # Attribute <-> Prompt alignment. Dropping a Topic takes its Prompts with it
+    # but leaves the Attributes behind, so a plan row can silently end up with
+    # nothing that measures it. Every row must either be carried by at least one
+    # Prompt or state why it is not, and an uncarried row must never outrank the
+    # rows we actually measure.
+    plan = config.get("attribute_plan") or []
+    if plan:
+        carried_names: set[str] = set()
+        for row in questions:
+            for tag in row.get("tags") or []:
+                carried_names.add(str(tag).strip())
+            for field in ("attribute_ref", "attribute"):
+                value = str(row.get(field) or "").strip()
+                if value:
+                    carried_names.add(value)
+        uncarried: list[str] = []
+        for entry in plan:
+            name = str(entry.get("attribute") or "").strip()
+            if not name or name in carried_names:
+                continue
+            reason = str(
+                entry.get("no_carrier_reason")
+                or entry.get("demoted_reason")
+                or ""
+            ).strip()
+            if not reason:
+                uncarried.append(name)
+            elif str(entry.get("priority") or "").strip() == "P1":
+                fail(
+                    f"attribute {name!r} carries no Prompt but is ranked P1; "
+                    "P1 requires a Prompt that measures it",
+                    errors,
+                )
+        if uncarried:
+            fail(
+                "attributes with no carrying Prompt and no no_carrier_reason "
+                f"({len(uncarried)}): " + ", ".join(sorted(uncarried)),
+                errors,
+            )
+
     lifecycle = config.get("lifecycle_status")
     if lifecycle is not None and lifecycle not in LIFECYCLE_STATES:
         fail(f"config.lifecycle_status must be one of {sorted(LIFECYCLE_STATES)}", errors)
@@ -302,9 +345,15 @@ def main() -> int:
     if args.monitoring_csv:
         with args.monitoring_csv.open(encoding="utf-8-sig", newline="") as handle:
             rows = list(csv.DictReader(handle))
-        expected = {"query", "question_zh", "topic", "region", "intent", "tags", "cadence"}
-        if rows and set(rows[0]) != expected:
-            fail(f"monitoring CSV headers must equal {sorted(expected)}", errors)
+        required = {"query", "question_zh", "topic", "region", "intent"}
+        allowed = required | {"tags", "cadence"}
+        actual = set(rows[0]) if rows else set()
+        missing = required - actual
+        unknown = actual - allowed
+        if missing:
+            fail(f"monitoring CSV is missing required columns {sorted(missing)}", errors)
+        if unknown:
+            fail(f"monitoring CSV has unsupported columns {sorted(unknown)}", errors)
         if len(rows) != len(questions):
             fail("monitoring CSV row count must equal JSON question count", errors)
         if any(len(str(row.get("tags") or "")) >= 200 for row in rows):
