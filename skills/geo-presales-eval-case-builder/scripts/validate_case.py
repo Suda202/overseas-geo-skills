@@ -22,15 +22,17 @@ TOPIC_QUESTION_RE = re.compile(
 )
 TOPIC_RANKING_RE = re.compile(r"(?:\bbest\b|\btop\b|最佳|最好)", re.IGNORECASE)
 
+# 与线上「配置海外诊断参数」表单对齐：只有这几项必填，业务描述字段都是选填。
 SINGLE_REQUIRED = {
+    "公司名",
     "品牌名称",
     "业务模式",
     "品类",
-    "适用边界",
     "官方域名",
 }
-OPTIONAL_SINGLE = {"公司名", "业务 / 产品名称", "补充内容"}
+OPTIONAL_SINGLE = {"业务 / 产品名称", "适用边界", "补充内容"}
 MULTI_VALUE_FIELDS = {
+    "目标企业画像",
     "目标客户",
     "痛点",
     "使用场景",
@@ -43,10 +45,11 @@ MULTI_VALUE_FIELDS = {
     "地理与市场",
 }
 MULTI_VALUE_RANGES = {
+    "目标企业画像": (1, 5),
     "目标客户": (1, 5),
-    "痛点": (2, 5),
-    "使用场景": (2, 5),
-    "产品特性": (2, 5),
+    "痛点": (1, 5),
+    "使用场景": (1, 5),
+    "产品特性": (1, 5),
     "差异化优势": (1, 5),
     "主题": (2, 3),
     "购买标准": (1, 5),
@@ -54,11 +57,11 @@ MULTI_VALUE_RANGES = {
     "信任与合规": (1, 5),
     "地理与市场": (1, 3),
 }
-# B2B 专属字段：B2B 与 B2B / B2C 必填，纯 B2C 必须省略整行。
-B2B_REQUIRED_SINGLE = {"目标企业画像"}
-B2B_REQUIRED_MULTI = {"购买标准", "集成与兼容", "信任与合规"}
-# 选填多值字段：有内容时做格式检查，没有则整行省略。
-OPTIONAL_MULTI = {"地理与市场"}
+# B2B 专属字段：B2B 与 B2B / B2C 选填，纯 B2C 必须省略整行。
+B2B_OPTIONAL_MULTI = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
+# 选填多值字段：有依据才写，查不到就省略整行；写了就做格式检查。
+OPTIONAL_MULTI = {"目标客户", "痛点", "使用场景", "产品特性", "差异化优势", "地理与市场"}
+PLACEHOLDERS = {"", "待人工确认"}
 ENGLISH_FIELDS = {"公司名", "业务 / 产品名称", "品牌名称"}
 MODES = {"B2B", "B2C", "B2B / B2C"}
 
@@ -101,13 +104,6 @@ def validate_case(index: int, body: str) -> list[str]:
     mode = values.get("业务模式")
     if mode and mode not in MODES:
         errors.append("业务模式只允许 B2B，B2C，B2B / B2C")
-    for key in sorted(B2B_REQUIRED_SINGLE):
-        if mode == "B2C":
-            if keys.count(key) > 0:
-                errors.append(f"纯 B2C Case 的{key}必须留空；Markdown 中应省略该行")
-            continue
-        if keys.count(key) != 1 or not values.get(key):
-            errors.append(f"B2B Case 必须填写{key}")
 
     for field in sorted(MULTI_VALUE_FIELDS):
         if field in OPTIONAL_MULTI:
@@ -115,13 +111,20 @@ def validate_case(index: int, body: str) -> list[str]:
                 errors.append(f"选填字段重复：{field}")
             if keys.count(field) != 1:
                 continue
-        elif field in B2B_REQUIRED_MULTI:
+            if values.get(field) in PLACEHOLDERS:
+                errors.append(f"{field}查不到时省略整行，不填空值或‘待人工确认’")
+                continue
+        elif field in B2B_OPTIONAL_MULTI:
             if mode == "B2C":
                 if keys.count(field) > 0:
                     errors.append(f"纯 B2C Case 的{field}必须留空；Markdown 中应省略该行")
                 continue
-            if keys.count(field) != 1 or not values.get(field):
-                errors.append(f"B2B Case 必须填写{field}；应合并为一行并用‘，’分隔")
+            if keys.count(field) > 1:
+                errors.append(f"选填字段重复：{field}")
+            if keys.count(field) != 1:
+                continue
+            if values.get(field) in PLACEHOLDERS:
+                errors.append(f"{field}查不到时省略整行，不填空值或‘待人工确认’")
                 continue
         elif keys.count(field) != 1 or not values.get(field):
             errors.append(f"缺少或重复多值字段：{field}；应合并为一行并用‘，’分隔")
@@ -141,7 +144,7 @@ def validate_case(index: int, body: str) -> list[str]:
 
     for key in keys:
         if re.fullmatch(
-            r"(?:目标客户|痛点|使用场景|产品特性|购买标准|集成与兼容|信任与合规|地理与市场) [1-5]",
+            r"(?:目标企业画像|目标客户|痛点|使用场景|产品特性|购买标准|集成与兼容|信任与合规|地理与市场) [1-5]",
             key,
         ):
             errors.append(f"{key}必须合并到不带序号的同名字段，并用‘，’分隔")

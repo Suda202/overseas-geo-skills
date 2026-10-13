@@ -1,5 +1,7 @@
 # Case 主题生成规则
 
+本文件管主题怎么拆、怎么命名、要几个。主题从哪来（手动输入，或按属性优先级梳理）见共用原则 [主题的两种来源](../../shared/prompt-generation-principles.md#主题的两种来源)；按属性梳理时，下文「字段如何参与主题生成」用来判断 P1 属性落在哪个买家或场景上。
+
 ## 主题、属性与标签边界
 
 把 Topic 作为纵向主组织：回答“长期独立监测哪个市场、场景或战略机会”，并能自然展开为一组任务、条件和问法不同的 Prompts。把 Attribute 作为横向战略认知：回答“希望 AI 在这些 Topic 中如何认识品牌”，通常是能力、特征或评价标准，可跨 Topic 复用。把 Tags 留给下游 Prompt 的自由分类，例如诊断意图、Branded / Non-Branded、购买阶段及 Attribute 关联。
@@ -71,4 +73,4 @@
 
 ## 工作记录与 Case 写入
 
-候选记录 `selected / merged / rejected / needs_confirmation` 及原因；被判为横向 Attribute 的候选记录 `routed_to_attribute` 及其 Case 来源字段。额外记录被拆为独立 Case 的产品线候选及拆分原因。正式 Case 只写 2–3 个选中主题的名称，不输出宽泛或细分标签。Case Builder 不创建 Attribute 配置、Attribute ID、逐题 Tags 或 Prompt 配额；这些由 Prompt Builder 从 Case 字段派生。
+候选记录 `selected / merged / rejected / needs_confirmation` 及原因；被判为横向 Attribute 的候选记录 `routed_to_attribute` 及其 Case 来源字段。额外记录被拆为独立 Case 的产品线候选及拆分原因。正式 Case 只写 2–3 个选中主题的名称，不输出宽泛或细分标签。按属性梳理的主题，在 handoff 记录主题来源和各主题承载的 P1。Case Builder 不创建 Attribute ID、逐题 Tags 或 Prompt 配额；主题内的属性规划由 Prompt Builder 沿用这里的 Case 级排序生成。

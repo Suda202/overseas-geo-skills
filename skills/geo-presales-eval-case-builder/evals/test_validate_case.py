@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import unittest
 from pathlib import Path
 
@@ -17,6 +18,7 @@ SPEC.loader.exec_module(MODULE)
 
 BASE_BODY = """| 字段 | 填写内容 |
 |---|---|
+| 公司名 | Example Co |
 | 品牌名称 | Example Brand |
 | 业务模式 | B2C |
 | 品类 | 彩色宝石首饰 |
@@ -72,6 +74,7 @@ class TopicValidationTest(unittest.TestCase):
 
 B2B_BODY = """| 字段 | 填写内容 |
 |---|---|
+| 公司名 | Example Co |
 | 品牌名称 | Example Travel |
 | 业务模式 | B2B |
 | 品类 | 企业差旅管理平台 |
@@ -114,7 +117,7 @@ class TargetCompanyProfileValidationTest(unittest.TestCase):
 
 
 class B2BAttributeFieldTest(unittest.TestCase):
-    """B2B 专属字段：B2B 必填，纯 B2C 必须省略。"""
+    """B2B 专属字段：目标企业画像 B2B 必填，采购三项选填；纯 B2C 四项都必须省略。"""
 
     def b2b_errors(self, body: str | None = None) -> list[str]:
         return MODULE.validate_case(1, (body or B2B_BODY).format(topics=B2B_TOPICS))
@@ -126,12 +129,30 @@ class B2BAttributeFieldTest(unittest.TestCase):
         body = B2B_BODY.replace("| 地理与市场 | 亚太多个市场，中国相关行程 |\n", "")
         self.assertEqual([], self.b2b_errors(body))
 
-    def test_rejects_b2b_without_buying_criteria(self) -> None:
+    def test_icp_is_multi_value(self) -> None:
+        icp_row = "| 目标企业画像 | 在亚太多个市场开展业务且有集中差旅管理需求的企业 |"
+        two = B2B_BODY.replace(icp_row, "| 目标企业画像 | 亚太跨国企业，中国出海制造企业 |")
+        self.assertEqual([], self.b2b_errors(two))
+        six = B2B_BODY.replace(icp_row, "| 目标企业画像 | A，B，C，D，E，F |")
+        self.assertTrue(any("目标企业画像数量必须为 1–5" in e for e in self.b2b_errors(six)))
+        split = B2B_BODY.replace(icp_row, "| 目标企业画像 1 | 亚太跨国企业 |")
+        self.assertTrue(any("必须合并到不带序号的同名字段" in e for e in self.b2b_errors(split)))
+
+    def test_accepts_b2b_without_optional_procurement_fields(self) -> None:
+        body = (
+            B2B_BODY.replace("| 购买标准 | 内容源与渠道偏见，佣金与回扣披露，服务级别承诺 |\n", "")
+            .replace("| 集成与兼容 | 对接财务与费用系统，对接 HR 系统 |\n", "")
+            .replace("| 信任与合规 | 数据驻留，安全认证 |\n", "")
+        )
+        self.assertEqual([], self.b2b_errors(body))
+
+    def test_rejects_pending_placeholder_in_optional_procurement_field(self) -> None:
         body = B2B_BODY.replace(
-            "| 购买标准 | 内容源与渠道偏见，佣金与回扣披露，服务级别承诺 |\n", ""
+            "| 购买标准 | 内容源与渠道偏见，佣金与回扣披露，服务级别承诺 |",
+            "| 购买标准 | 待人工确认 |",
         )
         self.assertTrue(
-            any("B2B Case 必须填写购买标准" in error for error in self.b2b_errors(body))
+            any("购买标准查不到时省略整行" in error for error in self.b2b_errors(body))
         )
 
     def test_rejects_b2b_only_fields_for_b2c(self) -> None:
@@ -181,3 +202,29 @@ class CaseParsingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OptionalBusinessFieldTest(unittest.TestCase):
+    """与线上表单对齐：业务描述字段选填，查不到就省略整行。"""
+
+    OPTIONAL_ROWS = ("目标企业画像", "目标客户", "痛点", "使用场景", "产品特性", "差异化优势",
+                     "适用边界", "购买标准", "集成与兼容", "信任与合规", "地理与市场")
+
+    def test_accepts_b2b_case_with_required_fields_only(self) -> None:
+        body = B2B_BODY.format(topics=B2B_TOPICS)
+        lines = [
+            line for line in body.splitlines()
+            if not any(line.startswith(f"| {field} |") for field in self.OPTIONAL_ROWS)
+        ]
+        self.assertEqual([], MODULE.validate_case(1, "\n".join(lines)))
+
+    def test_rejects_placeholder_in_optional_field(self) -> None:
+        body = B2B_BODY.format(topics=B2B_TOPICS)
+        body = re.sub(r"\| 痛点 \| [^\n]*\|", "| 痛点 | 待人工确认 |", body)
+        errors = MODULE.validate_case(1, body)
+        self.assertTrue(any("痛点查不到时省略整行" in e for e in errors), errors)
+
+    def test_rejects_missing_company_name(self) -> None:
+        body = B2B_BODY.format(topics=B2B_TOPICS).replace("| 公司名 | Example Co |\n", "")
+        errors = MODULE.validate_case(1, body)
+        self.assertTrue(any("必填字段：公司名" in e for e in errors), errors)
