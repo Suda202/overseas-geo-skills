@@ -17,9 +17,9 @@ from pathlib import Path
 
 TEXT_FIELD = {"overview": "content"}
 PLATFORM_LABELS = {"overview": "AIO", "gemini": "Gemini",
-                   "chatgpt": "ChatGPT", "perplexity": "Perplexity"}
+                   "chatgpt": "ChatGPT", "perplexity": "Perplexity", "aimode": "AI Mode"}
 # 与 details 的键保持同序，回填时才能对上
-PLATFORM_ORDER = ["overview", "gemini", "chatgpt", "perplexity"]
+PLATFORM_ORDER = ["overview", "gemini", "chatgpt", "perplexity", "aimode"]
 
 
 def parse_args(argv=None):

@@ -63,7 +63,7 @@ import sys
 DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "..", "build", "brand_candidates.csv")
 
-PLATFORMS = ["overview", "gemini", "chatgpt", "perplexity"]
+PLATFORMS = ["overview", "gemini", "chatgpt", "perplexity", "aimode"]
 
 
 def discover_regions(collect_dir: str) -> list[str]:

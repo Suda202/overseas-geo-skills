@@ -170,6 +170,7 @@ ANSWER_FIELD = {
     "gemini": "result_text",
     "chatgpt": "result_text",
     "perplexity": "result_text",
+    "aimode": "result_text",
 }
 
 # Scrapeless 锚点残留文案：它紧贴在商品名后（`AquaTru CarafeGo to product
@@ -199,6 +200,9 @@ def answer_prompt(task: dict) -> str:
     if prompt:
         return prompt
     meta = task.get("metadata")
+    # AI Mode 把同一题面放在顶层 raw_url 的 q= 参数里
+    if not isinstance(meta, dict) and task.get("raw_url"):
+        meta = {"rawUrl": task.get("raw_url")}
     if isinstance(meta, dict):
         url = str(meta.get("rawUrl") or meta.get("url") or "")
         if url:

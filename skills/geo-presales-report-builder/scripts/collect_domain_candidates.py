@@ -28,6 +28,7 @@ CITATION_FIELD = {
     "gemini": "citations",
     "chatgpt": "content_references",
     "perplexity": "web_results",
+    "aimode": "citations",
 }
 PLATFORM_HOST_SUFFIXES = ("google.com", "gstatic.com", "googleusercontent.com")
 

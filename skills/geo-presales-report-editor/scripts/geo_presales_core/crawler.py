@@ -31,6 +31,12 @@ from .util import ContractError, extract_urls, normalize_text, sha256_obj
 # `chatgpt`（utm_source）、以及标题里的「One Login」拼出了跨词匹配。
 # 引用定义行是采集交付的引用数据，不是助手正文，本不应参与失败页判定。
 INVALID_SIGNATURES = [
+    # 页面污染：采集把 Google 页面框架（复制/分享面板、反馈按钮）连同侧栏来源卡片摘要一起抓进了正文。
+    # 2026-10-10 实测 Botslab 端到端 scraper.overview/US/0005 首次尝试：免责声明之后 35% 的正文
+    # 是界面文字和 Reddit/Facebook 网友原话（「I like my Thinkware X1000」），会凭空制造品牌提及。
+    # 不能只剥掉按钮文字当作有效——污染段边界不可靠，整条重采。放在 ERROR_PAGE 前，原因才报得准。
+    ("PAGE_CHROME", re.compile(
+        r"Share public link|Good response\s*Bad response|Copied to clipboard\s*Failed to copy", re.I)),
     ("LOGIN_REQUIRED", re.compile(r"\b(log in|login|sign in|sign up)\b.{0,80}\b(chatgpt|account|continue)\b", re.I | re.S)),
     ("ERROR_PAGE", re.compile(
         r"\b(something went wrong|internal server error|bad gateway|service unavailable"

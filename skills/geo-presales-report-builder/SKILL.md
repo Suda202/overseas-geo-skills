@@ -29,7 +29,7 @@ metadata:
 
 | 输入 | 必需 | 说明 |
 |---|---|---|
-| 采集目录 | 是 | `<collect>/scraper.<platform>/<REGION>/<NNNN>.json`。区域目录名不限，按实际存在的读 |
+| 采集目录 | 是 | `<collect>/scraper.<platform>/<REGION>/<NNNN>.json`。区域目录名不限，按实际存在的读。新采集用 `scripts/collect_answers.py`（项目唯一采集实现，直连 Scrapeless API，`--dry-run` 先报调用量），用法见 `geo-presales-pipeline` 第 3 步 |
 | 题库 CSV | 是 | 至少含 `query / question_zh / topic / diagnosis_intent / tags / question_types`，行序即题号 |
 | Case 记录 | 是 | 品牌、官网域名、3 个配置竞品及其域名、品类 |
 | 品牌词表 | 建议 | 开放品牌集，决定声量份额分母的覆盖度 |
@@ -43,9 +43,12 @@ metadata:
 
 ```bash
 python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv> \
-  --case <Case.json> --lexicon assets/brand_lexicon.<品类>.json --out-dir <输出> \
-  --brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌> --brand-name <品牌> [--dry-run]
+  --case <Case.json 或 v8 题库.json> --lexicon assets/brand_lexicon.<品类>.json --out-dir <输出> \
+  --brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌> --brand-name <品牌> \
+  [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 ```
+
+采集目录还不存在时，脚本停在阶段 -1，并打印 `collect_answers.py` 的采集命令；付费采集不由驾驶脚本代跑。
 
 退出码:`0` 跑完到渲染、`3` 停在暂停点、其余为某步失败。它只调度不实现,各步口径以下列分步定义为准;单独重跑某一步时直接用该步命令。
 
@@ -128,9 +131,9 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    - `--theme-keywords` 只在**不传 `--claims` 的句级降级路径**下才需要（它把自由标签归到主题）；Claim 层自带 `theme` 字段，不依赖关键词表。
    - **同一份报告只能用一种口径**：走了 Claim 层就不要混用句级 `compute` 的数字，两者不可比。
 
-6. **中文译文**（可选；不跑则抽屉只显示原文）：
+6. **中文译文（必做；跳过等于交英文原文给中文客户）**：
 
-   采集数据不含译文，需要外翻一轮：
+   采集数据不含译文，需要外翻一轮。驾驶脚本会在 `translation-batches` 不存在时自动导出待翻译回答，然后暂停等你翻：
 
    ```bash
    python3 scripts/export_translations.py --collect <采集目录> --regions MY,SG      --batch-size 40 --out-dir <输出>/translation-batches

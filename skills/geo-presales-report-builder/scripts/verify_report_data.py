@@ -9,7 +9,8 @@
 
 复算完全不调用 ``build_report_data.py``；它直接从采集目录读原始 JSON，
 用共享的品牌识别入口 ``find_alias_spans`` 与 ``meta.objects`` 里声明的别名
-重新算一遍。``--self-test`` 会对产物做突变，确认校验能发现错误。
+重新算一遍（同样做跨对象最长优先不重叠消解，与数据层同口径）。
+``--self-test`` 会对产物做突变，确认校验能发现错误。
 
 退出码 0 = 全部通过；非 0 = 有对账失败。
 """
@@ -41,6 +42,7 @@ from geo_presales_core.util import (  # noqa: E402
     normalize_host,
     normalize_text,
     normalize_url as core_normalize_url,
+    resolve_alias_spans,
 )
 
 import geo_presales_core.util as core_util  # noqa: E402
@@ -62,14 +64,14 @@ INGEST_TRACKING_KEYS = set(core_util.TRACKING_QUERY_KEYS) | {
 }
 
 PLATFORM_DIR_BY_LABEL = {"AIO": "overview", "Gemini": "gemini",
-                         "ChatGPT": "chatgpt", "Perplexity": "perplexity"}
+                         "ChatGPT": "chatgpt", "Perplexity": "perplexity", "AI Mode": "aimode"}
 # 回答正文与引用字段的已知映射。平台清单是发现出来的，未登记的平台回落到
 # 默认字段名（正文 result_text、无独立引用字段），不因新平台直接崩。
 DEFAULT_ANSWER_FIELD = "result_text"
 ANSWER_FIELD = {"overview": "content", "gemini": "result_text",
-                "chatgpt": "result_text", "perplexity": "result_text"}
+                "chatgpt": "result_text", "perplexity": "result_text", "aimode": "result_text"}
 CITATION_FIELD = {"overview": "source", "gemini": "citations",
-                  "chatgpt": "content_references", "perplexity": "web_results"}
+                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations"}
 
 # 与 build_report_data.py 同步：Gemini / AIO 把同一来源拆成多个编号（伪拆分），需按
 # canonical 折叠但保留正文同编号真重复；ChatGPT / Perplexity 全按实际次数计。
@@ -135,7 +137,7 @@ class Recomputer:
         self.platform_dirs = dict(self.meta.get("platform_dirs")
                                   or PLATFORM_DIR_BY_LABEL)
         self._text_cache: dict[tuple, str] = {}
-        self._spans_cache: dict[tuple, list] = {}
+        self._resolved_spans_cache: dict[tuple, dict] = {}
         self._citations_cache: dict[tuple, list] = {}
         self._recompute_cache: dict[tuple, dict] = {}
         self._files_cache: dict[tuple, list] = {}
@@ -199,17 +201,33 @@ class Recomputer:
 
     def _spans(self, region: str, platform_dir: str, qid: int, object_id: str,
                repeat: int = 1) -> list[dict]:
-        key = (region, platform_dir, qid, object_id, repeat)
-        if key not in self._spans_cache:
+        return self._resolved_spans(region, platform_dir, qid, repeat).get(object_id, [])
+
+    def _resolved_spans(self, region: str, platform_dir: str, qid: int,
+                        repeat: int = 1) -> dict[str, list[dict]]:
+        """按对象回填的品牌跨度，与数据层同口径做跨对象最长优先不重叠消解。
+
+        泰文/CJK 别名不带词边界，短别名会落进别的对象的长别名里（中农大
+        `มหาวิทยาลัยเกษตรจีน` ⊂ 华南农大 `มหาวิทยาลัยเกษตรจีนตอนใต้`）。数据层在
+        `prepare_answers` 里跨对象消解，这里必须同口径，否则复算会把华南农大那条
+        同时记成中农大，凭空报出差异。拉丁别名带词边界，消解对它是空操作。
+        """
+        key = (region, platform_dir, qid, repeat)
+        if key not in self._resolved_spans_cache:
+            grouped: dict[str, list[dict]] = {}
             text = self.answer_text(region, platform_dir, qid, repeat)
-            obj = next(o for o in self.objects if o["object_id"] == object_id)
-            found = []
             if text.strip():
                 # 与数据层同口径：先剥引用标记与商品卡商家列，再匹配品牌
                 matching = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
-                found = find_alias_spans(matching, obj.get("aliases") or [obj["name"]])
-            self._spans_cache[key] = found
-        return self._spans_cache[key]
+                candidates = [
+                    {**span, "object_id": obj["object_id"]}
+                    for obj in self.objects
+                    for span in find_alias_spans(matching, obj.get("aliases") or [obj["name"]])
+                ]
+                for span in resolve_alias_spans(candidates):
+                    grouped.setdefault(span["object_id"], []).append(span)
+            self._resolved_spans_cache[key] = grouped
+        return self._resolved_spans_cache[key]
 
     def citations(self, region: str, platform_dir: str, qid: int,
                   repeat: int = 1) -> list[dict]:
@@ -227,6 +245,31 @@ class Recomputer:
                 payload = json.loads(paths[repeat - 1].read_text(encoding="utf-8"))
                 result = payload.get("task_result") or {}
                 text = str(result.get(answer_field(platform_dir)) or "")
+                raw_items = result.get(citation_field(platform_dir))
+                raw_items = raw_items if isinstance(raw_items, list) else []
+                # 与 build_report_data 同口径：新格式（字段带 cited_count）直接按次数计，
+                # 一次引用一行；cited_count 缺失按 0、为 0 不计。字段全无 cited_count 时
+                # 回退到正文 pill 计数（旧格式）。
+                if any(isinstance(i, dict) and isinstance(i.get("cited_count"), int)
+                       for i in raw_items):
+                    for order, item in enumerate(raw_items, 1):
+                        count = item.get("cited_count")
+                        count = count if isinstance(count, int) else 0
+                        if count <= 0:
+                            continue
+                        url = _clean_url(str(item.get("url") or item.get("link")
+                                             or item.get("href") or "").strip())
+                        host = normalize_host(url) if url else ""
+                        if host and _is_platform_internal(host):
+                            continue
+                        normalized = core_normalize_url(url) if url else None
+                        canonical = (normalized or {}).get("canonical_url") or (url or None)
+                        for _ in range(count):
+                            rows.append({"url": url or None, "host": host or None,
+                                         "canonical_url": canonical, "position": order,
+                                         "in_table_row": False})
+                    self._citations_cache[key] = rows
+                    return self._citations_cache[key]
                 definitions = {}
                 for number, url, _title in BODY_REF_DEF.findall(text):
                     definitions[number] = url
@@ -238,8 +281,6 @@ class Recomputer:
                     if any(start <= match.start() < end for start, end in spans):
                         continue
                     occurrences.append((match.group(2), match.start()))
-                raw_items = result.get(citation_field(platform_dir))
-                raw_items = raw_items if isinstance(raw_items, list) else []
 
                 candidates = []
                 occ_canonicals = []

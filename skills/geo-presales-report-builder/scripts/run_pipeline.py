@@ -1,18 +1,20 @@
 """售前报告流水线驾驶脚本:一条命令跑到下一个暂停点。
 
-把「采集目录 → HTML」的确定性步骤按序串起来;遇到需要语义工作或人工
-决定的环节(词表冻结、情感判读、观点归纳、翻译)时停下,打印该暂停点
-缺什么文件、按什么格式补,补齐后重跑本命令自动续跑。
+把「题库 → 采集目录 → HTML」的确定性步骤按序串起来;遇到需要语义工作或人工
+决定的环节(付费采集、词表冻结、情感判读、翻译)时停下,打印该暂停点
+缺什么文件、按什么格式补,补齐后重跑本命令自动续跑。译文是必做环节,
+不跑等于把英文原文交给中文客户。
 
 本脚本只调度、不实现:每一步都 subprocess 调用各 skill 既有脚本,口径
 和校验完全以被调脚本为准。步骤定义的权威说明仍是 SKILL.md 执行流程。
 
 用法(最少参数):
     python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv> \
-        --case <Case.json> --lexicon <词表.json> --out-dir <输出目录> \
+        --case <Case.json 或 v8 题库.json> --lexicon <词表.json> --out-dir <输出目录> \
         [--brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌>] \
-        [--regions MY,SG] [--dry-run]
+        [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 
+采集目录不存在时停在阶段 -1,打印 collect_answers.py 的采集命令(付费,不代跑)。
 不带 --brands/--target 时跳过情感环节(报告情感板块为 pending)。
 翻译环节按 translation-batches 目录是否就绪自动接入,缺席不阻塞主链。
 """
@@ -43,6 +45,42 @@ def run(cmd: list, dry: bool, label: str) -> None:
     result = subprocess.run([str(c) for c in cmd])
     if result.returncode != 0:
         raise SystemExit(f"[{label}] 失败(退出码 {result.returncode}),流水线停止:{printable}")
+
+
+def stage_collect(args) -> None:
+    """阶段 -1：采集目录是否齐全。采集要付费，驾驶脚本只检查、不代跑。"""
+    manifest = args.collect / "collect-manifest.json"
+    if args.collect.exists() and not manifest.exists():
+        print(f"○ [-1 采集] {args.collect} 不是 collect_answers.py 产出的目录(无 manifest),跳过采集检查")
+        return
+    if not args.regions:
+        raise SystemExit("[-1 采集] 采集目录还没建好，必须传 --regions(如 US 或 SG,MY)")
+    base = [sys.executable, HERE / "collect_answers.py", "--questions", args.questions,
+            "--out", args.collect, "--regions", args.regions, "--platforms", args.platforms]
+    printable = " ".join(str(c) for c in base)
+    print(f"→ [-1 采集检查] {printable} --check-only")
+    if args.dry_run and not args.collect.exists():
+        return
+    result = subprocess.run([str(c) for c in base + ["--check-only"]])
+    if result.returncode == 3:
+        raise Pause(
+            f"采集目录未齐(Scrapeless 付费调用,驾驶脚本不代跑)。先看调用量:\n    {printable} --dry-run\n"
+            f"确认后 export SCRAPELESS_API_KEY 再执行:\n    {printable}\n"
+            f"补采后仍无效的格会移出分母并登记在 {manifest}。")
+    if result.returncode != 0:
+        raise SystemExit(f"[-1 采集检查] 失败(退出码 {result.returncode})")
+
+
+def resolve_case(args) -> None:
+    """--case 可以直接给 v8 题库 JSON：取其中 config.case_fields 作为报告用 Case。"""
+    raw = json.loads(args.case.read_text(encoding="utf-8"))
+    fields = (raw.get("config") or {}).get("case_fields") if isinstance(raw, dict) else None
+    if not fields:
+        return
+    derived = args.out_dir / "case.json"
+    derived.write_text(json.dumps(fields, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"✓ [Case] 从 v8 题库取 config.case_fields → {derived}")
+    args.case = derived
 
 
 def stage_crawl_integrity(args, out: Path) -> None:
@@ -167,20 +205,25 @@ def stage_sentiment(args, out: Path) -> None:
 
 
 def stage_translations(args, out: Path) -> None:
+    """译文是必选环节：报告是给中文读者看的，抽屉里必须是中文。"""
     batches = out / "translation-batches"
     if not batches.exists():
-        print(f"○ [4 译文] {batches} 不存在,跳过(抽屉只显示原文)。需要译文时先跑"
-              f" export_translations.py 再分批翻译,详见 SKILL.md 第 6 步")
-        return
+        run([sys.executable, HERE / "export_translations.py", "--collect", args.collect,
+             "--out-dir", batches, *(["--regions", args.regions] if args.regions else [])],
+            args.dry_run, "4a 导出待翻译回答")
+        if args.dry_run:
+            return
     pending = [p.name for p in sorted(batches.glob("*.json"))
                if not p.name.endswith("-zh.json") and not (batches / f"{p.stem}-zh.json").exists()]
     if pending:
         raise Pause(
-            f"译文批次未齐:{len(pending)} 个批次缺 <批次>-zh.json(如 {pending[:3]})。"
-            f"翻译完补齐后重跑;确需部分交付时手动跑 attach_translations.py --allow-partial。")
+            f"译文未齐:{len(pending)} 个批次缺 <批次>-zh.json(如 {pending[:3]})。"
+            f"按 SKILL.md 第 6 步的翻译要求逐批翻译,每翻完一条立即落盘,"
+            f"补齐后重跑本命令。翻译要求:保留 markdown 结构、品牌名与型号保留英文、"
+            f"URL 与数值原样、商品表格照原样、不增删信息。")
     run([sys.executable, HERE / "attach_translations.py",
          "--report", out / "report-data.json", "--batches", batches,
-         "--out", out / "report-data.json"], args.dry_run, "4 译文回填")
+         "--out", out / "report-data.json"], args.dry_run, "4b 译文回填")
 
 
 def stage_verify_render(args, out: Path) -> None:
@@ -207,17 +250,23 @@ def main() -> int:
     parser.add_argument("--brand-suffixes",
                         help="逗号分隔的品类/产品线后缀,展示时从品牌名剥掉(如 LED,Display);"
                              "留空用内置净水器词表兜底")
-    parser.add_argument("--regions", help="逗号分隔区域,透传给 build_report_data")
+    parser.add_argument("--regions", help="逗号分隔区域:新采集时必填(决定采哪些国家),同时透传给 build_report_data")
+    parser.add_argument("--platforms", default="chatgpt,gemini,aimode,overview",
+                        help="新采集时的平台,默认售前四平台 ChatGPT/Gemini/AI Mode/AIO")
     parser.add_argument("--brand-name", help="输出 HTML 文件名用的品牌名,缺省 report")
     parser.add_argument("--dry-run", action="store_true", help="只打印步骤计划,不执行")
     args = parser.parse_args()
 
-    for path, label in ((args.collect, "采集目录"), (args.questions, "题库"), (args.case, "Case")):
+    for path, label in ((args.questions, "题库"), (args.case, "Case")):
         if not path.exists():
             raise SystemExit(f"{label}不存在:{path}")
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        resolve_case(args)
+        stage_collect(args)
+        if not args.collect.exists():
+            raise Pause(f"采集目录 {args.collect} 不存在(dry-run 到此为止)")
         stage_crawl_integrity(args, args.out_dir)
         stage_lexicon(args)
         stage_build(args, args.out_dir)

@@ -164,12 +164,12 @@ PLATFORM_LABELS: list[str] = []
 LABEL_TO_DIR: dict[str, str] = {}
 DIR_TO_LABEL: dict[str, str] = {}
 
-# 正文字段：overview 用 content，其余用 result_text
+# 正文字段：overview 用 content，其余用 result_text（AI Mode 的 result_md 混有 base64 图片与 HTML 块，不用）
 ANSWER_FIELD = {"overview": "content", "gemini": "result_text",
-                "chatgpt": "result_text", "perplexity": "result_text"}
+                "chatgpt": "result_text", "perplexity": "result_text", "aimode": "result_text"}
 # 引用字段：逐平台不同
 CITATION_FIELD = {"overview": "source", "gemini": "citations",
-                  "chatgpt": "content_references", "perplexity": "web_results"}
+                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations"}
 
 # 「同一回答内同一 URL 折叠为一条」的平台：这些平台会把一个逻辑来源拆成多条引用条目，
 # 把同一页面在一个回答里重复计数——Gemini 按 `…#:~:text=` 文本片段拆，AIO(overview)
@@ -735,16 +735,84 @@ def _citation_keep_mask(occ_canonicals: list, collapse: bool) -> list:
             for number, canonical in occ_canonicals]
 
 
-def _citation_entries(platform: str, task_result: dict, answer_text: str = "") -> list[dict]:
-    """引用条目 = 正文 pill 标记的出现次数。
+def _cited_count_entries(platform: str, task_result: dict):
+    """新格式引用条目：直接按供应商的 `cited_count` 计次数。
 
-    计数单位是「出现次数」：同一编号在一篇里出现 N 次就计 N 次。正文没有 pill 的回答计
-    0 条。某条 pill 缺定义行时，URL 按位置回退到供应商字段的第 N 条——那是**解析 URL**，
-    不是计数的来源；URL 仍解析不出时记 unresolved，只贡献次数、不贡献来源。
+    `cited_count` 是**未去重的引用次数**（供应商按正文 pill 统计，实测与正文逐条一致：
+    Botslab 探针 2026-10-13，ChatGPT 14=14、Gemini 16=16、AI Mode 15=15、Perplexity 3=3；
+    当天新采的 ChatGPT 3=3）。字段已按 URL 去重，所以一条来源就是一行数据 + 一个次数。
 
-    Gemini / AIO 会把同一来源拆成多个编号（伪重复），按 `_citation_keep_mask` 折叠，
-    但保留正文同一编号的真重复。ChatGPT / Perplexity 全部按实际次数计。
+    返回 None 表示这批是旧格式（字段里没有任何 `cited_count`），调用方回退到正文 pill 计数。
+
+    **逐格判代数，不按平台或日期一刀切**：ChatGPT 2026-10-10 及更早的批次没有该字段，
+    10-13 起才有；AIO 同一批里正文未引用的来源条目也可能缺字段（AI Mode 写 0，AIO 省略）。
+    两种情况都由下面这个 `any(...)` 分派到正确的计数路径。
+
+    计数规则：
+    - `cited_count > 0`：计该次数，次数写入 `cited_count`。
+    - `cited_count == 0`：正文没引用，不计（Perplexity 实测 10 条里 7 条为 0）。
+    - 字段缺失：按 0 处理（AIO 的未引用来源直接省略字段，而不是写 0）。
+    - AIO 的商品卡（`type=product`、`index` 为 null）没有该字段，自然为 0，不计入引用。
     """
+    field = CITATION_FIELD.get(platform)
+    raw_items = task_result.get(field)
+    if not isinstance(raw_items, list):
+        return None
+    if not any(isinstance(item, dict) and isinstance(item.get("cited_count"), int)
+               for item in raw_items):
+        return None
+    out = []
+    for order, raw in enumerate(raw_items, 1):
+        if not isinstance(raw, dict):
+            continue
+        count = raw.get("cited_count")
+        count = count if isinstance(count, int) else 0
+        if count <= 0:
+            continue
+        raw_url = str(raw.get("url") or raw.get("link") or raw.get("href") or "").strip()
+        url = clean_url(raw_url) if raw_url else ""
+        host = normalize_host(url) if url else None
+        if host and is_platform_internal(host):
+            continue
+        title = (raw.get("title") or raw.get("name") or raw.get("attribution")
+                 or raw.get("website_name") or "")
+        for _ in range(count):
+            out.append({
+                "raw_citation_id": None,
+                "source": "platform_cited_count",
+                "source_order": order,
+                "raw_url": url or None,
+                "source_name": raw.get("website_name") or raw.get("attribution"),
+                "domain_hint": host,
+                "title": str(title).strip() or None,
+                "date": raw.get("date"),
+                "summary": raw.get("snippet") or raw.get("summary"),
+                "source_position": None,
+                "positions": raw.get("positions") or [],
+                "extraction_method": f"{field}.cited_count",
+                "platform_reported_type": raw.get("type"),
+                "reference_number": str(raw.get("index")) if raw.get("index") is not None else None,
+                "mapping_method": "platform_cited_count",
+                "in_table_row": False,
+            })
+    return out
+
+
+def _citation_entries(platform: str, task_result: dict, answer_text: str = "") -> list[dict]:
+    """引用条目 = 该回答实际引用各来源的次数。
+
+    计数单位是「引用次数」：同一来源被引用 N 次就计 N 次（拆成 N 行，每行次数 1，
+    下游按行数统计，`cited_count` 字段保留原始次数便于核对）。
+
+    首选**供应商 `cited_count`**（新格式，2026-10-13 起五个平台都带；实测与正文 pill
+    逐条一致，Suda 2026-10-13 定为唯一口径）。字段不存在时回退到正文 pill 计数：
+    解析定义行与行内标记，Gemini / AIO 的旧格式伪拆分按 `_citation_keep_mask` 折叠、
+    保留正文同一编号的真重复，ChatGPT / Perplexity 全部按实际次数计。
+    """
+    cited = _cited_count_entries(platform, task_result)
+    if cited is not None:
+        return cited
+
     field = CITATION_FIELD.get(platform)
     definitions, occurrences = _body_citation_occurrences(answer_text)
 
@@ -1882,7 +1950,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
     text_field = {"overview": "content"}
     citation_field = {
         "overview": "source", "gemini": "citations",
-        "chatgpt": "content_references", "perplexity": "web_results",
+        "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
     }
     target = next((obj for obj in config["objects"] if obj["object_id"] == "target"), None)
     target_domains = list((target or {}).get("official_domains") or [])

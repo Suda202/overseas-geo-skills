@@ -51,6 +51,9 @@ PLATFORM_CONTRACT = {
         "body_citations": ["source"],
         "retrieval": ["web_source"],
         "answer_sources": ["source"],
+        # Google 不是每个查询、每次都出 AI 概览：接口 success 但正文为空 = 本次未触发，
+        # 是有效采集结果，不是失败；它不进提及分母，但也不阻断（2026-10-10 Suda 定）。
+        "empty_answer_allowed": True,
     },
     "perplexity": {
         "answer": ["result_text"],
@@ -242,7 +245,11 @@ def audit_sample(platform, path, target, contract):
     infos = []
 
     lowered = answer.strip().lower()
-    if not lowered:
+    succeeded = str(payload.get("status") or "").lower() == "success"
+    if not lowered and succeeded and contract.get("empty_answer_allowed"):
+        infos.append({"code": "AIO_NOT_TRIGGERED",
+                      "detail": "接口 success、本次未出 AI 概览：有效样本，不进提及分母"})
+    elif not lowered:
         defects.append({"code": "EMPTY_ANSWER", "detail": "回答正文为空"})
     else:
         valid, reason = answer_validity(answer)
@@ -452,6 +459,8 @@ def main():
                 if any(i["code"] == "TARGET_OUTSIDE_BODY_ONLY" for i in s["infos"])
             ),
             "samples_with_target_in_answer": sum(1 for s in samples if s.get("target_in_answer")),
+            "aio_not_triggered": sum(
+                1 for s in samples if any(i["code"] == "AIO_NOT_TRIGGERED" for i in s["infos"])),
         },
         "details": samples,
     }
@@ -468,6 +477,8 @@ def main():
         print(f"  {code}: {head}{more}")
     print(f"目标品牌回答正文命中 {report['counts']['samples_with_target_in_answer']} 条；"
           f"仅在正文外字段出现 {report['counts']['samples_with_target_outside_body_only']} 条")
+    if report["counts"]["aio_not_triggered"]:
+        print(f"AIO 本次未触发概览 {report['counts']['aio_not_triggered']} 条（有效样本，不进提及分母）")
 
     if report["counts"]["defects"]:
         return 2

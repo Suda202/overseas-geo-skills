@@ -603,18 +603,18 @@
 
   function answerSwitch(entry) {
     var hasZh = !!entry.answer_zh_html;
+    // 有译文时默认展示中文：报告读者是中文客户，原文退到一个点击之后。
+    var enTab = '<button class="answer-tab' + (hasZh ? "" : " active") +
+      '" type="button" role="tab" aria-selected="' + (hasZh ? "false" : "true") +
+      '" data-answer-tab="en">回答原文</button>';
+    var zhTab = '<button class="answer-tab active" type="button" role="tab" aria-selected="true" data-answer-tab="zh">中文译文</button>';
+    var enPanel = '<div class="answer-panel' + (hasZh ? "" : " active") +
+      ' answer-md" data-answer-panel="en">' +
+      (entry.answer_html || '<p class="support-line">该回答无可解析内容</p>') + "</div>";
+    var zhPanel = '<div class="answer-panel active answer-md" data-answer-panel="zh">' + entry.answer_zh_html + "</div>";
     var tabs = '<div class="answer-tabs" role="tablist" aria-label="切换回答语言">' +
-      '<button class="answer-tab active" type="button" role="tab" aria-selected="true" data-answer-tab="en">回答原文</button>' +
-      (hasZh
-        ? '<button class="answer-tab" type="button" role="tab" aria-selected="false" data-answer-tab="zh">中文译文</button>'
-        : "") +
-      "</div>";
-    var panels =
-      '<div class="answer-panel active answer-md" data-answer-panel="en">' +
-      (entry.answer_html || '<p class="support-line">该回答无可解析内容</p>') + "</div>" +
-      (hasZh
-        ? '<div class="answer-panel answer-md" data-answer-panel="zh">' + entry.answer_zh_html + "</div>"
-        : "");
+      (hasZh ? zhTab + enTab : enTab) + "</div>";
+    var panels = hasZh ? zhPanel + enPanel : enPanel;
     return '<div class="answer-switch">' + tabs + panels + "</div>";
   }
 

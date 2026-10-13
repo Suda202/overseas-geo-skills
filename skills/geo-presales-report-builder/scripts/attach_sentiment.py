@@ -37,6 +37,8 @@ PLATFORM_INTERNAL = {
     "Gemini": "gemini",
     "ChatGPT": "chatgpt",
     "Perplexity": "perplexity",
+    "AI Mode": "aimode",
+    "Google AI Mode": "aimode",
 }
 
 # 竞品情感矩阵的行（Theme）。Theme 从各品牌 claims 的 label 归一，
