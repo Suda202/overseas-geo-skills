@@ -100,14 +100,25 @@ def normalize_alias(value: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+# 词边界只对拉丁字母/数字边缘成立。泰文、中文这类无空格文字里，品牌名前后紧邻
+# 同文种字母同样是 `\w`，`(?<![\w])` / `(?![\w])` 会让别名在连续正文里永远匹配
+# 不上（中农大 `มหาวิทยาลัยเกษตรจีน` 即此例）。非拉丁边缘不加边界，改由
+# `resolve_alias_spans` 用最长优先不重叠消解处理撞名。
+_LATIN_EDGE = re.compile(r"[0-9A-Za-zÀ-ɏḀ-ỿ]")
+
+
+def _has_latin_edge(char: str) -> bool:
+    return bool(char and char.isalnum() and _LATIN_EDGE.match(char))
+
+
 def find_alias_spans(text: str, aliases: list[str]) -> list[dict]:
     normalized = unicodedata.normalize("NFKC", str(text or ""))
     matches: list[dict] = []
     for raw_alias in sorted({str(a).strip() for a in aliases if str(a).strip()}, key=len, reverse=True):
         alias = unicodedata.normalize("NFKC", raw_alias)
         escaped = re.escape(alias).replace(r"\ ", r"[\s\-_\.]*")
-        left = r"(?<![\w])" if alias[:1].isalnum() else ""
-        right = r"(?![\w])" if alias[-1:].isalnum() else ""
+        left = r"(?<![\w])" if _has_latin_edge(alias[:1]) else ""
+        right = r"(?![\w])" if _has_latin_edge(alias[-1:]) else ""
         pattern = re.compile(left + escaped + right, re.IGNORECASE | re.UNICODE)
         for found in pattern.finditer(normalized):
             matches.append({
@@ -125,6 +136,36 @@ def find_alias_spans(text: str, aliases: list[str]) -> list[dict]:
             seen.add(key)
             deduped.append(item)
     return deduped
+
+
+def resolve_alias_spans(spans: list[dict]) -> list[dict]:
+    """跨对象最长优先、互不重叠消解（候选项须带 `object_id`）。
+
+    非拉丁别名丢掉词边界后，短别名会落进别的对象的长别名里：中农大
+    `มหาวิทยาลัยเกษตรจีน` 是华南农大 `มหาวิทยาลัยเกษตรจีนตอนใต้` 的前缀，泰国农大
+    `มหาวิทยาลัยเกษตรศาสตร์` 又落在中农大 `มหาวิทยาลัยเกษตรศาสตร์แห่งประเทศจีน` 内。
+    按起点排序、同起点取更长者，只丢弃与**其它对象**已保留区间重叠的候选。
+
+    只跨对象消解、不动同对象内部的重叠（如某对象同时有 `YouTube` 与
+    `YouTube Music`），因此拉丁市场的既有结果逐字节不变——拉丁别名带词边界，
+    本就无法互相嵌套，跨对象消解对它是空操作。
+    """
+    ordered = sorted(
+        spans,
+        key=lambda item: (item["start"], -(item["end"] - item["start"]), item["alias"].casefold()),
+    )
+    kept: list[dict] = []
+    for candidate in ordered:
+        overlaps_other = any(
+            kept_item["object_id"] != candidate["object_id"]
+            and kept_item["start"] < candidate["end"]
+            and candidate["start"] < kept_item["end"]
+            for kept_item in kept
+        )
+        if not overlaps_other:
+            kept.append(candidate)
+    kept.sort(key=lambda item: (item["start"], -(item["end"] - item["start"]), item["alias"].casefold()))
+    return kept
 
 
 def normalize_host(value: str) -> str:

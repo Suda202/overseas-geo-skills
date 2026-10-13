@@ -9,6 +9,7 @@ from .util import (
     find_alias_spans,
     normalize_host,
     normalize_url,
+    resolve_alias_spans,
     sha256_obj,
     write_text,
 )
@@ -141,9 +142,28 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
         matching_text = sample.get("ranking_text") or answer_text
         evidence_path = run_root / "evidence/answers" / f"{sample['sample_id']}.txt"
         write_text(evidence_path, answer_text)
+        objects = all_objects(config)
+        # 品牌匹配按对象各跑一次会漏掉跨对象撞名：泰文无空格、别名又不带词边界，
+        # 短别名会落进别的对象的长别名里（中农大 vs 华南农大）。先把所有对象的候选
+        # 跨度汇总，做一次最长优先不重叠消解，再回填到各自对象。拉丁别名带词边界，
+        # 跨对象消解对它是空操作，既有结果不变。
+        resolved_spans: dict[str, list[dict]] = defaultdict(list)
+        if sample["analysis_eligible"]:
+            candidates = [
+                {**span, "object_id": obj["object_id"]}
+                for obj in objects
+                for span in find_alias_spans(matching_text, obj["aliases"])
+            ]
+            for span in resolve_alias_spans(candidates):
+                resolved_spans[span["object_id"]].append({
+                    "alias": span["alias"],
+                    "matched_text": span["matched_text"],
+                    "start": span["start"],
+                    "end": span["end"],
+                })
         object_records = []
-        for obj in all_objects(config):
-            spans = find_alias_spans(matching_text, obj["aliases"]) if sample["analysis_eligible"] else []
+        for obj in objects:
+            spans = resolved_spans.get(obj["object_id"], [])
             object_records.append({
                 "object_id": obj["object_id"],
                 "canonical_name": obj["canonical_name"],

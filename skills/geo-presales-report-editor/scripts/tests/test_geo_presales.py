@@ -14,9 +14,11 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from geo_presales_core.config import normalize_config
 from geo_presales_core.crawler import answer_validity, import_crawl
+from geo_presales_core.deterministic import prepare_answers
 from geo_presales_core.metrics import _is_formal_visibility_answer, _is_sentiment_answer
 from geo_presales_core.questions import normalize_question_bank
-from geo_presales_core.util import ContractError, domain_matches, find_alias_spans, normalize_url, read_json, write_json
+from geo_presales_core.util import (ContractError, domain_matches, find_alias_spans,
+                                    normalize_url, read_json, resolve_alias_spans, write_json)
 
 
 CLI = SCRIPT_DIR / "geo_presales.py"
@@ -255,6 +257,83 @@ class ContractTests(unittest.TestCase):
         pending = next(item for item in imported["samples"] if item["sample_id"] == "q02-r01")
         self.assertEqual(pending["error_code"], "PENDING")
         self.assertFalse(pending["analysis_eligible"])
+
+
+class AliasMatchingTests(unittest.TestCase):
+    """泰文/中文别名在连续文字里的匹配，以及跨对象撞名的最长优先消解。
+
+    泰文无空格，品牌别名前后紧邻同文种字母也是 `\\w`；旧实现一律加词边界，
+    导致泰语市场的别名永不命中、提及率被静默少算。见《CAU-中农大泰语称呼冻结》。
+    """
+
+    CAU = "มหาวิทยาลัยเกษตรจีน"
+    SCAU = "มหาวิทยาลัยเกษตรจีนตอนใต้"
+
+    def test_thai_alias_matches_inside_running_text(self):
+        spans = find_alias_spans("แนะนำมหาวิทยาลัยเกษตรจีนตั้งอยู่ที่ปักกิ่ง", [self.CAU])
+        self.assertEqual([item["matched_text"] for item in spans], [self.CAU])
+
+    def test_cjk_alias_matches_inside_running_text(self):
+        spans = find_alias_spans("我在看红果短剧很开心", ["红果短剧"])
+        self.assertEqual([item["matched_text"] for item in spans], ["红果短剧"])
+
+    def test_latin_boundary_still_requires_word_edges(self):
+        # 拉丁别名仍不能落在更长单词里，也不能被更长的拉丁串命中。
+        self.assertEqual(len(find_alias_spans("pineapple", ["Apple"])), 0)
+        self.assertEqual(len(find_alias_spans("ShortMax", ["Max"])), 0)
+
+    def test_cross_object_longest_alias_wins(self):
+        # 中农大 `มหาวิทยาลัยเกษตรจีน` 是华南农大 `มหาวิทยาลัยเกษตรจีนตอนใต้` 的前缀，
+        # 同一位置只算更长的那个对象。
+        candidates = [
+            {"alias": self.CAU, "matched_text": self.CAU, "start": 0, "end": len(self.CAU), "object_id": "target"},
+            {"alias": self.SCAU, "matched_text": self.SCAU, "start": 0, "end": len(self.SCAU), "object_id": "competitor-01"},
+        ]
+        self.assertEqual(
+            [item["object_id"] for item in resolve_alias_spans(candidates)],
+            ["competitor-01"],
+        )
+
+    def test_same_object_overlapping_aliases_are_kept(self):
+        # 只跨对象消解：同对象内部的重叠保持旧行为，拉丁结果不变。
+        candidates = [
+            {"alias": "YouTube", "matched_text": "YouTube", "start": 0, "end": 7, "object_id": "open-14"},
+            {"alias": "YouTube Music", "matched_text": "YouTube Music", "start": 0, "end": 13, "object_id": "open-14"},
+        ]
+        self.assertEqual(len(resolve_alias_spans(candidates)), 2)
+
+    def test_prepare_answers_does_not_credit_target_for_longer_competitor_alias(self):
+        """端到端：答案只含华南农大长串时，中农大不得被记成提及。"""
+        config = {
+            "run_id": "R-thai",
+            "rank_policy": "first_mention",
+            "sample_policy": "first_valid",
+            "objects": [
+                {"object_id": "target", "canonical_name": "China Agricultural University",
+                 "role": "target", "aliases": [self.CAU], "official_domains": ["cau.edu.cn"], "display_order": 1},
+                {"object_id": "competitor-01", "canonical_name": "South China Agricultural University",
+                 "role": "competitor", "aliases": [self.SCAU], "official_domains": ["scau.edu.cn"], "display_order": 2},
+            ],
+        }
+        question_bank = {"questions": [{
+            "question_id": "q01",
+            "question_text": "Which Chinese agricultural universities are located in Guangzhou?",
+            "question_type": "generic",
+            "funnel_intent": "recommendation",
+            "generation_sequence": 1,
+        }]}
+        answer = "มหาวิทยาลัยเกษตรจีนตอนใต้ตั้งอยู่ในกว่างโจว"
+        crawl = {"samples": [{
+            "sample_id": "q01-r01", "question_id": "q01", "repeat_index": 1,
+            "analysis_eligible": True, "answer_text": answer, "ranking_text": answer,
+            "citations": [], "provenance": None,
+        }]}
+        with tempfile.TemporaryDirectory() as temp:
+            result = prepare_answers(Path(temp), config, question_bank, crawl)
+        by_id = {obj["object_id"]: obj for obj in result["answers"][0]["objects"]}
+        self.assertFalse(by_id["target"]["mentioned"])
+        self.assertEqual(by_id["target"]["match_spans"], [])
+        self.assertTrue(by_id["competitor-01"]["mentioned"])
 
 
 class EndToEndTests(unittest.TestCase):
