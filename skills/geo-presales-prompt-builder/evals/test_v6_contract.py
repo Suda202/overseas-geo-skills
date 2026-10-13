@@ -264,7 +264,7 @@ class V6ContractTests(unittest.TestCase):
         self.assertIn("topic_type is retired in v6", joined)
         self.assertIn("retired v6 fields are not allowed ['metric_scopes']", joined)
 
-    def test_v6_requires_edgelight_case_fields_and_three_to_five_validation_items_per_topic(self) -> None:
+    def test_v6_business_fields_are_optional_but_validation_items_still_three_to_five(self) -> None:
         data = valid_v6_bank()
         for field in ("痛点 1", "痛点 2"):
             del data["config"]["case_fields"][field]
@@ -274,22 +274,38 @@ class V6ContractTests(unittest.TestCase):
         validation["validation_items"] = validation["validation_items"][:2]
         errors, _, _ = MODULE.validate(data)
         joined = "\n".join(errors)
-        self.assertIn("Case fields must contain at least one 痛点 n field", joined)
+        self.assertNotIn("痛点", joined)
         self.assertIn("validation_items must contain 3 to 5", joined)
 
     def test_v6_requires_b2b_fields_only_for_b2b(self) -> None:
         data = valid_v6_bank()
         case_fields = data["config"]["case_fields"]
         case_fields["业务模式"] = "B2C"
-        for field in MODULE.V6_B2B_REQUIRED_CASE_FIELDS:
+        for field in MODULE.V6_B2B_ONLY_CASE_FIELDS:
             case_fields.pop(field, None)
         errors, _, _ = MODULE.validate(data)
         self.assertEqual([], errors)
 
+        # 线上表单里 B2B 专属字段都是选填。
         case_fields["业务模式"] = "B2B"
         errors, _, _ = MODULE.validate(data)
+        self.assertEqual([], errors)
+
+    def test_v6_accepts_numbered_multi_value_icp(self) -> None:
+        data = valid_v6_bank()
+        case_fields = data["config"]["case_fields"]
+        case_fields.pop("目标企业画像")
+        case_fields["目标企业画像 1"] = "商业 AV 与零售"
+        case_fields["目标企业画像 2"] = "舞台与体育场馆"
+        errors, _, _ = MODULE.validate(data)
+        self.assertEqual([], errors)
+
+        case_fields["业务模式"] = "B2C"
+        for field in ("购买标准", "集成与兼容", "信任与合规"):
+            case_fields.pop(field, None)
+        errors, _, _ = MODULE.validate(data)
         self.assertTrue(
-            any("目标企业画像 must be present" in error for error in errors), errors
+            any("目标企业画像 1 must be omitted in a pure B2C Case" in error for error in errors), errors
         )
 
     def test_v6_rejects_b2b_fields_in_a_pure_b2c_case(self) -> None:

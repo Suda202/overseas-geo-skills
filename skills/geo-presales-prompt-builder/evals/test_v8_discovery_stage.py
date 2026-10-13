@@ -243,5 +243,53 @@ class DiscoveryStageTests(unittest.TestCase):
         self.assertEqual([], warnings)
 
 
+
+class OnlineFormCompetitorTests(unittest.TestCase):
+    """线上表单的竞品是动态列表：Discovery 题库允许 1–3 个正式竞品。"""
+
+    def test_discovery_bank_accepts_a_single_competitor(self) -> None:
+        data = discovery_bank()
+        config = data["config"]
+        selection = config["competitor_selection"]
+        selection["formal_competitors"] = selection["formal_competitors"][:1]
+        selection["formal_competitors"][0].pop("topic_ids", None)
+        selection["selection_count"] = 1
+        for index in (2, 3):
+            config["case_fields"].pop(f"竞品 {index}", None)
+            config["case_fields"].pop(f"竞品 {index} 官网域名", None)
+        errors, _, _ = MODULE.validate(data)
+        self.assertEqual([], errors)
+
+    def test_discovery_bank_accepts_required_fields_only(self) -> None:
+        data = discovery_bank()
+        config = data["config"]
+        cited = {
+            item["source_field"]
+            for plan in config["attribute_plan"]
+            for items in plan["priorities"].values()
+            for item in items
+        } | {
+            item["source_field"] for plan in config["attribute_plan"] for item in plan["excluded"]
+        }
+        topic_fields = {topic["source_field"] for topic in config["topics"]}
+        keep = MODULE.V6_REQUIRED_CASE_FIELDS | cited | topic_fields | {
+            f"竞品 {i}" for i in (2, 3)
+        } | {f"竞品 {i} 官网域名" for i in (2, 3)}
+        dropped = set(config["case_fields"]) - keep
+        config["case_fields"] = {k: v for k, v in config["case_fields"].items() if k in keep}
+        errors, _, _ = MODULE.validate(data)
+        self.assertEqual([], errors)
+        self.assertTrue(dropped, "fixture should contain optional fields to drop")
+
+    def test_rejects_leftover_competitor_field_without_formal_entry(self) -> None:
+        data = discovery_bank()
+        selection = data["config"]["competitor_selection"]
+        selection["formal_competitors"] = selection["formal_competitors"][:1]
+        selection["formal_competitors"][0].pop("topic_ids", None)
+        selection["selection_count"] = 1
+        errors, _, _ = MODULE.validate(data)
+        self.assertTrue(any("竞品 2 has no matching formal competitor" in e for e in errors), errors)
+
+
 if __name__ == "__main__":
     unittest.main()

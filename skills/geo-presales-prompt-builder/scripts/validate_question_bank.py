@@ -54,36 +54,32 @@ V8_BRAND_SCOPE_TAGS = {
     False: "Brand Scope: Non-Branded",
 }
 V8_ATTRIBUTE_TAG_PREFIX = "Attribute: "
+# 线上表单只强制这几项；业务描述字段都是选填（2026-10-10 按线上表单对齐）。
 V6_REQUIRED_CASE_FIELDS = {
     "公司名",
-    "业务 / 产品名称",
     "品牌名称",
     "业务模式",
     "品类",
-    "目标企业画像",
-    "差异化优势",
-    "适用边界",
-    "购买标准",
-    "集成与兼容",
-    "信任与合规",
     "官方域名",
     "竞品 1",
     "竞品 1 官网域名",
-    "竞品 2",
-    "竞品 2 官网域名",
-    "竞品 3",
-    "竞品 3 官网域名",
     "补充内容",
 }
 # 选填字段：允许出现，但缺失不报错。
-V6_OPTIONAL_CASE_FIELDS = {"地理与市场"}
-# B2B 专属字段：B2B 与 B2B / B2C 必填，纯 B2C 必须省略。
-V6_B2B_REQUIRED_CASE_FIELDS = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
+V6_OPTIONAL_CASE_FIELDS = {
+    "业务 / 产品名称", "差异化优势", "适用边界",
+    "地理与市场", "购买标准", "集成与兼容", "信任与合规",
+    "竞品 2", "竞品 2 官网域名", "竞品 3", "竞品 3 官网域名",
+}
+# B2B 专属字段：纯 B2C 必须省略；B2B 也都是选填（Case Builder 写飞书时另有更严的必填规则）。
+# 目标企业画像是多值字段，按 `目标企业画像 n` 展开；不带编号的单字段只为读旧题库保留。
+V6_B2B_ONLY_CASE_FIELDS = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
+V6_ICP_CASE_FIELD = re.compile(r"^目标企业画像(?:\s+\d+)?$")
 V6_NUMBERED_CASE_FIELDS = ("目标客户", "痛点", "使用场景", "产品特性")
-V6_NUMBERED_CASE_FIELD = re.compile(r"^(?:目标客户|痛点|使用场景|产品特性)\s+\d+$")
+V6_NUMBERED_CASE_FIELD = re.compile(r"^(?:目标企业画像|目标客户|痛点|使用场景|产品特性)\s+\d+$")
 V6_TOPIC_CASE_FIELD = re.compile(r"^主题\s+[1-3]（(?:宽泛|细分)）$")
 V6_ATTRIBUTE_SOURCE_FIELD = re.compile(
-    r"^(?:品类|目标企业画像|目标客户\s+\d+|痛点\s+\d+|使用场景\s+\d+|"
+    r"^(?:品类|目标企业画像(?:\s+\d+)?|目标客户\s+\d+|痛点\s+\d+|使用场景\s+\d+|"
     r"产品特性\s+\d+|差异化优势|适用边界|购买标准|集成与兼容|信任与合规|"
     r"地理与市场|补充内容)$"
 )
@@ -833,11 +829,14 @@ def _v6_competitors(
 ) -> list[dict]:
     selection = config.get("competitor_selection")
     items = selection.get("formal_competitors") if isinstance(selection, dict) else None
-    if not isinstance(items, list) or len(items) != 3:
-        errors.append("CONFIG competitor_selection must provide exactly 3 formal competitors in v6")
+    if not isinstance(items, list) or not 1 <= len(items) <= 3:
+        errors.append("CONFIG competitor_selection must provide 1 to 3 formal competitors in v6")
         return []
-    if selection.get("selection_count") != 3:
-        errors.append("CONFIG competitor_selection.selection_count must equal 3 in v6")
+    if selection.get("selection_count") != len(items):
+        errors.append("CONFIG competitor_selection.selection_count must equal the number of formal competitors")
+    for extra in range(len(items) + 1, 4):
+        if f"竞品 {extra}" in case_fields or f"竞品 {extra} 官网域名" in case_fields:
+            errors.append(f"CONFIG Case field 竞品 {extra} has no matching formal competitor")
     if selection.get("status") != "frozen":
         errors.append("CONFIG competitor_selection.status must equal frozen in v6")
 
@@ -1443,28 +1442,23 @@ def validate_v6(
             field_name in V6_REQUIRED_CASE_FIELDS
             or field_name in V6_OPTIONAL_CASE_FIELDS
             or V6_NUMBERED_CASE_FIELD.fullmatch(field_name)
+            or V6_ICP_CASE_FIELD.fullmatch(field_name)
             or V6_TOPIC_CASE_FIELD.fullmatch(field_name)
         ):
             errors.append(f"CONFIG unsupported Case field {field_name!r}")
     case_mode = str(case_fields.get("业务模式") or "").strip()
+    icp_fields = [key for key in case_fields if V6_ICP_CASE_FIELD.fullmatch(str(key))]
+    if case_mode == "B2C":
+        b2c_forbidden = (V6_B2B_ONLY_CASE_FIELDS & set(case_fields)) | set(icp_fields)
+        for field in sorted(b2c_forbidden):
+            errors.append(f"CONFIG Case field {field} must be omitted in a pure B2C Case")
     for field in sorted(V6_REQUIRED_CASE_FIELDS):
-        if field in V6_B2B_REQUIRED_CASE_FIELDS and case_mode == "B2C":
-            if field in case_fields:
-                errors.append(f"CONFIG Case field {field} must be omitted in a pure B2C Case")
-            continue
         if field not in case_fields:
             errors.append(f"CONFIG Case field {field} must be present")
         elif field == "补充内容":
             continue
         elif not str(case_fields.get(field) or "").strip():
             errors.append(f"CONFIG Case field {field} must be non-empty")
-    for prefix in V6_NUMBERED_CASE_FIELDS:
-        matches = [
-            key for key, value in case_fields.items()
-            if re.fullmatch(rf"{re.escape(prefix)}\s+\d+", str(key)) and str(value).strip()
-        ]
-        if not matches:
-            errors.append(f"CONFIG Case fields must contain at least one {prefix} n field")
 
     raw_topic_fields = {
         key: value
