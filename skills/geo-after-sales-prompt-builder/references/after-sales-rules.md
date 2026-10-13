@@ -68,25 +68,30 @@ The chain is continuous, but each stage answers exactly one question. **An earli
 |---|---|---|---|
 | **Before the presales run** | What is worth monitoring? | Brand facts, demand signals, attribute pool, initial attribute priority, competitors, Topics, the first Prompt set | Whether AI has a cognitive gap — nothing has been collected yet |
 | **Presales diagnostic run** | What might be wrong right now? | **Preliminary cognitive problem / opportunity hypothesis**: mentions, competitors, attribute cognition, accuracy, citations, recommendation reasons, content gaps | That a **stable** cognitive gap exists — AI answers fluctuate, so a single round only yields a suspicion |
-| **After-sales 3-day baseline** | What is the initial before benchmark under the final locked set? | Three daily valid observations, initial differences between Topics and a provisional optimisation order | A claim that a gap is stable over time, or that optimisation worked |
+| **After-sales formal baseline** | What is the initial before benchmark under the final locked set? | 3–7 valid runs per Prompt and platform, initial differences between Topics and a provisional optimisation order | A claim that a gap is stable over time, or that optimisation worked |
 | **Continuous monitoring** | Are the gaps persistent, and did optimisation improve them? | Same-question, same-condition, same-caliber window comparison; longitudinal evidence | A single-day comparison or immediate effect promises |
 
-**One line: presales suggests the opportunity, the 3-day baseline fixes the initial benchmark, long-term comparable data tests persistence and improvement.**
+**One line: presales suggests the opportunity, the formal baseline fixes the initial benchmark, long-term comparable data tests persistence and improvement.**
 
 ### Priority is set in two passes, never fixed in one
 
 | When | Basis | Nature of the result |
 |---|---|---|
-| **Before the presales run** | Does the customer care × does it affect purchase × does the brand truly have the capability × is it a strategic priority | **Theoretical priority** — demand and advantage only; no AI-gap data yet |
-| **After the 3-day baseline** (or once a presales batch has measured the gap) | **Purchase impact × initial measured gap × optimisability** — three legs, multiplied | Operational priority for the next actions, explicitly provisional about persistence |
+| **Before the presales run** | **Importance × changeability**; current gap marked `待测` | **Initial priority** — no current-gap data yet |
+| **After the formal baseline** (or once a presales batch has measured the gap) | **Importance × current gap × changeability** — three conditions, multiplied | Operational priority for the next actions, explicitly provisional about persistence |
 
-The second pass adds an **initial measured gap**, not a stable one. Presales cannot measure it before collection; three daily observations provide a reproducible starting point but still cannot separate short-term misses from a persistent gap. Confirm persistence through later comparable windows.
+The second pass adds an **initial measured gap**, not a stable one. Presales cannot measure it before collection; the baseline runs provide a reproducible starting point but still cannot separate short-term misses from a persistent gap. Confirm persistence through later comparable windows.
 
-**The operational formula has three legs; `相对竞品` is not a fourth.** Attributes, and the monitoring Prompts that carry them, share it. Scale each leg: purchase impact 高 3 / 中 2 / 低 1; measured gap = 3 × (1 − the Topic's measured rate); optimisability 证据缺口 3.0 / 持平 or no gap 2.2 / 能力缺口 1.5. Set the tier cuts per engagement so P1 stays a short list, and **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 however it scores.
+**The three conditions follow Profound's attribute prioritisation: importance, current gap, changeability.** Attributes, and the monitoring Prompts that carry them, share them.
+- **Importance** (重要性): how much the Attribute matters to the purchase decision — 高 3 (decides whether the brand gets onto the buyer's shortlist) / 中 2 (clearly matters to some buyers or specific situations) / 低 1 (relevant, but does not usually decide the choice). Grade it from the user-language sources in *Customer and Market Signals* (search data, sales records, reviews, community).
+- **Current gap** (当前差距): distance between what AI says now and what we want it to say — 3 × (1 − the Topic's measured rate). Use the measured value; before collection mark it `待测`, never fill it from intuition. Where another company shares or nearly shares the brand's name, measure by the share of answers citing the brand's own domain, not by name occurrences.
+- **Changeability** (可改变性): whether the brand can realistically move it within its own control — 证据缺口 (capability exists but is unpublished) 3.0 / 持平 or no gap 2.2 / 能力缺口 (capability absent) 1.5. A direction where a competitor's lead rests on brand awareness or broad media consensus scores as a capability gap.
 
-Why `相对竞品` is not multiplied in: the verdict is read off the public layer, so most `劣势` rows mean "the capability exists but is not published" — the same fact that makes optimisability high. Multiplying both counts it twice with opposite signs. In practice a four-leg formula ranks parity rows on top (the brand already matches competitors publicly yet still goes unmentioned, so the bottleneck is not content and the row is hard to move) and pushes evidence-gap rows down, although those are the fastest to move. **Competitive position enters inside optimisability instead**: ask whether publishing the missing material would actually bring the brand level with the leaders. If it would not — a competitor lists certifications per model while the brand can only publish a summary figure — score optimisability lower.
+Multiply the three (before collection, importance × changeability only). Set the tier cuts per engagement so P1 stays a short list, and **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 however it scores.
 
-**Within one tier, order the work by how ready the material is.** Evidence-gap rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. This is an execution order inside the tier, not a further multiplier.
+**`相对竞品` is not a fourth factor.** It records the **real industry position** (领先 / 持平 / 劣势 / 待确认), judged on the facts from the public layer wherever that can settle it, and **from the client wherever it cannot** — a client knows where its own spec sits in the industry, so never infer `持平` from the mere fact that neither side published. It feeds changeability: once the material is in place, can the brand catch the leader? If not (a competitor lists certification per model while the brand can only give a summary figure), score changeability lower. Multiplying it in separately would double-count.
+
+**Within one tier, order the work by how ready the material is.** Rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. This is an execution order inside the tier, not a further multiplier.
 
 Therefore: **presales may rank candidate Topics; the after-sales baseline informs operational priority, but neither stage alone promises that an action will work.**
 
@@ -170,43 +175,43 @@ This shape is a reference, not a validation checklist — a deliverable is not w
 
 The end of the whole chain is one table. **The reference shape** — the reference shape only, per the note above:
 
-`优先级 | 主题 | 主题类型 | 核心属性 | 限定属性 | 问题 | 来源依据 | 售前结果 | 3 天基线 | 是否正式优化`
+`优先级 | 主题 | 主题类型 | 核心属性 | 限定属性 | 问题 | 来源依据 | 售前结果 | 正式基线 | 是否正式优化`
 
-**Keep the 售前结果 and 3 天基线 columns side by side.** They make the two-pass priority auditable: the latter supplies an initial reading rather than proof that a gap is stable.
+**Keep the 售前结果 and 正式基线 columns side by side.** They make the two-pass priority auditable: the latter supplies an initial reading rather than proof that a gap is stable.
 
 **核心属性 and 限定属性 are two roles, not two trees.** The core attribute is the perception that makes the Topic worth watching on its own; the qualifiers are the pool attributes relevant to this Topic that change how a question is asked. Once an attribute is selected as a core attribute it stops also serving as a qualifier. Selecting the core attribute is the first layer; picking qualifiers is the second, and the second layer is a **filter, not a re-rank** — it asks only "is it relevant?" and "is it worth a share of the query budget?", and the same attribute may take different tiers in different Topics without the pool being re-sorted.
 
 **限定属性 fall into four slots, named as in 《海外 GEO 售前诊断报告 V2 PRD》 → 「细分主题」**: 无限定条件 (no qualifier) / 目标用户 (target user) / 偏好标准 (preference criteria) / 约束 (constraint). Pain points belong under 偏好标准 — a dimension buyers weigh while comparing, not a fifth slot. Coverage and Depth Topics follow different combination rules and mixing them is an error: a Coverage Prompt carries no condition or at most one low-complexity main condition and must not combine slots, while a Depth Topic may compound two or more conditions that genuinely change the choice.
 
-**「是否正式优化」 is filled by us after the baseline**, never by the client. The three-day result can justify an initial action with uncertainty recorded; it cannot certify a stable gap. Leave the column blank during presales rather than writing a placeholder.
+**「是否正式优化」 is filled by us after the baseline**, never by the client. The baseline result can justify an initial action with uncertainty recorded; it cannot certify a stable gap. Leave the column blank during presales rather than writing a placeholder.
 
 **An attribute is promoted from qualifier to its own Depth Topic** when it would form an independent competitive situation: a materially different competitor set, a changed evaluation standard, or a wholly different content strategy. That is the same clustering test that governs Topic boundaries — competition set or evaluation standard differs, so split.
 
 ## Topic and Attribute Selection Criteria
 
-Authoritative source for this section: the canonical rule document `售后生词规则` (§3 第三步, §4; Feishu rev 71 as of 2026-09-22). When this file and that rule document differ, the rule document wins.
+Authoritative source for this section: the canonical rule document `售后生词规则` (§1.5.1, §3 第三步, §4; Feishu rev 131 as of 2026-10-13). When this file and that rule document differ, the rule document wins.
 
-Selection runs on one joint test, applied to Attributes and Topics alike: **demand × standing to win × deliverable, all three or nothing** (有需求 × 有资格赢 × 可交付，三者缺一即为废).
+Attributes are prioritised by importance × changeability before collection, adding current gap after the baseline (see *Priority is set in two passes* above); Topics are then clustered from where the P1 Attributes land.
 
-| Leg | Meaning | Who judges |
+| Condition | Meaning | Who judges |
 |---|---|---|
-| Demand (有需求) | Buyers really ask it | The customer's buyer-intent work plus our own buyer evidence |
-| Standing to win (有资格赢) | The direction is eligible to compete and we hold the corresponding assets | Us, from presales diagnostic data plus an asset inventory |
-| Deliverable (可交付) | The corresponding action sits within 90-day control | Us |
+| Importance | How much the Attribute matters to the purchase decision | From the user-language sources: the client supplies sales and support records; we collect search data, reviews, and community language |
+| Changeability | Whether the brand can move it within its own control | Us, from gap type, `相对竞品`, and the asset inventory |
+| Current gap | Distance between what AI says and what we want | The formal baseline data; `待测` before collection |
 
-Do not ask the customer to rank. **The resulting Attribute order becomes the candidate order for Topics.** A direction with demand but no standing to win cannot be promised; one that is winnable but not asked about is self-indulgent differentiation nobody queries.
+Do not ask the customer to rank. **Topics are clustered from where the P1 Attributes land** — the core category as one Topic, and the buyers or scenarios where P1s concentrate and change the purchase judgement as Depth Topics. A differentiator no buyer asks about does not become P1 and does not get its own Topic.
 
-**This joint test is the presales-stage form of the priority judgement, not the final result.** Before the presales run the basis is demand × standing to win × deliverable. **After the 3-day baseline the basis adds an initial measured gap and optimisability**; these observations may guide the next action but do not establish a stable cognitive gap. Compare later windows before claiming persistence or improvement. See *The Four Stages and What Each Can Conclude* above.
+**Selection runs in two passes.** Before the presales run, Topics follow the P1 Attributes from importance × changeability. **After the formal baseline, current gap is added and the priority re-ranked**; these observations may guide the next action but do not establish a stable cognitive gap. Compare later windows before claiming persistence or improvement. See *The Four Stages and What Each Can Conclude* above.
 
-**How to judge "standing to win".** If a competitor's advantage in a direction rests on brand awareness or broad media consensus, it is not reversible in the short run. **Do not open a Topic for that direction.** A Topic carries Prompts, Prompts carry a measurement cost, and a direction nothing can move returns the same number every cycle — buying a baseline instrument that can never read differently is worse than not measuring it. Read the overall category position from the presales round instead. Directions whose competitor advantage does *not* rest on consensus are the battlefield that is movable within 90 days.
+**Consensus-locked directions do not get a Topic.** If a competitor's advantage in a direction rests on brand awareness or broad media consensus, it is not reversible in the short run. Its changeability scores as a capability gap, and **do not open a Topic for that direction.** A Topic carries Prompts, Prompts carry a measurement cost, and a direction nothing can move returns the same number every cycle — buying a baseline instrument that can never read differently is worse than not measuring it. Read the overall category position from the presales round instead. Directions whose competitor advantage does *not* rest on consensus are the battlefield that is movable within 90 days.
 
 **Judge this per Attribute, not per Topic.** A Topic can be unmovable as a whole while individual Attributes inside it are fixable — an absent OEM page or an unpublished certification is an evidence gap that one page closes, even when the Topic's leaders are consensus-locked. When you drop a Topic, **re-home its Attributes one by one**: promote the movable ones into a surviving Topic, and for each one you leave behind record why. Deleting a Topic and letting its Attributes sit in the plan unmeasured is the failure this rule exists to prevent.
 
-**Evidence hierarchy for that judgement — answer layer beats spec sheet.** Read the AI answers' sentiment matrix (which competitors are criticised on this theme, and whether we are clean) before comparing product specifications, and put market-convention web research last. A dimension where competitors have hardware parity can still be a battlefield if AI answers keep criticising them there; conversely, buyer-forum language that never enters AI answers is not monitoring evidence. Structural losses recorded in the answer layer do exclude a Prompt ("only structural evidence excludes; a single zero-mention never does"), and a dimension where we are the weaker party **does not get its own Topic** — let the category Prompts surface it.
+**Evidence hierarchy for the consensus and optimisation judgement — answer layer beats spec sheet.** Read the AI answers' sentiment matrix (which competitors are criticised on this theme, and whether we are clean) before comparing product specifications, and put market-convention web research last. A dimension where competitors have hardware parity can still be a battlefield if AI answers keep criticising them there; conversely, buyer-forum language that never enters AI answers is not monitoring evidence. Structural losses recorded in the answer layer do exclude a Prompt ("only structural evidence excludes; a single zero-mention never does"), and a dimension where we are the weaker party **does not get its own Topic** — let the category Prompts surface it.
 
 **The answer layer may not exist — check before reading anything into its absence.** A sentiment matrix exists only if the presales run produced one *and* put the **discovery** questions into its sentiment sample scope. Two failure modes are both common, and neither is an anomaly: a rough presales pass runs visibility only and has no sentiment layer at all; and a run that marked only the branded evaluation question produces a self-portrait of the brand rather than a competitor matrix, so there are still no per-theme negatives to read. Verify which case you are in before treating the answer layer as evidence.
 
-When the matrix is absent, do **not** report the emptiness as a finding that competitors are clean. Fall back to the next evidence layer — product specifications, our own asset inventory, external research on who leads the category — mark the standing-to-win judgement as **provisional**, and say so in the deliverable. Record the gap as a process fix for the next presales run rather than as a blocker for this one.
+When the matrix is absent, do **not** report the emptiness as a finding that competitors are clean. Fall back to the next evidence layer — product specifications, our own asset inventory, external research on who leads the category — mark the consensus judgement as **provisional**, and say so in the deliverable. Record the gap as a process fix for the next presales run rather than as a blocker for this one.
 
 **When several brands must be judged, keep the theme boundaries fixed across the run** so a later matrix stays comparable to the first one.
 
@@ -216,7 +221,7 @@ When the matrix is absent, do **not** report the emptiness as a finding that com
 
 **Differentiators are Attributes.** They are one row each in the decision-attribute table with their own priority — never a separate section, never a Topic, never a Tag. The "competitor cannot copy this" test decides **how a claim may be worded as a differentiator**, not whether a dimension earns a row: shared category requirements (compliance certification, integration, SLA) are legitimate Attributes and often decide the shortlist; they simply must not be sold as differentiators. A claim every major competitor can match — global inventory or price advantage, 24/7 multilingual support, "more advanced technology" — is either worded as the survivable part or recorded as parity. Trade-press or self-declared claims are labelled **品牌自述**, never asserted as fact, and gated on client confirmation. Attribute names must be legible in the client's own industry vocabulary — when the client says a name is unreadable, rename it rather than explaining it.
 
-**Standing-to-win judgements are made against the actual category leaders, not only the frozen competitor list.** Treating the frozen list as the whole competitive set produces false confidence: the brand may look strong against the configured set while the real answer-layer winners are elsewhere. Use the frozen list for Prompt construction and reporting consistency, but judge winnability against whoever actually leads the category's AI answers.
+**Consensus and `相对竞品` judgements are made against the actual category leaders, not only the frozen competitor list.** Treating the frozen list as the whole competitive set produces false confidence: the brand may look strong against the configured set while the real answer-layer winners are elsewhere. Use the frozen list for Prompt construction and reporting consistency, but judge them against whoever actually leads the category's AI answers.
 
 **The per-attribute relative-competitor verdict is researched, not requested.** Every P1, and every P2 that carries Prompts, is judged by actually comparing our public position against that product line's leaders on that attribute — answer layer first, then the competitors' own public pages (spec sheets, certification pages, service terms), then third-party material. Run it product line by product line: the comparison set is not the same set across lines.
 
@@ -268,11 +273,11 @@ Topic and Prompt both grow out of Attributes, so the rule document §3 derives a
 
 **Step 3 — B2B and B2C are not one attribute set.** The required categories, the wording, and the evidence lines all differ; mixing them yields a set that fits nobody — see the rule document §3 for the full comparison table (skeleton classes seen as required, how attributes are worded, data line, and when a single B2B/B2C set is acceptable).
 
-**Step 3.5 — validate that someone actually asks it, before locking.** An attribute that hits the priority test is still only a hypothesis about the market until a first-party source says buyers raise it. Check each P1, and each P2 that will carry Prompts, against our available sources: GSC/SEO queries, sales and CRM language, support tickets, win/loss and churn reasons, review and community language, already-collected AI answers. Traditional search volume is a directional signal, never proof of AI-side demand, and a long-tail or regional Query may legitimately have little volume while inheriting demand from its parent Topic. Where no first-party source exists, the row is marked **hypothesis grade** — it may still ship in a Discovery-first set, but it cannot be described as frequent, commonly asked, or high-demand. We have no AI prompt-volume data source; do not invent one, and do not present a tool's keyword figure as AI-answer volume.
+**Step 3.5 — validate that someone actually asks it, before locking.** An attribute graded P1 or P2 is still only a hypothesis about the market until a first-party source says buyers raise it. Check each P1, and each P2 that will carry Prompts, against our available sources: GSC/SEO queries, sales and CRM language, support tickets, win/loss and churn reasons, review and community language, already-collected AI answers. Traditional search volume is a directional signal, never proof of AI-side demand, and a long-tail or regional Query may legitimately have little volume while inheriting demand from its parent Topic. Where no first-party source exists, the row is marked **hypothesis grade** — it may still ship in a Discovery-first set, but it cannot be described as frequent, commonly asked, or high-demand. We have no AI prompt-volume data source; do not invent one, and do not present a tool's keyword figure as AI-answer volume.
 
-**On the AI-Gap leg of the priority test (fill it only when it has been measured).** Profound's third question — is there distance between what AI says and what we want it to say — is the leg we most often cannot answer at generation time, because a first set is designed before any answer exists. Do not fill it from intuition: an unfilled Gap is marked `待测`, never "AI doesn't know us". **But the engagement usually runs two rounds** — presales collects a first answer batch, so after-sales often *does* have measured Gap data. When it exists, fill it with the measured value and cite the sample ("APAC coverage mentioned in 33.3% of 15 valid discovery prompts, the other 7 topics at 0"), and keep it to the answer layer: a sales hunch or "the client says this matters" is not Gap evidence. **Where another company shares or nearly shares the brand's name, measure the gap on the brand's own-domain citation rate, not on name mentions**: a name appearing in the answer does not show the AI read the brand's content, and some of those answers cite the other company's pages under the brand's name.
+**On the current-gap condition (fill it only when it has been measured).** Profound's third question — is there distance between what AI says and what we want it to say — is the leg we most often cannot answer at generation time, because a first set is designed before any answer exists. Do not fill it from intuition: an unfilled Gap is marked `待测`, never "AI doesn't know us". **But the engagement usually runs two rounds** — presales collects a first answer batch, so after-sales often *does* have measured Gap data. When it exists, fill it with the measured value and cite the sample ("APAC coverage mentioned in 33.3% of 15 valid discovery prompts, the other 7 topics at 0"), and keep it to the answer layer: a sales hunch or "the client says this matters" is not Gap evidence. **Where another company shares or nearly shares the brand's name, measure the gap on the brand's own-domain citation rate, not on name mentions**: a name appearing in the answer does not show the AI read the brand's content, and some of those answers cite the other company's pages under the brand's name.
 
-**Step 4 — cross-map intents × attributes and filter by the joint test; the surviving order becomes the Topic candidate order.** Organise intents by the canonical five journey stages (`了解需求 / 比较方案 / 评估是否适合 / 准备购买 / 使用与续费` — the confirmation doc's labels; older namings like 了解产品/确认功能 are retired), map each to the attribute(s) that answer it, and keep only cells passing demand × standing to win × deliverable. An intent with no attribute behind it is low priority; an attribute no intent reaches is self-indulgent differentiation nobody queries. Demand is judged from the client's signal pass plus our own buyer evidence; the other two by us. Do not ask the customer to rank.
+**Step 4 — cross-map intents × attributes; the P1 Attributes and where they land become the Topic candidates.** Organise intents by the canonical five journey stages (`了解需求 / 比较方案 / 评估是否适合 / 准备购买 / 使用与续费` — the confirmation doc's labels; older namings like 了解产品/确认功能 are retired), map each to the attribute(s) that answer it, and keep the cells carrying P1 and P2 Attributes. An intent with no attribute behind it is low priority; an attribute no intent reaches is self-indulgent differentiation nobody queries. Importance is judged from the client's signal pass plus our own buyer evidence. Do not ask the customer to rank.
 
 Attributes are also not kept as a separate library: they exist to build and explain Topics, so do not create one Topic per Attribute or promote a brand's self-described selling point into a buyer need. Keep generation-time attributes (which design and explain the Prompts) apart from post-analysis attributes clustered out of AI answers; the two can be linked but never share one meaning. We draft the attribute list by category and the client only adds, deletes, and corrects — a dimension the client did not raise but the procurement RFP plainly evaluates is raised by us for confirmation. If interviews are used, run When / Where / While / with What / Why / how-feeling / with-Whom and converge on the 5–8 attributes that genuinely affect the choice.
 
@@ -396,13 +401,13 @@ Run each candidate Prompt three to five times on each proposed platform before l
 ambiguity, leading wording, and semantic duplication. Do not select or reject a
 Prompt because the target brand was or was not mentioned, and never retire an
 existing Prompt on a single or zero mention — that corrupts the visibility
-measurement. **"Can we win" is only one leg of the joint selection test — demand
-× standing to win × deliverable — and must not be used alone** (see Topic and
-Attribute Selection Criteria above). Judge it by the rule document's method: a
-competitor advantage resting on brand awareness or broad media consensus is not
-reversible in the short run, so treat that direction as baseline only; where the
-advantage does not rest on consensus, expect to move it within 90 days. A single
-or zero mention never enters this judgement.
+measurement. **Whether a direction can be moved is the changeability
+condition, not a reason to drop a Prompt** (see Topic and Attribute Selection
+Criteria above). Judge it by the rule document's method: a competitor advantage resting on brand awareness or
+broad media consensus is not reversible in the short run, so that direction gets
+no Topic of its own and no promise of improvement; where the advantage does not
+rest on consensus, expect to move it within 90 days. A single or zero mention
+never enters this judgement.
 
 When comparison is useful, a baseline observation group uses Discovery Prompts
 sampled at the same cadence as its comparable group. It is not automatically a
@@ -412,21 +417,19 @@ observation Topic.
 
 Confirm the business scope before trial; after three valid trial runs per
 Prompt/platform, the customer approves the final set and its version. Trial
-answers do not count toward the formal baseline. Run that baseline on three
-consecutive calendar days, once per Prompt/platform/day, under the same
-questions, market, language, and collection configuration. Use only observed
-valid samples; failures are not zeroes, and missing days cannot be glued into
-a three-day window. Three days establishes an initial benchmark, not
-statistical stability. This skill emits the plan; it does not execute crawling
+answers do not count toward the formal baseline. Run that baseline 3–7 times
+per Prompt/platform under the same questions, market, language, and collection
+configuration — in one sitting or spread over several days; what matters is
+enough runs. Use only observed valid samples; failures are not zeroes. The
+baseline establishes an initial benchmark, not statistical stability. This skill emits the plan; it does not execute crawling
 unless explicitly requested.
 
 An added, deleted, or reworded Prompt starts a new set version and a separate
-three-day baseline for its affected market/group. Preserve IDs, evidence
+formal baseline for its affected market/group. Preserve IDs, evidence
 references, and history, but do not concatenate old and new set-level windows.
 Unchanged common Prompts remain comparable on their own. Select initial
-optimization priorities using observed evidence plus confirmed advantage,
-evidence availability, AI recommendation opportunity, and content
-controllability; verify persistence in continued monitoring.
+optimization priorities by importance × current gap × changeability (see
+*Priority is set in two passes*); verify persistence in continued monitoring.
 
 ## Field Semantics
 

@@ -298,13 +298,15 @@ def main() -> int:
     if lifecycle == "formal_baseline" and baseline.get("status") not in {"formal", "active"}:
         fail("formal_baseline lifecycle requires baseline.status formal or active", errors)
     if baseline or lifecycle == "formal_baseline":
-        if baseline.get("window_days") != 3:
-            fail("baseline.window_days must be 3", errors)
-        if baseline.get("runs_per_day") != 1:
-            fail("baseline.runs_per_day must be 1", errors)
+        # 基线只规定总次数：每题每平台 3–7 次，可一次跑完也可分天跑。
+        # 旧题库写的 window_days × runs_per_day 按总次数换算兼容。
+        runs = baseline.get("planned_runs")
+        if runs is None and "window_days" in baseline:
+            days, per_day = baseline.get("window_days"), baseline.get("runs_per_day", 1)
+            runs = days * per_day if all(isinstance(v, int) and not isinstance(v, bool) for v in (days, per_day)) else None
+        if not isinstance(runs, int) or isinstance(runs, bool) or not 3 <= runs <= 7:
+            fail("baseline.planned_runs must be an integer between 3 and 7", errors)
     if formal_collection:
-        if baseline.get("calendar_days") is not True:
-            fail("formal baseline must use consecutive calendar days", errors)
         if not str(baseline.get("conditions_key") or "").strip():
             fail("formal baseline requires conditions_key", errors)
         if baseline.get("valid_samples_only") is not True:

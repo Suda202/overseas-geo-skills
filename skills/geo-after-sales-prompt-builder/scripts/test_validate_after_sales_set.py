@@ -114,8 +114,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data = staged_bank(5, "hypothesis")
         data["config"]["baseline"] = {
             "status": "formal",
-            "window_days": 7,
-            "calendar_days": True,
+            "planned_runs": 7,
             "conditions_key": "us-en-v1",
             "valid_samples_only": True,
             "failures_as_zero": False,

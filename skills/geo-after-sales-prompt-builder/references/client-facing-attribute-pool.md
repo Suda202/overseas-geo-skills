@@ -35,7 +35,7 @@ Use the sections that fit the task; do not force all of them into a small update
    Adapt the wording by buyer type:
    - **B2B:** first-party sales/procurement/contract/renewal records usually outweigh public evidence.
    - **B2C hardware/consumer:** public reviews, community language, ecommerce Q&A and third-party reviews may carry the buyer-language layer; internal returns, service tickets, warranty terms and test data remain crucial for relative-competitor judgement.
-   - Public absence is **not** `无优势` — but it is also **not** `待确认` until the external comparison has actually been run: the answer layer first, then the competitors' own public pages (spec sheets, certification pages, service terms), then third-party material. `待确认` is reserved for what stays undetermined *after* that pass; name the material that would settle it, and ask the brand party for that. A verdict reached by comparison is ours to defend, and the client's internal records then either confirm it or upgrade it.
+   - Public absence is **not** `无优势` — but it is also **not** `待确认` until the external comparison has actually been run: the answer layer first, then the competitors' own public pages (spec sheets, certification pages, service terms), then third-party material. **Absence on both sides is likewise not `持平`** — that is exactly the case to put to the client, who knows where its own number sits in the industry. `待确认` is reserved for what stays undetermined *after* that pass and the client has not yet answered; name the material that would settle it, and ask the brand party for it. A verdict reached by comparison is ours to defend, and the client's internal records then either confirm it or upgrade it.
 
 3. **品牌事实【请核对】**
 
@@ -63,7 +63,7 @@ Use the sections that fit the task; do not force all of them into a small update
    - `属性`: the buyer decision focus AI should associate with the brand. Differentiators are rows in this table, not a separate section, Topic, or Tag.
    - `解决的买家问题`: plain buyer problem or selection risk. Keep it close to customer language.
    - `购买影响`: buyer-side impact, normally 高 / 中 / 低. Judge by “if unresolved, does the buyer drop or downgrade the brand?”, not by frequency alone.
-   - `相对竞品`: 优势 / 持平 / 劣势 / 待确认. Add a short evidence note when needed.
+   - `相对竞品`: the attribute's **real position in the industry** — 优势 / 持平 / 劣势 / 待确认. Judge it on the facts, not on whether they happen to be published (publication is the **gap type**, a separate axis). Compare against the leaders publicly **first**; where the public layer cannot settle it — the brand's own spec or internal capability — put the question to the client rather than guessing. Add a short evidence note.
    - `优先级`: our initial action priority, not the customer's vote and not the final optimization priority after baseline.
    - `还缺什么`: specific material needed from the brand party; omit or leave blank when no material is needed.
    - `备注`: evidence and caveats we found. Keep it factual and short. For factual attributes, also note where public sources conflict or AI answers state the fact wrongly or outdatedly (quote the wrong claim and its platform), so the brand party can confirm the right answer.
@@ -77,24 +77,14 @@ Use the sections that fit the task; do not force all of them into a small update
 
 5. **Priority Rules**
 
-   Before any answers are collected, set the initial attribute priority from `购买影响` × `业务重点`, reading `相对竞品` together with its gap type: a `劣势` that is only unpublished (证据缺口) is the most movable row, not a weak one.
-
-   | Condition | Initial priority |
-   |---|---|
-   | 高影响 + 优势, or core scope/table-stakes recognition that must enter the candidate set | P1 |
-   | 高影响 + 持平 | P1 when the first task is to make a new/unknown product recognized; otherwise P2 |
-   | 高影响 + 劣势，证据缺口（有能力但没公开） | P1 or P2 by business emphasis — publishing the material is the fastest available move |
-   | 高影响 + 劣势，能力缺口（确实没有） | P3 or baseline-only; do not create a standalone Depth Topic to fight a structural loss |
-   | 高影响 + 待确认 | 待定 / P2 pending evidence; ask for evidence instead of silently downgrading |
-   | 中影响 | Usually P3 unless it is a confirmed strategic priority with evidence |
-   | 低影响 | P3 or excluded |
+   Before any answers are collected, set the initial priority from **importance × changeability**; current gap is `待测` until the baseline (the three conditions and their scales are in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes*). `购买影响` is the importance reading; `业务重点` the brand party states counts as evidence for it. `相对竞品` and the gap type feed changeability: an `优势` or `持平` row whose facts are unpublished (证据缺口) is the cheapest win; a `劣势` row behind on the facts, or a consensus-locked direction, scores low.
 
    Important constraints:
-   - P1 can coexist with `持平`: for a new product or category gate, the first-stage problem may be “AI does not know we have this,” not differentiation.
+   - P1 can coexist with `持平`: for a new product or category gate, the first-stage problem may be "AI does not know we have this," not differentiation.
    - P3 rows remain visible so the brand party can disagree, but P3 attributes do **not** get first-batch Prompts.
    - Only P1/P2 attributes normally carry first-stage Discovery Prompts.
    - `待确认` means the evidence is missing, not that the attribute is weak.
-   - Once a gap has been measured, re-rank with the operational formula in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes* (购买影响 × 当前认知差距 × 可影响性); do not backfill the measured-gap leg before collection.
+   - Once the baseline has measured the current gap, re-rank with importance × current gap × changeability; do not backfill the current gap before collection.
 
 6. **监测主题与问题 / 提示词【请核对】**
 
@@ -131,7 +121,7 @@ Use the sections that fit the task; do not force all of them into a small update
    1. 品牌方确认业务重点、事实边界和属性池。
    2. Candidate Prompts run three to five trial collections per proposed platform to check fit, ambiguity, leading wording and duplication.
    3. The final Prompt set is confirmed and version-locked after trial.
-   4. Formal baseline uses three consecutive calendar days, once per Prompt/platform/day; trial answers are not baseline data.
+   4. Formal baseline runs each Prompt 3–7 times per platform, in one sitting or over several days; trial answers are not baseline data.
 
 ## Wording Rules
 

@@ -41,7 +41,7 @@ Recommended root fields:
     "expected_total": 0,
     "competitor_selection": {},
     "trial": {"status": "planned", "planned_runs": 3},
-    "baseline": {"status": "planned", "window_days": 3, "runs_per_day": 1}
+    "baseline": {"status": "planned", "planned_runs": 5}
   },
   "questions": []
 }
@@ -193,8 +193,9 @@ silently dropping them:
 - `customer_confirmation.prompt_set_status`: confirmed after trial; retain the
   existing summary `status` separately;
 - `prompt_version`: immutable market/language set version after final approval;
-- `baseline`: `status`, `window_days: 3`, `runs_per_day: 1`,
-  `calendar_days: true`, `conditions_key`, `valid_samples_only`, and for a
+- `baseline`: `status`, `planned_runs` (3–7 per Prompt/platform; legacy
+  `window_days` × `runs_per_day` is read as the total), `conditions_key`,
+  `valid_samples_only`, and for a
   formal baseline `prompt_version` matching the locked set;
 - `collection_config`: market, language, platforms, model/mode, cadence, and
   other conditions required for comparability.
@@ -203,25 +204,24 @@ silently dropping them:
 trial evidence, and a locked Prompt version. `hypothesis` or
 `after_sales_signal` evidence cannot be formal-ready. Trial answers are never
 part of the baseline. Any addition, deletion, or wording change requires a new
-set version and a separate three-day baseline for the affected market/group;
+set version and a separate formal baseline for the affected market/group;
 retain history but do not concatenate old and new set-level series.
 
 The validator checks declared counts, references, cadence, and version linkage;
 it does not read crawler answers or prove collection occurred. Before marking
 trial or baseline collection complete, the collection workflow must audit the
-raw results for each Prompt/platform/day and retain their locations.
+raw results for each Prompt/platform run and retain their locations.
 
-Compute only from three consecutive days of observed valid daily samples.
-Diagnose failed or missing observations and restart the affected window rather
-than imputing zeroes or concatenating non-consecutive days. Three observations
-establish an initial benchmark, not proof of a stable long-term gap.
+Compute only from observed valid runs (3–7 per Prompt/platform). Diagnose
+failed or missing runs and rerun them rather than imputing zeroes. The baseline
+runs establish an initial benchmark, not proof of a stable long-term gap.
 
 ## Cadence
 
 Cadence belongs in a separate schedule file or an explicit CSV column:
 
-- Discovery: daily during a formal three-calendar-day baseline, then weekly or
-  otherwise as agreed.
+- Discovery: 3–7 runs per Prompt/platform for the formal baseline (one sitting
+  or several days), then weekly or otherwise as agreed.
 - Evaluation and Competitor: as agreed or event-triggered; no fixed default
   quota or cadence is implied.
 - Category Awareness: one-time baseline or occasional refresh.
@@ -247,10 +247,9 @@ Before delivery:
 11. CSV rows match JSON rows and all upload length limits.
 12. Discovery Prompts contain no brand names, ask a commercial recommendation/selection question, and test one primary intent.
 13. Trial review checks category/task fit, ambiguity, leading language, and duplication; target-brand mention is not a trial pass/fail criterion.
-14. Formal baseline plans three consecutive calendar days with one run per
-    Prompt/platform/day. Audit observed valid samples separately; failures are
-    not zeroes, missing days are not glued together, and old/new Prompt
-    versions are not concatenated.
+14. Formal baseline plans 3–7 runs per Prompt/platform. Audit observed valid
+    samples separately; failures are not zeroes, and old/new Prompt versions are
+    not concatenated.
 15. Each Topic records a parent Search-Demand anchor or an explicit reason why no reliable Search-Demand signal is available.
 16. A `discovery` generation stage contains Discovery Prompts only. Other
     intents are added later under their own evidence-backed purpose, not a fixed
@@ -260,9 +259,9 @@ Before delivery:
     decisions; it is not limited to product features or technical parameters.
 18. Attributes were derived in the rule document's four steps — twelve-category
     gap sweep, category-specific attributes from the three sources, one B2B/B2C
-    line or an explicit split — and ranked by demand × standing to win ×
-    deliverable before Topics were named. The delivery states the resulting
-    Attribute order.
+    line or an explicit split — and graded P1 / P2 / P3 by purchase-decision
+    importance before Topics were named. The delivery states the resulting
+    grades.
 19. The internal market coverage pass was completed before Prompt lock. Each
     retained market delta has evidence, each omitted slice has a reason, and
     reuse of an `intent_key` is justified by equivalent buyer decisions and
@@ -295,7 +294,7 @@ Before delivery:
 25. Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `购买影响`, `相对竞品`, `优先级`, evidence gaps and `客户确认`; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; every table uses the write-what-to-change `客户确认` convention; question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
 26. Business scope was confirmed before three to five trial runs per candidate
     Prompt/platform; the final set was confirmed and version-locked after trial.
-    Trial results do not count toward the three daily baseline observations.
+    Trial results do not count toward the formal baseline runs.
 27. The customer-facing document contains the resulting brand facts, attribute
     pool and necessary market-specific Prompts, not the full internal coverage
     matrix or unresolved reasoning.
