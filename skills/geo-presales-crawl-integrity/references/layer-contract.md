@@ -32,8 +32,8 @@
 
 | 平台 | 商品卡字段 | 不计入 |
 |---|---|---|
-| `chatgpt` | `products[]`；购买选项在 `offers[]` | 无标题的空占位项（实测 1908 张里 196 张）；`ads` |
-| `overview` | `source[]` 中 `type=product`（文档：「products inside ai overview」，position = recommended / inline_link / reference） | `products[]`（文档：「Google wale sponsored products」；实测 `section_title` 为 People also ask / Popular products / Deals 等区块名，525 项里 513 项不在 AI 概览商品中）；`type=ads product` |
+| `chatgpt` | `products[]`；购买选项在 `offers[]` | 无标题的空占位项（实测 1761 张里 130 张）；`ads` |
+| `overview` | `source[]` 中 `type=product`（文档：「products inside ai overview」，position = recommended / inline_link / reference） | `products[]`（文档：「Google wale sponsored products」；实测 `section_title` 为 People also ask / Popular products / Deals 等区块名，379 项里 371 项不在 AI 概览商品中）；`type=ads product` |
 | `aimode` | `products[]`；购买选项在 `stores[]` | — |
 | `gemini` | `products[]`；购买选项在 `stores[]` | — |
 | `perplexity` | 无 | 不支持购物指标，不按 0 计 |

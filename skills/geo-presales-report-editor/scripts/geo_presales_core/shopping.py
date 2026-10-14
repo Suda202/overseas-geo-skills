@@ -34,13 +34,13 @@ from .util import domain_matches, find_alias_spans, normalize_host, resolve_alia
 
 # 平台 → 商品卡在哪个字段。未登记的平台不支持购物指标（返回 None，不是空列表）。
 #
-# - chatgpt：`products[]`。实测 1908 张卡里 196 张是空占位（title/offers/id 全空），必须丢弃后再编位。
+# - chatgpt：`products[]`。实测 1761 张卡里 130 张是空占位（title/offers/id 全空），必须丢弃后再编位。
 # - overview（AIO）：取 `source[]` 里 `type == "product"`，**不取 `products[]`**。
 #   依据一（Scrapeless 文档 google-ai-overview「Data field」）：Source = "products inside ai overview"，
 #   product_position 取 recommended / inline_link / reference，`type == "ads product"` 是广告（排除）；
 #   Products = "Google wale sponsored products"。文档另一处又说 shopping=true 时 products 带
 #   「每个商品簇背后的商家报价」，两处说法不一致，已列为待供应商确认。
-#   依据二（2026-10-14 实测全量 AIO 数据）：products 525 项里 513 项的商品名不在同一回答的
+#   依据二（2026-10-14 实测全量 AIO 数据）：products 379 项里 371 项的商品名不在同一回答的
 #   AI 概览商品里，section_title 是 People also ask / Popular products / Videos / Deals 等页面区块名。
 # - aimode / gemini：`products[]`，带 `brand` 与 `stores[]`。Gemini 未与页面 DOM 核验，按交付字段为准。
 PLATFORM_PRODUCT_FIELDS = {

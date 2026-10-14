@@ -47,7 +47,7 @@
 | 商品卡（Product Card） | 卡 | ChatGPT / AI Mode / Gemini：`products[]`；AIO：`source[]` 中 `type=product` |
 | 购买选项（Offer） | offer | ChatGPT：`offers[]`；Google 系：`stores[]` |
 
-一张卡对应多个 offer，商品曝光和商家份额不能互相换算。AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的商品定义在 `source[]`（「products inside ai overview」），`products` 定义为「Google wale sponsored products」；实测 `products` 525 项里 513 项不在同一回答的 AI 概览商品中，`section_title` 是 People also ask、Popular products、Deals 等页面区块名。文档另一处说 `products` 带商品簇的商家报价，两处不一致，待供应商确认。空占位卡（无标题）和广告卡（`ads product`、`ads`）不计。
+一张卡对应多个 offer，商品曝光和商家份额不能互相换算。AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的商品定义在 `source[]`（「products inside ai overview」），`products` 定义为「Google wale sponsored products」；实测 `products` 379 项里 371 项不在同一回答的 AI 概览商品中，`section_title` 是 People also ask、Popular products、Deals 等页面区块名。文档另一处说 `products` 带商品簇的商家报价，两处不一致，待供应商确认。空占位卡（无标题）和广告卡（`ads product`、`ads`）不计。
 
 ### 样本范围
 
