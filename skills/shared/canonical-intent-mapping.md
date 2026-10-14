@@ -21,6 +21,8 @@
 
 情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他诊断意图而删除；它仍不得进入正式 Visibility。
 
+购物层（Shopping GEO）同样两条独立判定：购物触发率用全部有效回答、按诊断意图拆开报；购物可见度、商品曝光、商家份额只用 Discovery。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+
 > **迁移说明**：`Intent: Discovery`、`Intent: Competitor` 等诊断意图 Tag 当前作为默认枚举使用，计划迁移为项目自定义 Tags（不再是固定枚举）。迁移完成前，仍以本表为默认对照；迁移后，`analysis_type` 和 `formal_visibility_eligible` 的推导规则须在自定义 Tag 的定义文件中重新声明，不得依赖本表 Intent Tag 列自动推导。
 
 ## 问题类型（后端枚举）

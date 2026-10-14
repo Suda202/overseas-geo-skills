@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .shopping import extract_product_cards
 from .util import ContractError, extract_urls, normalize_text, sha256_obj
 
 
@@ -198,6 +199,7 @@ def _import_batch(raw: dict, question_bank: dict, source_file: str) -> dict:
             error_code = None
         citations, citation_issues = _citation_records(sample_id, result, answer_text)
         issues.extend(citation_issues)
+        engine = str((raw.get("run") or {}).get("engine") or "chatgpt")
         imported.append({
             "sample_id": sample_id,
             "question_id": question["question_id"],
@@ -205,11 +207,14 @@ def _import_batch(raw: dict, question_bank: dict, source_file: str) -> dict:
             "question": question["question_text"],
             "repeat_index": int(source.get("repeat_index") or 1),
             "repeat_total": int(source.get("repeat_total") or 1),
-            "engine": str((raw.get("run") or {}).get("engine") or "chatgpt"),
+            "engine": engine,
             "status": status,
             "analysis_eligible": eligible,
             "answer_text": answer_text if result is not None else None,
             "citations": citations if eligible else [],
+            # 批量格式没带商品字段时视为未采集（None），不按「未触发购物」计。
+            "product_cards": (extract_product_cards(engine, result)
+                              if result is not None and "products" in result else None),
             "error_code": error_code,
             "error_message": str(source.get("error") or "").strip() or None,
             "provenance": {

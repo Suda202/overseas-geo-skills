@@ -5,6 +5,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from .config import all_objects
 from .deterministic import SOURCE_TYPES
+from .shopping import compute_shopping_metrics
 from .util import sha256_obj
 
 
@@ -393,6 +394,10 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "display": opportunity_display,
         },
         "action_directions": directions[:3],
+        # 购物层（Shopping GEO）：按平台分开，口径见 shopping.py 与 metric-scope-and-copy-contract.md。
+        # 只做统计输出，不参与 action_directions 与客户 CSV 模块。
+        "shopping": compute_shopping_metrics(
+            config, valid_answers, _percent, _average, _is_formal_visibility_answer),
         "methodology": {
             "sample_policy": config["sample_policy"],
             "rank_policy": config["rank_policy"],

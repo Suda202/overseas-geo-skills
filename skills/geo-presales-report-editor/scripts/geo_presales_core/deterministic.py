@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .config import all_objects
+from .shopping import attribute_cards
 from .util import (
     domain_matches,
     find_alias_spans,
@@ -265,6 +266,9 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
             "evidence_ref": str(evidence_path.relative_to(run_root)),
             "objects": object_records,
             "citations": citations,
+            # 购物层：平台不支持商品字段时为 None（不是空列表），见 shopping.py。
+            "engine": sample.get("engine"),
+            "product_cards": attribute_cards(sample.get("product_cards"), objects),
             "provenance": sample.get("provenance"),
         })
 

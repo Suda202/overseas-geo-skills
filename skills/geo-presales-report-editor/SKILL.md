@@ -3,7 +3,7 @@ name: geo-presales-report-editor
 description: This skill should be used when editing or generating an upload-ready GEO presales report CSV with customer-facing conclusions from confirmed metrics and evidence, without recomputing facts or modifying the report webpage.
 metadata:
   author: Overseas GEO Project
-  version: "2.5.2"
+  version: "2.6.0"
 ---
 
 # GEO 售前报告编辑
@@ -16,7 +16,7 @@ metadata:
 
 ## 底层的归属与变更纪律
 
-`scripts/geo_presales_core/`（含 `metrics.py`、`deterministic.py`、`config.py`）**归本 skill 所有**，是四个 skill 共用的指标口径实现——`geo-presales-report-builder` 全面复用它的 `prepare_answers` 与 `compute_metrics` 做指标计算；`geo-presales-report-audit` 与 `geo-presales-crawl-integrity` 只引用它的 `answer_validity` 做答案有效性判断，不调用指标计算。
+`scripts/geo_presales_core/`（含 `metrics.py`、`shopping.py`、`deterministic.py`、`config.py`）**归本 skill 所有**，是四个 skill 共用的指标口径实现——`geo-presales-report-builder` 全面复用它的 `prepare_answers` 与 `compute_metrics` 做指标计算；`geo-presales-report-audit` 与 `geo-presales-crawl-integrity` 只引用它的 `answer_validity` 做答案有效性判断（crawl-integrity 另引用 `shopping.extract_product_cards` 核对商品卡字段），不调用指标计算。
 
 **其他 skill 对本目录只读。** 需要改口径时，改在本 skill 里，不在下游复制一份；下游需要不同口径时在自身的适配层做显式转换，并在产物里标注口径来源。
 
@@ -79,6 +79,7 @@ metadata:
 - 有正式 M07 时只使用其整体/主题结果；没有 M07 但有同口径、后端已确认的平台筛选聚合时，可直接比较已确认数值，写平台共同结论与差异结论，但不得自造状态枚举、阈值或共识强度。M08 不写成 Visibility、输赢原因或归因。
 - 品类认知与品牌表达的交叉判断由 M01 承载：同一 Attribute 的市场标准与品牌被认可/被质疑的证据必须落在同一条结论里。门禁按 Attribute 一致性核查（M04 证据用 `diagnostic:target_attributes:/索引` 锚定），关键词相似度不算数。交叉结论只经 `summary_overview.points[]` 进入上传 CSV，不新增 `summary_market_perception` 行，`attribute_id` 不出现在客户文案里。
 - 每条非空结论必须有真实证据引用，所有数字必须存在于对应资源。
+- 购物层指标（`metrics["shopping"]`，口径见统计范围契约「购物层指标」）目前没有模块归属，不写进客户文案与上传 CSV。
 - 不使用“正式结论/切片观察”区分分析等级，也不在客户文案中反复使用“本批”；整体、主题、平台和诊断意图都是不同数据维度的分析结论。按后端实际覆盖保留样本范围，不外推全网、不猜机制、不把相关性写成因果。
 
 ## 客户文案门禁
