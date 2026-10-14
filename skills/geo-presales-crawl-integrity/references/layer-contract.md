@@ -26,6 +26,20 @@
 
 `related_queries`、`search_model_queries`、`ads`、`products` 都不是来源列表。
 
+## 购物层（商品卡）
+
+商品卡是回答之外的另一层数据，抽取规则只在 core `geo_presales_core/shopping.py` 实现一次，本 skill 引用它核对字段，不另写解析。
+
+| 平台 | 商品卡字段 | 不计入 |
+|---|---|---|
+| `chatgpt` | `products[]`；购买选项在 `offers[]` | 无标题的空占位项（实测 1908 张里 196 张）；`ads` |
+| `overview` | `source[]` 中 `type=product`（文档：「products inside ai overview」，position = recommended / inline_link / reference） | `products[]`（文档：「Google wale sponsored products」；实测 `section_title` 为 People also ask / Popular products / Deals 等区块名，525 项里 513 项不在 AI 概览商品中）；`type=ads product` |
+| `aimode` | `products[]`；购买选项在 `stores[]` | — |
+| `gemini` | `products[]`；购买选项在 `stores[]` | — |
+| `perplexity` | 无 | 不支持购物指标，不按 0 计 |
+
+Gemini 与 AI Mode 只在有商品时才交付 `products` 键，缺键与「未触发」在字段上无法区分；同期 Botslab 美国 Gemini 68/75 条带卡、Bewinch 新马 0/100，按未触发处理。Gemini 商品卡约 75% 的标题不出现在正文，未与页面 DOM 核验。
+
 ## 字段代数（新旧格式批次）
 
 供应商 2026-09-18 起分批切换到新格式，**同一轮采集里不同平台可能新旧混杂，同一平台跨批次也会混杂**，统计前先看字段判代数。判据只有一条：**引用条目里有没有 `cited_count`**——按文件/按格判，不要按平台名或日期一刀切。

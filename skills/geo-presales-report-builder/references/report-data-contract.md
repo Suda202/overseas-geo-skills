@@ -109,6 +109,25 @@
       ]
     }
   },
+  "shopping": {
+    "schema_version": "geo-presales-shopping/v1",
+    "by_platform": {
+      "chatgpt": {
+        "valid_answers": 100, "shopping_answers": 32,
+        "shopping_mode_rate": {"numerator": 32, "denominator": 100, "raw": 0.32, "display": "32%"},
+        "shopping_mode_rate_by_intent": {"discovery": {"…": "…"}},
+        "discovery_answers": 68, "discovery_shopping_answers": 25,
+        "target": {"name": "Bewinch", "shopping_visibility": {"numerator": 2, "denominator": 25, "…": "…"},
+                   "shopping_exposure_rate": {"…": "…"}, "average_card_position": {"…": "…"}, "card_count": 3},
+        "brands": [], "products": [], "target_products": [],
+        "competitor_products_where_target_absent": [], "merchants": [],
+        "target_offer_channel": {"offer_count": 3, "official": {"…": "…"}, "third_party": {"…": "…"}},
+        "by_question": {"0001": {"valid_answers": 2, "shopping_answers": 1, "target_present_answers": 0, "brands": []}}
+      }
+    },
+    "unsupported_platforms": ["perplexity"],
+    "methodology": {"…": "…"}
+  },
   "records": [
     {
       "qid": 1, "en": "…", "zh": "…",
@@ -160,6 +179,14 @@
   - 展示颜色：正向绿、负向红、无数据 `—` 黑；主题列与非目标品牌表头黑，目标品牌高亮。
 - `rows[].values` 与 `columns` 同序；`target` 为真的行是本品。末列「代表证据」要求句子明确点名该品牌且不含其他展示品牌，并优先取 60 字以上的完整句（标题式短句说明不了问题）。
 - `by_brand` 在 Claim 层下按品牌给 `signal_total` / `positive_signals` / `negative_signals` / `pos_rate` / `pos_rate_cross_platform` / `platforms_with_signal` / `by_platform` / `by_attribute` / `by_theme`；句级路径下是 `positive`/`negative`/`pos_rate`。前端读字段前先看 `metric_basis`。
+
+**shopping**
+
+- 由 core `compute_metrics` 产出（`metrics["shopping"]`，实现在 `geo_presales_core/shopping.py`），本层原样挂到切片上，不重算。口径以 `geo-presales-report-editor` 的统计范围契约「购物层指标」为准。
+- `by_platform` 键是平台目录名（`chatgpt` / `overview` / `aimode` / `gemini`）。全部平台切片也只给逐平台结果，不合池。没有商品字段的平台进 `unsupported_platforms`，不出现在 `by_platform` 里。
+- 比率字段都是 core 的 `{numerator, denominator, raw, display}` 结构，分子分母随值携带；分母为 0 时 `raw=null`、`display="—"`。
+- `products` / `competitor_products_where_target_absent` / `merchants` 各截前 20 行；`target_products` 全量。
+- 只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。`verify_report_data.py` 独立复算每平台的有效回答数、触发数、Discovery 触发数和目标品牌购物可见度分子分母。
 
 **records**
 

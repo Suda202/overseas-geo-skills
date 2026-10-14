@@ -119,6 +119,9 @@ DISCOVERY_LABEL = "发现"
 
 TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
 
+# 有商品卡字段的平台目录（与 core shopping.PLATFORM_PRODUCT_FIELDS 同集合，刻意不 import）
+SHOPPING_PLATFORMS = {"chatgpt", "overview", "aimode", "gemini"}
+
 
 # ------------------------------------------------------------------ 复算
 
@@ -469,6 +472,80 @@ class Recomputer:
             },
         }
 
+    # --- 购物层复算（刻意独立于 core shopping.py：两侧口径都改才算一致）---
+
+    def _cards(self, region: str, platform_dir: str, qid: int, repeat: int):
+        """该回答的商品卡；平台无商品字段返回 None。规则与 shopping.py 同口径独立实现。"""
+        if platform_dir not in SHOPPING_PLATFORMS:
+            return None
+        paths = self.sample_files(region, platform_dir, qid)
+        if not 0 < repeat <= len(paths):
+            return []
+        result = json.loads(paths[repeat - 1].read_text(encoding="utf-8")).get("task_result") or {}
+        if platform_dir == "overview":
+            raw = [i for i in result.get("source") or []
+                   if isinstance(i, dict) and str(i.get("type") or "").casefold() == "product"]
+        else:
+            raw = [i for i in result.get("products") or [] if isinstance(i, dict)]
+        cards = []
+        for item in raw:
+            if not str(item.get("title") or "").strip():
+                continue
+            if platform_dir == "chatgpt":
+                merchants = [o.get("merchant_name") for o in item.get("offers") or [] if isinstance(o, dict)]
+                product_names = [o.get("product_name") for o in item.get("offers") or [] if isinstance(o, dict)]
+            else:
+                merchants = [st.get("name") for st in item.get("stores") or [] if isinstance(st, dict)]
+                merchants = merchants or [item.get("website_name") or item.get("seller")]
+                product_names = []
+            cards.append({"brand": item.get("brand") if platform_dir in ("aimode", "gemini") else None,
+                          "title": item["title"], "product_name": next((n for n in product_names if n), None),
+                          "merchants": [m for m in merchants if m]})
+        return cards
+
+    def _owner_of_text(self, text) -> str | None:
+        if not str(text or "").strip():
+            return None
+        candidates = [{**span, "object_id": obj["object_id"]} for obj in self.objects
+                      for span in find_alias_spans(str(text), obj.get("aliases") or [obj["name"]])]
+        resolved = resolve_alias_spans(candidates)
+        return resolved[0]["object_id"] if resolved else None
+
+    def _card_owner(self, card) -> str | None:
+        for text in (card["brand"], card["title"], card["product_name"]):
+            owner = self._owner_of_text(text)
+            if owner:
+                return owner
+        owners = {self._owner_of_text(m) for m in card["merchants"]} - {None}
+        return owners.pop() if len(owners) == 1 else None
+
+    def shopping(self, region: str, platform: str, topic: str) -> dict:
+        """逐平台：有效回答数、触发数、Discovery 触发数、目标品牌出现的 Discovery 触发回答数。"""
+        out = {}
+        questions = self.slice_questions(topic)
+        for platform_label in self.slice_platforms(platform):
+            platform_dir = self.platform_dirs[platform_label]
+            if platform_dir not in SHOPPING_PLATFORMS:
+                continue
+            row = {"valid": 0, "shopping": 0, "discovery": 0, "discovery_shopping": 0, "target": 0}
+            for market in self.slice_regions(region):
+                for q in questions:
+                    qid = q["qid"]
+                    for repeat in range(1, self.repeat_count(market, platform_dir, qid) + 1):
+                        if not self.answer_text(market, platform_dir, qid, repeat).strip():
+                            continue
+                        cards = self._cards(market, platform_dir, qid, repeat)
+                        row["valid"] += 1
+                        row["shopping"] += bool(cards)
+                        if q["intent"] != DISCOVERY_LABEL:
+                            continue
+                        row["discovery"] += 1
+                        if cards:
+                            row["discovery_shopping"] += 1
+                            row["target"] += any(self._card_owner(c) == "target" for c in cards)
+            out[platform_dir] = row
+        return out
+
     def _official_owner(self, host: str) -> str | None:
         """与后端 _classify_official 一致：按纳入对象顺序，第一个域名命中的胜出。"""
         for obj in self.objects:
@@ -760,6 +837,37 @@ def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[st
         out.append(f"{key}: sources.official_share {sources.get('official_share')!r} "
                    f"!= 复算 {expected['official_share']!r}")
 
+    # 购物层：按平台对账触发数与目标品牌购物可见度（分子分母都对）。
+    shopping = slc.get("shopping")
+    if shopping is None:
+        out.append(f"{key}: 缺少 shopping 块")
+    else:
+        expected_shop = recomputer.shopping(region, platform, topic)
+        actual_shop = shopping.get("by_platform") or {}
+        if set(actual_shop) != {p for p, r in expected_shop.items() if r["valid"]}:
+            out.append(f"{key}: shopping.by_platform 平台集合 {sorted(actual_shop)} "
+                       f"!= 复算 {sorted(p for p, r in expected_shop.items() if r['valid'])}")
+        for platform_dir, row in expected_shop.items():
+            got = actual_shop.get(platform_dir)
+            if got is None:
+                continue
+            pairs = (
+                ("valid_answers", got.get("valid_answers"), row["valid"]),
+                ("shopping_answers", got.get("shopping_answers"), row["shopping"]),
+                ("discovery_answers", got.get("discovery_answers"), row["discovery"]),
+                ("discovery_shopping_answers", got.get("discovery_shopping_answers"),
+                 row["discovery_shopping"]),
+                ("target.shopping_visibility.numerator",
+                 ((got.get("target") or {}).get("shopping_visibility") or {}).get("numerator"),
+                 row["target"]),
+                ("target.shopping_visibility.denominator",
+                 ((got.get("target") or {}).get("shopping_visibility") or {}).get("denominator"),
+                 row["discovery_shopping"]),
+            )
+            for field, actual, wanted in pairs:
+                if actual != wanted:
+                    out.append(f"{key}: shopping[{platform_dir}].{field} {actual!r} != 复算 {wanted!r}")
+
     matrix = slc.get("matrix") or {}
     if (matrix.get("platforms") or []) != meta["platforms"]:
         out.append(f"{key}: matrix.platforms 与 meta.platforms 不一致")
@@ -908,6 +1016,26 @@ def _mutations(base: dict):
                lambda n: n[0].__setitem__("target_in_question", "yes") if n else None),
         mutate(f"把 {key_a} 某题的 mentioned 改成字符串", ["slices", key_a, "records"],
                lambda n: n[0].__setitem__("mentioned", "yes") if n else None),
+        *_shopping_mutations(mutate, slices),
+    ]
+
+
+def _shopping_mutations(mutate, slices):
+    """购物层篡改：只在产物里确有购物平台时生成，单平台无商品字段的 Case 不硬造。"""
+    key = next((k for k, v in slices.items() if (v.get("shopping") or {}).get("by_platform")), None)
+    if key is None:
+        return []
+    platform_dir = next(iter(slices[key]["shopping"]["by_platform"]))
+    return [
+        mutate(f"把 {key} 的 {platform_dir} 购物触发数加 3",
+               ["slices", key, "shopping", "by_platform", platform_dir],
+               lambda n: n.__setitem__("shopping_answers", n["shopping_answers"] + 3)),
+        mutate(f"把 {key} 的 {platform_dir} 目标品牌购物可见度分子加 1",
+               ["slices", key, "shopping", "by_platform", platform_dir, "target", "shopping_visibility"],
+               lambda n: n.__setitem__("numerator", n["numerator"] + 1)),
+        mutate(f"删掉 {key} 的 {platform_dir} 购物统计",
+               ["slices", key, "shopping", "by_platform"],
+               lambda n: n.pop(platform_dir)),
     ]
 
 
@@ -970,6 +1098,12 @@ def main(argv=None) -> int:
               f"声量份额 {kpis.get('share_of_voice')}（复算 {expected['share_of_voice']}）  "
               f"引用份额 {kpis.get('official_share')}（复算 {expected['official_share']}）  "
               f"discovery 分母 {expected['discovery_answers']}")
+        for platform_dir, row in recomputer.shopping(region, "", "").items():
+            got = ((slices.get(key, {}).get("shopping") or {}).get("by_platform") or {}).get(platform_dir) or {}
+            vis = (got.get("target") or {}).get("shopping_visibility") or {}
+            print(f"            购物[{platform_dir}] 触发 {got.get('shopping_answers')}/{got.get('valid_answers')}"
+                  f"（复算 {row['shopping']}/{row['valid']}）  目标购物可见度 "
+                  f"{vis.get('numerator')}/{vis.get('denominator')}（复算 {row['target']}/{row['discovery_shopping']}）")
     if failures:
         print(f"\n校验失败 {len(failures)} 项：", file=sys.stderr)
         for item in failures[:40]:

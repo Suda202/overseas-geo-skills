@@ -64,6 +64,7 @@ from geo_presales_core.config import all_objects
 from geo_presales_core.deterministic import prepare_answers  # noqa: E402
 from geo_presales_core.crawler import answer_validity
 from geo_presales_core.metrics import compute_metrics  # noqa: E402
+from geo_presales_core.shopping import extract_product_cards  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     normalize_host,
     normalize_text,
@@ -1002,6 +1003,8 @@ def load_samples(collect_dir: Path, region: str, platform: str,
             "answer_text": text,
             "ranking_text": ranking_text,
             "citations": citations,
+            # 商品卡抽取走 core 的唯一实现；AIO 只取 source[type=product]，不取 SERP products 区块。
+            "product_cards": extract_product_cards(platform, task_result),
             "error_code": invalid_code,
             "error_message": None,
             "provenance": {"source_shape": "platform_json", "source_file": str(path),
@@ -1189,6 +1192,9 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
         "matrix": matrix,
         "sources": build_sources(metrics, answers),
         "sentiment": build_sentiment(answers),
+        # Shopping GEO 统计块：按平台分开（全部平台切片只给 by_platform，不合池）。
+        # 只供统计与下游读取，不进售前 HTML（render_report.slim_for_html 剥掉）。
+        "shopping": metrics["shopping"],
         "records": build_records(answers, bank["questions"], topic, all_objects(config)),
         "_rows": {row["object_id"]: row for row in rows},
         "_counts": {

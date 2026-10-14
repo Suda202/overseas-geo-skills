@@ -311,6 +311,8 @@ def slim_for_html(data: dict) -> dict:
             (slice_value.get("kpis") or {}).pop(field, None)
         for row in slice_value.get("competition_all", []):
             row.pop("linked_mention_rate", None)
+        # Shopping GEO 统计块同理：售前页面暂无购物模块（Suda 2026-10-14）。
+        slice_value.pop("shopping", None)
     return slim
 
 

@@ -3,7 +3,7 @@ name: geo-presales-crawl-integrity
 description: This skill should be used before computing any overseas GEO presales metric, to verify that a raw crawler collection directory (Scrapeless scraper.<platform>/<REGION>/<NNNN>.json) is trustworthy input — detecting field-layer mixing, lost reference definitions, empty citation fields and failed answers, and naming the exact platform + file for each. Do not use it to compute visibility or citation metrics, to correct brand rankings, or to judge sentiment.
 metadata:
   author: 海外 GEO 项目
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # 采集数据可信性前置校验
@@ -20,7 +20,7 @@ metadata:
 ## 开始前读取
 
 1. [数据分层契约](references/layer-contract.md)——四层数据定义、每平台字段映射、两个计数单位、缺失状态约定。判读任何一条前先读这个。
-2. [已知缺陷目录](references/defect-catalog.md)——D1–D8 的现象、一手证据、检测方法与影响范围，含旧格式批次的引用列表伪重复（D8）。
+2. [已知缺陷目录](references/defect-catalog.md)——D1–D9 的现象、一手证据、检测方法与影响范围，含旧格式批次的引用列表伪重复（D8）。
 3. [平台字段契约](references/platform-contract.json)——**平台会持续扩展**：新增平台在这里加一条即可，不必改脚本；有平台没登记时脚本报 `UNKNOWN_PLATFORM_CONTRACT` 阻断，不静默跳过。
 
 ## 为什么必须先跑这一步
@@ -48,7 +48,7 @@ metadata:
    | 退出码 | 含义 | 处理 |
    |---|---|---|
    | `0` | 无缺陷、无警告 | 可进入指标计算 |
-   | `1` | 只有警告（D2/D3/D6） | 按缺陷目录的修复规则补齐后再算指标 |
+   | `1` | 只有警告（D2/D3/D6/D9） | 按缺陷目录的修复规则补齐后再算指标 |
    | `2` | 有阻断缺陷（D1/D5/D7） | **先修采集或显式降级口径，不得直接算指标** |
 
    D4（`CITATION_UNITS` 计数单位说明）只进 `infos`，不影响退出码。脚本的判定规则：有任何 defect 即 `2`，否则有任何 warning 即 `1`，否则 `0`。
@@ -61,6 +61,7 @@ metadata:
    - `TEXT_CORRUPTION` → 警告。受影响条目的**原文与译文不得直接交付客户**，须先校正或在报告里标注采集异常。新损坏词追加进 `KNOWN_TEXT_CORRUPTION` 清单，不要改成启发式匹配。
    - `PLATFORM_MARKUP_IN_BODY` → 不是缺陷。平台自带标记（`<Elicitation>`、`<FollowUp>`）混在正文里属正常输出形态，下游做句子切分、翻译与引用解析前要先剥掉。
    - `UNKNOWN_PLATFORM_CONTRACT` → **阻断**。有平台目录没登记契约，该平台整批未被审计；补 `references/platform-contract.json` 后重跑，不得据此宣称采集可信。
+   - `SHOPPING_FLAG_WITHOUT_CARDS` → 警告。AIO 标了概览购物却没有商品卡，商品层丢失；该条购物指标标注采集缺陷。其余 `SHOPPING_*` 只是信息（抽到多少卡、排除了哪些占位卡、广告卡、AIO `products` 字段），见缺陷目录 D9。
    - `TARGET_OUTSIDE_BODY_ONLY` → 不是缺陷。这是「被检索但未被提及」的内容机会，单独统计并交给内容侧。
 
 5. **交下游前对齐口径**：品牌分母、引用计数单位（次数 vs 去重来源）的唯一权威实现是 `geo-presales-report-editor/scripts/geo_presales_core/`（`geo-presales-report-builder` 复用该实现），本 skill 不另立一套。两处不一致时以 core 的定义为准。

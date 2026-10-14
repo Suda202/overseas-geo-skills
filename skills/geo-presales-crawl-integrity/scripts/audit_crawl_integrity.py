@@ -72,6 +72,8 @@ CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 from geo_presales_core.crawler import answer_validity  # noqa: E402
+# 商品卡抽取同理只在 core 实现一次（shopping.py），这里只核对字段层，不算购物指标。
+from geo_presales_core.shopping import extract_product_cards, shopping_supported  # noqa: E402
 
 REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re.M)
 MARKER_PAREN = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
@@ -234,6 +236,42 @@ def iter_samples(root: Path, contract: dict):
             yield platform, path
 
 
+def audit_shopping(platform, result, valid_answer):
+    """购物层字段核对：只报抽取了多少卡、排除了什么、哪里丢了层，不判品牌、不算比率。"""
+    warnings, infos = [], []
+    cards = extract_product_cards(platform, result)
+    if cards is None:
+        return {"cards": None, "warnings": warnings, "infos": infos}
+    if cards:
+        offers = sum(len(card["offers"]) for card in cards)
+        infos.append({
+            "code": "SHOPPING_CARDS",
+            "detail": f"商品卡 {len(cards)} 张 / 购买选项 {offers} 个（字段 {cards[0]['source_field']}）"
+                      + ("" if valid_answer else "；回答无效，不进购物指标分母"),
+        })
+    if platform == "chatgpt":
+        placeholders = sum(1 for item in result.get("products") or []
+                           if isinstance(item, dict) and not str(item.get("title") or "").strip())
+        if placeholders:
+            infos.append({"code": "SHOPPING_PLACEHOLDER_CARDS",
+                          "detail": f"products 有 {placeholders} 个空占位（无标题），已丢弃、不占卡位"})
+    if platform == "overview":
+        serp = result.get("products") or []
+        if serp:
+            sections = sorted({str(item.get("section_title") or "") for item in serp if isinstance(item, dict)})
+            infos.append({"code": "SHOPPING_SERP_BLOCK_EXCLUDED",
+                          "detail": f"products 有 {len(serp)} 项（section_title：{'、'.join(sections)}）；"
+                                    "文档定义为 sponsored products，AI 概览内商品在 source[type=product]，不计商品卡"})
+        ads = sum(1 for item in result.get("source") or []
+                  if isinstance(item, dict) and str(item.get("type") or "").casefold() == "ads product")
+        if ads:
+            infos.append({"code": "SHOPPING_ADS_EXCLUDED", "detail": f"source 有 {ads} 个广告商品卡，已排除"})
+        if result.get("is_overview_shopping") and not cards:
+            warnings.append({"code": "SHOPPING_FLAG_WITHOUT_CARDS",
+                             "detail": "is_overview_shopping=True，但 source 里没有 type=product 的卡：商品层丢失"})
+    return {"cards": len(cards), "warnings": warnings, "infos": infos}
+
+
 def audit_sample(platform, path, target, contract):
     payload = json.loads(path.read_text())
     result = payload.get("task_result") or {}
@@ -368,6 +406,11 @@ def audit_sample(platform, path, target, contract):
             "detail": "正文含平台标记：" + "、".join(residues),
         })
 
+    # D9 — 购物层（Shopping GEO）。商品卡是回答之外的第三层数据，抽取规则与 core 同源。
+    shopping = audit_shopping(platform, result, valid_answer=bool(lowered) and not defects)
+    warnings.extend(shopping["warnings"])
+    infos.extend(shopping["infos"])
+
     # D4 — occurrences and unique sources are two different units; both must
     # travel together or a downstream reader will pick the wrong one.
     unique_sources = len({u for u in definitions.values() if u})
@@ -384,6 +427,7 @@ def audit_sample(platform, path, target, contract):
         "unique_sources": unique_sources,
         "target_in_answer": in_answer,
         "target_in_retrieval": in_retrieval,
+        "shopping_cards": shopping["cards"],
         "defects": defects,
         "warnings": warnings,
         "infos": infos,
@@ -462,6 +506,16 @@ def main():
             "aio_not_triggered": sum(
                 1 for s in samples if any(i["code"] == "AIO_NOT_TRIGGERED" for i in s["infos"])),
         },
+        # 购物层只报字段事实（每平台多少条带卡、多少张卡），触发率等比率由 core 按有效回答算。
+        "shopping_by_platform": {
+            platform: {
+                "samples": sum(1 for s in samples if s["platform"] == platform),
+                "samples_with_cards": sum(1 for s in samples
+                                          if s["platform"] == platform and s.get("shopping_cards")),
+                "cards": sum(s.get("shopping_cards") or 0 for s in samples if s["platform"] == platform),
+            }
+            for platform in sorted({s["platform"] for s in samples if shopping_supported(s["platform"])})
+        },
         "details": samples,
     }
 
@@ -477,6 +531,8 @@ def main():
         print(f"  {code}: {head}{more}")
     print(f"目标品牌回答正文命中 {report['counts']['samples_with_target_in_answer']} 条；"
           f"仅在正文外字段出现 {report['counts']['samples_with_target_outside_body_only']} 条")
+    for platform, row in report["shopping_by_platform"].items():
+        print(f"商品卡 {platform}: {row['samples_with_cards']}/{row['samples']} 条带卡，共 {row['cards']} 张")
     if report["counts"]["aio_not_triggered"]:
         print(f"AIO 本次未触发概览 {report['counts']['aio_not_triggered']} 条（有效样本，不进提及分母）")
 

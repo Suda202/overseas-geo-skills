@@ -151,6 +151,26 @@
 
 ---
 
+## D9 · 购物层字段（警告 / 信息）
+
+**现象**：商品卡与回答正文、引用是不同的层，平台交付字段里混着三类不该计入的东西——AIO 的 `products` 字段（文档定义为 sponsored products，AI 概览内商品在 `source[type=product]`）、ChatGPT 的空占位卡、广告卡。直接数 `products` 会让 AIO 购物触发率虚高、ChatGPT 卡位错位。
+
+**检测**（`audit_shopping`，抽取规则引用 core `shopping.extract_product_cards`）：
+
+| 码 | 级别 | 含义 |
+|---|---|---|
+| `SHOPPING_CARDS` | 信息 | 本条抽取到的商品卡数与购买选项数；回答无效时注明不进分母 |
+| `SHOPPING_PLACEHOLDER_CARDS` | 信息 | ChatGPT `products` 里的空占位项数，已丢弃、不占卡位 |
+| `SHOPPING_SERP_BLOCK_EXCLUDED` | 信息 | AIO `products` 字段（文档：sponsored products；附 `section_title` 区块名），不计商品卡 |
+| `SHOPPING_ADS_EXCLUDED` | 信息 | AIO `source` 里的广告商品卡数 |
+| `SHOPPING_FLAG_WITHOUT_CARDS` | 警告 | AIO `is_overview_shopping=True` 但 `source` 里没有 `type=product`：商品层丢失，该条购物指标不可信 |
+
+报告顶层 `shopping_by_platform` 按平台给「多少条带卡、共多少张」，只是字段事实；触发率等比率由 core 按有效回答算，本 skill 不算。
+
+**处理**：信息级不需处理。`SHOPPING_FLAG_WITHOUT_CARDS` 命中时，受影响条目的购物指标在交付里标注采集缺陷，并把文件清单反馈供应商。
+
+---
+
 ## 判读边界
 
 - 检测只报事实与受影响记录，不修改采集文件。
