@@ -169,13 +169,12 @@ class DiscoveryStageTests(unittest.TestCase):
         errors, _, _ = MODULE.validate(data)
         self.assertTrue(any("quota" in err.lower() or "expected_total" in err for err in errors), errors)
 
-    def test_fifty_is_the_batch_ceiling(self) -> None:
-        errors, warnings, summary = MODULE.validate(discovery_bank((17, 17, 16)))
+    def test_batch_ceiling_is_sixty(self) -> None:
+        # 2026-10-14 起单产品单市场起步参考 30–60 条，整批上限 50→60；51 条原先被拒，现在应通过。
+        errors, warnings, summary = MODULE.validate(discovery_bank((17, 17, 17)))
         self.assertEqual([], errors)
         self.assertEqual([], warnings)
-        self.assertEqual(50, summary["total"])
-        errors, _, _ = MODULE.validate(discovery_bank((17, 17, 17)))
-        self.assertTrue(any("must not exceed 50" in err for err in errors), errors)
+        self.assertEqual(51, summary["total"])
 
     def test_explicit_diagnostic_can_add_only_one_evaluation(self) -> None:
         data = discovery_bank((5,))

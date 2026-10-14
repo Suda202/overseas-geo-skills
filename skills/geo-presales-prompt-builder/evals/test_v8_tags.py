@@ -439,7 +439,7 @@ class V8TagsTests(unittest.TestCase):
             errors,
         )
 
-    def test_v8_accepts_three_topics_with_custom_discovery_quotas_at_or_below_50(self) -> None:
+    def test_v8_accepts_three_topics_with_custom_discovery_quotas_at_or_below_60(self) -> None:
         data = flexible_v8_bank()
         errors, warnings, summary = MODULE.validate(data)
         self.assertEqual([], errors)
@@ -453,14 +453,23 @@ class V8TagsTests(unittest.TestCase):
             },
         )
 
-    def test_v8_rejects_batch_total_above_50(self) -> None:
+    def test_v8_rejects_batch_total_above_60(self) -> None:
+        # 每主题 8 条非发现型 × 3 = 24；13+12+12 = 37 条发现型，合计 61。
         data = flexible_v8_bank({
-            "topic_1": 10,
-            "topic_2": 9,
-            "topic_3": 8,
+            "topic_1": 13,
+            "topic_2": 12,
+            "topic_3": 12,
         })
         errors, _, _ = MODULE.validate(data)
-        self.assertTrue(any("must not exceed 50" in error for error in errors), errors)
+        self.assertTrue(any("must not exceed 60" in error for error in errors), errors)
+        data = flexible_v8_bank({
+            "topic_1": 12,
+            "topic_2": 12,
+            "topic_3": 12,
+        })
+        errors, _, summary = MODULE.validate(data)
+        self.assertEqual([], errors)
+        self.assertEqual(60, summary["total"])
 
     def test_v8_requires_at_least_five_discovery_prompts_per_topic(self) -> None:
         data = flexible_v8_bank({

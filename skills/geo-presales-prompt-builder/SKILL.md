@@ -3,7 +3,7 @@ name: geo-presales-prompt-builder
 description: Generate or validate Discovery-first GEO Prompts from an evaluation Case, and supplement competitor or evaluation questions when requested. Use evidence-backed buyer intent, Topic-scoped Attribute planning, and free Tags; do not create Topics, research competitors, collect answers, or calculate metrics.
 metadata:
   author: Overseas GEO Project
-  version: "4.21.0"
+  version: "4.23.0"
 ---
 
 # GEO Presales Prompt Builder
@@ -16,7 +16,7 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 
 接口中的原始 Case 业务字段就是 Builder 的直接输入。不要另造 `target_audiences / pain_points / use_cases` 等平行输入合同。
 
-题量硬门槛：每个 Topic 至少 5 条，整批（含后补题）不超过 50 条；这是下限和总量上限，不是均衡配额。不同 Topic 可以有不同数量，只有在重要买家关注点尚未覆盖时才增加问题。若已知后续要补 diagnostic 题，先为后补题预留总量，不把 Discovery 机械扩到 50 条。发现型阶段全部为 Discovery；其他阶段没有固定竞品、评价或品类认知配额。旧题库省略 `generation_stage` 时仍按历史完整诊断合同校验，不能通过漏题自动降级为发现型。
+题量硬门槛：每个 Topic 至少 5 条，整批（含后补题）不超过 60 条；单产品单市场的起步参考是 30–60 条（Aleyda 提示词库区间），30 不是硬下限——这是下限和总量上限，不是均衡配额。不同 Topic 可以有不同数量，只有在重要买家关注点尚未覆盖时才增加问题。若已知后续要补 diagnostic 题，先为后补题预留总量，不把 Discovery 机械扩到 60 条。发现型阶段全部为 Discovery；其他阶段没有固定竞品、评价或品类认知配额。旧题库省略 `generation_stage` 时仍按历史完整诊断合同校验，不能通过漏题自动降级为发现型。
 
 ## 开始前读取
 
@@ -46,7 +46,7 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 
 Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评测集复制 `target_attributes`，不得新增 `attribute_pool / attribute_id / priority_attribute_ids`。`attribute_plan` 只能由 Builder 从当前 Case 字段派生。字段缺项以归一化脚本的 `errors` 为准。线上业务描述字段可以全空：此时品类、主题和补充内容就是 Case 依据，题目覆盖该主题下买家通用的选择关注点，交接文件注明「业务字段缺省」，不因字段少而停止；连主题本身都撑不出每 Topic 5 个独立购买意图时，才停止并说明缺什么证据；建议上游补证据或合并 Topic，不制造伪重复。对新增问题还必须逐条通过“Case 有依据、真实买家会问、会改变独立决策”三门；只因某个 Topic 题少、某项能力看起来有趣或模型能推测出来，不足以新增问题。
 
-同时复用上游已交付的来源、客户确认文档和确认状态，见共享原则中的“阶段交接”。这些是研究证据，不是第二套业务字段；新增或更正业务事实先由 Case Builder 回写原字段。售前负责初步核对诊断用业务重点与事实边界；客户尚未回复时可用公开证据形成明确标为待客户确认的 V1，不能把公开资料或 AI 推测当成客户原话。交接时列出已确认与待确认的范围，不把预填文档当成批准；售后试跑前负责复核最终监测范围。多市场题库先按市场证据核对产品线、买家、旅程、约束、竞品与当地信源，再决定哪些意图共享、当地化、增删或不生成；完整查漏表留内部，客户只确认整理后的属性池和市场相关事实。
+同时复用上游已交付的来源、客户确认文档和确认状态，见共享原则中的“阶段交接”。这些是研究证据，不是第二套业务字段；新增或更正业务事实先由 Case Builder 回写原字段。售前负责初步核对诊断用业务重点与事实边界；客户尚未回复时可用公开证据形成明确标为待客户确认的 V1，不能把公开资料或 AI 推测当成客户原话。交接时列出已确认与待确认的范围，不把预填文档当成批准；售后候选基线前负责复核最终监测范围。多市场题库先按市场证据核对产品线、买家、旅程、约束、竞品与当地信源，再决定哪些意图共享、当地化、增删或不生成；完整查漏表留内部，客户只确认整理后的属性池和市场相关事实。
 
 ## Topic、Attribute 与 Tags
 
@@ -59,12 +59,12 @@ Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评
 
 1. 归一化中英文名称、品类、业务边界、1–3 个 Topic 和 1–3 组正式竞品；只把输入中的“宽泛/细分”当作理解提示，不保存为字段。读取补充内容中的 Topic 局部竞品边界，为每个正式竞品写入适用的 `topic_ids`；归一化结果已带 `topic_ids` 时直接沿用；未提供局部边界时，全部正式竞品默认适用于全部 Topic。不得把 Case 中可跨 Topic 的能力重新升级为 Topic。
 2. 从证据支持的买家决策关注点完成轻量 `attribute_plan`；交接文件带有属性梳理得出的 Case 级排序时，各主题内的优先级沿用它，不重新排；P1/P2/P3 与 `excluded` 均按实际内容填写，不凑数量；P1 必须被 Discovery 覆盖。生成前按重要性 × 可改变性分级（见共用原则第 11 条），不虚构尚未采集的当前差距。纯目录事实进入 `exclude`，需要真值的精确数值进入 `accuracy_only`。**进入 `excluded` 的候选项不得再作为任何题目的 `Attribute:` 标签**——被排除意味着它不改变购买决策，以它命名的题同样不改变决策。研究中已识别的属性直接复用，勿要求客户重复填写。优先级判断覆盖产品能力、场景、痛点、采购约束和边界，不把“属性数量”当作完整度。
-3. 先选择阶段再记录实际配额。`discovery`：其他五类为 0，每 Topic 至少 5 条独立 Discovery；题量按该 Topic 的重要决策覆盖情况决定，允许明显不对称，不为凑齐或平均分配新增问题。`diagnostic`：在已有发现型集合上按需补竞品、评价或品类认知题，不要求每个竞品都出题或各 Topic 对称。先计算 Discovery 与计划中的后补题合计是否不超过 50；若后补后超限，先由用户决定范围，不静默删除已锁定的发现型问题。保存 `quotas` 的真实数量，不用配额驱动虚构需求。
+3. 先选择阶段再记录实际配额。`discovery`：其他五类为 0，每 Topic 至少 5 条独立 Discovery；题量按该 Topic 的重要决策覆盖情况决定，允许明显不对称，不为凑齐或平均分配新增问题。`diagnostic`：在已有发现型集合上按需补竞品、评价或品类认知题，不要求每个竞品都出题或各 Topic 对称。先计算 Discovery 与计划中的后补题合计是否不超过 60；若后补后超限，先由用户决定范围，不静默删除已锁定的发现型问题。保存 `quotas` 的真实数量，不用配额驱动虚构需求。
 4. 按生成方法编写自然英文根问题及等义中文。每题先确定一个 `Prompt Task`，再确定后端 `Intent`；两者分别记录。Discovery 和 Category Awareness 不出现具体品牌；Competitor、Evaluation 遵守各自品牌边界。按题面实际品牌提及写入唯一品牌范围 Tag。逐题检查任务匹配、不引导、消除缩写/跨品类歧义、买家语境有来源。Case 中多个既有品类称呼可帮助校准语言，但单纯更换称呼不计为新增独立意图。
 5. Discovery 先覆盖当前 Topic 的所有重要 P1，再按独立购买价值选择 P2/P3；完成覆盖后立即停止，不因为其他 Topic 题更多或更少而平衡数量。每道新增题都要能指出 Case 来源、具体买家/场景和独立决策结果。每题只承担一个主要决策，允许真实场景所需的复合条件，不堆叠仅本品符合的 USP；保留低条件自然问法，长短取决于语境而非固定词数。实际测试的属性写为 `Attribute: …`，无独立属性的品类题可不写。**去重的单位是购买决策，不是措辞**：两题指向同一决策（同一候选集合、同一比较维度）只保留一题，只有买家、地区、场景或决策阶段变化才算新题；不把 best/top、品类同义称呼或同一能力的换说法计为新增覆盖。**宽 Topic 要落到切面**：一个 Topic 下有多个不同买家需求时，逐条标出所属切面，并把配题重心放在差异化优势与买家需求重合的切面上，不平均分配。补充 Competitor 时只选当前 Topic 适用且有比较价值的竞品，同组题面和 Attribute Tags 保持同构。
 6. 不生成 Verification 与 Accuracy 问题。保留 Verification 作为意图定义（批量验证 AI 是否正确认知目标品牌与多个关键 Attribute 的关联，适用阶段为售后），P1 的属性级正确性核查并入 Accuracy 合同；只有用户明确要求售后验证或事实核验时，才在独立合同下单独确认产物，不得从 Case 或模型记忆临时补真值，也不在默认售前题库中生成 `validation_items` 或 `fact_value / official_source_url / fact_checked_at`。
 7. 仅在补充诊断时读取生成方法的对应模板，按需要生成 Evaluation 或 Category Awareness，不为补全类型强制生成。Evaluation 每题一个目标品牌或当前 Topic 适用竞品；品牌间评价保持同模板。两类固定模板在品类与 Topic 相同时省略范围从句，非英文使用语言注册表。英文题面不出现元词 `topic`。品类 Topic 下的 Discovery 不是 Category Awareness，不互相替代。
-8. 写入题型、品牌范围和实际属性 Tags，按真实产物核对配额。二遍语义 review 检查证据、意图覆盖、重复、题面和翻译；保存 JSON/CSV 并运行 validator。将题库版本、证据索引和客户确认状态交给售后。售后采集流程负责每道候选题在拟监测平台各试跑 3 次；售前未试跑就如实标记，不以本品是否出现作为合格条件。**阶段边界：售前这一轮只能产出「初步认知问题 / 机会假设」，不能认定为稳定认知缺口**——AI 回答有波动，单轮结果区分不了偶发未提及与长期提及率低；售后正式基线（每题每平台 3–7 次）只建立初始基准，长期稳定性仍由后续同口径监测验证。售前按重要性 × 可改变性定属性优先级，基线后加入实测的当前差距再排验证与优化，不把基线读数称为稳定缺口或效果承诺。详见 `geo-after-sales-prompt-builder` → after-sales-rules.md 的 *The Four Stages and What Each Can Conclude*。**能不能推动属于可改变性**（见共用原则第 11 条）：共识锁死的方向可以不为它新配题；**不能因为单次或零提及删题**，那会污染可见度测量。
+8. 写入题型、品牌范围和实际属性 Tags，按真实产物核对配额。二遍语义 review 检查证据、意图覆盖、重复、题面和翻译；保存 JSON/CSV 并运行 validator。将题库版本、证据索引和客户确认状态交给售后。售后由候选基线（每道候选题每平台 5 次）检查题目质量；售前没跑过就如实标记，不以本品是否出现作为合格条件。**阶段边界：售前这一轮只能产出「初步认知问题 / 机会假设」，不能认定为稳定认知缺口**——AI 回答有波动，单轮结果区分不了偶发未提及与长期提及率低；售后正式基线（每题每平台 5 次）只建立初始基准，长期稳定性仍由后续同口径监测验证。售前按重要性 × 可改变性定属性优先级，基线后加入实测的当前差距再排验证与优化，不把基线读数称为稳定缺口或效果承诺。详见 `geo-after-sales-prompt-builder` → after-sales-rules.md 的 *The Four Stages and What Each Can Conclude*。**能不能推动属于可改变性**（见共用原则第 11 条）：共识锁死的方向可以不为它新配题；**不能因为单次或零提及删题**，那会污染可见度测量。
 
 ## 分析与指标边界
 
@@ -85,7 +85,7 @@ Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评
 
 ## 输出与验证
 
-- 新产物显式写 `generation_stage`；每 Topic 至少 5 条、整批不超过 50。默认只输出 Discovery；补充题型没有固定数量。保留 `attribute_plan`、实际配额、Tags 和失败/重写原因。按独立购买决策解释题量，不用产品线、市场和任务类型的笛卡尔积凑题。客户文档、来源、版本、市场任务查漏和待确认状态写入独立交接文件，不塞进闭合 `config` 或上传 CSV。
+- 新产物显式写 `generation_stage`；每 Topic 至少 5 条、整批不超过 60（单产品单市场起步参考 30–60 条）。默认只输出 Discovery；补充题型没有固定数量。保留 `attribute_plan`、实际配额、Tags 和失败/重写原因。按独立购买决策解释题量，不用产品线、市场和任务类型的笛卡尔积凑题。客户文档、来源、版本、市场任务查漏和待确认状态写入独立交接文件，不塞进闭合 `config` 或上传 CSV。
 - 每题包含 `question_id / topic_id / tags / analysis_type / formal_visibility_eligible / intent_key / user_question / zh_translation / monitoring_prompt / quality_checks`；不包含 `diagnosis_intent` 或单独的 `attributes`。
 - 默认题库不含 Verification 题与 `validation_items`、Accuracy 题或事实包字段；上传 CSV 固定字段顺序为 `query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`。`diagnosis_intent` 从 JSON 唯一默认 Intent Tag 转写为 `discovery / competitor / verification / accuracy / evaluation / category_awareness`。`tags` 为上传适配列：允许留空；如果填写，必须是短于 200 字符的字符串，并使用英文逗号、中文逗号或换行分隔，优先保留可上传的最小化摘要，不要把 JSON 里的完整 Attribute 列表直接搬进来。`question_types` 按上传合同填写：Discovery 为 `visibility,sentiment`，Competitor 与 Evaluation 为 `sentiment`，Verification、Accuracy 与 Category Awareness 为 `visibility`——这三类不得带 `sentiment`，否则下游 `geo-presales-sentiment-judge` 会把它们错误纳入情绪样本（样本口径见 `../shared/canonical-intent-mapping.md`）。`purchase_intent / persona_name / scene_name` 没有可靠来源时留空，不臆造。JSON 仍不生成独立 `diagnosis_intent` 或 `question_type` 字段；这两个 CSV 字段只由上传适配器导出。
 

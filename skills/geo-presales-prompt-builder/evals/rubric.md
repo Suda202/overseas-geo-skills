@@ -4,4 +4,4 @@
 - **4**：全部硬门通过，但目标客户、场景或评价标准的覆盖分布略弱，或英文表达略显模板化。
 - **3**：实际题量记录与六个常用 Intent Tags 基本正确，但 Topic / Attribute 路由、Attribute Tags、品牌范围 Tag、P1 在 Discovery 中的覆盖、竞品同构或固定模板有一项需要人工修订。
 - **2**：仍依赖旧 `target_attributes`、固定三个 Topic、JSON 内保留 `diagnosis_intent` 固定字段、单属性 Verification 或 v5 双重指标路由，虽能生成问题但不符合新流程。
-- **1**：实际题量、聚合配额与 `expected_total` 不一致，超过 50 题，Discovery 少于 5 条或未覆盖 P1，品牌边界破坏，品类明显漂移，事实被编造，或把检索词直接作为监测 Prompt。
+- **1**：实际题量、聚合配额与 `expected_total` 不一致，超过 60 题，Discovery 少于 5 条或未覆盖 P1，品牌边界破坏，品类明显漂移，事实被编造，或把检索词直接作为监测 Prompt。

@@ -23,7 +23,7 @@ V7_SCHEMA_VERSION = "overseas-geo-question-bank/v7"
 V8_SCHEMA_VERSION = "overseas-geo-question-bank/v8"
 DEFAULT_GENERATION_SCHEMA_VERSION = V8_SCHEMA_VERSION
 V6_MAX_TOTAL = 60
-V8_MAX_TOTAL = 50
+V8_MAX_TOTAL = 60
 V6_PER_TOPIC_QUOTAS = {
     "discovery": 14,
     "competitor": 3,

@@ -23,9 +23,9 @@ Accuracy 默认配额为 0，不需要上游事实包，也不产生 `fact_value
 ## 固定结构
 
 - `schema_version=overseas-geo-question-bank/v8`
-- 1–3 个 Topic，总题量不得超过 50。
+- 1–3 个 Topic，总题量不得超过 60。
 - 新产物显式写 `config.generation_stage`：默认 `discovery` 只含 Discovery，其他五类配额为 0；按需补题时用 `diagnostic`，竞品、评价和品类认知数量按实际需求填写，无固定配额。Verification / Accuracy 仍为 0，单独走已确认的验证合同。
-- 每 Topic 至少 5 条、整批（含后补题）不超过 50。先确定独立发现型意图，不靠同义改写、品牌名替换或复制字段凑数。6/8/8 只是首轮分配示例。
+- 每 Topic 至少 5 条、整批（含后补题）不超过 60；单产品单市场起步参考 30–60 条，按独立购买决策定题量，30 不是硬下限。先确定独立发现型意图，不靠同义改写、品牌名替换或复制字段凑数。6/8/8 只是首轮分配示例。
 - 补充题不改变已有 Discovery 的 ID、题面或来源；若需修改，必须留变更记录，不能把前后题当同一监测样本。
 - `quotas.per_topic` 保存未被 `topic_overrides` 单列 Topic 共用的默认实际配额；`topic_overrides` 表达不同 Topic 的实际差异，不只用于适用竞品数不同的情形。`quotas.intent_tags` 必须等于各 Topic 实际配额之和。`expected_total` 必须等于最终题数。
 - 正式可见度指标只统计 Discovery；后端管线 eligibility 与指标分母不是一回事，见共享映射。
