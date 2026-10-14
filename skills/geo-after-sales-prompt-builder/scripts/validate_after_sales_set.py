@@ -183,6 +183,14 @@ def main() -> int:
     # Prompt or state why it is not, and an uncarried row must never outrank the
     # rows we actually measure.
     plan = config.get("attribute_plan") or []
+    if plan and (not isinstance(plan, list) or not all(isinstance(entry, dict) for entry in plan)):
+        # 2026-09-28 前的旧写法是 {note, p1, p2, p3} 字典；对齐门禁只认逐行对象，不硬转换以免中英文名对不上被误报。
+        fail(
+            "attribute_plan must be a list of {attribute, priority, no_carrier_reason} rows; "
+            "legacy {p1, p2, p3} plans must be migrated before the alignment gate can check them",
+            errors,
+        )
+        plan = []
     if plan:
         carried_names: set[str] = set()
         for row in questions:
@@ -247,6 +255,15 @@ def main() -> int:
                 f"short Topics need merge, Tag treatment, or evidence-gap report: {short_topics}",
                 errors,
             )
+        # 交付范围：正式题每个采购主题最多 10 条；候选阶段（customer_confirmed）不设上限。
+        if lifecycle in {"locked", "formal_baseline", "active"}:
+            long_topics = {topic_id: count for topic_id, count in topic_counts.items() if count > 10}
+            if long_topics:
+                fail(
+                    "formal set allows at most 10 Prompts per purchased Topic; "
+                    f"move the rest out of the deliverable set: {long_topics}",
+                    errors,
+                )
 
     evidence_status = config.get("evidence_status")
     if evidence_status in {"hypothesis", "after_sales_signal"} and lifecycle in {
@@ -272,16 +289,17 @@ def main() -> int:
 
     trial = config.get("trial") or {}
     if trial or lifecycle in {"locked", "formal_baseline", "active"}:
+        # trial = 候选题基线：候选题每题每平台统一跑 5 次，同一批数据既查题目质量也测当前差距。
         planned = trial.get("planned_runs")
-        if not isinstance(planned, int) or not 3 <= planned <= 5:
-            fail("trial.planned_runs must be an integer between 3 and 5", errors)
+        if not isinstance(planned, int) or planned != 5:
+            fail("trial.planned_runs must be 5 (one run per question per platform, five times)", errors)
     if trial.get("status") in {"running", "passed"} and confirmation.get("scope_status") != "confirmed":
         fail("customer_confirmation.scope_status must be confirmed before trial", errors)
     if lifecycle in {"locked", "formal_baseline", "active"}:
         valid = trial.get("valid_runs")
         ceiling = trial.get("planned_runs") if isinstance(trial.get("planned_runs"), int) else 5
         if trial.get("status") != "passed" or not isinstance(valid, int) or not 3 <= valid <= ceiling:
-            fail("locked set requires 3 to 5 valid trial runs", errors)
+            fail("locked set requires 3 to 5 valid candidate-baseline runs (planned 5; failures are not zeros)", errors)
         if not trial.get("evidence_refs"):
             fail("locked set requires trial.evidence_refs", errors)
 
@@ -298,14 +316,16 @@ def main() -> int:
     if lifecycle == "formal_baseline" and baseline.get("status") not in {"formal", "active"}:
         fail("formal_baseline lifecycle requires baseline.status formal or active", errors)
     if baseline or lifecycle == "formal_baseline":
-        # 基线只规定总次数：每题每平台 3–7 次，可一次跑完也可分天跑。
-        # 旧题库写的 window_days × runs_per_day 按总次数换算兼容。
+        # 正式基线统一每题每平台跑 5 次，可一次跑完也可分天跑。
+        # 旧题库写的 window_days × runs_per_day 按总次数换算，总次数 3–7 作旧合同兼容。
         runs = baseline.get("planned_runs")
         if runs is None and "window_days" in baseline:
             days, per_day = baseline.get("window_days"), baseline.get("runs_per_day", 1)
-            runs = days * per_day if all(isinstance(v, int) and not isinstance(v, bool) for v in (days, per_day)) else None
-        if not isinstance(runs, int) or isinstance(runs, bool) or not 3 <= runs <= 7:
-            fail("baseline.planned_runs must be an integer between 3 and 7", errors)
+            legacy = days * per_day if all(isinstance(v, int) and not isinstance(v, bool) for v in (days, per_day)) else None
+            if not isinstance(legacy, int) or not 3 <= legacy <= 7:
+                fail("legacy baseline window_days x runs_per_day must total 3 to 7", errors)
+        elif not isinstance(runs, int) or isinstance(runs, bool) or runs != 5:
+            fail("baseline.planned_runs must be 5 (one run per question per platform, five times)", errors)
     if formal_collection:
         if not str(baseline.get("conditions_key") or "").strip():
             fail("formal baseline requires conditions_key", errors)

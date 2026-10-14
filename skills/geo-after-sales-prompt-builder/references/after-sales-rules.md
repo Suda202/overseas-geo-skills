@@ -29,9 +29,9 @@ described in [representative-library.md](representative-library.md). Check the
 meaningful intersections of product/service line, buyer/persona, journey stage,
 market/language, constraint, competitor/alternative set, and business
 priority. Add local terminology, source ecosystem, regulation, currency, trust,
-availability, and service expectations when they can change the answer. This
-pass is for internal gap checking; it is not a customer-facing matrix or a
-requirement to fill every combination.
+availability, and service expectations when they can change the answer. We
+draft this pass and the brand party reviews its filled slices in the client
+Base's 覆盖矩阵 table; it is not a form to fill every combination.
 
 Every new Prompt must pass three gates:
 
@@ -68,7 +68,7 @@ The chain is continuous, but each stage answers exactly one question. **An earli
 |---|---|---|---|
 | **Before the presales run** | What is worth monitoring? | Brand facts, demand signals, attribute pool, initial attribute priority, competitors, Topics, the first Prompt set | Whether AI has a cognitive gap — nothing has been collected yet |
 | **Presales diagnostic run** | What might be wrong right now? | **Preliminary cognitive problem / opportunity hypothesis**: mentions, competitors, attribute cognition, accuracy, citations, recommendation reasons, content gaps | That a **stable** cognitive gap exists — AI answers fluctuate, so a single round only yields a suspicion |
-| **After-sales formal baseline** | What is the initial before benchmark under the final locked set? | 3–7 valid runs per Prompt and platform, initial differences between Topics and a provisional optimisation order | A claim that a gap is stable over time, or that optimisation worked |
+| **After-sales formal baseline** | What is the initial before benchmark under the final locked set? | 5 valid runs per Prompt and platform, initial differences between Topics and a provisional optimisation order | A claim that a gap is stable over time, or that optimisation worked |
 | **Continuous monitoring** | Are the gaps persistent, and did optimisation improve them? | Same-question, same-condition, same-caliber window comparison; longitudinal evidence | A single-day comparison or immediate effect promises |
 
 **One line: presales suggests the opportunity, the formal baseline fixes the initial benchmark, long-term comparable data tests persistence and improvement.**
@@ -90,6 +90,21 @@ The second pass adds an **initial measured gap**, not a stable one. Presales can
 Multiply the three (before collection, importance × changeability only). Set the tier cuts per engagement so P1 stays a short list, and **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 however it scores.
 
 **`相对竞品` is not a fourth factor.** It records the **real industry position** (领先 / 持平 / 劣势 / 待确认), judged on the facts from the public layer wherever that can settle it, and **from the client wherever it cannot** — a client knows where its own spec sits in the industry, so never infer `持平` from the mere fact that neither side published. It feeds changeability: once the material is in place, can the brand catch the leader? If not (a competitor lists certification per model while the brand can only give a summary figure), score changeability lower. Multiplying it in separately would double-count.
+
+| `相对竞品` | Gap type | Changeability |
+|---|---|---|
+| 优势 / 持平 | Capability exists but is unpublished (证据缺口) | 3.0 — one page can move it |
+| 优势 / 持平 | Already published | 2.2 — content is not the bottleneck |
+| 劣势, small gap that material can close | Material can be supplied | 2.2 |
+| 劣势, cannot catch up even with material | Capability absent (能力缺口) | 1.5; no candidate Prompt once the client confirms there is no remedy |
+| Competitor leads on brand awareness or media consensus | — | 1.5; still gets a candidate Prompt in round one |
+| 待确认 | — | Get the evidence first; hold at 2.2, never downgrade by default |
+
+**Round one excludes only confirmed capability gaps.** Round-one changeability rests on public facts such as official sites and specs and can be wrong, so the initial priority mainly orders the work and allocates Prompts. Low changeability has two sources, handled differently:
+- **Confirmed capability gap**: the product really lacks the capability or really trails on the spec, and the client confirms there is no remedy (no bridging course, alternative model or roadmap date). Content cannot move it, so a candidate Prompt would only measure a known loss: give it none, and record the reason in `no_carrier_reason`. Until the client confirms, treat the row as 待确认 and give it a Prompt. Revisit the row when the product changes.
+- **Competitor leads on brand awareness or media consensus**: the low score is a guess about how AI answers, and the answers may not follow the consensus. This is where high-importance directions that look hard turn out to be open, so give every high-importance one at least one candidate Prompt.
+
+Low-importance Attributes may go without a Prompt. After the candidate baseline, re-judge `相对竞品` and changeability from the answer layer (whether competitors are criticised on the theme, whose pages AI cites) instead of carrying the round-one scores forward.
 
 **Within one tier, order the work by how ready the material is.** Rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. This is an execution order inside the tier, not a further multiplier.
 
@@ -135,7 +150,7 @@ Depth also varies by layer: business boundaries (product, market, ICP, competito
 
 ### The customer confirmation table
 
-"Fill in whatever you like" is not a low bar — it is no bar, and clients freeze or free-associate. Give a fixed frame; lower the burden by choosing the right columns, not by removing them. For the actual customer-facing 属性池、监测主题与问题确认件, use [client-facing-attribute-pool.md](client-facing-attribute-pool.md) as the concrete document pattern: opening scope, 核对时从哪里判断, 品牌事实, 属性池, optional 监测主题与问题, optional 竞品名单, and 试跑与锁词流程. The canonical intake spec is the project's client-intake spec 《AI 搜索监测问题确认说明》 — follow it rather than re-inventing columns. Its settled shape is five client columns:
+"Fill in whatever you like" is not a low bar — it is no bar, and clients freeze or free-associate. Give a fixed frame; lower the burden by choosing the right columns, not by removing them. For the actual customer-facing 属性池、监测主题与问题确认件, use [client-facing-attribute-pool.md](client-facing-attribute-pool.md) as the concrete document pattern: opening scope, 核对时从哪里判断, 品牌事实, 属性池, optional 监测主题与问题, optional 竞品名单, 需要品牌方提供的数据, and 候选基线与锁词流程. The canonical intake spec is the project's client-intake spec 《AI 搜索监测问题确认说明》 — follow it rather than re-inventing columns. Its settled shape is five client columns:
 
 `目标客户 | 客户问题与场景 | 客户原话 | 客户旅程 | 业务重要程度`
 
@@ -284,23 +299,25 @@ Attributes are also not kept as a separate library: they exist to build and expl
 ## Topic Rule
 
 A Topic is a business theme worth tracking with an independent long-term metric.
-The recommended first-stage shape is one category observation Topic plus two
-same-product buying-scenario Topics; two Topics are acceptable when the product
-line or evidence is genuinely narrow. Category observation is not a randomized
+The formal Topic count follows what the customer purchases; the recommended
+first-stage shape is one category observation Topic plus two same-product
+buying-scenario Topics, and two are acceptable when the product line or
+evidence is genuinely narrow. Candidate Topics are not limited in number. Category observation is not a randomized
 causal control and may be optimized when it is a real opportunity. It is also
 not the `Category Awareness` intent.
 
-For a customer-confirmed, locked, or formal Topic, require at least five
-independent Prompts. Candidate/hypothesis Topics may temporarily have fewer,
+Every candidate Topic needs at least five independent Prompts before it
+enters the candidate baseline; a hypothesis draft may temporarily have fewer,
 but must be marked for evidence completion. Do not fill them with synonymous
 rewrites: merge them, keep them as Tags, or report the evidence gap if five
 independent intents cannot be supported. Prompt counts are deliberately
-variable and Topic counts may differ. The project's first-stage shape is three
-Topics — one category observation Topic plus two same-product buying-scenario
-Topics — with a lower bound of five Prompts per Topic, normally 5–10, 8 as the
-internal recommendation, and **no permanent upper cap**. Ten or more Prompts in
-one Topic requires a stated reason (ten or more genuinely distinct important
-intents; otherwise split the Topic). Weight the counts, do not equalise them: the
+variable and Topic counts may differ. Candidate Topics are open-ended in
+number, each carrying at least five Prompts; formal Topics follow the
+purchased count, with a lower bound of five Prompts per Topic and **at most 10
+formal Prompts per purchased Topic** (the deliverable); the candidate set may
+be larger.
+Ten or more genuinely distinct important intents in one Topic mean it should be
+split and purchased as two. Weight the counts, do not equalise them: the
 category observation Topic carries roughly six Prompts, while the
 buying-scenario Topics the brand can win carry eight to ten each. A mature set
 grows only when evidence supports independent long-term value.
@@ -397,7 +414,7 @@ specific attribute does not by itself make a Prompt an Evaluation.
 
 ## Trial, Baseline, and Optimization Groups
 
-Run each candidate Prompt three to five times on each proposed platform before lock. Check the market coverage pass first, then category fit, answer-task fit,
+Run each candidate Prompt 5 times on each proposed platform before selecting the formal set (the candidate baseline). Check the market coverage pass first, then category fit, answer-task fit,
 ambiguity, leading wording, and semantic duplication. Do not select or reject a
 Prompt because the target brand was or was not mentioned, and never retire an
 existing Prompt on a single or zero mention — that corrupts the visibility
@@ -415,12 +432,15 @@ causal control and does not need a fixed size. Do not confuse it with
 low-frequency Category Awareness, and do not forbid optimizing the category
 observation Topic.
 
-Confirm the business scope before trial; after three valid trial runs per
-Prompt/platform, the customer approves the final set and its version. Trial
-answers do not count toward the formal baseline. Run that baseline 3–7 times
-per Prompt/platform under the same questions, market, language, and collection
-configuration — in one sitting or spread over several days; what matters is
-enough runs. Use only observed valid samples; failures are not zeroes. The
+Confirm the attribute pool and business scope before generating candidates.
+The candidate baseline runs 5 times per Prompt/platform under the same
+questions, market, language, and collection configuration — in one sitting or
+spread over several days; what matters is enough runs. Select the formal set
+(at most 10 per purchased Topic) by Attribute priority, question quality and
+coverage, never by a Prompt's own reading; the customer approves it and its
+version. Unchanged formal Prompts reuse their candidate-baseline readings as
+the Before baseline; reworded ones get 5 fresh runs. Candidates left out stop
+being monitored and are outside the deliverable. Use only observed valid samples; failures are not zeroes. The
 baseline establishes an initial benchmark, not statistical stability. This skill emits the plan; it does not execute crawling
 unless explicitly requested.
 

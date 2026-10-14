@@ -13,7 +13,8 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - `属性池【请核对】` with `购买影响`, `相对竞品`, `优先级`, evidence-gap fields, and `客户确认`;
 - optional candidate `监测主题与问题【请核对】` table;
 - optional competitor confirmation table;
-- trial / lock / baseline handoff.
+- `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
+- candidate-baseline / lock handoff.
 
 Every table has a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
 
@@ -105,8 +106,9 @@ coverage record for each priority market/language. It checks product/service
 line, audience/persona, journey stage, market/language, buyer constraint,
 competitor/alternative set and business priority, plus local terminology,
 source ecosystem, regulation, currency, trust, availability and service
-expectations when relevant. It is a gap check, not a customer form or a
-Cartesian-product quota.
+expectations when relevant. It is a gap check we draft — shown to the brand
+party as the 覆盖矩阵 table of the client Base — not a form the client fills or
+a Cartesian-product quota.
 
 Each candidate intent is classified per market as:
 
@@ -185,15 +187,16 @@ derive a separate schedule/evidence sidecar from the validated set rather than
 silently dropping them:
 
 - `customer_confirmation.scope_status`: customer confirmed business priority,
-  product/buyer/market scope, and factual/exclusion boundaries before trial;
-- `trial`: `planned_runs` 3–5; after 3–5 valid runs for each candidate Prompt
+  product/buyer/market scope, and factual/exclusion boundaries before the
+  candidate baseline;
+- `trial` (the candidate baseline): `planned_runs` 5; after the valid runs for each candidate Prompt
   on each proposed platform, `status: passed`, `valid_runs` equal to the runs
   actually completed, and raw
   `evidence_refs`. These counts are per Prompt/platform, not a total for the bank;
-- `customer_confirmation.prompt_set_status`: confirmed after trial; retain the
+- `customer_confirmation.prompt_set_status`: formal set confirmed after the candidate baseline; retain the
   existing summary `status` separately;
 - `prompt_version`: immutable market/language set version after final approval;
-- `baseline`: `status`, `planned_runs` (3–7 per Prompt/platform; legacy
+- `baseline`: `status`, `planned_runs` (5 per Prompt/platform; legacy
   `window_days` × `runs_per_day` is read as the total), `conditions_key`,
   `valid_samples_only`, and for a
   formal baseline `prompt_version` matching the locked set;
@@ -202,8 +205,9 @@ silently dropping them:
 
 `locked`/`formal_baseline`/`active` requires both confirmations, completed
 trial evidence, and a locked Prompt version. `hypothesis` or
-`after_sales_signal` evidence cannot be formal-ready. Trial answers are never
-part of the baseline. Any addition, deletion, or wording change requires a new
+`after_sales_signal` evidence cannot be formal-ready. A locked set holds at most
+10 Prompts per purchased Topic. Unchanged formal Prompts reuse their
+candidate-baseline readings as the Before baseline; reworded ones are rerun. Any addition, deletion, or wording change requires a new
 set version and a separate formal baseline for the affected market/group;
 retain history but do not concatenate old and new set-level series.
 
@@ -212,15 +216,22 @@ it does not read crawler answers or prove collection occurred. Before marking
 trial or baseline collection complete, the collection workflow must audit the
 raw results for each Prompt/platform run and retain their locations.
 
-Compute only from observed valid runs (3–7 per Prompt/platform). Diagnose
+Compute only from observed valid runs (5 per Prompt/platform). Diagnose
 failed or missing runs and rerun them rather than imputing zeroes. The baseline
 runs establish an initial benchmark, not proof of a stable long-term gap.
+
+Baseline analysis also reads the query fan-out from the same runs: ChatGPT
+`task_result.search_model_queries.queries` and Gemini
+`task_result.related_queries`; other platforms return none. Keep the raw
+results whole so these fields survive, report the two platforms separately, and
+treat an empty field as "no fan-out returned", not a failed run. How to read it
+is in [gap-cause-action-table.md](gap-cause-action-table.md) → *Query fan-out*.
 
 ## Cadence
 
 Cadence belongs in a separate schedule file or an explicit CSV column:
 
-- Discovery: 3–7 runs per Prompt/platform for the formal baseline (one sitting
+- Discovery: 5 runs per Prompt/platform for the formal baseline (one sitting
   or several days), then weekly or otherwise as agreed.
 - Evaluation and Competitor: as agreed or event-triggered; no fixed default
   quota or cadence is implied.
@@ -236,7 +247,7 @@ Before delivery:
 
 1. The chosen scope and stage are explicit. The recommended first-stage shape is one category observation Topic plus two same-product buying-scenario Topics; two Topics can be justified.
 2. Topic names are short and each Prompt maps to exactly one Topic.
-3. A customer-confirmed, locked, or formal Topic has at least five Prompts. A shorter hypothesis Topic is marked for merge, Tag treatment, or evidence completion rather than padded with rewrites. Topic counts may differ; no equalization is required.
+3. Every candidate (customer-confirmed), locked, or formal Topic has at least five Prompts; candidate Topic count is not limited. A shorter hypothesis Topic is marked for merge, Tag treatment, or evidence completion rather than padded with rewrites. Topic counts may differ; no equalization is required.
 4. Every Prompt has Topic, Region, and Intent, a query in the market's selected language, and a Chinese translation.
 5. Tags, when used, do not repeat Topic, Intent, or Region, and carry a dimension those fields do not.
 6. Competitor Prompts are one-to-one, use only frozen applicable competitors, and do not enter the natural Discovery count.
@@ -247,7 +258,7 @@ Before delivery:
 11. CSV rows match JSON rows and all upload length limits.
 12. Discovery Prompts contain no brand names, ask a commercial recommendation/selection question, and test one primary intent.
 13. Trial review checks category/task fit, ambiguity, leading language, and duplication; target-brand mention is not a trial pass/fail criterion.
-14. Formal baseline plans 3–7 runs per Prompt/platform. Audit observed valid
+14. Formal baseline plans 5 runs per Prompt/platform. Audit observed valid
     samples separately; failures are not zeroes, and old/new Prompt versions are
     not concatenated.
 15. Each Topic records a parent Search-Demand anchor or an explicit reason why no reliable Search-Demand signal is available.
@@ -292,9 +303,10 @@ Before delivery:
     actual purchase decision belongs and the counts recomputed. A shortfall
     resolved this way is a correction, not padding.
 25. Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `购买影响`, `相对竞品`, `优先级`, evidence gaps and `客户确认`; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; every table uses the write-what-to-change `客户确认` convention; question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
-26. Business scope was confirmed before three to five trial runs per candidate
-    Prompt/platform; the final set was confirmed and version-locked after trial.
-    Trial results do not count toward the formal baseline runs.
+26. The attribute pool and business scope were confirmed before the candidate
+    baseline (5 runs per Prompt/platform); the formal set (at most 10 per
+    purchased Topic) was selected by attribute priority, confirmed and
+    version-locked; reworded Prompts were rerun before reuse.
 27. The customer-facing document contains the resulting brand facts, attribute
     pool and necessary market-specific Prompts, not the full internal coverage
     matrix or unresolved reasoning.

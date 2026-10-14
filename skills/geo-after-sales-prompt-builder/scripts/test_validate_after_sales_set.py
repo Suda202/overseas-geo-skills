@@ -114,7 +114,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data = staged_bank(5, "hypothesis")
         data["config"]["baseline"] = {
             "status": "formal",
-            "planned_runs": 7,
+            "planned_runs": 5,
             "conditions_key": "us-en-v1",
             "valid_samples_only": True,
             "failures_as_zero": False,
@@ -137,8 +137,8 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertIn("generation_stage must be one of", result.stdout)
 
 
-    def test_trial_run_range_accepts_three_to_five(self) -> None:
-        for planned, valid in ((3, 3), (4, 3), (5, 5)):
+    def test_trial_runs_fixed_at_five_with_valid_run_floor(self) -> None:
+        for planned, valid in ((5, 3), (5, 5)):
             with self.subTest(planned_runs=planned, valid_runs=valid):
                 data = staged_bank(5, "locked")
                 data["config"]["customer_confirmation"] = {
@@ -155,22 +155,47 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
                 result = validate(data)
                 self.assertEqual(result.returncode, 0, result.stdout)
 
-    def test_trial_run_range_rejects_out_of_range_counts(self) -> None:
-        data = staged_bank(5, "locked")
-        data["config"]["customer_confirmation"] = {
-            "status": "confirmed",
-            "scope_status": "confirmed",
-            "prompt_set_status": "confirmed",
-        }
-        data["config"]["trial"] = {
-            "status": "passed",
-            "planned_runs": 2,
-            "valid_runs": 2,
-            "evidence_refs": ["trial/run-1.json"],
-        }
-        result = validate(data)
+    def test_trial_run_range_rejects_non_five_plans(self) -> None:
+        for planned, valid in ((2, 2), (3, 3), (7, 7)):
+            with self.subTest(planned_runs=planned):
+                data = staged_bank(5, "locked")
+                data["config"]["customer_confirmation"] = {
+                    "status": "confirmed",
+                    "scope_status": "confirmed",
+                    "prompt_set_status": "confirmed",
+                }
+                data["config"]["trial"] = {
+                    "status": "passed",
+                    "planned_runs": planned,
+                    "valid_runs": valid,
+                    "evidence_refs": ["trial/run-1.json"],
+                }
+                result = validate(data)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("trial.planned_runs must be 5", result.stdout)
+
+    def test_formal_set_caps_each_topic_at_ten(self) -> None:
+        def locked(count: int, lifecycle: str = "locked") -> dict:
+            data = staged_bank(count, lifecycle)
+            data["config"]["customer_confirmation"] = {
+                "status": "confirmed",
+                "scope_status": "confirmed",
+                "prompt_set_status": "confirmed",
+            }
+            data["config"]["trial"] = {
+                "status": "passed",
+                "planned_runs": 5,
+                "valid_runs": 5,
+                "evidence_refs": ["trial/run-1.json"],
+            }
+            return data
+
+        self.assertEqual(validate(locked(10)).returncode, 0)
+        result = validate(locked(11))
         self.assertEqual(result.returncode, 1)
-        self.assertIn("planned_runs must be an integer between 3 and 5", result.stdout)
+        self.assertIn("at most 10 Prompts per purchased Topic", result.stdout)
+        # 候选阶段可以多出题
+        self.assertEqual(validate(locked(14, "customer_confirmed")).returncode, 0, validate(locked(14, "customer_confirmed")).stdout)
 
 
 if __name__ == "__main__":

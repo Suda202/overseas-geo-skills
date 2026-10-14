@@ -8,6 +8,10 @@ The document lets the brand party quickly correct business facts, attribute prio
 
 Use it when delivering or updating an after-sales attribute pool, first monitoring-topic set, customer confirmation document, or trial handoff. Keep the document in Chinese unless the customer explicitly needs another language.
 
+## Format: the Feishu Base template
+
+The client confirmation piece is a Feishu Base copied from the template 《AI 搜索监测确认表（模板）》, kept in the same wiki space as 《售后生词规则》. Copy it once per client and per market/language, delete every 【示例】 row, and fill the 使用说明 doc's data-source placeholders with the sources actually used. Its tables carry the sections below: 品牌事实, 属性池, 买家原话 (the evidence log), 覆盖矩阵, 监测主题与问题, 竞品名单, 需要品牌方提供的数据. Links do the reconciliation: each Prompt links the Attributes it tests, its 覆盖切片 and its 买家原话 evidence; 承载题数 / 覆盖检查 on 属性池 and 已有题数 / 覆盖情况 on 覆盖矩阵 are formulas, so an uncarried P1/P2 or an under-covered slice shows up without manual checking. Use the 需品牌方确认 checkbox where a document would use orange highlighting. The sections below still define what each table must contain.
+
 ## Canonical Shape
 
 Use the sections that fit the task; do not force all of them into a small update.
@@ -16,15 +20,16 @@ Use the sections that fit the task; do not force all of them into a small update
    - State the monitoring object, product/category scope, market/language, and entry scenario.
    - Ask the brand party to confirm three things: the attribute list, the buying impact, and whether the brand is advantaged/at parity/weak versus competitors.
    - Explain the confirmation convention: every table's `客户确认` column is write-what-to-change; blank means reviewed with no change.
+   - **State where our data came from**, in two or three plain sentences, so the brand party can judge the evidence instead of taking the table on trust: which public sources we collected (搜索需求与相关搜索、哪些评价平台、哪些社区——写实际用到的站点名，不写方法论), which of the brand party's own materials we used (销售/客服记录、GSC 等——只列用过的), and which AI answers were already collected (售前诊断或候选基线，带采集时间). Name only sources actually used in this engagement — the full menu stays internal in [signal-sources.md](signal-sources.md). One line of boundary: 公开来源查不到的，已在表中标为「待确认」或「需品牌方提供」，不会当成品牌方没有。
 
 2. **核对时从哪里判断**
 
    The internal team may use a market-coverage pass to check whether the pool
    misses a product line, audience, journey stage, constraint, competitor,
    local terminology, regulation, currency, trust signal or source ecosystem.
-   Do not expose that full matrix as a customer questionnaire. Show the
-   customer only the resulting brand facts, attributes, and market-specific
-   Prompt rows that require factual or priority confirmation.
+   Show the filled slices in the 覆盖矩阵 table: we draft it, and the brand
+   party only reviews whether an important buyer situation is missing. Never
+   turn it into a questionnaire the client fills from scratch.
 
    | 要确认的 | 内部看什么 | 外部看什么 |
    |---|---|---|
@@ -115,13 +120,17 @@ Use the sections that fit the task; do not force all of them into a small update
 
    Explain each inclusion/exclusion by “same buying comparison set,” not by brand fame alone.
 
-8. **试跑与锁词流程**
+8. **需要品牌方提供的数据**
+
+   Include this section whenever the attribute pool is still being built. List only the data the brand party alone can access, using the table in [signal-sources.md](signal-sources.md) → 客户提供什么 (`数据 | 必要性与怎么给 | 品牌方补充与确认`). Mark 销售与 CRM 记录 and 客服记录 as 必须给 and the platform data as 最好给; do not ask for public search data, reviews or community language — we collect those. Say in one line that personal and customer-company details will be removed before use and raw records stay internal.
+
+9. **候选基线与锁词流程**
 
    If the document hands off to monitoring, state the staged process in four lines:
    1. 品牌方确认业务重点、事实边界和属性池。
-   2. Candidate Prompts run three to five trial collections per proposed platform to check fit, ambiguity, leading wording and duplication.
-   3. The final Prompt set is confirmed and version-locked after trial.
-   4. Formal baseline runs each Prompt 3–7 times per platform, in one sitting or over several days; trial answers are not baseline data.
+   2. Candidate Prompts run 5 times per proposed platform (the candidate baseline), in one sitting or over several days; the same runs check fit, ambiguity, leading wording and duplication.
+   3. The formal set — at most 10 Prompts per purchased Topic — is chosen by attribute priority, confirmed by the brand party, and version-locked.
+   4. Unchanged formal Prompts keep their candidate-baseline readings as the Before baseline; reworded ones are rerun 5 times.
 
 ## Wording Rules
 
