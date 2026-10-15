@@ -3,7 +3,7 @@ name: geo-after-sales-prompt-builder
 description: Build or maintain evidence-backed after-sales GEO monitoring Topics and Prompts, including Discovery-first handoff, evidence correction, versioning, and collection plans. Use for ongoing monitoring-set expansion, refinement, deduplication, and retirement; do not use for presales coverage, crawler execution unless explicitly requested, metric calculation, report writing, or automatic competitor discovery.
 metadata:
   author: Overseas GEO Project
-  version: "1.25.0"
+  version: "1.29.0"
 ---
 
 # GEO After-Sales Prompt Builder
@@ -12,7 +12,7 @@ metadata:
 
 售后生词不是重新生成一套售前题库，而是基于已有监测结果和真实业务变化，持续发现、补充、合并和淘汰高价值监测 Prompt。目标是发现新的可优化机会和细分分析视角，而不是把覆盖面机械做满。
 
-Use this skill when the user asks to create, revise, expand, prune, organize, or schedule an after-sales GEO monitoring Prompt set. Read [after-sales-rules.md](references/after-sales-rules.md) before designing Topics or Prompt quotas. Read [representative-library.md](references/representative-library.md) when the task involves market/language coverage, attribute-pool gap checking, Prompt groups, localization, or sampling protocol. Read [client-facing-attribute-pool.md](references/client-facing-attribute-pool.md) when producing or updating the client confirmation Base (业务范围 / 买家原话 / 提示词矩阵 / 提示词库 / 竞品名单 / 需要品牌方提供的数据), an 属性池 or 对客确认件, or any customer-facing handoff. Read [output-contract.md](references/output-contract.md) when producing JSON, CSV, cadence, or audit artifacts.
+Use this skill when the user asks to create, revise, expand, prune, organize, or schedule an after-sales GEO monitoring Prompt set. Read [after-sales-rules.md](references/after-sales-rules.md) before designing Topics or Prompt quotas. Read [representative-library.md](references/representative-library.md) when the task involves market/language coverage, attribute-pool gap checking, Prompt groups, localization, or sampling protocol. Read [client-facing-attribute-pool.md](references/client-facing-attribute-pool.md) when producing or updating the client confirmation Base (使用说明 + 业务范围 / 买家原话 / 提示词矩阵 / 提示词库 / 需要品牌方提供的数据; competitors are 竞品（n） rows in 业务范围), an 属性池 or 对客确认件, or any customer-facing handoff. Read [output-contract.md](references/output-contract.md) when producing JSON, CSV, cadence, or audit artifacts.
 
 ## Operating Boundary
 

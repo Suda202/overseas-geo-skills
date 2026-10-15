@@ -10,13 +10,13 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - opening scope and monitoring object;
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
 - a separate `品牌事实【请核对】` table (the Base's 业务范围);
-- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields and `客户确认` — carried by 提示词矩阵 rows (one row = buyer situation × attribute), not a separate 属性池 table;
+- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 提示词类型, 约束或场景 and 目标题数 — carried by 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号), not a separate 属性池 table;
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
 - candidate-baseline / lock handoff.
 
-Every table has a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
+In the Base there is no `客户确认` column: the brand party edits cells directly and marks 审核状态 (待审核 / 已批准 / 需修改) on 提示词库; only 已批准 Prompts enter the candidate baseline. Document-format pieces keep a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
 
 ## JSON
 
