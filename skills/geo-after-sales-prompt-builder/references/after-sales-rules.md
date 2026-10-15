@@ -79,37 +79,48 @@ The chain is continuous, but each stage answers exactly one question. **An earli
 | When | Basis | Nature of the result |
 |---|---|---|
 | **Before the presales run** | **Importance × changeability**; current gap marked `待测` | **Initial priority** — no current-gap data yet |
-| **After the formal baseline** (or once a presales batch has measured the gap) | **Importance × current gap × changeability** — three conditions, multiplied | Operational priority for the next actions, explicitly provisional about persistence |
+| **After the formal baseline** (or once a presales batch has measured the gap) | **Importance × current gap × changeability** — lookup tier, re-judged changeability, then per-Prompt adjustment by current gap | Operational priority for the next actions, explicitly provisional about persistence |
 
 The second pass adds an **initial measured gap**, not a stable one. Presales cannot measure it before collection; the baseline runs provide a reproducible starting point but still cannot separate short-term misses from a persistent gap. Confirm persistence through later comparable windows.
 
 **The three conditions follow Profound's attribute prioritisation: importance, current gap, changeability.** Attributes, and the monitoring Prompts that carry them, share them.
-- **Importance** (重要性): how much the Attribute matters to the purchase decision — 高 3 (decides whether the brand gets onto the buyer's shortlist) / 中 2 (clearly matters to some buyers or specific situations) / 低 1 (relevant, but does not usually decide the choice). Grade it from the user-language sources in *Customer and Market Signals* (search data, sales records, reviews, community).
+- **Importance** (重要性): how much the Attribute matters to the purchase decision — 高 (decides whether the brand gets onto the buyer's shortlist) / 中 (clearly matters to some buyers or specific situations) / 低 (relevant, but does not usually decide the choice). Grade it from the user-language sources in *Customer and Market Signals* (search data, sales records, reviews, community).
 - **Current gap** (当前差距, recorded per Prompt as **AI 认知差距**): distance between what AI says now and what we want it to say, judged from each Prompt's own answer text — 有缺口 (AI omits the brand or says something unfavourable) / 无人讨论 (AI does not discuss this dimension) / 无缺口 (AI already describes it correctly and favourably). Mention rate alone is not the gap: a brand mentioned in every answer can still be described wrongly. Before that Prompt's own candidate-baseline answers exist, mark it `待基线`; never copy an attribute-level judgement or presales answers onto individual Prompts. Where another company shares or nearly shares the brand's name, measure by the share of answers citing the brand's own domain, not by name occurrences.
-- **Changeability** (可改变性): whether the brand can realistically move it within its own control — 证据缺口 (capability exists but is unpublished) 3.0 / 持平 or no gap 2.2 / 能力缺口 (capability absent) 1.5. A direction where a competitor's lead rests on brand awareness or broad media consensus scores as a capability gap.
+- **Changeability** (可改变性): whether what the brand can do itself — publish content, fix the site, supply material, earn third-party reviews — can move what AI says on this Attribute within the service window. Graded 高 / 中 / 低 by the two questions under *How to grade changeability*.
 
-Multiply the three (before collection, importance × changeability only). Set the tier cuts per engagement so P1 stays a short list, and **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 however it scores.
+Before collection, read the tier from importance × changeability in the table below; after the baseline, re-judge changeability and then adjust each Prompt by its current gap. **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 whatever its cell.
 
-**P1/P2/P3 are this project's tiers, not Profound's.** Profound's AEO Guide also uses Priority 1–3 (chapter 4), but grades them only by how central the Attribute is to the buying decision; and for a gap that cannot realistically be closed it says "park it lower on the list", not drop it. Cutting tiers from the product of the three conditions, and giving a confirmed capability gap no Prompt, are our own choices — do not cite Profound for either. Sources: https://www.tryprofound.com/aeo-guide/chapter-2 and https://www.tryprofound.com/aeo-guide/chapter-4 .
+| Importance \ Changeability | 高 | 中 | 低 |
+|---|---|---|---|
+| 高 | P1 | P2 | P2 |
+| 中 | P2 | P2 | P3 |
+| 低 | P3 | P3 | P3 |
 
-**`相对竞品` is not a fourth factor.** It records the **real industry position** (领先 / 持平 / 劣势 / 待确认), judged on the facts from the public layer wherever that can settle it, and **from the client wherever it cannot** — a client knows where its own spec sits in the industry, so never infer `持平` from the mere fact that neither side published. It feeds changeability: once the material is in place, can the brand catch the leader? If not (a competitor lists certification per model while the brand can only give a summary figure), score changeability lower. Multiplying it in separately would double-count.
+Only 高 × 高 is P1, so P1 stays a short list; the category-baseline row (empty attribute) is fixed at P1 because it measures which brands AI lists with no condition. Do not reintroduce numeric weights: only the cell decides the tier, and decimals imply a precision the judgement does not have.
 
-| `相对竞品` | Gap type | Changeability |
+**P1/P2/P3 are this project's tiers, not Profound's.** Profound's AEO Guide also uses Priority 1–3 (chapter 4), but grades them only by how central the Attribute is to the buying decision; and for a gap that cannot realistically be closed it says "park it lower on the list", not drop it. Setting tiers by a lookup on the three conditions, and giving a confirmed capability gap no Prompt, are our own choices — do not cite Profound for either. Sources: https://www.tryprofound.com/aeo-guide/chapter-2 and https://www.tryprofound.com/aeo-guide/chapter-4 .
+
+**How to grade changeability.** Ask in order; the first "yes" sets the grade; two "no"s give 中.
+
+| # | Question | If yes |
 |---|---|---|
-| 优势 / 持平 | Capability exists but is unpublished (证据缺口) | 3.0 — one page can move it |
-| 优势 / 持平 | Already published | 2.2 — content is not the bottleneck |
-| 劣势, small gap that material can close | Material can be supplied | 2.2 |
-| 劣势, cannot catch up even with material | Capability absent (能力缺口) | 1.5; no candidate Prompt once the client confirms there is no remedy |
-| Competitor leads on brand awareness or media consensus | — | 1.5; still gets a candidate Prompt in round one |
-| 待确认 | — | Get the evidence first; hold at 2.2, never downgrade by default |
+| 1 | Can the brand not catch up even with material? The product truly lacks the capability or trails on the spec, or the competitor's lead rests on brand awareness or broad media consensus with no concrete fact the brand could match. | 低 (能力缺口 or consensus lead). A capability gap the client confirms has no remedy gets no candidate Prompt; a consensus lead still gets one in round one |
+| 2 | Does the brand have the capability (`相对竞品` 领先 or 持平) but it is not written anywhere AI can read? | 高 (证据缺口) — one page or one template fix can move it |
+| — | Otherwise: already written where AI reads; 劣势 with a small gap that material can close; `相对竞品` 待确认 | 中 |
+
+**"Somewhere AI can read" is judged from the site diagnosis report** — the HTML report a colleague produces with the site GEO-readiness skill (a score per dimension: crawler access, technical base, brand recognition and Schema, content quality, content citability; then a P0–P3 fix list). It means statically fetchable text or images on the brand site or on third-party pages AI cites. Numbers that exist only in JS-rendered elements, pages blocked by robots or behind a login, and pages the report marks as blocked or unreadable count as not written; parameters inside images count as written (ChatGPT read them in the 2026-10-10 test). The report samples only a few pages: when the Attribute's landing page is not in the sample, check its static source instead of borrowing the homepage score.
+
+**`相对竞品` is not scored separately; it answers question 1.** It records the **real industry position** (领先 / 持平 / 劣势 / 待确认), judged on the facts from the public layer wherever that can settle it, and **from the client wherever it cannot** — a client knows where its own spec sits in the industry, so never infer `持平` from the mere fact that neither side published. Scoring it again would double-count. 待确认 holds at 中 until the evidence arrives; never downgrade by default.
 
 **Round one excludes only confirmed capability gaps.** Round-one changeability rests on public facts such as official sites and specs and can be wrong, so the initial priority mainly orders the work and allocates Prompts. Low changeability has two sources, handled differently:
 - **Confirmed capability gap**: the product really lacks the capability or really trails on the spec, and the client confirms there is no remedy (no bridging course, alternative model or roadmap date). Content cannot move it, so a candidate Prompt would only measure a known loss: give it none, and record the reason in `no_carrier_reason`. Until the client confirms, treat the row as 待确认 and give it a Prompt. Revisit the row when the product changes.
-- **Competitor leads on brand awareness or media consensus**: the low score is a guess about how AI answers, and the answers may not follow the consensus. This is where high-importance directions that look hard turn out to be open, so give every high-importance one at least one candidate Prompt.
+- **Competitor leads on brand awareness or media consensus**: the low grade is a guess about how AI answers, and the answers may not follow the consensus. This is where high-importance directions that look hard turn out to be open, so give every high-importance one at least one candidate Prompt.
 
-Low-importance Attributes may go without a Prompt. After the candidate baseline, re-judge `相对竞品` and changeability from the answer layer (whether competitors are criticised on the theme, whose pages AI cites) instead of carrying the round-one scores forward.
+Low-importance Attributes may go without a Prompt.
 
-**Within one tier, order the work by how ready the material is.** Rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. This is an execution order inside the tier, not a further multiplier.
+**After the candidate baseline, re-judge changeability, then adjust per Prompt.** Do not carry the round-one grades forward. Re-judge from the answer layer: if AI cites the brand's own site or third-party pages the brand can influence (review sites, communities, trade media) on this Attribute, changeability is at least 中; if AI rests on awareness or a vague "industry leader" and cites only sources the brand cannot influence, grade it 低; if AI criticises competitors on the theme, raise it one grade. Then adjust each Prompt by its AI 认知差距: 无缺口 drops one tier (P1 → P2, P2 → P3); 有缺口 and 无人讨论 keep the tier.
+
+**Within one tier, order the work by effort.** Rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. Optimization actions handed to the content team follow the same rule: tier first, then lower effort first inside the tier. Effort counts content execution cost only and never lifts an action across tiers; whether the capability exists is already in changeability, so do not charge for it twice.
 
 Therefore: **presales may rank candidate Topics; the after-sales baseline informs operational priority, but neither stage alone promises that an action will work.**
 
@@ -209,7 +220,7 @@ The end of the whole chain is one table. **The reference shape** — the referen
 
 Authoritative source for this section: the canonical rule document `售后生词规则` (§1.5.1, §3 第三步, §4; Feishu rev 131 as of 2026-10-13). When this file and that rule document differ, the rule document wins.
 
-Attributes are prioritised by importance × changeability before collection, adding current gap after the baseline (see *Priority is set in two passes* above); Topics are then clustered from where the P1 Attributes land.
+Attributes are tiered by importance × changeability before collection, re-judged and adjusted by current gap after the baseline (see *Priority is set in two passes* above); Topics are then clustered from where the P1 Attributes land.
 
 | Condition | Meaning | Who judges |
 |---|---|---|
@@ -389,7 +400,9 @@ Discovery is the formal visibility population. It must be a natural commercial r
 - one main decision;
 - enough buyer context to produce named providers or platforms;
 - no pure methodology, trend, or educational question unless a separate problem-awareness track is explicitly requested;
+- **the wording must ask for candidates** — which / best / top / recommend / options / alternatives / where to buy or source. A "How do I fix X" question gets advice back and no brand list: PETKIT's "How do I get rid of litter box smell in a home with multiple cats?" returned zero brands in 5 of 5 ChatGPT US runs (2026-10-15), while the same need asked as "Which automatic litter boxes seal in odor best between bag changes?" listed brands every run. The validator fails English Discovery Prompts without a candidate ask. A problem-awareness Prompt kept on purpose is set `formal_visibility_eligible: false` so it stays out of the visibility statistic and passes the gate;
 - **match the real distribution of user wording, and do not default to "concise"**: a large share of delegated, long-form questions is expected (measured user prompts run to a ~20-word median, delegated questions about 37%, keyword-style only about 3%). Mix short direct questions with questions carrying a buyer, scenario, or constraint, in roughly the proportions real users produce;
+- **do not rewrite an existing "Which …" Prompt only to make it sound more personal.** Adding a first-person situation that carries the same decision ("I travel a lot for work. Which automatic litter box lets me check…") did not move target-brand mention in a 2026-10-15 ChatGPT US test (PETKIT, 6 pairs × 5 runs: 63% → 50%, Fisher p=0.44), but the answers named fewer brands (one pair 4.2 → 2.2 on average), so long-tail competitors drop out of the competitor reading. Add a buyer situation when it changes the expected candidate set (a condition slot below), not for tone. Tested on ChatGPT only; re-test on Gemini and AI Mode before applying the same conclusion there;
 - no redundant containment wording, such as a broad region plus a subregion that is already included;
 - classify every qualified Prompt into one of the four condition slots used by 《海外 GEO 售前诊断报告 V2 PRD》 → 「细分主题」, and keep those names: **无限定条件** (no qualifier), **目标用户** (target user), **偏好标准** (preference criteria), **约束** (constraint). Pain points sit under 偏好标准 — they are a dimension buyers weigh while comparing, not a fifth slot. Retain a mix across the four whenever the condition changes the expected candidate set.
 

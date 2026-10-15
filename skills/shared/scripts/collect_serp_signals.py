@@ -47,7 +47,7 @@ SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
 PAA_TAG = re.compile(r"<div[^>]*\brelated-question-pair\b[^>]*>")
 DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
 FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "原话", "中文意思", "受众", "旅程阶段",
-          "约束或场景", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
+          "约束", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
 KINDS = {"paa": ("Google People Also Ask", "中"),
          "related": ("Google 相关搜索", "中"),
          "autocomplete": ("Google 自动补全", "低")}

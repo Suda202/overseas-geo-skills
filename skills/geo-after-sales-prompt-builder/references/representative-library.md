@@ -77,7 +77,7 @@ generated from the bank, not planned as a Cartesian product.
 Dimensions that sound separate but are not:
 - **Audience vs journey state.** 「已在比较具体品牌」, 「准备下单」 and the like
   are stages, not audiences. Audience is who the buyer is; with no group
-  condition it is 「通用」.
+  condition it is the category's base audience (e.g. 「养猫家庭」), never 「通用」.
 - **Buyer task vs journey stage.** One column, the eight stages
   `发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持`.
 - **Business priority vs attribute priority.** Rating audiences 高/中 by
@@ -163,7 +163,7 @@ evidence.
 Log every piece of audience language as one row, so each Prompt can point
 back to its evidence (Aleyda step 7, her workbook's 受众输入 sheet):
 
-`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 原话（保留原语言） | 中文意思 | 受众 | 旅程阶段 | 约束或场景 | 来源说明 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
+`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 原话（保留原语言） | 中文意思 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
 
 (Market/language is fixed per Base; 受众 and 旅程阶段 use the 提示词矩阵 sets;
 rules for 涉及品牌 and 来源类型 are in client-facing-attribute-pool.md →

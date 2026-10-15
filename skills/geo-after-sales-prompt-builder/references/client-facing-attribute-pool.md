@@ -10,7 +10,7 @@ Use it when delivering or updating an after-sales attribute pool, first monitori
 
 ## Format: the Feishu Base template
 
-The client confirmation piece is a Feishu Base copied from the template 《AI 搜索监测确认表（模板）》, kept in the same wiki space as 《售后生词规则》. Copy it once per client and per market/language, delete every 【示例】 row, and fill the 使用说明 doc's data-source placeholders with the sources actually used. **The 使用说明 doc is the only client-facing explanation** (Suda 2026-10-15): it carries the service flow, what the brand party provides, platform permissions (GSC 受限 / GA4 查看者 / Bing 只读 — grant access first, export only as fallback), brand-material timing, how to check each table, content review and publishing, and how to read results. Do not send a separate guide document; edit the template's 使用说明 instead. Use the 需品牌方确认 checkbox where a document would use orange highlighting. The sections below still define what each table must contain.
+The client confirmation piece is a Feishu Base copied from the template 《AI 搜索监测确认表（模板）》, kept in the same wiki space as 《售后生词规则》. Copy it once per client and per market/language, delete every 【示例】 row, and fill the 使用说明 doc's data-source placeholders with the sources actually used. **The 使用说明 doc is the only client-facing explanation** (Suda 2026-10-15): it carries the service flow, what the brand party provides, platform permissions (GSC 受限 / GA4 查看者 / Bing 只读 — grant access first, export only as fallback), brand-material timing, how to check each table, content review and publishing, and how to read results. Do not send a separate guide document; edit the template's 使用说明 instead. The Base has no 需品牌方确认 checkbox: every table is for the brand party to review, and what we need from them is written in 提示词矩阵 还缺什么 (filter it non-empty) or as an 【请补充】 placeholder in 业务范围 (Suda 2026-10-15). The sections below still define what each table must contain.
 
 **Settled table set (PETKIT, 2026-10-14/15).** Five tables plus the 使用说明 doc, in this order (监测主题 and 竞品名单 tables were removed 2026-10-15 and folded into 业务范围):
 
@@ -22,7 +22,7 @@ The client confirmation piece is a Feishu Base copied from the template 《AI �
 | 提示词库 | 一道提示词 | Links its 所属切片 (one 提示词矩阵 row) and its 证据 (买家原话 rows) |
 | 需要品牌方提供的数据 | 一项只有品牌方能拿到的数据 | Buyer-signal data per [signal-sources.md](signal-sources.md) → 客户提供什么, plus three content-production rows: 官网未公开的产品事实, 品牌规范 (必须给), 即将发生的变化. Do not ask for anything the official site already publishes — we extract it into 业务范围 and the brand party only checks it |
 
-**No separate 监测主题 table.** 监测主题 is a single-select column on both 提示词矩阵 and 提示词库 (same option set); Topics are ours to name and split — the brand party does not know what to write there, so 业务范围 carries no 监测主题 rows (Suda 2026-10-15); the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors are 竞品（n） rows in 业务范围 carrying 适用产品线, not 适用主题; no separate competitor table, since nothing links to it.
+**No separate 监测主题 table.** 监测主题 is a single-select column on 提示词库 only; 提示词矩阵 has no Topic column, because a slice's Topic is whatever its linked Prompts carry and a second hand-filled copy drifts (Suda removed it 2026-10-15); Topics are ours to name and split — the brand party does not know what to write there, so 业务范围 carries no 监测主题 rows (Suda 2026-10-15); the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors are 竞品（n） rows in 业务范围 carrying 适用产品线, not 适用主题; no separate competitor table, since nothing links to it.
 
 Customer-facing names: call the Prompts **提示词** (tables 提示词矩阵 / 提示词库, field 提示词); keep **监测主题** for Topics. Suda reversed the 2026-08 ban on 「提示词」 on 2026-10-14. Use one term throughout the Base and the 使用说明.
 
@@ -32,23 +32,23 @@ One row is **one coverage slice × one tested attribute** (Suda 2026-10-15 reali
 
 Columns, in view order:
 
-`切片编号（主字段） | 产品线 | 监测主题 | 受众 | 旅程阶段 | 提示词类型 | 约束或场景 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 目标题数 | 已有问题 | 已批准题数 | 覆盖情况 | 还缺什么 | 备注 | 需品牌方确认`
+`切片编号（主字段） | 产品线 | 受众 | 旅程阶段 | 提示词类型 | 约束 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 目标题数 | 已有问题 | 已批准题数 | 覆盖情况 | 还缺什么 | 备注`
 
-- **切片编号** is the primary field: plain text M-001, M-002… in order (a text field, not a formula). The slice's meaning lives in its dimension columns — 受众, 旅程阶段, 提示词类型, 约束或场景, 属性.
+- **切片编号** is the primary field: plain text M-001, M-002… in order (a text field, not a formula). The slice's meaning lives in its dimension columns — 受众, 旅程阶段, 提示词类型, 约束, 属性.
 - **提示词类型** (single select: 推荐榜单 / 使用场景 / 对比 / 替代方案 / 验证 / 价格与购买 / 学习了解 / 评价口碑 / 售后支持, after Aleyda's Prompt Type) is a slice dimension. When one situation needs two question shapes, split it into two slices so the bank does not collapse into one shape.
-- **约束或场景** is its own column (same name as in 买家原话): the concrete conditions or worry the buyer carries — budget, hours of use, prescription flow, travel. Write it in full, never a keyword like 「保几年」.
-- **目标题数 / 已批准题数 / 覆盖情况**: we fill 目标题数 before writing Prompts; 已批准题数 is a formula counting linked Prompts whose 审核状态 is 已批准; 覆盖情况 is a formula (已覆盖 / 未达标 / 不配题 for 0). Leave 目标题数 blank, never 0-as-placeholder, on slices with no first-stage Prompt — the coverage cell then shows blank, which reads as no Prompts planned.
-- **Rows.** Every situation × attribute pair that has Prompts is a row. Every attribute with no first-stage Prompt also gets one row (受众 「通用」, 约束或场景 written from its buyer problem, a judged 旅程阶段, 目标题数 blank), with the reason at the start of 备注 — 「首期不配提示词：购买影响低，不决定买家选谁」 or 「…：能力缺口，发布内容改变不了 AI 的说法」. Do not add a separate 去向/缺口说明 column. Category-baseline Prompts sit on rows with an empty 属性.
-- **受众** is a single select with the same option set as 买家原话. Use only real buyer groups. A journey state is not an audience — 「已在比较具体品牌」 is the 对比 stage, not a persona — so named-brand Prompts are filed by the group their wording names, and Prompts with no group condition are 「通用」. Audiences beyond the brand party's listed 主要受众 are added to 业务范围 as 主要受众 rows with 需品牌方确认 ticked.
+- **约束** is its own column (same name as in 买家原话): the conditions the buyer carries beyond the attribute — budget, home size, number of cats, days away, a named rival or model. Write 2–3 keywords separated by 、 (「小公寓、2–3 只猫」「300 美元以内」「对手 Litter-Robot」), after Aleyda's CONSTRAINT column; do not restate 受众, 旅程阶段 or 属性 — the full wording lives in the Prompt. Slices that share every other dimension must still differ here (Suda 2026-10-15).
+- **目标题数 / 已批准题数 / 覆盖情况**: we fill 目标题数 **before writing Prompts**, not after. Default is 1. Add one per additional buyer constraint wording where the candidate list would change — "two cats" vs "four or more" on the same feeder slice may pull different brands; different phrasings of the same constraint that would produce the same shortlist do not add a count. Note in 备注 which constraint each extra Prompt tests. Leave 目标题数 blank (never 0) on slices with no first-stage Prompt — the coverage cell then shows blank. 已批准题数 is a formula counting linked Prompts whose 审核状态 is 已批准; 覆盖情况 is a formula (已覆盖 / 未达标 / 不配题 for 0).
+- **Rows.** Every situation × attribute pair that has Prompts is a row. Every attribute with no first-stage Prompt also gets one row (受众 the category's base audience, 约束 written from its buyer problem, a judged 旅程阶段, 目标题数 blank), with the reason at the start of 备注 — 「首期不配提示词：购买影响低，不决定买家选谁」 or 「…：能力缺口，发布内容改变不了 AI 的说法」. Do not add a separate 去向/缺口说明 column. Category-baseline Prompts sit on rows with an empty 属性.
+- **受众** is a single select with the same option set as 买家原话. Use only real buyer groups. A journey state is not an audience — 「已在比较具体品牌」 is the 对比 stage, not a persona — so named-brand Prompts are filed by the group their wording names, and rows with no narrower group condition take the category's base audience — the buyer group the whole category serves, such as 「养猫家庭」 for pet-cat devices — never 「通用」 and never blank (Suda 2026-10-15). List the base audience as 主要受众（1） in 业务范围 so it is an option in the select. Audiences beyond the brand party's listed 主要受众 are added to 业务范围 as 主要受众 rows.
 - **旅程阶段** uses the eight stages below; there is no separate 买家任务 column.
 - **购买影响** is judged **per situation**: the same attribute may be 高 for one audience and 中 for another. Raise to 高 when the row's audience buys the product for exactly this attribute and drops any option that fails it (多猫家庭 × 每只猫分开记录; 预算敏感 × 耗材成本). Lower to 中 on post-purchase troubleshooting and returns rows, and on generic alternatives rows where the attribute is not what decides.
 - **相对竞品 / 可改变性** are judgements about the attribute itself: identical on every row of that attribute, because the priority formula reads them. The brand party may correct any one row; we write the change back to all of its rows when collecting.
-- **还缺什么 / 备注 / 需品牌方确认** are written **only on the first row of each attribute**, so the brand party meets each question once. When a named fact-check Prompt needs the brand's standard answer (does feature X need a subscription, how long does the battery last), write that request into the attribute's 还缺什么 with 「点名题要用：…」 — do not tick 需品牌方确认 on the Prompt itself.
+- **还缺什么 / 备注** are written **only on the first row of each attribute**, so the brand party meets each question once. When a named fact-check Prompt needs the brand's standard answer (does feature X need a subscription, how long does the battery last), write that request into the attribute's 还缺什么 with 「点名题要用：…」 — not on the Prompt itself.
 - **优先级** is a formula; the brand party never fills it:
-  - 购买影响 高 3 / 中 2 / 低 1 × 可改变性 证据缺口 3 / 持平或无缺口 2.2 / 能力缺口 1.5;
-  - **P1 only at 9 (高 × 证据缺口)**, above 4.3 P2, otherwise P3;
+  - look up 购买影响 (高 / 中 / 低) × 可改变性 (高 / 中 / 低) in the tier table in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes*; changeability is graded there by two ordered questions;
+  - **P1 only at 高 × 高**; the Base formula field encodes the same table;
   - rows with an empty 属性 (category baseline) are fixed at P1 — they measure which brands AI lists with no condition, the base of natural visibility.
-  - Check the distribution after filling: P1 must stay a short list. At PETKIT a 6.5 cut put 52 of 105 rows in P1 because 高 × 持平或无缺口 scores 6.6; moving the cut to 9 left 26.
+  - Check the distribution after filling: P1 must stay a short list. If 高 × 高 rows pile up, re-check whether the rows graded 高 changeability are really unwritten where AI can read.
 - Drop: formula-built slice IDs, 市场与语言 (one Base is one market), 业务优先级 (half importance, half an echo of attribute priority), 客户确认 (the brand party edits cells directly — see *How the brand party reviews*), and any column whose every row holds the same value. 目标题数 / 覆盖情况 came back on 2026-10-15 because 审核状态 now separates written from approved, so coverage is no longer always 已覆盖.
 
 ### 旅程阶段：八段，三张表同一套
@@ -59,7 +59,10 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's
 
 ### 买家原话
 
-`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 原话 | 中文意思 | 受众 | 旅程阶段 | 约束或场景 | 来源说明 | 来源链接 | 收集日期 | 证据可信度 | 引用它的问题`
+`原话（主字段） | 中文意思 | 涉及品牌 | 来源类型 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度 | 引用它的问题 | 产品线 | 输入编号`
+
+- **Primary fields are chosen for what a link cell shows** (Suda 2026-10-15). A linked cell displays the other table's primary field, so: 买家原话 leads with **原话**, and 提示词库's 证据 cell shows the quote itself, letting the brand party judge a Prompt's grounding without leaving the row; 提示词库 leads with **提示词**, so 提示词矩阵's 已有问题 lists the actual questions; 提示词矩阵 keeps **切片编号**, because no content column identifies a slice — PETKIT's 120 rows had 3 product lines, 52 attributes of which 25 repeat, and 17 repeated 属性 + 受众 + 旅程阶段 combinations. When the brand party reads only Chinese, lead 买家原话 with 中文意思 instead.
+- **输入编号** stays as the last column. Our bank JSON's `evidence_refs` and `config.audience_inputs` cite it, and both sides use it to point at one quote in feedback.
 
 - **涉及品牌** (multi-select) names the brand the quote is about; generic buying posts and search terms are 「未指明品牌」. A subreddit name is not a brand mention.
 - **来源类型** is the real source — 社区 / 评价 / 搜索数据 (later 销售记录、客服记录、GSC、站内搜索 when the brand party supplies them). Never 「竞品评价」: whose product it is goes in 涉及品牌.
@@ -68,10 +71,10 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's
 
 ### 提示词库
 
-`编号 | 提示词 | 中文含义 | 产品线 | 监测主题（单选） | 库分层 | 审核状态 | 旅程阶段 | 所属切片 | 提示词类型（公式） | 切片约束或场景（公式） | 买家问题与场景 | 证据 | AI 认知差距 | 提及率 | 需品牌方确认`
+`提示词（主字段） | 中文含义 | 主题（单选） | 状态 | 库分层 | 所属切片 | 证据 | 审核状态 | 产品线`; 编号, AI 认知差距 and 提及率 exist but are hidden in the default view.
 
 - **审核状态** (待审核 / 已批准 / 需修改, default 待审核) is the approval gate: we mark 待审核 after internal QA; the brand party marks 已批准 when the Prompt is fine or after editing it directly, 需修改 when it wants us to rewrite. **Only 已批准 Prompts enter the candidate baseline.** It is separate from 状态 (候选 / 正式 / 停测), which records what happened after the baseline.
-- **提示词类型 / 切片约束或场景** are formulas pulled from 所属切片, so a reviewer sees the slice's shape and condition without switching tables. Never fill them by hand.
+- **No slice-level columns on 提示词库.** 旅程阶段, 提示词类型, 约束 (and the old 买家问题与场景) belong to the slice and were identical on all 100 PETKIT Prompts; a second copy drifts when the brand party edits one table. The reviewer opens 所属切片 to see them (Suda 2026-10-15). The bank JSON keeps `journey_stage` for metrics and the validator.
 
 - Sort the view by 编号.
 - **AI 认知差距 and 提及率 exist only after the candidate baseline.** Judge AI 认知差距 per Prompt from that Prompt's own answer text (有缺口 / 无人讨论 / 无缺口). Until then every row is 「待基线」 and both columns are hidden in the view. Never push an attribute-level judgement or presales answers onto individual Prompts — Prompts under one attribute would all read the same however their wording differs, which is not data.
@@ -79,11 +82,11 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's
 
 ### How the brand party reviews
 
-The brand party edits cells directly — wrong fact: change the cell; missing: add a row. There is no 客户确认 column (Suda 2026-10-15). Before sending, snapshot every table; when collecting, compare against the snapshot and `lark-cli base +record-history-list` to see each change, and review every edit to 购买影响 / 相对竞品 / 可改变性 because they move the priority formula. Keep 需品牌方确认 so the must-answer cells can be filtered out of a full review.
+The brand party edits cells directly — wrong fact: change the cell; missing: add a row. There is no 客户确认 column (Suda 2026-10-15). Before sending, snapshot every table; when collecting, compare against the snapshot and `lark-cli base +record-history-list` to see each change, and review every edit to 购买影响 / 相对竞品 / 可改变性 because they move the priority formula. Filter 提示词矩阵 还缺什么 non-empty to find the must-answer cells.
 
 ### Facts we can verify ourselves
 
-Settle what the public layer can settle before asking the brand party — for example whether a model is still sold: check the official site's product pages, redirects and search, then the main marketplace, and write the result into 业务范围 without ticking 需品牌方确认. Ask the brand party only for what only it knows.
+Settle what the public layer can settle before asking the brand party — for example whether a model is still sold: check the official site's product pages, redirects and search, then the main marketplace, and write the result into 业务范围 as a settled fact, not a question. Ask the brand party only for what only it knows.
 
 ## Canonical Shape
 
@@ -124,7 +127,7 @@ The sections below define the content. In the Base they live as: 品牌事实 �
    - 官方域名
    - 竞品或替代方案（only if the comparison set itself needs confirmation）
 
-   Use `项目 | 内容 | 为什么重要 | 需品牌方确认` (the Base's 业务范围; document-format pieces add `客户确认`). One fact per row; split multi-valued facts into numbered rows. Do not rank brand facts. Wording rules for these rows: describe AI performance as 推荐 / 提及 — never 首推、排第一、排首位 or a rank percentage, which the client-facing caliber does not use; competitor reasons cite mention rates only.
+   Use `项目 | 内容 | 为什么重要` (the Base's 业务范围; document-format pieces add `客户确认`). One fact per row; split multi-valued facts into numbered rows. Do not rank brand facts. Wording rules for these rows: describe AI performance as 推荐 / 提及 — never 首推、排第一、排首位 or a rank percentage, which the client-facing caliber does not use; competitor reasons cite mention rates only.
 
 4. **属性池【请核对】**
 
@@ -155,14 +158,14 @@ The sections below define the content. In the Base they live as: 品牌事实 �
 
 5. **Priority Rules**
 
-   In the Base the tier is a formula on 提示词矩阵 (cuts in *提示词矩阵* above). Before any answers are collected, set the initial priority from **importance × changeability**; current gap is `待测` until the baseline (the three conditions and their scales are in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes*). `购买影响` is the importance reading; `业务重点` the brand party states counts as evidence for it. `相对竞品` and the gap type feed changeability: an `优势` or `持平` row whose facts are unpublished (证据缺口) is the cheapest win; a `劣势` row behind on the facts, or a consensus-locked direction, scores low.
+   In the Base the tier is a formula on 提示词矩阵 (lookup in *提示词矩阵* above). Before any answers are collected, set the initial priority from **importance × changeability**; current gap is `待测` until the baseline (the three conditions and their scales are in [after-sales-rules.md](after-sales-rules.md) → *Priority is set in two passes*). `购买影响` is the importance reading; `业务重点` the brand party states counts as evidence for it. `相对竞品` and the gap type feed changeability: an `优势` or `持平` row whose facts are unpublished (证据缺口) is the cheapest win; a `劣势` row behind on the facts, or a consensus-locked direction, scores low.
 
    Important constraints:
    - P1 can coexist with `持平`: for a new product or category gate, the first-stage problem may be "AI does not know we have this," not differentiation.
    - P3 rows remain visible so the brand party can disagree, but P3 attributes do **not** get first-batch Prompts.
    - Only P1/P2 attributes normally carry first-stage Discovery Prompts.
    - `待确认` means the evidence is missing, not that the attribute is weak.
-   - Once the baseline has measured the current gap, re-rank with importance × current gap × changeability; do not backfill the current gap before collection.
+   - Once the baseline has measured the current gap, re-judge changeability from the answer layer and adjust each Prompt by its current gap (importance × current gap × changeability); do not backfill the current gap before collection.
 
 6. **监测主题与问题 / 提示词【请核对】**
 
