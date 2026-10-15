@@ -24,6 +24,8 @@ The client confirmation piece is a Feishu Base copied from the template 《AI �
 
 **No separate 监测主题 table.** 监测主题 is a single-select column on 提示词库 only; 提示词矩阵 has no Topic column, because a slice's Topic is whatever its linked Prompts carry and a second hand-filled copy drifts (Suda removed it 2026-10-15); Topics are ours to name and split — the brand party does not know what to write there, so 业务范围 carries no 监测主题 rows (Suda 2026-10-15); the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors are 竞品（n） rows in 业务范围 carrying 适用产品线, not 适用主题; no separate competitor table, since nothing links to it.
 
+**Dashboard 「覆盖分布」 (Suda 2026-10-15).** The template carries one dashboard, so every copy has it: a short how-to-read text block; 提示词总数 and 已批准提示词 cards; 切片覆盖情况 (ring on 覆盖情况); 旅程阶段 × 提示词类型, 按受众 and 按优先级 (sum of 目标题数 on 提示词矩阵); 按主题 and 库分层 (count on 提示词库). Distributions sum 目标题数, which is filled before Prompts are written, so the plan's gaps show before review — an empty stage, a main audience or product line at zero. Read it before sending the Base and before the candidate baseline; it replaces no check in the validator.
+
 Customer-facing names: call the Prompts **提示词** (tables 提示词矩阵 / 提示词库, field 提示词); keep **监测主题** for Topics. Suda reversed the 2026-08 ban on 「提示词」 on 2026-10-14. Use one term throughout the Base and the 使用说明.
 
 ### 提示词矩阵
