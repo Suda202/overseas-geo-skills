@@ -50,6 +50,7 @@ P1、P2、P3 是本项目为生成和覆盖监测问题增加的属性优先级�
 14. **代表性先于穷举**：写题前先做内部覆盖查漏，至少检查产品线、买家、旅程、市场/语言、约束、竞品/替代方案和业务优先级；这是一张内部工作表，不是客户填写表，也不产生笛卡尔积配额。
 15. Prompt Task 至少从真实需要中选择：`Discovery`、`Problem Solving`、`Evaluation`、`Comparison`、`Alternatives`、`Shortlist`、`Validation`、`Transaction`、`Post-purchase Support`、`Category Understanding`、`Source Discovery`。不要求每批覆盖全部任务；没有独立业务问题就不生成。
 16. 题型任务与分析路由分开。比较、替代、验证、交易和购买后支持不自动进入自然可见度；先按题面、品牌范围和用户任务选择现有 Intent 或独立合同，再写入 `Prompt Task`。
+17. **题面措辞向买家原话靠**：有 AI 真实提示词样本、销售与客服记录、评价或社区原话时，题面措辞从这些来源取；官网、竞品页、品牌方访谈和关键词工具只决定覆盖什么，不决定措辞。搜索词按规则改写后才能当题面；模型生成的联想（query fan-out、Perplexity 相关问题等）只作线索。细则见 [每类信源能用来干什么](../geo-after-sales-prompt-builder/references/signal-sources.md)。
 
 ## 售前与售后的边界
 

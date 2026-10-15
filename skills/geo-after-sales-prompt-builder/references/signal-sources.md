@@ -8,9 +8,11 @@
 
 | 类别 | 去哪收 | 用来判断什么 |
 |---|---|---|
-| 搜索数据 | Google 自动补全、People Also Ask 和相关搜索；Google Trends；AlsoAsked、AnswerThePublic；有账号时用 Semrush 或 Ahrefs 看非品牌词 | 需求是否存在、买家怎么问 |
+| 搜索数据 | People Also Ask、相关搜索和自动补全：跑 `shared/scripts/collect_serp_signals.py`（每个种子词 1 次 Scrapeless 付费调用，产物直接是买家原话表的行）；Google Trends；AlsoAsked、AnswerThePublic；有账号时用 Semrush 或 Ahrefs 看非品牌词 | 需求是否存在、买家怎么问 |
 | 竞品对比页 | 竞品官网的 alternatives、vs、compare 页 | 竞品在强调哪些属性、买家会拿谁来比 |
 | 已采集的 AI 回答 | 售前诊断与候选基线的答案 | 当前差距 |
+
+**Google 搜索侧默认跑脚本，不用本地浏览器。**本机 IP 不在目标市场，浏览器还带着 Google 登录与搜索历史，结果会按本机所在地和个人偏好变化；PAA 模块也不一定渲染出来（PETKIT 曾因此没取到）。脚本按市场参数采集、每次是干净会话、原始页面存档可复核（Longfian 12 个种子词实测 12 个都取到 PAA，此前手工只取到 1 个）。本地浏览器只在三种情况用：要逐层点开 PAA 看更多问题、需要登录或反爬强的社区与评价站、脚本对某个种子词失败或为空时人工核对。
 
 ## 按行业收评价和社区
 
