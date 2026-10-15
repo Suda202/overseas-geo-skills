@@ -12,7 +12,7 @@ Use it when delivering or updating an after-sales attribute pool, first monitori
 
 The client confirmation piece is a Feishu Base copied from the template 《AI 搜索监测确认表（模板）》, kept in the same wiki space as 《售后生词规则》. Copy it once per client and per market/language, delete every 【示例】 row, and fill the 使用说明 doc's data-source placeholders with the sources actually used. **The 使用说明 doc is the only client-facing explanation** (Suda 2026-10-15): it carries the service flow, what the brand party provides, platform permissions (GSC 受限 / GA4 查看者 / Bing 只读 — grant access first, export only as fallback), brand-material timing, how to check each table, content review and publishing, and how to read results. Do not send a separate guide document; edit the template's 使用说明 instead. The Base has no 需品牌方确认 checkbox: every table is for the brand party to review, and what we need from them is written in 提示词矩阵 还缺什么 (filter it non-empty) or as an 【请补充】 placeholder in 业务范围 (Suda 2026-10-15). The sections below still define what each table must contain.
 
-**Settled table set (PETKIT, 2026-10-14/15).** Five tables plus the 使用说明 doc, in this order (监测主题 and 竞品名单 tables were removed 2026-10-15 and folded into 业务范围):
+**Settled table set (PETKIT, 2026-10-14/15).** Five confirmation tables plus the 使用说明 doc, then three baseline tables (added 2026-10-15, filled after the candidate baseline), in this order (监测主题 and 竞品名单 tables were removed 2026-10-15 and folded into 业务范围):
 
 | 表 | 一行是什么 | 要点 |
 |---|---|---|
@@ -21,6 +21,9 @@ The client confirmation piece is a Feishu Base copied from the template 《AI �
 | 提示词矩阵 | 一种买家处境下要测的一条属性 | Carries the attribute pool — **no separate 属性池 table**; see *提示词矩阵* below |
 | 提示词库 | 一道提示词 | Links its 所属切片 (one 提示词矩阵 row) and its 证据 (买家原话 rows) |
 | 需要品牌方提供的数据 | 一项只有品牌方能拿到的数据 | Buyer-signal data per [signal-sources.md](signal-sources.md) → 客户提供什么, plus three content-production rows: 官网未公开的产品事实, 品牌规范 (必须给), 即将发生的变化. Do not ask for anything the official site already publishes — we extract it into 业务范围 and the brand party only checks it |
+| 基线读数 | 一道提示词在一个平台的基线结果 | Written by our statistics script; see *基线读数 · 主题汇总 · 被引来源* below |
+| 主题汇总 | 一个主题在一个平台的基线结果 | Pooled per Topic × platform by the same script |
+| 被引来源 | 一个被引用的域名或网页 | Top 20 per Topic × platform |
 
 **No separate 监测主题 table.** 监测主题 is a single-select column on 提示词库 only; 提示词矩阵 has no Topic column, because a slice's Topic is whatever its linked Prompts carry and a second hand-filled copy drifts (Suda removed it 2026-10-15); Topics are ours to name and split — the brand party does not know what to write there, so 业务范围 carries no 监测主题 rows (Suda 2026-10-15); the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors are 竞品（n） rows in 业务范围 carrying 适用产品线, not 适用主题; no separate competitor table, since nothing links to it.
 
@@ -81,6 +84,16 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's
 - Sort the view by 编号.
 - **AI 认知差距 and 提及率 exist only after the candidate baseline.** Judge AI 认知差距 per Prompt from that Prompt's own answer text (有缺口 / 无人讨论 / 无缺口). Until then every row is 「待基线」 and both columns are hidden in the view. Never push an attribute-level judgement or presales answers onto individual Prompts — Prompts under one attribute would all read the same however their wording differs, which is not data.
 - **监测主题 names describe what the Topic holds.** A category Topic that also carries condition Prompts (safety, large cats, one app) is 「××选购条件」, not 「××品类」; a Topic whose Prompts span cost, reliability and upkeep is named for all three.
+- **The formal set is a view, not a table.** 提示词库 has a 「正式监测」 view filtered to 状态 = 正式. Do not copy formal Prompts into another table: two copies of one wording drift.
+
+### 基线读数 · 主题汇总 · 被引来源 (Suda 2026-10-15)
+
+Three tables hold the baseline results — every Prompt runs about 5 times per platform. Metric values are **written by our statistics script** (`geo-presales-report-builder` → `build_report_data.py`: `build_records` per Prompt, `build_slice` per Topic × platform, `build_sources` for top sources; all call the same core `compute_metrics`). The Base never recomputes a metric with formulas — a second implementation drifts from the core. Platforms are never merged into one number.
+
+- **基线读数** — one row per Prompt × platform: `平台读数（主字段，公式 = 平台） | 提示词（关联提示词库，反向字段「基线读数」） | 主题（公式） | 平台 | 计入可见度 | 采集日期 | 有效回答数 | 提及率（%） | 声量份额（%） | 平均提及位置 | 官网引用份额（%） | 正向情感占比（%） | 备注`. **计入可见度** is 是 only for unbranded Discovery Prompts that ask for candidates (from the bank JSON's intent, brand scope and `formal_visibility_eligible`); 提及率, 声量份额, 平均提及位置 and 官网引用份额 are filled only on those rows and left blank elsewhere. 正向情感占比 covers every Prompt.
+- **主题汇总** — one row per Topic × platform, the same metrics pooled over the Topic's answers (sum of numerators ÷ sum of denominators, never an average of per-Prompt rates). 主题 is written exactly as in 提示词库.
+- **被引来源** — the top 20 domains and the top 20 pages per Topic × platform (plus 「全部主题」), with 排名, 引用次数 (正文引用，不去重), 引用份额 and 来源类别 (the report's labels: 自有网站 / 竞品网站 / 媒体网站 / 社交平台 / 新闻稿平台 / 机构网站 / 其他; 自有网站 is the official site).
+- **Not tracked here, by decision:** 推荐率 and 决胜率 (not important enough for the baseline; 决胜率 stays an ad-hoc analysis for comparison Prompts); 事实准确率 (fact-accuracy Prompts are written only when a mention rate comes out low, and are followed in the retest table, never promised); Shopping GEO metrics (product and merchant cards are a different grain, Perplexity has no product field, and the presales report carries no shopping module either — add a separate table when a client's category actually triggers product cards). The hidden 提及率 field on 提示词库 predates 基线读数, pools platforms, and stays empty.
 
 ### How the brand party reviews
 
