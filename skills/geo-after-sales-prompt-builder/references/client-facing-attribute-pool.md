@@ -12,7 +12,7 @@ Use it when delivering or updating an after-sales attribute pool, first monitori
 
 The client confirmation piece is a Feishu Base copied from the template 《AI 搜索监测确认表（模板）》, kept in the same wiki space as 《售后生词规则》. Copy it once per client and per market/language, delete every 【示例】 row, and fill the 使用说明 doc's data-source placeholders with the sources actually used. Use the 需品牌方确认 checkbox where a document would use orange highlighting. The sections below still define what each table must contain.
 
-**Settled table set (PETKIT, 2026-10-14/15).** Six tables plus the 使用说明 doc, in this order:
+**Settled table set (PETKIT, 2026-10-14/15).** Six tables plus the 使用说明 doc, in this order (the template had a seventh, 监测主题, removed 2026-10-15):
 
 | 表 | 一行是什么 | 要点 |
 |---|---|---|
@@ -22,7 +22,8 @@ The client confirmation piece is a Feishu Base copied from the template 《AI �
 | 提示词库 | 一道提示词 | Links its 所属切片 (one 提示词矩阵 row) and its 证据 (买家原话 rows) |
 | 竞品名单 | 一个竞品 | `品牌 | 官网 | 适用产品线（多选） | 说明 | 客户确认`; 说明 gives mention-based reasons only |
 | 需要品牌方提供的数据 | 一项只有品牌方能拿到的数据 | Unchanged |
-| 监测主题（可选） | 一个监测主题 | In the template: 状态 已采购 / 候选 / 停测, links to its 提示词矩阵 rows, Prompts and competitors, and a 题数检查 formula that flags non-retired Topics under 5 Prompts. Use it when Topics need status tracking; otherwise 监测主题 can stay a single-select column in 提示词库, as at PETKIT |
+
+**No separate 监测主题 table.** 监测主题 is a single-select column on both 提示词矩阵 and 提示词库 (same option set); a Topic's purchase status (已采购 / 候选) is written once in 业务范围 as 监测主题（n） rows, and the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors carry 适用产品线, not 适用主题.
 
 Customer-facing names: call the Prompts **提示词** (tables 提示词矩阵 / 提示词库, field 提示词); keep **监测主题** for Topics. Suda reversed the 2026-08 ban on 「提示词」 on 2026-10-14. Use one term throughout the Base and the 使用说明.
 
@@ -32,7 +33,7 @@ One row is **one buyer situation × one tested attribute**. Aleyda's matrix row 
 
 Columns, in view order:
 
-`买家处境（主字段） | 产品线 | 受众 | 旅程阶段 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 已有问题 | 已有题数 | 还缺什么 | 备注 | 需品牌方确认 | 客户确认`
+`买家处境（主字段） | 产品线 | 监测主题 | 受众 | 旅程阶段 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 已有问题 | 已有题数 | 还缺什么 | 备注 | 需品牌方确认 | 客户确认`
 
 - **买家处境** is the primary field and carries the information of the row: who, at which step, worried about what. Write it out in full (「听说水泵容易坏，下单前想确认保几年」), never a keyword like 「保几年」. Do not use a formula slice ID as the primary field.
 - **Rows.** Every situation × attribute pair that has Prompts is a row. Every attribute with no first-stage Prompt also gets one row (受众 「通用」, a situation written from its buyer problem, a judged 旅程阶段), with the reason at the start of 备注 — 「首期不配提示词：购买影响低，不决定买家选谁」 or 「…：能力缺口，发布内容改变不了 AI 的说法」. Do not add a separate 去向/缺口说明 column. Category-baseline Prompts sit on rows with an empty 属性.
