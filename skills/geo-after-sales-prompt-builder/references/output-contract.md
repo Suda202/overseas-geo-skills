@@ -10,7 +10,7 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - opening scope and monitoring object;
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
 - a separate `品牌事实【请核对】` table (the Base's 业务范围);
-- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 提示词类型, 约束或场景 and 目标题数 — carried by 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号), not a separate 属性池 table;
+- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 提示词类型, 约束 and 目标题数 — carried by 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号), not a separate 属性池 table;
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
@@ -68,20 +68,49 @@ Each question should contain:
 - `intent_key`
 - `quality_checks`
 
+Staged banks (those with `config.generation_stage`) also carry, on every
+question, the five fields the client Base 提示词库 and 提示词矩阵 read:
+
+| Field | Value | Base column |
+|---|---|---|
+| `journey_stage` | eight-stage label: 发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持 | 旅程阶段 |
+| `audience` | a real buyer group, or 「通用」 as the internal placeholder for no group condition (rendered as the category's base audience, e.g. 「养猫家庭」, in the Base); never a journey state such as 「已在比较具体品牌」 | 受众 |
+| `group_role` | `core` / `experimental` / `monitoring` | 库分层 (核心 / 实验 / 监测) |
+| `attribute_ref` | the 提示词矩阵 attribute name; empty string on a category-baseline Prompt | 属性 (via 所属切片) |
+| `evidence_refs` | list of 买家原话 输入编号 (or source notes) behind the Prompt | 证据 |
+
+The validator warns while any of them is missing and fails once
+`lifecycle_status` is `locked`, `formal_baseline` or `active`. Older banks
+used other names; the validator reads them as aliases — `journey_stage_9` /
+`journey` → `journey_stage`, `persona` / `buyer` → `audience`,
+`library_layer` → `group_role`, `attribute` → `attribute_ref`,
+`buyer_demand_evidence` → `evidence_refs`, `condition_slot` →
+`constraint_type`. Write new banks with the canonical names only. Two names
+holding different values on one Prompt fail validation (for example
+`library_layer: 实验` beside `group_role: core`). Old five-stage labels
+(了解需求 / 比较方案 / 评估是否适合 / 准备购买 / 使用与续费) are recognised but
+never converted, because the mapping is not one-to-one: re-judge each Prompt.
+
+`review_status` mirrors the 提示词库 审核状态 column: `待审核` / `已批准` /
+`需修改` (`pending` / `approved` / `needs_revision` are read as the same
+values; anything else fails). Once any Prompt in a bank carries it, the
+attribute-alignment gate counts only 已批准 Prompts as covering an
+`attribute_plan` row, matching the Base 已批准题数 formula; a Prompt without the
+field is counted as 待审核 and listed in a warning. An attribute carried only
+by unapproved Prompts warns while drafting and fails from `customer_confirmed`
+on. Banks with no `review_status` anywhere keep the older rule that any Prompt
+covers its attribute. The summary line reports the count per status.
+
 Recommended additional per-question metadata when useful:
 
 - `region`
 - `cadence`
-- `evidence_refs`
 - `evidence_status`
 - `change_reason`
 - `version`
 - `lineage_id`
 - `status` (`hypothesis`, `customer_confirmed`, `locked`, `retired`)
 - `prompt_group`
-- `group_role` (`core`, `experimental`, `monitoring`)
-- `journey_stage` (eight-stage label: 发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持)
-- `audience` (a real buyer group or 「通用」; never a journey state such as 「已在比较具体品牌」)
 - `constraint_type`
 - `competitor_set`
 - `business_priority`
@@ -252,11 +281,11 @@ Before delivery:
 5. Tags, when used, do not repeat Topic, Intent, or Region, and carry a dimension those fields do not.
 6. Competitor Prompts are one-to-one, use only frozen applicable competitors, and do not enter the natural Discovery count.
 7. Category Awareness is low-frequency and not duplicated across every Topic without a reason; it is not the category observation Topic.
-8. Prompt text is unique after normalization and semantically reviewed for duplicates.
+8. Prompt text is unique after normalization and semantically reviewed for duplicates. The validator fails on exact duplicates and warns on near-duplicates (word overlap of 60% or more once words shared by most of the bank are removed) and on Prompts with the same Topic, intent and `attribute_ref` whose wording overlaps; each warning is resolved by keeping one or by recording what decision the second one adds.
 9. New Prompts have evidence or are clearly marked as hypotheses requiring confirmation. Each new Prompt also records why a recognizable buyer would ask it and what independent decision, risk, candidate set, or applicability judgment it adds.
 10. No cross-topic competitor, product-line, or category leakage.
 11. CSV rows match JSON rows and all upload length limits.
-12. Discovery Prompts contain no brand names, ask a commercial recommendation/selection question, and test one primary intent.
+12. Discovery Prompts contain no brand names, ask a commercial recommendation/selection question, and test one primary intent. The validator fails on a Discovery Prompt naming `brand_name`, any `aliases`, or any name in `competitor_selection`; a brand written in a non-Latin script is caught only when that spelling is listed in `aliases`.
 13. Trial review checks category/task fit, ambiguity, leading language, and duplication; target-brand mention is not a trial pass/fail criterion.
 14. Formal baseline plans 5 runs per Prompt/platform. Audit observed valid
     samples separately; failures are not zeroes, and old/new Prompt versions are
@@ -322,6 +351,12 @@ Before delivery:
     `core`/`experimental`/`monitoring` role; refresh decisions record a
     business or evidence trigger rather than an automatic expiry.
 32. **Every plan Attribute is either carried by a Prompt or says why not.** The validator fails on an Attribute with no carrying Prompt and no `no_carrier_reason` (it also accepts a legacy `demoted_reason`), and it fails when such an Attribute is ranked P1 — P1 means "optimise this first", which is impossible for a dimension nothing measures. Record the reason on the row itself: `no_carrier_reason` is a short string a reader can act on ("its Topic was dropped as unmovable; the Attribute is product-selection shaped and has no home Topic"), never a placeholder. Dropping a Topic deletes its Prompts but leaves its Attributes in the plan, so run this check **after every Topic change**, not only before delivery.
+33. **Wording matches the market.** The validator fails when fewer than half of a query's letters are in the script of `collection_config.language` (a Thai bank may still carry acronyms such as IELTS). It warns, without failing, on: a Latin-script query that reads as another Latin language; queries of four words or fewer, or short all-lowercase phrases without a question mark (keyword shape); more than one question mark; more than 40 words; a currency outside the market's. Warnings are reviewed one by one. Do not reword a Prompt only to silence one; a deliberate exception (for example a low-condition baseline kept next to its one-condition variant) is recorded in the internal diff.
+34. **Metadata is complete and balanced.** Every Prompt in a staged bank carries the five fields in the table above, under their canonical names. The validator also warns when one journey stage holds more than 45% of a non-Discovery-stage set (a Discovery-stage set is mostly 发现 by construction, so it is not checked), and when fewer than half of the Discovery Prompts are `core` (the natural-visibility trend is read from the core set).
+35. **Evidence comes from more than one kind of source.** From `customer_confirmed` on, the validator classifies every `evidence_refs` entry on 已批准 Prompts into a source family — 答案层, 搜索数据, 评价, 社区, 一手记录 (sales, CRM, support, interviews), 客户确认, 官网与竞品页 — by keywords in the ref text, and warns when the set spans fewer than three families. Refs that match no family (bare 输入编号 such as `input-3`) are 未分类; when they are more than half the refs the check is skipped, because diversity cannot be judged from IDs alone. A single-family set usually means the signal pass skipped sources (see SKILL.md → *Customer and Market Signals*); answer it by collecting the missing family or recording in the internal diff why that family has nothing for this category.
+36. **Every collected buyer quote is either used or set aside on purpose.** When `config.audience_inputs` lists the 买家原话 输入编号 collected for this bank (plain strings or objects with `input_id`), the validator warns on each one that no Prompt's `evidence_refs` cites. Record a decision per unused input in the internal diff — drafted as a candidate, set aside (with reason), or not applicable — so the next expansion round starts from them instead of re-collecting.
+
+The validator ends with a one-line verdict in three tiers: `Not ready: N errors to fix` (printed as `READINESS:` after the errors, exit 1), `Usable: N warnings to review`, or `Ready for the next lifecycle stage` (both in the summary JSON's `readiness` field). Quote this line in the validation summary handed over with the set.
 
 Run the validator against the market's set and, for changes, its prior version:
 

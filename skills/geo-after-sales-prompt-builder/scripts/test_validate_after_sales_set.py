@@ -49,7 +49,17 @@ def staged_bank(topic_count: int, lifecycle: str) -> dict[str, object]:
             "topics": topics,
             "expected_total": topic_count,
         },
-        "questions": [question("topic_1", number) for number in range(topic_count)],
+        "questions": [
+            {
+                **question("topic_1", number),
+                "journey_stage": "发现",
+                "audience": "通用",
+                "group_role": "core",
+                "attribute_ref": "",
+                "evidence_refs": [f"input-{number}"],
+            }
+            for number in range(topic_count)
+        ],
     }
 
 
@@ -69,6 +79,28 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
     def test_hypothesis_topic_can_remain_below_five(self) -> None:
         result = validate(staged_bank(2, "hypothesis"))
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_discovery_method_question_without_candidate_ask_fails(self) -> None:
+        for text, ok in [
+            ("How do I get rid of litter box smell in a home with multiple cats?", False),
+            ("What's the best way to get my cat to drink more water?", False),
+            ("Which automatic litter boxes seal in odor best between bag changes?", True),
+            ("Where can I source custom light guide panels for thin light box signs?", True),
+        ]:
+            data = staged_bank(2, "hypothesis")
+            data["questions"][0]["user_question"] = text
+            data["questions"][0]["monitoring_prompt"] = text
+            result = validate(data)
+            with self.subTest(text=text):
+                self.assertEqual(result.returncode == 0, ok, result.stdout)
+                if not ok:
+                    self.assertIn("asks no candidate question", result.stdout)
+        # 显式不进可见度统计的问题意识题放行
+        data = staged_bank(2, "hypothesis")
+        data["questions"][0]["user_question"] = "How can I get my cat to drink more water?"
+        data["questions"][0]["monitoring_prompt"] = "How can I get my cat to drink more water?"
+        data["questions"][0]["formal_visibility_eligible"] = False
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
 
     def test_formal_topic_requires_five_prompts(self) -> None:
         result = validate(staged_bank(4, "locked"))
