@@ -9,9 +9,9 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 
 - opening scope and monitoring object;
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
-- a separate `品牌事实【请核对】` table;
-- `属性池【请核对】` with `购买影响`, `相对竞品`, `优先级`, evidence-gap fields, and `客户确认`;
-- optional candidate `监测主题与问题【请核对】` table;
+- a separate `品牌事实【请核对】` table (the Base's 业务范围);
+- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields and `客户确认` — carried by 提示词矩阵 rows (one row = buyer situation × attribute), not a separate 属性池 table;
+- optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
 - candidate-baseline / lock handoff.
@@ -80,8 +80,8 @@ Recommended additional per-question metadata when useful:
 - `status` (`hypothesis`, `customer_confirmed`, `locked`, `retired`)
 - `prompt_group`
 - `group_role` (`core`, `experimental`, `monitoring`)
-- `journey_stage`
-- `audience`
+- `journey_stage` (eight-stage label: 发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持)
+- `audience` (a real buyer group or 「通用」; never a journey state such as 「已在比较具体品牌」)
 - `constraint_type`
 - `competitor_set`
 - `business_priority`
@@ -107,7 +107,7 @@ line, audience/persona, journey stage, market/language, buyer constraint,
 competitor/alternative set and business priority, plus local terminology,
 source ecosystem, regulation, currency, trust, availability and service
 expectations when relevant. It is a gap check we draft — shown to the brand
-party as the 覆盖矩阵 table of the client Base — not a form the client fills or
+party as the 提示词矩阵 table of the client Base — not a form the client fills or
 a Cartesian-product quota.
 
 Each candidate intent is classified per market as:

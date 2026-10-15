@@ -51,7 +51,7 @@ confirmation, so record only what is missing:
 
 Before writing individual Prompts, build a lightweight internal coverage pass
 for each priority market/language. It is a gap check we draft and the brand
-party reviews (the 覆盖矩阵 table of the client Base); it is not a form the
+party reviews (the 提示词矩阵 table of the client Base); it is not a form the
 client fills from scratch, and not a Cartesian-product quota.
 
 Review the intersections that can change the decision:
@@ -59,16 +59,31 @@ Review the intersections that can change the decision:
 `product/service line × buyer/persona × journey stage × market/language × buyer constraint × competitor/alternative set × business priority`
 
 **One matrix, not two.** Aleyda's prompt matrix (step 5) and our attribute
-pool merge into one internal coverage table: her columns describe the slice,
-ours add which Attribute it tests and where it lands. Row shape:
+pool merge into one table — the client Base's 提示词矩阵. One row is **one
+buyer situation × one tested attribute**: her columns describe the slice, ours
+add the attribute and its priority judgement. The column set, per-row rules
+and the priority formula are defined once in
+[client-facing-attribute-pool.md](client-facing-attribute-pool.md) →
+*提示词矩阵*; the internal handoff keeps only what the client does not see
+(market decision and its evidence date, reuse reasoning).
 
-`切片编号 | 产品线/主题 | 受众 | 市场/语言 | 旅程阶段 | 买家任务(Prompt Task) | 买方约束 | 竞品/替代方案 | 测的属性 | 属性优先级 | 业务优先级 | 计划题数 | 已有题数 | 去向（Topic/Prompt 或证据缺口原因）`
+Two properties make the table do its job. Every Prompt links one row
+(`已有问题 / 已有题数`), so a P1 row with no Prompt is visible; and every
+attribute without a Prompt still has a row whose 备注 says why, so an
+attribute nobody tests cannot disappear silently. Fill only the slices that
+change a decision; empty intersections are expected, and the row set is
+generated from the bank, not planned as a Cartesian product.
 
-`计划题数 / 已有题数` is her coverage check (a slice planned but not carried
-is a visible gap); `测的属性 / 属性优先级` ties every slice back to the pool, so
-a slice testing no Attribute, or a P1 Attribute no slice reaches, shows up in
-the same table. Fill only the slices that change a decision; empty
-intersections are expected.
+Dimensions that sound separate but are not:
+- **Audience vs journey state.** 「已在比较具体品牌」, 「准备下单」 and the like
+  are stages, not audiences. Audience is who the buyer is; with no group
+  condition it is 「通用」.
+- **Buyer task vs journey stage.** One column, the eight stages
+  `发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持`.
+- **Business priority vs attribute priority.** Rating audiences 高/中 by
+  whether the brand party listed them restates importance; rating them by
+  where P1 attributes cluster restates attribute priority. Keep only the
+  attribute priority, judged per row through 购买影响.
 
 Adapt the uncertainty to the business model: ecommerce may hinge on
 availability, delivery and returns; SaaS on integration, onboarding,
@@ -120,8 +135,8 @@ a Prompt does not add a country or city unless the place is itself a buying
 condition (import compliance for the US, returning to work in Thailand).
 Keep one convention within a Prompt group.
 
-The filled slices go into the 覆盖矩阵 table of the client confirmation Base
-(decided 2026-10-14), so the brand party sees which buyer situations are
+The filled slices go into the 提示词矩阵 table of the client confirmation Base
+(decided 2026-10-14; attribute pool folded in 2026-10-15), so the brand party sees which buyer situations are
 covered and can point out missing ones. Show only slices that change a
 decision — never pad empty intersections for completeness — and keep the
 evidence notes behind reuse decisions (dates, shared/localized reasoning) in
@@ -148,7 +163,11 @@ evidence.
 Log every piece of audience language as one row, so each Prompt can point
 back to its evidence (Aleyda step 7, her workbook's 受众输入 sheet):
 
-`输入编号 | 来源类型 | 原话（保留原语言） | 市场/语言 | 受众 | 旅程阶段 | 买家任务 | 约束/场景 | 可转成哪类问题 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
+`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 原话（保留原语言） | 中文意思 | 受众 | 旅程阶段 | 约束或场景 | 来源说明 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
+
+(Market/language is fixed per Base; 受众 and 旅程阶段 use the 提示词矩阵 sets;
+rules for 涉及品牌 and 来源类型 are in client-facing-attribute-pool.md →
+*买家原话*.)
 
 A Prompt's evidence field cites the 输入编号. Client records enter only after
 anonymisation (see [signal-sources.md](signal-sources.md)). A Prompt whose
