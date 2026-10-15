@@ -10,7 +10,7 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - opening scope and monitoring object;
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
 - a separate `品牌事实【请核对】` table (the Base's 业务范围);
-- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 提示词类型, 约束 and 目标题数 — carried by 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号), not a separate 属性池 table;
+- the attribute judgements — `购买影响`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 约束 and 目标题数 — carried by 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号), not a separate 属性池 table;
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
@@ -373,7 +373,7 @@ The final delivery should state:
 - active Topic count and Prompt count per Topic;
 - the derived Attribute list and its ranking order;
 - Prompt role counts, split so that Discovery (natural visibility) is
-  distinguishable from named-brand Evaluation, Comparison, and Verification;
+  distinguishable from named-brand Evaluation, Competitor, and Accuracy;
 - additions, revisions, merges, and retirements;
 - evidence source and confidence gaps, marked against the customer-input tiers
   (must-have / best-to-have / collected by us);

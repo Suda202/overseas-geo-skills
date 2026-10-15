@@ -208,14 +208,14 @@ Common mappings are only defaults:
 | Prompt Task | Common Intent | Boundary |
 |---|---|---|
 | Discovery / Shortlist | Discovery | Non-branded candidate selection |
-| Alternatives | Discovery or separate exploration | Non-branded alternatives can be Discovery; "alternatives to [named brand]" does not fit the current default Discovery or one-to-one Competitor contract |
-| Problem Solving | Discovery or Category Awareness | Only enter core visibility when the task asks for a solution/provider |
+| Alternatives | Discovery or Competitor | Non-branded alternatives are Discovery; "alternatives to [named brand]" is Competitor |
+| Problem Solving | Discovery | Only when the task asks for a solution/provider; a how-to or troubleshooting question is not written as a Prompt |
 | Evaluation | Evaluation | Named-brand fit or quality judgement |
 | Comparison | Competitor | One-to-one named comparison |
-| Validation | Verification, Accuracy, or Evaluation | Depends on capability, fact, or trust question |
-| Transaction | Separate transaction contract | Price/availability alone is not a provider-selection Discovery question |
-| Post-purchase Support | Separate support contract | Does not enter default natural-discovery metrics |
-| Category Understanding | Category Awareness | Category framing and decision criteria |
+| Validation | Accuracy or Evaluation | One checkable capability or fact is Accuracy; a trust or reputation question is Evaluation |
+| Transaction | Discovery when it asks for candidates | "Which … are on sale / in stock" lists brands; kept in the `experimental` layer because answers move with prices and stock |
+| Post-purchase Support | Accuracy for policy facts | Return, warranty and subscription terms are Accuracy; troubleshooting is not written as a Prompt |
+| Category Understanding | Category Awareness | How to choose and which criteria decide; `formal_visibility_eligible: false` |
 | Source Discovery | Separate research task | Studies source ecosystem, not brand visibility |
 
 The first staged set may use several task labels while remaining
@@ -270,13 +270,44 @@ not fix it — fix the scope or the wording first.
 
 ## Roles and Refresh
 
-Classify each Prompt group as one of:
+Classify every candidate Prompt by purpose (Aleyda step 21), before anything
+is purchased:
 
-- `core`: stable, high-priority Prompts used for recurring comparison;
-- `experimental`: new market, audience, constraint, competitor or emerging
-  intent under evaluation;
-- `monitoring`: representation, reputation, risk, compliance or competitor
-  change surveillance.
+- `core`: non-branded discovery, shortlist and problem-solving Prompts on the
+  highest-priority journeys and P1 attributes, worded to stay unchanged
+  across periods. Only `core` Prompts feed the natural-visibility trend.
+- `experimental`: Prompts whose answers move with time or whose value is not
+  yet proven — price, availability, delivery and returns; a new market,
+  product line, audience, constraint or competitor; emerging intents such as
+  fan-out directions. Reported apart from the trend.
+- `monitoring`: named-brand Prompts — description accuracy, evaluation,
+  one-to-one competitor comparison, reputation, risk and compliance. Read for
+  whether the answer is right and how it judges the brand, not for
+  visibility or rank.
+
+The layer describes what a Prompt is for. Only `core` Prompts form the
+purchased formal set that runs every period, under the per-Topic cap; the
+brand party chooses which intents and Prompts to buy, and core comes first,
+because without it there is no comparable trend.
+
+**Competitor, Category Awareness and Accuracy Prompts are research
+instruments, collected during research rather than in the candidate baseline**
+(Suda 2026-10-15). Generate them while building the attribute pool and run them
+5 times per platform then: competitor answers settle `相对竞品`, and AI's
+buying criteria show whether our P1 attributes are on the list, which feeds
+changeability. Accuracy Prompts can be collected at the same time but are
+scored only after the brand party confirms the right answer. That research run
+is their baseline; they do not run again in the candidate baseline and take no
+formal-set slot. Evaluation Prompts and the `experimental` price/stock/delivery
+Discovery Prompts stay in the candidate baseline.
+
+**Re-runs** (Aleyda step 20). After their first readings, `monitoring` and
+`experimental` Prompts are re-run only on a trigger: an optimisation shipped
+for the attribute they test, a change to the underlying fact (new model,
+repricing, policy change), a named competitor's major move, or a quarterly
+review. A re-run after an optimisation checks whether AI changed its answer on
+the Prompts tied to that attribute; it is read against that group's first
+readings, never spliced into the core trend.
 
 Keep the core stable for comparison. Review affected groups immediately when
 products, markets, pricing models, regulation or major competitors change.

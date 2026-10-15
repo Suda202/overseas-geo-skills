@@ -25,6 +25,8 @@ INTENTS = {
     "Category Awareness",
     "Accuracy",
 }
+# After-sales folds Verification into Accuracy (2026-10-15); presales keeps both.
+INTENT_ALIASES = {"Verification": "Accuracy"}
 STAGES = {"discovery", "diagnostic"}
 LIFECYCLE_STATES = {
     "hypothesis",
@@ -321,13 +323,13 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
     if explicit and tag_intent and explicit != tag_intent:
         fail(f"{row.get('question_id')}: explicit intent conflicts with Intent tag", errors)
     if explicit:
-        return explicit
+        return INTENT_ALIASES.get(explicit, explicit)
     if tag_intent:
         if intent_key in INTENTS and intent_key != tag_intent:
             fail(f"{row.get('question_id')}: intent_key conflicts with Intent tag", errors)
-        return tag_intent
+        return INTENT_ALIASES.get(tag_intent, tag_intent)
     if intent_key in INTENTS:
-        return intent_key
+        return INTENT_ALIASES.get(intent_key, intent_key)
     return ""
 
 
@@ -338,6 +340,15 @@ JOURNEY_STAGES = ("发现", "解决问题", "评估", "对比", "替代方案", 
 # by its content), so they are recognised but never converted.
 OLD_JOURNEY_STAGES = {"了解需求", "比较方案", "评估是否适合", "准备购买", "使用与续费"}
 GROUP_ROLES = {"core", "experimental", "monitoring"}
+# Which journey stages each after-sales intent can sit on.
+INTENT_STAGES = {
+    "Discovery": {"发现", "解决问题", "交易"},
+    "Category Awareness": {"发现", "解决问题"},
+    "Competitor": {"对比", "替代方案"},
+    "Evaluation": {"评估", "验证"},
+    "Accuracy": {"验证", "购后支持"},
+}
+NON_VISIBILITY_INTENTS = {"Category Awareness", "Accuracy"}
 LAYER_TO_ROLE = {"核心": "core", "实验": "experimental", "监测": "monitoring",
                  "core": "core", "experimental": "experimental", "monitoring": "monitoring"}
 FIELD_ALIASES = {
@@ -438,6 +449,15 @@ def field_contract_checks(
     report(f"journey_stage is not one of {'/'.join(JOURNEY_STAGES)}", odd, formal)
     bad_role = [r for r in questions if fields[id(r)]["group_role"] and fields[id(r)]["group_role"] not in GROUP_ROLES]
     report(f"group_role is not one of {sorted(GROUP_ROLES)}", bad_role, formal)
+
+    bad_pair = [r for r in questions if intents.get(id(r)) in INTENT_STAGES
+                and fields[id(r)]["journey_stage"] in JOURNEY_STAGES
+                and fields[id(r)]["journey_stage"] not in INTENT_STAGES[intents[id(r)]]]
+    report("intent does not fit journey_stage (评估 asks for a judgement, 验证 for one checkable "
+           "answer; see client-facing-attribute-pool.md → 旅程阶段)", bad_pair, True)
+    leaking = [r for r in questions if intents.get(id(r)) in NON_VISIBILITY_INTENTS
+               and r.get("formal_visibility_eligible") is True]
+    report("Category Awareness and Accuracy Prompts must set formal_visibility_eligible: false", leaking, True)
 
     # Balance checks only mean something on the shape they were written for.
     # A Discovery-stage set is mostly 发现 by construction, and a named-brand

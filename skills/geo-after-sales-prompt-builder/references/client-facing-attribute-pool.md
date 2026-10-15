@@ -27,7 +27,7 @@ The client confirmation piece is a Feishu Base copied from the template 《AI �
 
 **No separate 监测主题 table.** 监测主题 is a single-select column on 提示词库 only; 提示词矩阵 has no Topic column, because a slice's Topic is whatever its linked Prompts carry and a second hand-filled copy drifts (Suda removed it 2026-10-15); Topics are ours to name and split — the brand party does not know what to write there, so 业务范围 carries no 监测主题 rows (Suda 2026-10-15); the ≥5 candidate / ≤10 formal counts are checked by filtering 提示词库. A topic table would only duplicate the name and need links kept in sync. Competitors are 竞品（n） rows in 业务范围 carrying 适用产品线, not 适用主题; no separate competitor table, since nothing links to it.
 
-**Dashboard 「覆盖分布」 (Suda 2026-10-15).** The template carries one dashboard, so every copy has it: a short how-to-read text block; 提示词总数 and 已批准提示词 cards; 切片覆盖情况 (ring on 覆盖情况); 旅程阶段 × 提示词类型, 按受众 and 按优先级 (sum of 目标题数 on 提示词矩阵); 按主题 and 库分层 (count on 提示词库). Distributions sum 目标题数, which is filled before Prompts are written, so the plan's gaps show before review — an empty stage, a main audience or product line at zero. Read it before sending the Base and before the candidate baseline; it replaces no check in the validator.
+**Dashboard 「覆盖分布」 (Suda 2026-10-15).** The template carries one dashboard, so every copy has it: a short how-to-read text block; 提示词总数 and 已批准提示词 cards; 切片覆盖情况 (ring on 覆盖情况); 按旅程阶段, 按受众 and 按优先级 (sum of 目标题数 on 提示词矩阵); 按主题 and 按意图 (count on 提示词库). 库分层 is not charted (Suda 2026-10-15). Distributions sum 目标题数, which is filled before Prompts are written, so the plan's gaps show before review — an empty stage, a main audience or product line at zero. Read it before sending the Base and before the candidate baseline; it replaces no check in the validator.
 
 Customer-facing names: call the Prompts **提示词** (tables 提示词矩阵 / 提示词库, field 提示词); keep **监测主题** for Topics. Suda reversed the 2026-08 ban on 「提示词」 on 2026-10-14. Use one term throughout the Base and the 使用说明.
 
@@ -37,10 +37,10 @@ One row is **one coverage slice × one tested attribute** (Suda 2026-10-15 reali
 
 Columns, in view order:
 
-`切片编号（主字段） | 产品线 | 受众 | 旅程阶段 | 提示词类型 | 约束 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 目标题数 | 已有问题 | 已批准题数 | 覆盖情况 | 还缺什么 | 备注`
+`切片编号（主字段） | 产品线 | 受众 | 旅程阶段 | 约束 | 属性 | 购买影响 | 相对竞品 | 可改变性 | 优先级 | 目标题数 | 已有问题 | 已批准题数 | 覆盖情况 | 还缺什么 | 备注`
 
-- **切片编号** is the primary field: plain text M-001, M-002… in order (a text field, not a formula). The slice's meaning lives in its dimension columns — 受众, 旅程阶段, 提示词类型, 约束, 属性.
-- **提示词类型** (single select: 推荐榜单 / 使用场景 / 对比 / 替代方案 / 验证 / 价格与购买 / 学习了解 / 评价口碑 / 售后支持, after Aleyda's Prompt Type) is a slice dimension. When one situation needs two question shapes, split it into two slices so the bank does not collapse into one shape.
+- **切片编号** is the primary field: plain text M-001, M-002… in order (a text field, not a formula). The slice's meaning lives in its dimension columns — 受众, 旅程阶段, 约束, 属性.
+- **No 提示词类型 column** (Suda 2026-10-15). Aleyda's Prompt Type mostly repeats 旅程阶段 — on PETKIT's 120 rows 对比 / 替代方案 / 购后支持 each held one type and 交易 was 12 of 15 one type — and the rest repeats 约束 (scenario, budget) or 属性 (reliability). How a Prompt is read is 意图 on 提示词库, a per-Prompt field, not a slice dimension.
 - **约束** is its own column (same name as in 买家原话): the conditions the buyer carries beyond the attribute — budget, home size, number of cats, days away, a named rival or model. Write 2–3 keywords separated by 、 (「小公寓、2–3 只猫」「300 美元以内」「对手 Litter-Robot」), after Aleyda's CONSTRAINT column; do not restate 受众, 旅程阶段 or 属性 — the full wording lives in the Prompt. Slices that share every other dimension must still differ here (Suda 2026-10-15).
 - **目标题数 / 已批准题数 / 覆盖情况**: we fill 目标题数 **before writing Prompts**, not after. Default is 1. Add one per additional buyer constraint wording where the candidate list would change — "two cats" vs "four or more" on the same feeder slice may pull different brands; different phrasings of the same constraint that would produce the same shortlist do not add a count. Note in 备注 which constraint each extra Prompt tests. Leave 目标题数 blank (never 0) on slices with no first-stage Prompt — the coverage cell then shows blank. 已批准题数 is a formula counting linked Prompts whose 审核状态 is 已批准; 覆盖情况 is a formula (已覆盖 / 未达标 / 不配题 for 0).
 - **Rows.** Every situation × attribute pair that has Prompts is a row. Every attribute with no first-stage Prompt also gets one row (受众 the category's base audience, 约束 written from its buyer problem, a judged 旅程阶段, 目标题数 blank), with the reason at the start of 备注 — 「首期不配提示词：购买影响低，不决定买家选谁」 or 「…：能力缺口，发布内容改变不了 AI 的说法」. Do not add a separate 去向/缺口说明 column. Category-baseline Prompts sit on rows with an empty 属性.
@@ -60,7 +60,20 @@ Columns, in view order:
 
 `发现 | 解决问题 | 评估 | 对比 | 替代方案 | 验证 | 交易 | 购后支持`
 
-Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's shortlist step folds into 发现; category understanding and source discovery are not used for after-sales banks. The older five-stage labels map as 了解需求→发现, 比较方案→对比, 评估是否适合→评估, 准备购买→交易, 使用与续费→购后支持, but re-judge each quote by its content when converting: a 「how do I get rid of the smell」 post is 解决问题, a filtering condition such as 「must be stainless steel」 is 发现, a 「does it have a hidden monthly fee」 check is 验证. A row with no Prompt still gets a judged stage — never leave it blank.
+Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Judge each stage by what the buyer is doing:
+
+| 旅程阶段 | The buyer is | Example |
+|---|---|---|
+| 发现 | looking for candidates or learning how to choose, no brand settled | 「Which automatic litter boxes work for a small apartment?」「What should I look for in an automatic litter box for multiple cats?」 |
+| 解决问题 | starting from a problem, looking for what fixes it | 「The waste drawer smells before it's full — which litter boxes seal odor best?」 |
+| 评估 | judging whether one named brand or model fits them or is worth buying | 「Is the PETKIT Purobot Max Pro 2 worth it for three cats?」「What are the most common problems with PETKIT litter boxes?」 |
+| 对比 | choosing between two or more named options | 「PETKIT vs Litter-Robot: which is better for multiple cats?」 |
+| 替代方案 | looking beyond a named option | 「What are the best alternatives to Litter-Robot?」 |
+| 验证 | checking one specific capability, term or fact of a named brand | 「Do PETKIT litter boxes need a paid subscription?」「Can the Purobot Crystal Duo take a Maine Coon?」 |
+| 交易 | deciding where, when and on what terms to buy | 「Which automatic litter boxes are on sale right now?」 |
+| 购后支持 | already owns it: setup, returns, warranty, troubleshooting | 「Why did my PETKIT fountain pump stop working?」 |
+
+评估 asks for a judgement (fit, worth, weaknesses); 验证 asks for one checkable answer. When unsure, ask whether the reply can be marked right or wrong against an official source — if yes, it is 验证. Aleyda's shortlist step folds into 发现, and category understanding (how to choose, what to look for) is 发现 with 意图 品类认知; source discovery is not used for after-sales banks. The older five-stage labels map as 了解需求→发现, 比较方案→对比, 评估是否适合→评估, 准备购买→交易, 使用与续费→购后支持, but re-judge each quote by its content when converting: a 「how do I get rid of the smell」 post is 解决问题, a filtering condition such as 「must be stainless steel」 is 发现, a 「does it have a hidden monthly fee」 check is 验证. A row with no Prompt still gets a judged stage — never leave it blank.
 
 ### 买家原话
 
@@ -76,10 +89,12 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Aleyda's
 
 ### 提示词库
 
-`提示词（主字段） | 中文含义 | 主题（单选） | 状态 | 库分层 | 所属切片 | 证据 | 审核状态 | 产品线`; 编号, AI 认知差距 and 提及率 exist but are hidden in the default view.
+`提示词（主字段） | 中文含义 | 主题（单选） | 意图 | 状态 | 库分层 | 所属切片 | 证据 | 审核状态 | 产品线`; 编号, AI 认知差距 and 提及率 exist but are hidden in the default view.
+
+- **意图** (single select: 发现 / 竞品 / 评价 / 准确性 / 品类认知) is the bank JSON's `intent` shown in Chinese, using the names in shared/canonical-intent-mapping.md; the two are one field, never two vocabularies (Suda 2026-10-15). It decides which metric a Prompt feeds, so there is no separate 分析类型 column — the analysis type follows from the intent (see after-sales-rules.md → *Prompt Priorities*). We fill it; the brand party does not edit it.
 
 - **审核状态** (待审核 / 已批准 / 需修改, default 待审核) is the approval gate: we mark 待审核 after internal QA; the brand party marks 已批准 when the Prompt is fine or after editing it directly, 需修改 when it wants us to rewrite. **Only 已批准 Prompts enter the candidate baseline.** It is separate from 状态 (候选 / 正式 / 停测), which records what happened after the baseline.
-- **No slice-level columns on 提示词库.** 旅程阶段, 提示词类型, 约束 (and the old 买家问题与场景) belong to the slice and were identical on all 100 PETKIT Prompts; a second copy drifts when the brand party edits one table. The reviewer opens 所属切片 to see them (Suda 2026-10-15). The bank JSON keeps `journey_stage` for metrics and the validator.
+- **No slice-level columns on 提示词库.** 旅程阶段, 约束 (and the old 买家问题与场景) belong to the slice and were identical on all 100 PETKIT Prompts; a second copy drifts when the brand party edits one table. The reviewer opens 所属切片 to see them (Suda 2026-10-15). The bank JSON keeps `journey_stage` for metrics and the validator.
 
 - Sort the view by 编号.
 - **AI 认知差距 and 提及率 exist only after the candidate baseline.** Judge AI 认知差距 per Prompt from that Prompt's own answer text (有缺口 / 无人讨论 / 无缺口). Until then every row is 「待基线」 and both columns are hidden in the view. Never push an attribute-level judgement or presales answers onto individual Prompts — Prompts under one attribute would all read the same however their wording differs, which is not data.
