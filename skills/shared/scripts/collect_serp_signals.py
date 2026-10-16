@@ -19,7 +19,8 @@ Key 依次读环境变量 SCRAPELESS_API_KEY、macOS 钥匙串（服务名 SCRAP
 
 产物（<out>/）：
   raw/<种子词>.json / .html   原始返回，作证据留存
-  signals.csv                列与对客 Base「买家原话」表一致；中文意思、受众、旅程阶段、涉及品牌留空待人工判
+  signals.csv                列与对客 Base「买家原话」表一致；中文意思、受众、旅程阶段、涉及品牌、月搜索量留空待人工判
+                             （PAA、相关搜索、自动补全都不带搜索量；月搜索量只对 Ahrefs 等关键词工具的词填）
   summary.json               每个种子词各类信号条数与失败原因；PAA 为 0 的种子词单独列出
 """
 from __future__ import annotations
@@ -46,7 +47,7 @@ RESULT_PATH = "/api/v1/scraper/result/"
 SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
 PAA_TAG = re.compile(r"<div[^>]*\brelated-question-pair\b[^>]*>")
 DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
-FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "原话", "中文意思", "受众", "旅程阶段",
+FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "月搜索量", "原话", "中文意思", "受众", "旅程阶段",
           "约束", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
 KINDS = {"paa": ("Google People Also Ask", "中"),
          "related": ("Google 相关搜索", "中"),
