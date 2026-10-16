@@ -77,7 +77,9 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Judge ea
 
 ### 买家原话
 
-`原话（主字段） | 中文意思 | 涉及品牌 | 来源类型 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度 | 引用它的问题 | 产品线 | 输入编号`
+`原话（主字段） | 中文意思 | 涉及品牌 | 来源类型 | 月搜索量 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度 | 引用它的问题 | 产品线 | 输入编号`
+
+- **月搜索量** (single-select) is the US monthly volume tier for 搜索数据 rows (Ahrefs free-tier estimate: >10,000 / >1000 / >100 / <100). Google 自动补全 rows carry no volume — leave the cell blank. Keep the tier out of 来源说明, which already states the tool and market; the column exists so the brand party can sort and filter by demand size.
 
 - **Primary fields are chosen for what a link cell shows** (Suda 2026-10-15). A linked cell displays the other table's primary field, so: 买家原话 leads with **原话**, and 提示词库's 证据 cell shows the quote itself, letting the brand party judge a Prompt's grounding without leaving the row; 提示词库 leads with **提示词**, so 提示词矩阵's 已有问题 lists the actual questions; 提示词矩阵 keeps **切片编号**, because no content column identifies a slice — PETKIT's 120 rows had 3 product lines, 52 attributes of which 25 repeat, and 17 repeated 属性 + 受众 + 旅程阶段 combinations. When the brand party reads only Chinese, lead 买家原话 with 中文意思 instead.
 - **输入编号** stays as the last column. Our bank JSON's `evidence_refs` and `config.audience_inputs` cite it, and both sides use it to point at one quote in feedback.
@@ -91,7 +93,7 @@ Use one stage column in 提示词矩阵, 提示词库 and 买家原话. Judge ea
 
 `提示词（主字段） | 中文含义 | 主题（单选） | 意图 | 状态 | 库分层 | 所属切片 | 证据 | 审核状态 | 产品线`; 编号, AI 认知差距 and 提及率 exist but are hidden in the default view.
 
-- **意图** (single select: 发现 / 竞品 / 评价 / 准确性 / 品类认知) is the bank JSON's `intent` shown in Chinese, using the names in shared/canonical-intent-mapping.md; the two are one field, never two vocabularies (Suda 2026-10-15). It decides which metric a Prompt feeds, so there is no separate 分析类型 column — the analysis type follows from the intent (see after-sales-rules.md → *Prompt Priorities*). We fill it; the brand party does not edit it.
+- **意图** (single select: 发现 / 竞品 / 评价 / 验证 / 准确性 / 品类认知) is the bank JSON's `intent` shown in Chinese, using the names in shared/canonical-intent-mapping.md; the two are one field, never two vocabularies (Suda 2026-10-15). It decides which metric a Prompt feeds, so there is no separate 分析类型 column — the analysis type follows from the intent (see after-sales-rules.md → *Prompt Priorities*). We fill it; the brand party does not edit it.
 
 - **审核状态** (待审核 / 已批准 / 需修改, default 待审核) is the approval gate: we mark 待审核 after internal QA; the brand party marks 已批准 when the Prompt is fine or after editing it directly, 需修改 when it wants us to rewrite. **Only 已批准 Prompts enter the candidate baseline.** It is separate from 状态 (候选 / 正式 / 停测), which records what happened after the baseline.
 - **No slice-level columns on 提示词库.** 旅程阶段, 约束 (and the old 买家问题与场景) belong to the slice and were identical on all 100 PETKIT Prompts; a second copy drifts when the brand party edits one table. The reviewer opens 所属切片 to see them (Suda 2026-10-15). The bank JSON keeps `journey_stage` for metrics and the validator.

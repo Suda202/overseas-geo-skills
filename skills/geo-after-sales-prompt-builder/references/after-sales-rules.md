@@ -260,20 +260,19 @@ When the matrix is absent, do **not** report the emptiness as a finding that com
 
 While judging, split the gap and state which applies: **evidence gap** (the capability exists but is not published — the fix is a page) versus **capability gap** (the capability is absent — the fix is investment). That split is the most actionable line in the document and it is invisible from the verdict alone.
 
-**Check factual accuracy during the same research pass — do not wait for Accuracy Prompts to find errors.** For every factual P1 (and every factual P2 that carries Prompts) — attributes with one checkable right answer, such as installation requirement, dimensions, availability in a market, price band, certification, warranty, eligibility, or corporate ownership — run two checks while filling `相对竞品`:
+**Check factual accuracy during the same research pass — do not wait for Verification or Accuracy Prompts to find errors.** For every factual P1 (and every factual P2 that carries Prompts) — attributes with one checkable right answer, such as installation requirement, dimensions, availability in a market, price band, certification, warranty, eligibility, or corporate ownership — run two checks while filling `相对竞品`:
 
 1. **Public-layer consistency.** Do the official site, marketplace and retailer listings, reviews, and third-party profiles state the same fact (model names, specs, prices, scope)? Conflicting public sources are the main reason AI gets a fact wrong.
 2. **Answer-layer statement.** In the collected answers, what does AI actually say about this fact for the brand — correct, wrong, outdated, conflated with another entity (Edgelight vs Edgelit), or missing a remedy the brand does offer (CAU's foundation pathway)?
 
 Write what you find into that row's `备注` / `还缺什么` as evidence for the client to confirm; do not report it as an accuracy percentage — presales samples are too small, and the ground truth is the client's to settle. Subjective appraisals ("easy to use", "good value") are not facts; they belong to sentiment and recommendation, not here.
 
-**Only a few of those rows become Accuracy Prompts.** Research finds what is wrong and why; monitoring only tracks known risk points and whether fixes land. Convert a row into an Accuracy Prompt only when all hold:
+**Only a few of those rows become Verification or Accuracy Prompts.** Research finds what is wrong and why; monitoring only tracks known risk points and whether fixes land. The two intents split by what AI gets wrong — a row becomes one or the other, never both:
 
-- a wrong answer would change shortlisting or purchase (typically a P1 or gating fact; a shared category fact every competitor also has does not qualify unless it gates entry);
-- the discovery answers cannot show whether AI knows it (the brand is rarely or never mentioned there), **or** the answer layer already states it wrongly or outdatedly, **or** the fact recently changed (new model, rename, repricing) so AI is likely stale;
-- the client has confirmed the right answer and an official source page exists — without that, keep it on the pending-confirmation list, not in the Prompt set.
+- **Verification** — AI does not know the brand holds the capability. The row becomes a Verification Prompt when the brand really offers the capability, a wrong answer would change shortlisting or purchase (typically a P1 or gating fact), and the discovery answers cannot show whether AI knows it (the brand is rarely or never mentioned on that attribute). Read it against the Discovery Prompts on the same attribute (trust gap vs comprehension gap, above).
+- **Accuracy** — AI can state the fact but states it wrongly. The row becomes an Accuracy Prompt when a wrong answer would change shortlisting or purchase, and the answer layer already states it wrongly or outdatedly, **or** the fact recently changed (new model, rename, repricing) so AI is likely stale.
 
-Facts that already appear correctly and frequently in discovery answers need no Accuracy Prompt. Expect roughly two to five per market; ask the fact directly and name the brand (e.g. "Does Bewinch G3 require plumbing installation?"). The client-confirmed answer is the scoring truth for that Prompt.
+Either intent requires the client to have confirmed the right answer and an official source page — without that, keep it on the pending-confirmation list, not in the Prompt set. Facts that already appear correctly and frequently in discovery answers need neither. Expect roughly two to five per market across both intents; ask one checkable answer and name the brand (e.g. "Does Bewinch G3 require plumbing installation?"). The client-confirmed answer is the scoring truth for that Prompt.
 
 **The category observation Topic doubles as a diagnostic.** Research suggests roughly 15% of categories already have a clear winner. Where one exists, put the effort into the depth Topics and keep the category Topic as the baseline instrument; where none exists, the category Topic is itself a winnable battlefield. It has to be measured either way, so the extra judgement costs almost nothing.
 
@@ -364,16 +363,16 @@ Do not encode a whole use case, audience, feature list, or region into the Topic
 3. **Competitor:** one-to-one comparison only when a real competitive opportunity justifies it.
 4. **Category Awareness:** low-frequency observation; refresh only for a new concept, trend, or changed buying standard.
 
-After-sales uses five intents: `Discovery`, `Competitor`, `Evaluation`,
-`Accuracy`, and `Category Awareness`. **`Verification` is folded into
-`Accuracy`** (Suda 2026-10-15): a capability check ("Does PETKIT offer X?")
-presupposes that the brand really has X, which is itself a fact the brand
-party must confirm, and the accuracy gate already carries Verification's
-trigger (the discovery answers cannot show whether AI knows it). The validator
-reads `Verification` as an alias of `Accuracy`. Presales keeps six intents
-(shared/canonical-intent-mapping.md), because its report modules route the two
-differently. Accuracy is not a default after-sales Prompt: use it only through
-the accuracy gate in *Topic and Attribute Selection Criteria*.
+After-sales uses the same six intents as presales: `Discovery`, `Competitor`,
+`Evaluation`, `Verification`, `Accuracy`, and `Category Awareness`.
+`Verification` and `Accuracy` are **two distinct intents**, divided by what AI
+gets wrong (Suda 2026-10-16). Verification asks whether AI recognises that the
+brand holds a specific capability — the failure is that AI does not know the
+brand has it. Accuracy asks whether a fact AI can already state is right — the
+failure is that AI states it wrongly. A capability check ("Does PETKIT offer
+X?") is a Verification Prompt, not an Accuracy Prompt. Neither is a default
+after-sales Prompt: use them only through the gates in *Topic and Attribute
+Selection Criteria*.
 
 **Which monitoring task each intent carries, and which statistic it feeds.**
 The analysis type follows from the intent; there is no separate field for it.
@@ -384,26 +383,27 @@ The Chinese name is the client Base 提示词库 意图 value.
 | Discovery (发现) | Does AI recommend the brand when a buyer explores the category | Returns a provider/platform list; needs a candidate-noun trigger | visibility, sentiment |
 | Competitor (竞品) | Whom AI picks in a head-to-head, or what it offers instead of a named option | Returns a verdict, not a both-sides answer; needs a use case and a comparison ask | sentiment |
 | Evaluation (评价) | How AI appraises the brand or a competitor on a stated scope | Returns an appraisal; this is where sentiment is read per attribute | sentiment |
-| Accuracy (准确性) | Whether what AI says about one fact or capability of the brand is right | One checkable answer, scored against the client-confirmed answer; only for rows that pass the accuracy gate | accuracy |
+| Verification (验证) | Whether AI even knows the brand holds a specific capability | One checkable answer per capability, scored against the client-confirmed answer; distinguishes a comprehension gap from a trust gap | neither visibility nor sentiment |
+| Accuracy (准确性) | Whether a fact AI can already state about the brand is right | One checkable answer, scored against the client-confirmed answer; only for rows that pass the accuracy gate | accuracy |
 | Category Awareness (品类认知) | How AI frames the category — what to look for, which criteria decide | Buying criteria, category framing and comparison dimensions; read whether our P1 attributes appear among the criteria and which guides AI cites | neither visibility nor sentiment |
 
 Sentiment is read only on Prompts whose intent feeds it; it is never inferred
-from Accuracy or Category Awareness answers.
+from Verification, Accuracy or Category Awareness answers.
 
-**Reading a capability Accuracy Prompt against its Discovery Prompts.** When the
-fact is a capability tied to an attribute that Discovery Prompts also test, read
+**Reading a capability Verification Prompt against its Discovery Prompts.** When
+the capability is tied to an attribute that Discovery Prompts also test, read
 the two together (Profound's validation diagnostic):
 
-| Discovery on that attribute | Accuracy answer | Diagnosis | Action |
+| Discovery on that attribute | Verification answer | Diagnosis | Action |
 |---|---|---|---|
 | brand absent | AI confirms the capability | trust gap — AI knows but does not recommend | third-party reviews, citations, off-page descriptions |
 | brand absent | AI denies or does not know it | comprehension gap — AI has not linked brand and capability | own pages and structured documentation stating it |
 | brand present | AI confirms | goal state | no fix |
 | brand present | AI denies | inconsistent signals | investigate before acting |
 
-Ask one fact per Prompt in yes/no or single-answer form ("Does [brand] [capability]?"); an open "what can [brand] do" question cannot be scored. Write the diagnosis into the gap-cause-action table.
+Ask one capability per Prompt in yes/no or single-answer form ("Does [brand] [capability]?"); an open "what can [brand] do" question cannot be scored. Write the diagnosis into the gap-cause-action table.
 
-Our Evaluation covers both Profound's `Sentiment` and its appraisal prompts; Accuracy covers its `Validation` and `Accuracy`; Category Awareness covers its `Market Perception`.
+Our Evaluation covers both Profound's `Sentiment` and its appraisal prompts; Verification covers Profound's `Validation`; Accuracy covers its `Accuracy`; Category Awareness covers its `Market Perception`.
 
 **Category Awareness in after-sales.** Add one or two per product line, on the
 journey stage 发现, in the `experimental` layer, with `formal_visibility_eligible:
@@ -412,11 +412,11 @@ litter box for multiple cats?"), never how to fix or use something — how-to an
 troubleshooting questions return advice without criteria or brands, and their
 content-topic value is already captured by fan-out sub-queries and People Also
 Ask at no collection cost. They are collected during research with the
-Competitor and Accuracy Prompts, not in the candidate baseline (see
+Competitor, Verification and Accuracy Prompts, not in the candidate baseline (see
 representative-library.md → *Roles and Refresh*).
 
 The first staged set is all `Discovery`: lock the Discovery group first, then add
-Competitor, Evaluation, Category Awareness, or Accuracy as the
+Competitor, Evaluation, Category Awareness, Verification, or Accuracy as the
 situation requires, each only when its separate business question and evidence
 contract are present; none has a fixed quota. The Feishu rule's reference
 distribution — six to eight Discovery Prompts out of about ten, with the
@@ -456,7 +456,7 @@ Topic-level rules:
   are covered; a longer list is not evidence of better monitoring.
 
 **Natural visibility uses Discovery Prompts only.** Named-brand Evaluation,
-Competitor, and Accuracy results are read separately and never enter the
+Competitor, Verification, and Accuracy results are read separately and never enter the
 natural-discovery statistic. Keep one identical wording when several brands must
 be evaluated. A Discovery Prompt scoped to a specific attribute — "which
 enterprise travel platforms have good customer support" — is still Discovery; a
@@ -507,7 +507,7 @@ Every Prompt has:
 
 - `Topic`: one stable business theme.
 - `Region`: the market being monitored, such as `Global`, `United States`, or `Singapore`.
-- `Intent`: one of the after-sales intents: Discovery, Competitor, Evaluation, Accuracy, or Category Awareness (`Verification` is read as Accuracy).
+- `Intent`: one of the after-sales intents: Discovery, Competitor, Evaluation, Verification, Accuracy, or Category Awareness.
 - `Tags`: **optional, and kept short.** Leave it empty unless a tag carries a dimension the other fields do not — typically an attribute, a buyer role, or a use case. Do not repeat `Region`, `Intent`, or `Topic` in Tags, do not prefix a value with its field name (`属性:` / `Prompt Task:`), and use the bare name rather than a phrase.
 
 ## Maintenance

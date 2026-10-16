@@ -25,8 +25,8 @@ INTENTS = {
     "Category Awareness",
     "Accuracy",
 }
-# After-sales folds Verification into Accuracy (2026-10-15); presales keeps both.
-INTENT_ALIASES = {"Verification": "Accuracy"}
+# Verification and Accuracy are two distinct intents (Suda 2026-10-16): Verification
+# covers a capability AI does not recognise, Accuracy a fact AI states wrongly. No aliasing.
 STAGES = {"discovery", "diagnostic"}
 LIFECYCLE_STATES = {
     "hypothesis",
@@ -323,13 +323,13 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
     if explicit and tag_intent and explicit != tag_intent:
         fail(f"{row.get('question_id')}: explicit intent conflicts with Intent tag", errors)
     if explicit:
-        return INTENT_ALIASES.get(explicit, explicit)
+        return explicit
     if tag_intent:
         if intent_key in INTENTS and intent_key != tag_intent:
             fail(f"{row.get('question_id')}: intent_key conflicts with Intent tag", errors)
-        return INTENT_ALIASES.get(tag_intent, tag_intent)
+        return tag_intent
     if intent_key in INTENTS:
-        return INTENT_ALIASES.get(intent_key, intent_key)
+        return intent_key
     return ""
 
 
@@ -346,9 +346,10 @@ INTENT_STAGES = {
     "Category Awareness": {"发现", "解决问题"},
     "Competitor": {"对比", "替代方案"},
     "Evaluation": {"评估", "验证"},
+    "Verification": {"验证", "购后支持"},
     "Accuracy": {"验证", "购后支持"},
 }
-NON_VISIBILITY_INTENTS = {"Category Awareness", "Accuracy"}
+NON_VISIBILITY_INTENTS = {"Category Awareness", "Verification", "Accuracy"}
 LAYER_TO_ROLE = {"核心": "core", "实验": "experimental", "监测": "monitoring",
                  "core": "core", "experimental": "experimental", "monitoring": "monitoring"}
 FIELD_ALIASES = {
@@ -457,7 +458,7 @@ def field_contract_checks(
            "answer; see client-facing-attribute-pool.md → 旅程阶段)", bad_pair, True)
     leaking = [r for r in questions if intents.get(id(r)) in NON_VISIBILITY_INTENTS
                and r.get("formal_visibility_eligible") is True]
-    report("Category Awareness and Accuracy Prompts must set formal_visibility_eligible: false", leaking, True)
+    report("Category Awareness, Verification and Accuracy Prompts must set formal_visibility_eligible: false", leaking, True)
 
     # Balance checks only mean something on the shape they were written for.
     # A Discovery-stage set is mostly 发现 by construction, and a named-brand

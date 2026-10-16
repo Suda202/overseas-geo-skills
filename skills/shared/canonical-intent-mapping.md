@@ -15,6 +15,8 @@
 | `Intent: Evaluation` | `sentiment` | 评价（评价类问题） | `sentiment` | `false` | M04 品牌表达 |
 | `Intent: Category Awareness` | `market_perception` | 品类认知（品类认知类问题） | —（空） | `true` | M08 购买框架（品类认知 / Market Perception） |
 
+**验证与准确性是两个独立意图（2026-10-16 起，售前售后一致）。** 分界按 AI 错在哪：AI 不知道品牌有这个能力 → 验证；AI 能说出这个事实但说错了 → 准确性。两者都不进可见度指标，都只作诊断输入。Prompt Builder 不做别名转换，题库里写哪个就是哪个。
+
 **报告模块按事实来源划分，不按诊断意图划分，两者不是一一对应。** 一个模块可以消费多种意图的样本（M02 同时用 Discovery 的竞争位置与 Competitor 的决胜结果），一种意图也可能不进任何模块（验证与准确性只作为诊断输入）。下表的模块归属只说明「该意图的样本最终进入哪些模块」，不要把它读成「该意图等于某个模块」。
 
 *重要：`formal_visibility_eligible = true` 表示进入后端可见度处理管线，**不等于**进入正式 Visibility 指标（品牌进入率、平均提及位置、声量、问题机会）。报告侧正式 Visibility 指标和主要引用生态**只使用 Discovery（`Intent: Discovery`）**；Competitor 只统计情感并进入独立的 M02 竞品表现，不再进入可见度题集；Category Awareness 进入独立的 M08 购买框架。
