@@ -163,10 +163,10 @@ evidence.
 Log every piece of audience language as one row, so each Prompt can point
 back to its evidence (Aleyda step 7, her workbook's 受众输入 sheet):
 
-`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 原话（保留原语言） | 中文意思 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
+`输入编号 | 产品线 | 涉及品牌 | 来源类型 | 月搜索量 | 原话（保留原语言） | 中文意思 | 受众 | 旅程阶段 | 约束 | 来源说明 | 来源链接 | 收集日期 | 证据可信度（高/中/低）`
 
 (Market/language is fixed per Base; 受众 and 旅程阶段 use the 提示词矩阵 sets;
-rules for 涉及品牌 and 来源类型 are in client-facing-attribute-pool.md →
+rules for 涉及品牌, 来源类型 and 月搜索量 are in client-facing-attribute-pool.md →
 *买家原话*.)
 
 A Prompt's evidence field cites the 输入编号. Client records enter only after
