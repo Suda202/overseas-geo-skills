@@ -108,6 +108,8 @@ Only 高 × 高 is P1, so P1 stays a short list; the category-baseline row (empt
 | 2 | Does the brand have the capability (`相对竞品` 领先 or 持平) but it is not written anywhere AI can read? | 高 (证据缺口) — one page or one template fix can move it |
 | — | Otherwise: already written where AI reads; 劣势 with a small gap that material can close; `相对竞品` 待确认 | 中 |
 
+Changeability answers one question only — can content move what AI says. Whether the attribute decides the purchase lives in 重要性 (judged once per attribute in 属性池 since 2026-10-22; its 高 already means the buyer drops options that fail it — the former per-slice 购买影响 column restated it and was removed), and how the win ranks against parity lives in the within-tier ordering below; a 2026-10-22 attempt to split this question by 领先/持平 double-counted both and was reverted the same day.
+
 **"Somewhere AI can read" is judged from the site diagnosis report** — the HTML report a colleague produces with the site GEO-readiness skill (a score per dimension: crawler access, technical base, brand recognition and Schema, content quality, content citability; then a P0–P3 fix list). It means statically fetchable text or images on the brand site or on third-party pages AI cites. Numbers that exist only in JS-rendered elements, pages blocked by robots or behind a login, and pages the report marks as blocked or unreadable count as not written; parameters inside images count as written (ChatGPT read them in the 2026-10-10 test). The report samples only a few pages: when the Attribute's landing page is not in the sample, check its static source instead of borrowing the homepage score.
 
 **`相对竞品` is not scored separately; it answers question 1.** It records the **real industry position** (领先 / 持平 / 劣势 / 待确认), judged on the facts from the public layer wherever that can settle it, and **from the client wherever it cannot** — a client knows where its own spec sits in the industry, so never infer `持平` from the mere fact that neither side published. Scoring it again would double-count. 待确认 holds at 中 until the evidence arrives; never downgrade by default.
@@ -120,7 +122,7 @@ Low-importance Attributes may go without a Prompt.
 
 **After the candidate baseline, re-judge changeability, then adjust per Prompt.** Do not carry the round-one grades forward. Re-judge from the answer layer: if AI cites the brand's own site or third-party pages the brand can influence (review sites, communities, trade media) on this Attribute, changeability is at least 中; if AI rests on awareness or a vague "industry leader" and cites only sources the brand cannot influence, grade it 低; if AI criticises competitors on the theme, raise it one grade. Then adjust each Prompt by its AI 认知差距: 无缺口 drops one tier (P1 → P2, P2 → P3); 有缺口 and 无人讨论 keep the tier.
 
-**Within one tier, order the work by effort.** Rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. Optimization actions handed to the content team follow the same rule: tier first, then lower effort first inside the tier. Effort counts content execution cost only and never lifts an action across tiers; whether the capability exists is already in changeability, so do not charge for it twice.
+**Within one tier, 领先 rows go before 持平 rows, then order by effort** (Suda 2026-10-22: an advantage AI cannot see moves recommendation once closed; parity only restores mention and a competitor neutralises it with one page). After that, rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. Optimization actions handed to the content team follow the same rule: tier first, then 领先 before 持平, then lower effort first inside the tier. Effort counts content execution cost only and never lifts an action across tiers; whether the capability exists is already in changeability, so do not charge for it twice.
 
 Therefore: **presales may rank candidate Topics; the after-sales baseline informs operational priority, but neither stage alone promises that an action will work.**
 
@@ -136,7 +138,7 @@ Search-volume tools may use different countries, databases, and keyword definiti
 
 ## Customer and Market Signals Before Product Features
 
-**The coverage skeleton is enumerated top-down; signals fill it; the Attribute Matrix is distilled from the signals** (Suda 2026-10-22; before that the grid itself was built bottom-up and a dimension the collection missed never surfaced). Write out 产品线 × 受众 × 旅程阶段 from the business scope before collecting, so every cell the signals never reach stays visible as an open cell — `scripts/check_matrix_coverage.py` lists them, and each one is closed with a reason (无买家证据 / 超出范围 / 留到后续周期) in the internal handoff. Collecting Customer / Market Signals remains the evidence stage — sales and CRM language, support and customer-success records, win/loss and churn reasons, review and community language, GSC/SEO queries, already-collected AI answers — and the attribute pass comes after, not before. Do not open by filling in an attribute list and then hunting for signals that confirm it, and do not write a Prompt into an empty cell just to close it.
+**The coverage skeleton is enumerated top-down; signals fill it; the Attribute Matrix is distilled from the signals** (Suda 2026-10-22; before that the grid itself was built bottom-up and a dimension the collection missed never surfaced). Write out 产品线 × 受众 × 旅程阶段 from the business scope before collecting, so every cell the signals never reach stays visible as an open cell — `scripts/check_matrix_coverage.py` lists them, and each one is closed with a reason (无买家证据 — our research gap / 低业务优先，留到后续周期 — the brand party's confirmed trade-off, read off the 业务范围 主要受众 priority marks / 超出范围) in the internal handoff. Collecting Customer / Market Signals remains the evidence stage — sales and CRM language, support and customer-success records, win/loss and churn reasons, review and community language, GSC/SEO queries, already-collected AI answers — and the attribute pass comes after, not before. Do not open by filling in an attribute list and then hunting for signals that confirm it, and do not write a Prompt into an empty cell just to close it.
 
 The customer should help confirm what buyers actually ask, compare, worry about, and need to solve. The builder may organize and translate these inputs, but must not replace them with a feature-list-derived question bank.
 
@@ -355,6 +357,26 @@ evidence is genuinely narrow. Candidate Topics are not limited in number. Catego
 causal control and may be optimized when it is a real opportunity. It is also
 not the `Category Awareness` intent.
 
+### When to split a Topic: three tests, three checkpoints
+
+**Split when the two halves are two independent competitive situations** — the same test that promotes a qualifier to a Depth Topic (see *An attribute is promoted* below). Three questions; any one hit means split, none means keep:
+
+| 测试 | 问什么 | 例（Mbrand 家用 vs 医用制氧机） |
+|---|---|---|
+| 竞品集合 | 两半的买家在拿不同的对手比吗？ | 家用对手是 Inogen 这类消费品牌，医用是医院采购渠道的器械商，名单几乎不重叠 → 拆 |
+| 评估标准 | 决定选谁的属性清单换了吗？ | 家用看噪音、便携、价格；医用看 FDA 510(k)、流量精度、保险覆盖 → 拆 |
+| 优化方向 | 要发的内容、要挣的信源是两套吗？ | 一半上患者社区和 Amazon 评价，一半上行业采购指南 → 拆 |
+
+Counter-example: Hbrand's rental Topic carried 20 candidate Prompts and stayed one Topic — budget, district, school zone and short-lease are constraint variants inside one competitive situation (same platforms, same criteria, same content landing). Many Prompts is not many situations.
+
+Run the tests at three checkpoints:
+
+1. **At clustering** (P1 landings → candidate Topics): the pool's 判据与证据 and `相对竞品` already name each P1's competitor set and evaluation standard — check whether the P1s inside one candidate Topic are homogeneous on those two columns. An obvious two-situation cluster (Mbrand above) is split here.
+2. **At formal-set selection** (after the baseline, the decisive checkpoint): the brand party picks at most 10 formal Prompts per purchased Topic by attribute priority — that pick is the test of whether one Topic holds the coverage. We do not pre-split at quoting time on an intent count: candidate Topics carry **no cap on Prompts or intents**, and predicting "your coverage won't fit" for the client is our inference overriding their call (Suda 2026-10-22). Only when the brand party cannot get under 10 without dropping intents it genuinely needs — or says so — propose splitting into a second purchased Topic; the units are the **independent purchase decisions** left over (the dedup yardstick: same candidate set, same comparison dimension, same answer-changing condition = one intent), not the Prompt count.
+3. **After the candidate baseline, from the data**: the answer layer shows it — when two groups of Prompts under one Topic surface two clearly different competitor lists (per-cell top3), that is test 1 showing up in data; split so each half's mention rate means something. This evidence also feeds checkpoint 2's conversation.
+
+Signals that do **not** justify a split: a difference that is only a constraint (budget tier, household size) stays in the slice's 约束 column; only an audience, with competitors and criteria unchanged — multi-select 受众; only language or market — the 市场 field.
+
 Every candidate Topic needs at least five independent Prompts before it
 enters the candidate baseline; a hypothesis draft may temporarily have fewer,
 but must be marked for evidence completion. Do not fill them with synonymous
@@ -365,8 +387,11 @@ number, each carrying at least five Prompts; formal Topics follow the
 purchased count, with a lower bound of five Prompts per Topic and **at most 10
 formal Prompts per purchased Topic** (the deliverable); the candidate set may
 be larger.
-Ten or more genuinely distinct important intents in one Topic mean it should be
-split and purchased as two. Weight the counts, do not equalise them: the
+Ten or more genuinely distinct important intents in one Topic is a split
+**signal**, acted on only when the brand party cannot pick its 10 formal
+Prompts without dropping intents it needs — never a candidate-stage cap and
+never a pre-quote auto-split (see *When to split a Topic* above).
+Weight the counts, do not equalise them: the
 category observation Topic carries roughly six Prompts, while the
 buying-scenario Topics the brand can win carry eight to ten each. A mature set
 grows only when evidence supports independent long-term value.
@@ -396,12 +421,14 @@ Do not encode a whole use case, audience, feature list, or region into the Topic
 
 1. **Discovery:** natural non-branded candidate discovery and the main visibility opportunity.
 2. **Evaluation:** a specific attribute, scenario, or decision standard that can guide content/action.
-3. **Competitor:** one-to-one comparison only when a real competitive opportunity justifies it. The target brand is always one side (or the Prompt asks for alternatives to a named competitor, where the brand can appear); a comparison between two competitors that leaves the brand out says nothing about it and is never written (Suda 2026-10-19).
-4. **Category Awareness:** low-frequency observation; refresh only for a new concept, trend, or changed buying standard.
+3. **Competitor (客户标签 竞品对比, renamed from 竞品 2026-10-22):** one-to-one comparison only when a real competitive opportunity justifies it. The target brand is always one side; a comparison between two competitors that leaves the brand out says nothing about it and is never written (Suda 2026-10-19). Read for win/loss and sentiment. **A Competitor Prompt must carry a concrete use case** — its `constraints` list is non-empty and names the scenario the verdict hinges on; without one AI answers "it depends" instead of picking a side (Profound ch3, adopted 2026-10-22). The validator fails a selection-stage Competitor Prompt with no constraints. Win rate is reported as two numbers — over all answers, and with ties stripped (Profound's worked example: 58% overall, 74.4% once answers where neither brand is clearly favored are removed); the tie-stripped number is the one to watch.
+4. **Alternatives (客户标签 替代, split out of Competitor 2026-10-22, after-sales only):** asks for alternatives to a named competitor (「best alternatives to [leader]」), where the brand can appear in the answer list. Its natural reading is **列入率** — in how many of the 5 runs the brand is listed among the alternatives, and where — plus sentiment; win/loss framing does not apply because the brand is not one side of a comparison. 列入≠推荐: the listing feeds the mention layer only, the recommendation caliber stays separate. `formal_visibility_eligible: false` — 列入率 is reported as its own line and never merged into the natural mention-rate KPI, because the wording plants a competitor name and conditions the answer set. Non-branded alternatives questions stay Discovery as before. Evidence-gated like everything else, and the leader-default rule still bars 「alternatives to [leader]」 where buyers do not ask it. Same layer and cadence as Competitor (monitoring/experimental, never core; collected during research; may be bought into the formal set). Banks written before 2026-10-22 keep such Prompts typed Competitor — do not migrate; the validator accepts both on the 替代方案 stage.
+5. **Category Awareness:** low-frequency observation; refresh only for a new concept, trend, or changed buying standard.
 
 After-sales uses the six presales intents — `Discovery`, `Competitor`,
-`Evaluation`, `Verification`, `Accuracy`, and `Category Awareness` — plus an
-after-sales-only seventh, `Information` (信息, Suda 2026-10-19): a buyer's own
+`Evaluation`, `Verification`, `Accuracy`, and `Category Awareness` — plus two
+after-sales-only additions: `Alternatives` (替代, split out of Competitor on
+2026-10-22, see item 4 above) and `Information` (信息, Suda 2026-10-19): a buyer's own
 policy, process, cost, rights or dispute question that AI answers with advice
 rather than a candidate list ("Should I take an HDB loan or a bank loan for a
 resale flat?"). Its answers are read for two things: whether the brand is named or recommended
@@ -433,6 +460,19 @@ failure is that AI states it wrongly. A capability check ("Does Pbrand offer
 X?") is a Verification Prompt, not an Accuracy Prompt. Neither is a default
 after-sales Prompt: use them only through the gates in *Topic and Attribute
 Selection Criteria*.
+
+**Pair a Verification Prompt with every low-reading P1 Discovery direction
+(Profound AEO Guide ch3, adopted 2026-10-22).** When a P1 attribute's Discovery
+Prompts read low mention at the candidate baseline, the formal set must carry
+one Verification Prompt on that same attribute ("Does {brand} offer
+{capability}?"). Its answer splits the gap into two diseases with different
+prescriptions — AI knows the brand holds the capability but does not recommend
+it (build off-site signals: third-party citations, reviews, authority), or AI
+does not know the brand holds it at all (fix on-site description and
+documentation first): "These are completely different programs of work, and
+without validation prompts, you can't tell which one you need." Record which in
+提示词库 AI 认知差距 — the old single 有缺口 value is split into 知道但不推荐
+and 不知道该能力 (2026-10-22); 待基线 / 无人讨论 / 无缺口 are unchanged.
 
 **Which monitoring task each intent carries, and which statistic it feeds.**
 The analysis type follows from the intent; there is no separate field for it.
@@ -514,6 +554,7 @@ Topic-level rules:
 - **Coverage and Depth follow different combination rules, and mixing them is an error.** A Coverage (宽泛) Topic's Prompt carries no condition or at most ONE low-complexity main condition, and must NOT combine target user, preference criteria, and constraint. A Depth (细分) Topic's Prompt may carry one condition or several, and the group must systematically contain meaningful compound Prompts — the same question joined with two or more conditions that genuinely change the choice. Not every Prompt needs to compound, there is no fixed sub-quota, and stacking conditions to look thorough is prohibited;
 - compound conditions are allowed for a genuinely narrow scenario, but must change the candidate set or recommendation;
 - do not create near-duplicate Prompts by changing only adjectives, word order, or “best/top/recommended”.
+- **changing only the category's name is a legitimate variant, not a near-duplicate** (Profound, adopted 2026-10-22: synonymous category phrasings moved visibility by 25–50 pp in its measurements). When evidence shows buyers search the same category under several names, keep one Prompt per name and register the synonyms in `config.category_aliases` (a flat list of phrases); the validator exempts a Prompt pair whose only wording difference is tokens from that list. Every other rewording-only pair still merges.
 - dedupe by **purchase decision**, not by wording. Two Prompts that resolve the
   same decision (same candidate set, same comparison dimension, same condition
   that changes the answer) are one Prompt, however differently they read; only a
@@ -586,6 +627,13 @@ After-sales is a dynamic set:
 - merge when two Prompts produce the same buyer need and expected candidate set;
 - retire only when duplicated, obsolete, or no longer business-relevant. Do not
   retire only because of zero target-brand mentions or inconvenient outcomes.
+- **a formal Prompt's wording is immutable** (Scrunch archives-and-recreates,
+  Peec keeps history the same way; adopted 2026-10-22). To reword one, set the
+  old Prompt 停测 — keeping its question_id, readings and history — create a new
+  question_id with the new wording, and start a new set version per the
+  versioning rule in *Trial, Baseline, and Optimization Groups*. Never edit the
+  text in place: the old readings would silently describe a question that no
+  longer exists.
 
 Core and experimental groups are qualitative operating categories; do not set a
 fixed percentage split. The goal is a smaller, more useful monitoring set, not
