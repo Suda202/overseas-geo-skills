@@ -46,9 +46,10 @@ for p in (str(SK), str(CORE)):
         sys.path.insert(0, p)
 
 INTENT_ZH = {"discovery": "发现", "information": "信息", "evaluation": "评价", "sentiment": "评价",
-             "verification": "验证", "validation": "验证", "competitor": "竞品", "accuracy": "准确性",
+             "verification": "验证", "validation": "验证", "competitor": "竞品对比", "alternatives": "替代",
+             "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
-INTENT_ORDER = ["发现", "信息", "评价", "验证", "竞品", "准确性", "品类认知"]
+INTENT_ORDER = ["发现", "信息", "评价", "验证", "竞品对比", "替代", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
 # 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
 # Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是提示词类型，

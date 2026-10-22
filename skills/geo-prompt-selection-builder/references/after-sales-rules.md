@@ -85,7 +85,7 @@ The second pass adds an **initial measured gap**, not a stable one. Presales can
 
 **The three conditions follow Profound's attribute prioritisation: importance, current gap, changeability.** Attributes, and the monitoring Prompts that carry them, share them.
 - **Importance** (重要性): how much the Attribute matters to the purchase decision — 高 (decides whether the brand gets onto the buyer's shortlist) / 中 (clearly matters to some buyers or specific situations) / 低 (relevant, but does not usually decide the choice). Grade it from the user-language sources in *Customer and Market Signals* (search data, sales records, reviews, community).
-- **Current gap** (当前差距, recorded per Prompt as **AI 认知差距**): distance between what AI says now and what we want it to say, judged from each Prompt's own answer text — 有缺口 (AI omits the brand or says something unfavourable) / 无人讨论 (AI does not discuss this dimension) / 无缺口 (AI already describes it correctly and favourably). Mention rate alone is not the gap: a brand mentioned in every answer can still be described wrongly. Before that Prompt's own candidate-baseline answers exist, mark it `待基线`; never copy an attribute-level judgement or presales answers onto individual Prompts. Where another company shares or nearly shares the brand's name, measure by the share of answers citing the brand's own domain, not by name occurrences.
+- **Current gap** (当前差距, recorded per Prompt as **AI 认知差距**): distance between what AI says now and what we want it to say, judged from each Prompt's own answer text — 知道但不推荐 (AI knows the brand holds the capability but omits or disfavours it; fix off-site signals) / 不知道该能力 (AI does not know the brand holds it; fix on-site description first — the paired Verification Prompt on the same attribute tells the two apart, see *Prompt Priorities*) / 无人讨论 (AI does not discuss this dimension) / 无缺口 (AI already describes it correctly and favourably). The pre-2026-10-22 single value 有缺口 covered the first two. Mention rate alone is not the gap: a brand mentioned in every answer can still be described wrongly. Before that Prompt's own candidate-baseline answers exist, mark it `待基线`; never copy an attribute-level judgement or presales answers onto individual Prompts. Where another company shares or nearly shares the brand's name, measure by the share of answers citing the brand's own domain, not by name occurrences.
 - **Changeability** (可改变性): whether what the brand can do itself — publish content, fix the site, supply material, earn third-party reviews — can move what AI says on this Attribute within the service window. Graded 高 / 中 / 低 by the two questions under *How to grade changeability*.
 
 Before collection, read the tier from importance × changeability in the table below; after the baseline, re-judge changeability and then adjust each Prompt by its current gap. **P1 always requires a Prompt that carries the Attribute** — an uncarried row cannot be P1 whatever its cell.
@@ -120,7 +120,7 @@ Changeability answers one question only — can content move what AI says. Wheth
 
 Low-importance Attributes may go without a Prompt.
 
-**After the candidate baseline, re-judge changeability, then adjust per Prompt.** Do not carry the round-one grades forward. Re-judge from the answer layer: if AI cites the brand's own site or third-party pages the brand can influence (review sites, communities, trade media) on this Attribute, changeability is at least 中; if AI rests on awareness or a vague "industry leader" and cites only sources the brand cannot influence, grade it 低; if AI criticises competitors on the theme, raise it one grade. Then adjust each Prompt by its AI 认知差距: 无缺口 drops one tier (P1 → P2, P2 → P3); 有缺口 and 无人讨论 keep the tier.
+**After the candidate baseline, re-judge changeability, then adjust per Prompt.** Do not carry the round-one grades forward. Re-judge from the answer layer: if AI cites the brand's own site or third-party pages the brand can influence (review sites, communities, trade media) on this Attribute, changeability is at least 中; if AI rests on awareness or a vague "industry leader" and cites only sources the brand cannot influence, grade it 低; if AI criticises competitors on the theme, raise it one grade. Then adjust each Prompt by its AI 认知差距: 无缺口 drops one tier (P1 → P2, P2 → P3); 知道但不推荐, 不知道该能力 and 无人讨论 keep the tier.
 
 **Within one tier, 领先 rows go before 持平 rows, then order by effort** (Suda 2026-10-22: an advantage AI cannot see moves recommendation once closed; parity only restores mention and a competitor neutralises it with one page). After that, rows whose content already exists somewhere the answers read (a blog, a PDF, a sub-domain) and only needs moving onto the product page go first; rows that need new material from the brand party follow. Optimization actions handed to the content team follow the same rule: tier first, then 领先 before 持平, then lower effort first inside the tier. Effort counts content execution cost only and never lifts an action across tiers; whether the capability exists is already in changeability, so do not charge for it twice.
 
@@ -481,8 +481,13 @@ The Chinese name is the client Base 提示词库 提示词类型 value.
 | Prompt type (提示词类型) | Task it carries | Success shape | Feeds |
 |---|---|---|---|
 | Discovery (发现) | Does AI recommend the brand when a buyer explores the category | Returns a provider/platform list; needs a candidate-noun trigger | visibility, sentiment |
-| Competitor (竞品) | Whom AI picks in a head-to-head, or what it offers instead of a named option | Returns a verdict, not a both-sides answer; needs a use case and a comparison ask | sentiment |
+| Competitor (竞品对比) | Whom AI picks in a head-to-head, or what it offers instead of a named option | Returns a verdict, not a both-sides answer; needs a use case and a comparison ask | sentiment (win rate reported with and without ties) |
+| Alternatives (替代) | Whether AI lists the brand among alternatives to a named competitor | Returns an alternatives list the brand can appear in | 列入率 (own line), sentiment |
 | Evaluation (评价) | How AI appraises the brand or a competitor on a stated scope | Returns an appraisal; this is where sentiment is read per attribute | sentiment |
+| Verification (验证) | Whether AI knows the brand holds a specific capability | Returns a yes/no with grounds; pairs with same-attribute Discovery to split the gap | AI 认知差距 (知道但不推荐 / 不知道该能力) |
+| Accuracy (准确性) | Whether a brand fact AI states is right | Returns the fact; checked against the confirmed official source | 事实准确（复测表） |
+| Category Awareness (品类认知) | What criteria AI tells buyers to choose by | Returns a criteria list; calibrates the attribute matrix | reference only |
+| Information (信息) | Whether advice answers name the brand as the next step or cite its domain | Returns advice, not a candidate list | 提及/引用 own line, never the mention-rate KPI |
 
 **Evaluation wording.** Two wordings test the same decision; pick one per Prompt, never both: the buyer's wording `Is {brand} a good {category} for {scope}?` and the report wording `Evaluate the {category} company {brand} on {scope}`. Default to the report wording (Suda 2026-10-22): it reads how AI appraises the brand in full, including regulator and recall records. Use the buyer wording only when the task is explicitly to read the short answer a buyer would see. They return different answers (2026-10-22, ChatGPT + Gemini US, 4 brands × 3 runs): the report wording averages 1072 words, cites more sources and surfaces regulator and recall records (Swisse recall in 3/3 ChatGPT answers); the buyer wording averages 599 words, gives a direct verdict, compares against other brands more often (1.6 vs 0.6 named) and did not raise the Swisse recall (0/3).
 
@@ -572,6 +577,36 @@ enterprise travel platforms have good customer support" — is still Discovery; 
 specific attribute does not by itself make a Prompt an Evaluation.
 
 ## Trial, Baseline, and Optimization Groups
+
+**A light QC trial runs before the candidate set goes to the brand party; it is
+quality acceptance, never an early baseline** (Suda 2026-10-22, adopting
+Profound's pre-tracking answer check and Aleyda's small-batch validation). One
+run per Prompt on **ChatGPT, regardless of market** — the trial checks whether
+the question is asked right, not visibility, so platform coverage is the
+candidate baseline's job, not this one's. A Prompt that passes on the first
+run is done; a Prompt that fails a check gets **two more runs before it is
+reworded or culled** — rework it only when the failure shows in at least two
+of its three runs, so a single random answer is not mistaken for a wording
+defect. The re-run trigger is "failed a check", a fact, never a judgement
+call about which Prompts look ambiguous. The readings are discarded — they
+never count toward any baseline and are
+never a selection input. Read each answer for exactly four things: whether AI
+understood the category and intent; whether the answer task matches the prompt
+type (Discovery returns named candidates, Competitor returns a verdict rather
+than "it depends", Verification recognises or denies the capability,
+Information gives advice); whether the answer reaches the target segment
+rather than the broad category; and whether it is substantively identical to
+another Prompt's answer with no new decision inside. A misread or mismatch is
+reworded or culled; an unsegmented answer is reworded first; a same-answer
+pair goes back through the dedup rule. **Brand mention — present, absent,
+competitor-only — is never a trial verdict**: an answer recommending
+competitors but not the brand is kept (that is the opportunity), and a stable
+brand presence is not a reason to cut. Do not let trial answers pick the
+Prompts most likely to show improvement — the selection input stays attribute
+priority and buyer evidence (sample-selection bias poisons every later
+delta; Peec's 2026-09 finding: representative Prompt coverage beats more runs
+of the same questions). Record reworded/culled Prompts with reasons in the
+internal diff.
 
 Run each candidate Prompt 5 times on each proposed platform before selecting the formal set (the candidate baseline). Check the market coverage pass first, then category fit, answer-task fit,
 ambiguity, leading wording, and semantic duplication. Do not select or reject a
