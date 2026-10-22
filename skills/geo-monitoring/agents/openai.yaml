@@ -1,0 +1,4 @@
+interface:
+  display_name: "GEO Monitoring"
+  short_description: "Run GEO baselines and periodic monitoring, report readings"
+  default_prompt: "Use $geo-monitoring to run a candidate or formal baseline, set collection cadence, and build the baseline report."

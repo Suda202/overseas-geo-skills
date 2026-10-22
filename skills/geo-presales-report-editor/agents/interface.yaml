@@ -1,0 +1,17 @@
+interface:
+  display_name: "GEO Presales Report Editor"
+  short_description: "根据已确认统计直接修改客户可用的售前报告上传 CSV"
+  default_prompt: "使用 $geo-presales-report-editor 根据已确认统计直接更新报告 CSV：正式可见度与主要引用生态只取 Discovery，情绪按独立适用范围保留；客户指标统一写平均提及位置和引用份额；不要重算事实、操作报告页面或上传。"
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets: ["openai", "claude", "generic"]
+  activation: {mode: "manual", paths: []}
+  execution: {context: "inline", shell: "bash"}
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"

@@ -1,0 +1,33 @@
+{
+  "_note": "平台字段契约的外部扩展点。这里的条目会按平台名覆盖脚本内置默认值；新增平台只需在此追加，不必改代码。每个平台必须指明四层数据各自落在哪个字段：answer=回答正文，body_citations=正文引用/来源卡片，retrieval=检索结果，answer_sources=随回答返回的来源列表。",
+  "perplexity": {
+    "answer": ["result_text"],
+    "body_citations": ["web_results"],
+    "retrieval": [],
+    "answer_sources": ["web_results"]
+  },
+  "aimode": {
+    "answer": ["result_md", "result_text"],
+    "body_citations": ["citations"],
+    "retrieval": ["search_result"],
+    "answer_sources": ["citations"]
+  },
+  "copilot": {
+    "answer": ["result_text"],
+    "body_citations": ["citations"],
+    "retrieval": ["links"],
+    "answer_sources": ["citations"]
+  },
+  "grok": {
+    "answer": ["full_response"],
+    "body_citations": ["footnotes"],
+    "retrieval": ["web_search_results", "x_search_results"],
+    "answer_sources": ["footnotes"]
+  },
+  "alexa": {
+    "answer": ["md_text", "raw_text"],
+    "body_citations": ["references"],
+    "retrieval": [],
+    "answer_sources": ["sources"]
+  }
+}

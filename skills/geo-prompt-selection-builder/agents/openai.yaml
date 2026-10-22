@@ -1,0 +1,4 @@
+interface:
+  display_name: "GEO Prompt Selection Builder"
+  short_description: "Select and build evidence-backed GEO prompt sets (选词)"
+  default_prompt: "Use $geo-prompt-selection-builder to research, select and build an evidence-backed GEO Prompt set."

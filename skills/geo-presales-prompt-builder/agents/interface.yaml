@@ -1,0 +1,24 @@
+interface:
+  display_name: "GEO Presales Prompt Builder"
+  short_description: "Build Discovery-first v8 Prompts; supplement diagnosis on request"
+  default_prompt: "Use $geo-presales-prompt-builder with an existing Case and its research/customer-confirmation handoff. Generate v8 with config.generation_stage=discovery first: non-branded buyer selection questions, at least 5 per Topic and at most 50 across the entire bank. Use lightweight evidence-backed Attribute planning, no Attribute quotas or customer journey matrix prerequisite. Preserve Topic and competitor boundaries, actual quotas, free Tags and analysis routing. Do not invent demand or count wording variants as distinct intent. Add competitor/evaluation/category-awareness questions only when requested, using generation_stage=diagnostic and retaining existing Discovery IDs and text; there are no fixed supplemental quotas. Keep Verification/Accuracy outside this contract. Hand off source references, version and pending customer confirmations separately. Validate staged output and retain strict legacy checks for historical banks without generation_stage."
+compatibility:
+  canonical_format: "agent-skills"
+  adapter_targets:
+    - "openai"
+    - "claude"
+    - "generic"
+  activation:
+    mode: "manual"
+    paths: []
+  execution:
+    context: "inline"
+    shell: "bash"
+  trust:
+    source_tier: "local"
+    remote_inline_execution: "forbid"
+    remote_metadata_policy: "allow-metadata-only"
+  degradation:
+    openai: "metadata-adapter"
+    claude: "neutral-source-plus-adapter"
+    generic: "neutral-source"

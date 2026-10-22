@@ -1,0 +1,26 @@
+{
+  "required_artifacts": [
+    "monitoring_ready_v8_question_bank",
+    "attribute_topic_priority_plan",
+    "chinese_translations",
+    "attribute_driven_allocation_summary",
+    "tags_summary",
+    "brand_scope_tag_summary",
+    "attribute_tag_coverage_summary",
+    "analysis_type_routing_summary",
+    "formal_visibility_eligibility_summary",
+    "default_intent_tag_matrix",
+    "competitor_policy_summary",
+    "generation_stage",
+    "research_and_customer_confirmation_handoff",
+    "rejected_or_repaired_questions",
+    "quality_report"
+  ],
+  "conditional_artifacts": {
+    "diagnostic_supplement": [
+      "actual_supplemental_intent_counts",
+      "existing_discovery_preservation_check",
+      "applicable_competitor_and_template_review"
+    ]
+  }
+}

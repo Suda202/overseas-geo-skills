@@ -1,0 +1,1169 @@
+{
+ "schema_version": "overseas-geo-question-bank/v8",
+ "mode": "after-sales-strategic-topics",
+ "config": {
+  "brand_name": "Bbrand",
+  "official_domain": "https://www.brand-b.example",
+  "generation_stage": "discovery",
+  "region": "US",
+  "lifecycle_status": "hypothesis",
+  "evidence_status": "hypothesis",
+  "customer_confirmation": {
+   "status": "pending",
+   "scope_status": "pending",
+   "prompt_set_status": "pending"
+  },
+  "audiences": [
+   {
+    "audience": "注重安全记录的个人车主",
+    "basis": "Case 目标客户（1）；Q04、Q05、Q06、Q07、Q08",
+    "asks_differently": "夜间能否拍清车牌、传感器、耐热、可靠性与售后"
+   },
+   {
+    "audience": "需要多方向记录的驾驶者",
+    "basis": "Case 目标客户（2）；Q01、Q02、Q03、Q09、Q10、Q11",
+    "asks_differently": "车外覆盖范围、通道数、停车持续录像、接电方式与电瓶耗电"
+   }
+  ],
+  "topics": [
+   {
+    "topic_id": "T1",
+    "topic": "Multi-Channel Dash Cams",
+    "name_zh": "多路行车记录仪",
+    "role": "category_observation",
+    "parent_demand_anchor": "dash cam / 4 channel dash cam（Google 自动补全种子词，Q09）",
+    "business_question": "买家要「看清车身四周」时，AI 会不会把四路/多路方案列进来，Bbrand 是否在候选名单内。",
+    "possible_action": "自有内容补齐「四路 vs 三路」「盲区覆盖」对比页；第三方评测与清单收录。",
+    "facets": {
+     "coverage_breadth": "T1-D01",
+     "channel_count_and_configuration": "T1-D02, T1-D03",
+     "budget": "T1-D04",
+     "storage": "T1-D05"
+    },
+    "prompt_count": 5,
+    "target_prompts": 6
+   },
+   {
+    "topic_id": "T2",
+    "topic": "Parking Monitoring",
+    "name_zh": "停车监控",
+    "role": "buying_scenario",
+    "parent_demand_anchor": "dash cam parking mode（Google 自动补全种子词，Q10、Q11）",
+    "business_question": "停车场景下，AI 推荐哪些行车记录仪，是否把「持续录像」「接电方式」「电瓶耗电」讲清。",
+    "possible_action": "停车监控说明页写清硬线套件、录影方式与时长、耗电保护；把套件做成套装卖点。",
+    "facets": {
+     "continuous_vs_impact_only": "T2-D01",
+     "power_source_and_hardwire": "T2-D02, T2-D04",
+     "battery_drain": "T2-D03",
+     "overnight_coverage": "T2-D05",
+     "impact_alert": "T2-D06",
+     "all_channel_parking": "T2-D07"
+    },
+    "prompt_count": 7,
+    "target_prompts": 8
+   },
+   {
+    "topic_id": "T3",
+    "topic": "Night Driving Footage",
+    "name_zh": "夜间行车录像",
+    "role": "buying_scenario",
+    "parent_demand_anchor": "无对应自动补全种子词；需求来自 r/Dashcam 反复出现的夜间车牌问题（Q04、Q05），搜索需求侧标记为待补。",
+    "business_question": "夜间取证场景，AI 用哪些标准排序，Bbrand 是否因未公开传感器与实拍样张而缺席。",
+    "possible_action": "官网补传感器型号、夜间实拍样张与车牌对比；第三方夜测收录。",
+    "facets": {
+     "plate_legibility": "T3-D01",
+     "general_night_footage": "T3-D02",
+     "sensor_spec": "T3-D03",
+     "night_on_all_channels": "T3-D04",
+     "budget_night": "T3-D05"
+    },
+    "prompt_count": 5,
+    "target_prompts": 6
+   },
+   {
+    "topic_id": "T4",
+    "topic": "Dash Cam Reliability",
+    "name_zh": "耐用与售后",
+    "role": "buying_scenario",
+    "parent_demand_anchor": "dash cam warranty（Google 自动补全种子词，Q12）覆盖保修面；耐热面仅有社区语言（Q07），无搜索种子词，标记为待补。",
+    "business_question": "买家担心「用一两年就坏、夏天鼓包、售后没人管」时，AI 推荐哪些品牌，Bbrand 的超级电容与保修条款是否被看见。",
+    "possible_action": "公开耐温测试与保修/退换条款页；把 1 年保修与 money-back 写进产品页首屏。",
+    "facets": {
+     "heat_battery_failure": "T4-D01, T4-D02",
+     "thermal_shutdown": "T4-D03",
+     "warranty_and_support": "T4-D04",
+     "long_term_failure": "T4-D05",
+     "returns": "T4-D06"
+    },
+    "prompt_count": 6,
+    "target_prompts": 6
+   }
+  ],
+  "attribute_plan": [
+   {
+    "attribute": "Multi-channel coverage",
+    "class": "Feature / Differentiator",
+    "priority": "P1",
+    "importance": "high",
+    "changeability": "high",
+    "relative_position": "领先：H1 四路（前 3K + 后/左/右 1080P），RivalB3 N5 四路但前摄 2.7K（各家官网快照）",
+    "gap_type": "capability advantage",
+    "evidence_refs": [
+     "Q03",
+     "Q09"
+    ],
+    "carrier_prompts": [
+     "T1-D01",
+     "T1-D02",
+     "T1-D03"
+    ],
+    "note": "买家直接说「maximum exterior coverage」，搜索词也点名 4 channel；品牌最能赢的一面。"
+   },
+   {
+    "attribute": "Parking mode recording",
+    "class": "Use Case",
+    "priority": "P1",
+    "importance": "high",
+    "changeability": "high",
+    "relative_position": "持平：RivalB3 N5 同样提供 24/7 parking guard 与四种停车模式",
+    "gap_type": "parity",
+    "evidence_refs": [
+     "Q01",
+     "Q02"
+    ],
+    "carrier_prompts": [
+     "T2-D01",
+     "T2-D05",
+     "T2-D06",
+     "T2-D07"
+    ],
+    "note": "买家要的是「持续录，不是被撞才录」；品类标配，但答案里讲不讲清决定推荐顺序。"
+   },
+   {
+    "attribute": "Parking power & installation",
+    "class": "Constraint / Integration",
+    "priority": "P1",
+    "importance": "high",
+    "changeability": "high",
+    "relative_position": "持平：RivalB3 N5 也要求硬线并单卖套件；Bbrand 官网 24/7 卖点与 FAQ「需专用硬线套件」自相矛盾",
+    "gap_type": "evidence gap",
+    "evidence_refs": [
+     "Q02",
+     "Q10",
+     "Q11"
+    ],
+    "carrier_prompts": [
+     "T2-D02",
+     "T2-D03",
+     "T2-D04"
+    ],
+    "note": "直接决定「还要再花多少钱、会不会耗电瓶」，也是官网事实冲突点（见 public-research fact_checks）。"
+   },
+   {
+    "attribute": "Night vision & plate capture",
+    "class": "Evaluation Criteria",
+    "priority": "P1",
+    "importance": "high",
+    "changeability": "medium",
+    "relative_position": "待确认（证据缺口）：RivalB3 N5 公开 Sony STARVIS 2 IMX675 与夜间车牌表述，Bbrand 官网只写 Enhanced Low-Light Capture，未写传感器型号",
+    "gap_type": "evidence gap",
+    "evidence_refs": [
+     "Q04",
+     "Q05"
+    ],
+    "carrier_prompts": [
+     "T3-D01",
+     "T3-D02",
+     "T3-D03",
+     "T3-D04",
+     "T3-D05"
+    ],
+    "note": "买家点名 STARVIS 2；能力可能存在但未公开，先补官网事实，不能当作能力缺口。"
+   },
+   {
+    "attribute": "Heat tolerance",
+    "class": "Evaluation Criteria / Trust & Security",
+    "priority": "P1",
+    "importance": "high",
+    "changeability": "high",
+    "relative_position": "持平：Bbrand 与 RivalB3 N5 均用超级电容；Bbrand 公开 -20°C~70°C，RivalB3 未给数值",
+    "gap_type": "parity",
+    "evidence_refs": [
+     "Q06",
+     "Q07"
+    ],
+    "carrier_prompts": [
+     "T4-D01",
+     "T4-D02",
+     "T4-D03"
+    ],
+    "note": "美国夏季高温是真实顾虑；超级电容与工作温度是可直接被 AI 引用的事实。"
+   },
+   {
+    "attribute": "Storage & recording capacity",
+    "class": "Feature",
+    "priority": "P2",
+    "importance": "medium",
+    "changeability": "high",
+    "relative_position": "持平：H1 随附 128GB、最高 512GB；RivalB3 套装也含 256/512GB 卡",
+    "gap_type": "parity",
+    "evidence_refs": [
+     "Q06"
+    ],
+    "carrier_prompts": [
+     "T1-D05"
+    ],
+    "note": "出现在买家自列的选购清单里（SD card support），单条证据，中等重要。"
+   },
+   {
+    "attribute": "Price & value",
+    "class": "Evaluation Criteria / Constraint",
+    "priority": "P2",
+    "importance": "medium",
+    "changeability": "low",
+    "relative_position": "待确认：本轮快照未取竞品美国售价",
+    "gap_type": "evidence gap",
+    "evidence_refs": [
+     "Q04",
+     "Q08"
+    ],
+    "carrier_prompts": [
+     "T1-D04"
+    ],
+    "note": "两条买家原话都带预算上限；价格由业务决定，内容只能解释价值，可改变性低。"
+   },
+   {
+    "attribute": "Warranty & after-sales support",
+    "class": "Trust & Security",
+    "priority": "P2",
+    "importance": "medium-high",
+    "changeability": "high",
+    "relative_position": "待确认：Bbrand 1 年保修 + money-back；RivalB3/RivalB2/RivalB1 保修条款本轮未核",
+    "gap_type": "evidence gap",
+    "evidence_refs": [
+     "Q08",
+     "Q12"
+    ],
+    "carrier_prompts": [
+     "T4-D04",
+     "T4-D06"
+    ],
+    "note": "Q08 是「好评多但 Reddit 说质量差、客服差」的信任落差，Q12 说明买家会按品牌搜保修。"
+   },
+   {
+    "attribute": "Build quality & long-term reliability",
+    "class": "Trust & Security",
+    "priority": "P2",
+    "importance": "medium",
+    "changeability": "medium",
+    "relative_position": "待确认：无公开故障率或长期测试数据",
+    "gap_type": "evidence gap",
+    "evidence_refs": [
+     "Q08"
+    ],
+    "carrier_prompts": [
+     "T4-D05"
+    ],
+    "note": "与保修分开：一个靠产品与测试证明，一个靠条款页，动作不同。"
+   },
+   {
+    "attribute": "App & Wi-Fi connectivity",
+    "class": "Feature",
+    "priority": "P3",
+    "importance": "low",
+    "changeability": "high",
+    "relative_position": "未评判",
+    "gap_type": "n/a",
+    "evidence_refs": [],
+    "carrier_prompts": [],
+    "no_carrier_reason": "P3：买家原话里没有把 App/Wi-Fi 当选择理由，答案排序也由覆盖与夜视决定；留作产品事实，不占题量。"
+   },
+   {
+    "attribute": "GPS & route data",
+    "class": "Feature",
+    "priority": "P3",
+    "importance": "low",
+    "changeability": "high",
+    "relative_position": "未评判",
+    "gap_type": "n/a",
+    "evidence_refs": [],
+    "carrier_prompts": [],
+    "no_carrier_reason": "P3：无任何买家信号提到 GPS；它是购买后的加分项，不改变候选集。"
+   },
+   {
+    "attribute": "Screen & voice usability",
+    "class": "Feature",
+    "priority": "P3",
+    "importance": "low",
+    "changeability": "medium",
+    "relative_position": "未评判",
+    "gap_type": "n/a",
+    "evidence_refs": [
+     "Q06"
+    ],
+    "carrier_prompts": [],
+    "no_carrier_reason": "P3：Q06 只把「夜里屏幕刺不刺眼」列进清单，没有独立的选择意图；记为体验细节，不出题。"
+   },
+   {
+    "attribute": "US availability & purchase",
+    "class": "Geography & Market",
+    "priority": "P3",
+    "importance": "low",
+    "changeability": "low",
+    "relative_position": "未评判",
+    "gap_type": "n/a",
+    "evidence_refs": [],
+    "carrier_prompts": [],
+    "no_carrier_reason": "P3：Case 已确认官网对美国直销配送与退换；这是既定条件，不是买家比较项，不出题。"
+   }
+  ],
+  "expected_total": 23,
+  "competitor_selection": {
+   "status": "frozen_presales",
+   "note": "Case 冻结三家，本轮不增删、不核验；discovery 阶段不使用竞品名。",
+   "competitors": [
+    {
+     "name": "RivalB1",
+     "official_domain": "https://www.rival-b1.example"
+    },
+    {
+     "name": "RivalB2",
+     "official_domain": "https://www.rival-b2.example"
+    },
+    {
+     "name": "RivalB3",
+     "official_domain": "https://www.rival-b3.example"
+    }
+   ]
+  },
+  "audience_inputs": [
+   "Q01",
+   "Q02",
+   "Q03",
+   "Q04",
+   "Q05",
+   "Q06",
+   "Q07",
+   "Q08",
+   "Q09",
+   "Q10",
+   "Q11",
+   "Q12"
+  ],
+  "market_coverage": {
+   "market": "US",
+   "language": "en",
+   "product_lines": [
+    "Bbrand Smart Dash Cams / H1 4-channel"
+   ],
+   "audiences": [
+    "注重安全记录的个人车主",
+    "需要多方向记录的驾驶者"
+   ],
+   "journey_tasks": [
+    "发现",
+    "解决问题",
+    "交易"
+   ],
+   "buyer_constraints": [
+    "4-channel",
+    "no hardwire",
+    "battery drain",
+    "budget under $200",
+    "overnight street parking",
+    "hot climate"
+   ],
+   "formal_competitors": [
+    "RivalB1",
+    "RivalB2",
+    "RivalB3"
+   ],
+   "substitutes_or_status_quo": [
+    "single-channel dash cam",
+    "phone as recorder",
+    "dealer-installed camera"
+   ],
+   "evidence_refs": [
+    "Q01",
+    "Q02",
+    "Q03",
+    "Q04",
+    "Q05",
+    "Q06",
+    "Q07",
+    "Q08",
+    "Q09",
+    "Q10",
+    "Q11",
+    "Q12"
+   ],
+   "intent_decisions": [
+    {
+     "candidate_intent": "full exterior coverage / multi-channel selection",
+     "decision": "market_specific",
+     "reason": "US 买家原话与 4-channel 自动补全均指向多路覆盖；无其他市场可复用",
+     "destination": "T1"
+    },
+    {
+     "candidate_intent": "continuous parking recording and its power requirement",
+     "decision": "market_specific",
+     "reason": "Q01/Q02/Q10/Q11 均为美国 r/Dashcam 与 hl=en gl=us 搜索语言",
+     "destination": "T2"
+    },
+    {
+     "candidate_intent": "night plate legibility",
+     "decision": "localized",
+     "reason": "需求同构，但措辞按美国买家习惯写（license plate / night driving）",
+     "destination": "T3"
+    },
+    {
+     "candidate_intent": "heat durability and warranty confidence",
+     "decision": "localized",
+     "reason": "高温顾虑来自美国夏季用车场景；保修按美国直销条款表达",
+     "destination": "T4"
+    }
+   ],
+   "omitted_slices": [
+    {
+     "slice": "fleet / commercial vehicle monitoring",
+     "reason": "Case 适用边界明确排除车队管理与专业监控中心"
+    },
+    {
+     "slice": "rideshare-driver specific",
+     "reason": "无买家原话支持，属推测人群，不进首轮候选"
+    },
+    {
+     "slice": "cold-climate performance",
+     "reason": "仅有耐热证据（Q07），低温无买家信号"
+    }
+   ]
+  },
+  "trial": {
+   "status": "planned",
+   "planned_runs": 5
+  },
+  "baseline": {
+   "status": "planned",
+   "planned_runs": 5
+  },
+  "collection_config": {
+   "market": "US",
+   "language": "en",
+   "platforms": [],
+   "platform_note": "输入未列明四平台名称；由采集流程按售前同配置固定，不在此假设。",
+   "cadence": "discovery baseline 5 runs per Prompt per platform, then weekly"
+  },
+  "buyer_quotes": [
+   {
+    "输入编号": "Q01",
+    "原话": "I’m looking for something to continuously record while my vehicle is parked, not just went it’s bumped into.",
+    "约束": "停车持续录像"
+   },
+   {
+    "输入编号": "Q02",
+    "原话": "Also if I need to buy any extra equipment to make this happen I’d like that info as well",
+    "约束": "另购配件"
+   },
+   {
+    "输入编号": "Q03",
+    "原话": "I want to get one which has maximum exterior coverage.",
+    "约束": "车外全覆盖"
+   },
+   {
+    "输入编号": "Q04",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "约束": "STARVIS 2、夜间车牌、100 美元以内"
+   },
+   {
+    "输入编号": "Q05",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
+    "约束": "传感器"
+   },
+   {
+    "输入编号": "Q06",
+    "原话": "what would you check first before caring about the sale price: night footage, heat tolerance, SD card support, rear camera quality, parking mode, or how annoying the screen is at night?",
+    "约束": "促销季、选购清单"
+   },
+   {
+    "输入编号": "Q07",
+    "原话": "i am in search of dashcam that works inhot summers without the internal battery ballooning and dying.",
+    "约束": "高温、电池鼓包"
+   },
+   {
+    "输入编号": "Q08",
+    "原话": "came across a few reddit posts saying quality was bad or faulty products with poor customer service despite seemingly good reviews on trustpilot.",
+    "约束": "客服、200 美元以内"
+   },
+   {
+    "输入编号": "Q09",
+    "原话": "4 channel dash cam with parking mode",
+    "约束": "四路、停车模式"
+   },
+   {
+    "输入编号": "Q10",
+    "原话": "dash cam parking mode without hardwire",
+    "约束": "不接电线"
+   },
+   {
+    "输入编号": "Q11",
+    "原话": "dash cam parking mode drain battery",
+    "约束": "电瓶耗电"
+   },
+   {
+    "输入编号": "Q12",
+    "原话": "rivalb2 dash cam warranty",
+    "约束": "保修"
+   }
+  ],
+  "base_conditions": [
+   "私家车",
+   "日常驾驶",
+   "通勤",
+   "事故证据"
+  ]
+ },
+ "questions": [
+  {
+   "question_id": "T1-D01",
+   "topic_id": "T1",
+   "user_question": "What are the best multi-channel dash cams for getting full coverage around a car?",
+   "zh_translation": "想覆盖车身四周，有哪些多通道行车记录仪值得买？",
+   "monitoring_prompt": "What are the best multi-channel dash cams for getting full coverage around a car?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "multi-channel-coverage",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "group_role": "core",
+   "attribute_ref": "Multi-channel coverage",
+   "evidence_refs": [
+    "Q03"
+   ],
+   "constraint_type": "无限定条件",
+   "facet": "coverage_breadth",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T1-D02",
+   "topic_id": "T1",
+   "user_question": "Which 4-channel dash cam should I buy to record the front, rear and both sides at the same time?",
+   "zh_translation": "想同时录前、后和左右两侧，四路行车记录仪该选哪款？",
+   "monitoring_prompt": "Which 4-channel dash cam should I buy to record the front, rear and both sides at the same time?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "four-channel-simultaneous-recording",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Multi-channel coverage",
+   "evidence_refs": [
+    "Q03",
+    "Q09"
+   ],
+   "constraint_type": "约束",
+   "facet": "channel_count_and_configuration",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "四路"
+   ]
+  },
+  {
+   "question_id": "T1-D03",
+   "topic_id": "T1",
+   "user_question": "Which setup covers blind spots better, a 3-channel or a 4-channel dash cam?",
+   "zh_translation": "想覆盖盲区，三路和四路行车记录仪哪种方案更好？",
+   "monitoring_prompt": "Which setup covers blind spots better, a 3-channel or a 4-channel dash cam?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "three-vs-four-channel-coverage",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Multi-channel coverage",
+   "evidence_refs": [
+    "Q03",
+    "Q09"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "channel_count_and_configuration",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "三路",
+    "四路"
+   ]
+  },
+  {
+   "question_id": "T1-D04",
+   "topic_id": "T1",
+   "user_question": "What are the best 4-channel dash cams under $200?",
+   "zh_translation": "两百美元以内，哪些四路行车记录仪最值得买？",
+   "monitoring_prompt": "What are the best 4-channel dash cams under $200?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "four-channel-budget",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Price & value",
+   "evidence_refs": [
+    "Q04",
+    "Q08"
+   ],
+   "constraint_type": "约束",
+   "facet": "budget",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "tags": [],
+   "constraints": [
+    "四路",
+    "200 美元以内"
+   ]
+  },
+  {
+   "question_id": "T1-D05",
+   "topic_id": "T1",
+   "user_question": "Which 4-channel dash cams come with a memory card and support large SD cards for long recordings?",
+   "zh_translation": "哪些四路行车记录仪自带存储卡，并支持大容量卡长时间录像？",
+   "monitoring_prompt": "Which 4-channel dash cams come with a memory card and support large SD cards for long recordings?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "memory-card-and-storage",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Storage & recording capacity",
+   "evidence_refs": [
+    "Q06",
+    "Q09"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "storage",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "四路",
+    "随箱存储卡"
+   ]
+  },
+  {
+   "question_id": "T2-D01",
+   "topic_id": "T2",
+   "user_question": "Which dash cams keep recording continuously while my car is parked, not just when it gets bumped?",
+   "zh_translation": "哪些行车记录仪在停车时能持续录像，而不只是被撞时才录？",
+   "monitoring_prompt": "Which dash cams keep recording continuously while my car is parked, not just when it gets bumped?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "continuous-parking-recording",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking mode recording",
+   "evidence_refs": [
+    "Q01"
+   ],
+   "constraint_type": "无限定条件",
+   "facet": "continuous_vs_impact_only",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T2-D02",
+   "topic_id": "T2",
+   "user_question": "Which dash cams can run a parking mode without a hardwire kit?",
+   "zh_translation": "哪些行车记录仪不用另接硬线就能开启停车监控？",
+   "monitoring_prompt": "Which dash cams can run a parking mode without a hardwire kit?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "parking-mode-without-hardwire",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking power & installation",
+   "evidence_refs": [
+    "Q10"
+   ],
+   "constraint_type": "约束",
+   "facet": "power_source_and_hardwire",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "不接电线"
+   ]
+  },
+  {
+   "question_id": "T2-D03",
+   "topic_id": "T2",
+   "user_question": "Which dash cams will not drain my car battery when they record overnight while parked?",
+   "zh_translation": "哪些行车记录仪停车录一整夜也不会耗光汽车电瓶？",
+   "monitoring_prompt": "Which dash cams will not drain my car battery when they record overnight while parked?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "parking-battery-drain",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking power & installation",
+   "evidence_refs": [
+    "Q11"
+   ],
+   "constraint_type": "约束",
+   "facet": "battery_drain",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "电瓶耗电"
+   ]
+  },
+  {
+   "question_id": "T2-D04",
+   "topic_id": "T2",
+   "user_question": "Which parking mode setups include the hardwire kit so I do not have to buy extra accessories?",
+   "zh_translation": "哪些停车监控方案自带硬线套件，不用再单独买配件？",
+   "monitoring_prompt": "Which parking mode setups include the hardwire kit so I do not have to buy extra accessories?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "parking-kit-and-extras",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking power & installation",
+   "evidence_refs": [
+    "Q02"
+   ],
+   "constraint_type": "约束",
+   "facet": "power_source_and_hardwire",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "另购配件"
+   ]
+  },
+  {
+   "question_id": "T2-D05",
+   "topic_id": "T2",
+   "user_question": "What are the best dash cams for 24/7 parking monitoring on a street where I park overnight?",
+   "zh_translation": "每天在路边过夜停车，哪些行车记录仪的 24 小时停车监控最靠谱？",
+   "monitoring_prompt": "What are the best dash cams for 24/7 parking monitoring on a street where I park overnight?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "overnight-parking-monitoring",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking mode recording",
+   "evidence_refs": [
+    "Q01",
+    "Q11"
+   ],
+   "constraint_type": "约束",
+   "facet": "overnight_coverage",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "tags": [],
+   "constraints": [
+    "街边过夜"
+   ]
+  },
+  {
+   "question_id": "T2-D06",
+   "topic_id": "T2",
+   "user_question": "Which dash cams send an alert to my phone when someone hits my parked car?",
+   "zh_translation": "车停着被撞时，哪些行车记录仪会给手机发提醒？",
+   "monitoring_prompt": "Which dash cams send an alert to my phone when someone hits my parked car?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "parking-impact-alert",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking mode recording",
+   "evidence_refs": [
+    "Q01"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "impact_alert",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "手机提醒",
+    "被撞"
+   ]
+  },
+  {
+   "question_id": "T2-D07",
+   "topic_id": "T2",
+   "user_question": "Which four-camera dash cam keeps every lens recording when the ignition is off?",
+   "zh_translation": "熄火之后，哪些四摄像头行车记录仪还能让每个镜头继续录像？",
+   "monitoring_prompt": "Which four-camera dash cam keeps every lens recording when the ignition is off?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "four-camera-parking-recording",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "需要多方向记录的驾驶者",
+   "group_role": "core",
+   "attribute_ref": "Parking mode recording",
+   "evidence_refs": [
+    "Q01",
+    "Q09"
+   ],
+   "constraint_type": "约束",
+   "facet": "all_channel_parking",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "四路"
+   ]
+  },
+  {
+   "question_id": "T3-D01",
+   "topic_id": "T3",
+   "user_question": "Which dash cams capture license plates clearly at night?",
+   "zh_translation": "哪些行车记录仪夜间能拍清车牌？",
+   "monitoring_prompt": "Which dash cams capture license plates clearly at night?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "night-license-plate",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Night vision & plate capture",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "plate_legibility",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T3-D02",
+   "topic_id": "T3",
+   "user_question": "What are the best dash cams for night driving footage?",
+   "zh_translation": "夜间行车录像，哪些行车记录仪效果最好？",
+   "monitoring_prompt": "What are the best dash cams for night driving footage?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "night-driving-footage",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Night vision & plate capture",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "无限定条件",
+   "facet": "general_night_footage",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T3-D03",
+   "topic_id": "T3",
+   "user_question": "Which dash cams use Sony STARVIS 2 sensors for low-light recording?",
+   "zh_translation": "哪些行车记录仪用 Sony STARVIS 2 传感器做低照度录像？",
+   "monitoring_prompt": "Which dash cams use Sony STARVIS 2 sensors for low-light recording?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "starvis2-low-light",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Night vision & plate capture",
+   "evidence_refs": [
+    "Q05"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "sensor_spec",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "STARVIS 2"
+   ]
+  },
+  {
+   "question_id": "T3-D04",
+   "topic_id": "T3",
+   "user_question": "Which dash cams have night vision on the rear and side cameras as well as the front?",
+   "zh_translation": "哪些行车记录仪的后摄和侧摄也和前摄一样有夜视？",
+   "monitoring_prompt": "Which dash cams have night vision on the rear and side cameras as well as the front?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "rear-and-side-night-vision",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Night vision & plate capture",
+   "evidence_refs": [
+    "Q04",
+    "Q09"
+   ],
+   "constraint_type": "约束",
+   "facet": "night_on_all_channels",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "侧后摄"
+   ]
+  },
+  {
+   "question_id": "T3-D05",
+   "topic_id": "T3",
+   "user_question": "Which dash cams have the best low-light footage under $200?",
+   "zh_translation": "两百美元以内，哪些行车记录仪的低照度画面最好？",
+   "monitoring_prompt": "Which dash cams have the best low-light footage under $200?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "budget-low-light",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Night vision & plate capture",
+   "evidence_refs": [
+    "Q04",
+    "Q08"
+   ],
+   "constraint_type": "约束",
+   "facet": "budget_night",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "tags": [],
+   "constraints": [
+    "200 美元以内"
+   ]
+  },
+  {
+   "question_id": "T4-D01",
+   "topic_id": "T4",
+   "user_question": "Which dash cams survive hot summers without the internal battery swelling or dying?",
+   "zh_translation": "哪些行车记录仪能扛住炎热夏天，内置电池不鼓包、不报废？",
+   "monitoring_prompt": "Which dash cams survive hot summers without the internal battery swelling or dying?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "summer-battery-heat",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Heat tolerance",
+   "evidence_refs": [
+    "Q07"
+   ],
+   "constraint_type": "约束",
+   "facet": "heat_battery_failure",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T4-D02",
+   "topic_id": "T4",
+   "user_question": "Which dash cams use supercapacitors instead of batteries so they last in high heat?",
+   "zh_translation": "哪些行车记录仪用超级电容替代电池，高温下更耐用？",
+   "monitoring_prompt": "Which dash cams use supercapacitors instead of batteries so they last in high heat?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "supercapacitor-heat-durability",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Heat tolerance",
+   "evidence_refs": [
+    "Q07"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "heat_battery_failure",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "超级电容"
+   ]
+  },
+  {
+   "question_id": "T4-D03",
+   "topic_id": "T4",
+   "user_question": "Which dash cams keep recording in a hot car without overheating or shutting down?",
+   "zh_translation": "炎热车内，哪些行车记录仪能持续录像而不过热关机？",
+   "monitoring_prompt": "Which dash cams keep recording in a hot car without overheating or shutting down?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "hot-car-overheat-recording",
+   "region": "US",
+   "journey_stage": "解决问题",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Heat tolerance",
+   "evidence_refs": [
+    "Q06",
+    "Q07"
+   ],
+   "constraint_type": "约束",
+   "facet": "thermal_shutdown",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T4-D04",
+   "topic_id": "T4",
+   "user_question": "Which dash cam brands have the best warranty and customer support?",
+   "zh_translation": "哪些行车记录仪品牌的保修和客服最好？",
+   "monitoring_prompt": "Which dash cam brands have the best warranty and customer support?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "warranty-and-support",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Warranty & after-sales support",
+   "evidence_refs": [
+    "Q08",
+    "Q12"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "warranty_and_support",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T4-D05",
+   "topic_id": "T4",
+   "user_question": "Which dash cams are most reliable long term and least likely to fail?",
+   "zh_translation": "哪些行车记录仪长期使用最可靠、最不容易坏？",
+   "monitoring_prompt": "Which dash cams are most reliable long term and least likely to fail?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "long-term-reliability",
+   "region": "US",
+   "journey_stage": "发现",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Build quality & long-term reliability",
+   "evidence_refs": [
+    "Q08"
+   ],
+   "constraint_type": "无限定条件",
+   "facet": "long_term_failure",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": []
+  },
+  {
+   "question_id": "T4-D06",
+   "topic_id": "T4",
+   "user_question": "Which dash cams can I return easily if the footage quality disappoints?",
+   "zh_translation": "如果画质不满意，哪些行车记录仪退货最省事？",
+   "monitoring_prompt": "Which dash cams can I return easily if the footage quality disappoints?",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "return-if-quality-disappoints",
+   "region": "US",
+   "journey_stage": "交易",
+   "audience": "注重安全记录的个人车主",
+   "group_role": "core",
+   "attribute_ref": "Warranty & after-sales support",
+   "evidence_refs": [
+    "Q08"
+   ],
+   "constraint_type": "偏好标准",
+   "facet": "returns",
+   "evidence_status": "hypothesis",
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "tags": [],
+   "constraints": [
+    "画质不满意"
+   ]
+  }
+ ]
+}

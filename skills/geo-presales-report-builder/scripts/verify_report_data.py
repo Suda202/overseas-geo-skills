@@ -1,0 +1,1155 @@
+#!/usr/bin/env python3
+"""海外 GEO 售前诊断报告 · 数据层校验
+
+独立复算 ``report-data.json`` 里的关键数字，与产物逐项对账：
+
+- 目标品牌提及率、声量份额、引用份额、平均提及位置、提及率排名（逐切片）
+- 每个切片的 records 条数、competition 行集合、矩阵行集合
+- 内部一致性：引用分类计数与总引用数、share 数组与 mention 行同序
+
+复算完全不调用 ``build_report_data.py``；它直接从采集目录读原始 JSON，
+用共享的品牌识别入口 ``find_alias_spans`` 与 ``meta.objects`` 里声明的别名
+重新算一遍（同样做跨对象最长优先不重叠消解，与数据层同口径）。
+``--self-test`` 会对产物做突变，确认校验能发现错误。
+
+退出码 0 = 全部通过；非 0 = 有对账失败。
+"""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+import os
+import re
+import sys
+import tempfile
+from collections import Counter, defaultdict
+from pathlib import Path
+from urllib.parse import parse_qsl, urlsplit
+
+# 兄弟 skill 按相对位置定位：本脚本在 <skills>/<skill>/scripts/ 下。
+# 脱离整套 skill 单独部署时，用 GEO_PRESALES_SKILLS_ROOT 指向 skills 根目录。
+SKILLS_ROOT = Path(os.environ.get(
+    "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
+CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
+if str(CORE_DIR) not in sys.path:
+    sys.path.insert(0, str(CORE_DIR))
+
+from geo_presales_core.util import (  # noqa: E402
+    domain_matches,
+    find_alias_spans,
+    normalize_host,
+    normalize_text,
+    normalize_url as core_normalize_url,
+    resolve_alias_spans,
+)
+
+import geo_presales_core.util as core_util  # noqa: E402
+
+# 品牌匹配必须与数据层一致地跑在去引用正文上，否则复算会重现「被引文章标题里的品牌
+# 被算成提及」的旧行为，与本模块要校验的数据层对不上。见 build_report_data.py 的说明。
+_AUDIT_SCRIPTS = SKILLS_ROOT / "geo-presales-report-audit" / "scripts"
+if str(_AUDIT_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_AUDIT_SCRIPTS))
+import de_cite_crawl as de_cite  # noqa: E402
+
+core_util.COMMON_MULTI_LABEL_SUFFIXES |= {
+    "com.my", "net.my", "org.my", "gov.my", "edu.my", "com.sg", "net.sg", "org.sg",
+    "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
+}
+INGEST_TRACKING_KEYS = set(core_util.TRACKING_QUERY_KEYS) | {
+    "srsltid", "gbraid", "wbraid", "yclid", "igshid", "gad_source", "gclsrc",
+    "msclkid", "ref_src", "ref_url", "guccounter", "guce_referrer", "spm", "scm",
+}
+
+PLATFORM_DIR_BY_LABEL = {"AIO": "overview", "Gemini": "gemini",
+                         "ChatGPT": "chatgpt", "Perplexity": "perplexity", "AI Mode": "aimode",
+                         "Copilot": "copilot", "Grok": "grok", "Alexa": "alexa"}
+# 回答正文与引用字段的已知映射。平台清单是发现出来的，未登记的平台回落到
+# 默认字段名（正文 result_text、无独立引用字段），不因新平台直接崩。
+DEFAULT_ANSWER_FIELD = "result_text"
+ANSWER_FIELD = {"overview": "content", "gemini": "result_text",
+                "chatgpt": "result_text", "perplexity": "result_text", "aimode": "result_text",
+                "copilot": "result_text", "grok": "full_response", "alexa": "md_text"}
+CITATION_FIELD = {"overview": "source", "gemini": "citations",
+                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
+                  "copilot": "citations", "grok": "footnotes", "alexa": "references"}
+# Alexa 正文（md_text）不带引用标记，引用位置在 raw_text 的 `{ref cite_<id>}`，按 id 对 references。
+# 与 build_report_data.ALEXA_REF_MARKER 同口径，刻意独立实现。
+ALEXA_REF = re.compile(r"\{ref\s+(?:cite_)+([A-Za-z0-9_-]+)\}")
+
+# 与 build_report_data.py 同步：Gemini / AIO 把同一来源拆成多个编号（伪拆分），需按
+# canonical 折叠但保留正文同编号真重复；ChatGPT / Perplexity 全按实际次数计。
+CITATION_URL_COLLAPSE_PLATFORMS = {"gemini", "overview"}
+
+
+def _citation_keep_mask(occ_canonicals: list, collapse: bool) -> list:
+    """逐条正文引用是否计入引用次数（与 build_report_data._citation_keep_mask 同口径）。
+
+    刻意独立实现：两侧都改才算一致，一侧漂移会在门禁里暴露。规则见数据层同名函数。
+    """
+    if not collapse:
+        return [True] * len(occ_canonicals)
+    per_canon: dict = defaultdict(Counter)
+    for number, canonical in occ_canonicals:
+        if canonical is not None:
+            per_canon[canonical][number] += 1
+    winner: dict = {}
+    for canonical, counter in per_canon.items():
+        winner[canonical] = min(
+            counter.items(),
+            key=lambda kv: (-kv[1], int(kv[0]) if str(kv[0]).isdigit() else 1_000_000),
+        )[0]
+    return [canonical is None or number == winner[canonical]
+            for number, canonical in occ_canonicals]
+
+
+def answer_field(platform_dir: str) -> str:
+    return ANSWER_FIELD.get(platform_dir, DEFAULT_ANSWER_FIELD)
+
+
+def citation_field(platform_dir: str):
+    return CITATION_FIELD.get(platform_dir)
+# 正文引用标记。口径必须与 build_report_data.py 同步（正文优先、字段按位置回退），
+# 但刻意独立实现：两侧都改才算一致，一侧漂移会在门禁里暴露。
+BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re.M)
+BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
+BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
+PLATFORM_INTERNAL_HOSTS = {
+    "google.com", "google.com.sg", "google.com.my", "google.co", "google.com.hk",
+    "gstatic.com", "googleusercontent.com", "bing.com", "chatgpt.com", "openai.com",
+    "perplexity.ai", "gemini.google.com",
+    "copilot.microsoft.com", "bingapis.com", "grok.com",
+}
+DISCOVERY_LABEL = "发现"
+
+TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
+
+# 有商品卡字段的平台目录（与 core shopping.PLATFORM_PRODUCT_FIELDS 同集合，刻意不 import）
+SHOPPING_PLATFORMS = {"chatgpt", "overview", "aimode", "gemini"}
+
+
+# ------------------------------------------------------------------ 复算
+
+class Recomputer:
+    """从采集目录重建切片口径，不依赖 build_report_data。"""
+
+    def __init__(self, collect: Path, report: dict):
+        self.collect = Path(collect)
+        self.meta = report["meta"]
+        self.objects = self.meta["objects"]
+        self.questions = self.meta["questions"]
+        self.regions = self.meta["regions"]
+        self.platforms = self.meta["platforms"]
+        self.topics = self.meta["topics"]
+        # 平台清单随产物携带（数据层从采集目录发现）；旧产物没有该字段时回落内置映射
+        self.platform_dirs = dict(self.meta.get("platform_dirs")
+                                  or PLATFORM_DIR_BY_LABEL)
+        self._text_cache: dict[tuple, str] = {}
+        self._resolved_spans_cache: dict[tuple, dict] = {}
+        self._citations_cache: dict[tuple, list] = {}
+        self._recompute_cache: dict[tuple, dict] = {}
+        self._files_cache: dict[tuple, list] = {}
+
+    # --- 原始读取 ---
+
+    def sample_files(self, region: str, platform_dir: str, qid: int) -> list[Path]:
+        """该题在该平台×市场下的采集文件，按文件名排序；索引即重复序号。
+
+        归属优先按 ``task_result.prompt`` 与题库正文比对；**题面为空时回退文件名题号**。
+        必须回退的原因与数据层一致：AIO 的响应没有 ``prompt`` 字段（100/100 为空）、
+        ChatGPT 有 73/100 为空，只按题面归属会让这两条平台整批取不到文件，复算分母
+        与数据层对不上。文件名回退只在题面为空时启用；题面存在但对不上任何题的仍
+        视为错位，不靠文件名兜底。
+        """
+        key = (region, platform_dir, qid)
+        if key not in self._files_cache:
+            folder = self.collect / f"scraper.{platform_dir}" / region
+            paths: list[Path] = []
+            if folder.is_dir():
+                by_prompt = {
+                    normalize_text(q.get("en") or ""): f"{int(q['qid']):04d}"
+                    for q in self.questions if q.get("en")
+                }
+                known = {f"{int(q['qid']):04d}" for q in self.questions}
+                for path in sorted(folder.glob("*.json")):
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                    result = payload.get("task_result") or {}
+                    prompt = str(result.get("prompt") or result.get("user_query")
+                                 or result.get("user_text") or "").strip()
+                    matched = by_prompt.get(normalize_text(prompt)) if prompt else None
+                    if not matched and not prompt:
+                        stem = path.stem.strip()
+                        if stem in known:
+                            matched = stem
+                        elif stem.isdigit() and stem.zfill(4) in known:
+                            matched = stem.zfill(4)
+                    # qid 在本模块是整数行号，matched 是补零字符串，统一后比较
+                    if matched and str(matched).zfill(4) == str(qid).zfill(4):
+                        paths.append(path)
+            self._files_cache[key] = paths
+        return self._files_cache[key]
+
+    def repeat_count(self, region: str, platform_dir: str, qid: int) -> int:
+        return len(self.sample_files(region, platform_dir, qid))
+
+    def answer_text(self, region: str, platform_dir: str, qid: int, repeat: int = 1) -> str:
+        key = (region, platform_dir, qid, repeat)
+        if key not in self._text_cache:
+            paths = self.sample_files(region, platform_dir, qid)
+            text = ""
+            if 0 < repeat <= len(paths):
+                payload = json.loads(paths[repeat - 1].read_text(encoding="utf-8"))
+                result = payload.get("task_result") or {}
+                text = str(result.get(answer_field(platform_dir)) or "")
+            self._text_cache[key] = text
+        return self._text_cache[key]
+
+    def mentions(self, region: str, platform_dir: str, qid: int, object_id: str,
+                 repeat: int = 1) -> bool:
+        return bool(self._spans(region, platform_dir, qid, object_id, repeat))
+
+    def _spans(self, region: str, platform_dir: str, qid: int, object_id: str,
+               repeat: int = 1) -> list[dict]:
+        return self._resolved_spans(region, platform_dir, qid, repeat).get(object_id, [])
+
+    def _resolved_spans(self, region: str, platform_dir: str, qid: int,
+                        repeat: int = 1) -> dict[str, list[dict]]:
+        """按对象回填的品牌跨度，与数据层同口径做跨对象最长优先不重叠消解。
+
+        泰文/CJK 别名不带词边界，短别名会落进别的对象的长别名里（乙大学
+        `มหาวิทยาลัยอัลฟา` ⊂ 乙大学南校区 `มหาวิทยาลัยอัลฟาตอนใต้`）。数据层在
+        `prepare_answers` 里跨对象消解，这里必须同口径，否则复算会把乙大学南校区那条
+        同时记成乙大学，凭空报出差异。拉丁别名带词边界，消解对它是空操作。
+        """
+        key = (region, platform_dir, qid, repeat)
+        if key not in self._resolved_spans_cache:
+            grouped: dict[str, list[dict]] = {}
+            text = self.answer_text(region, platform_dir, qid, repeat)
+            if text.strip():
+                # 与数据层同口径：先剥引用标记与商品卡商家列，再匹配品牌
+                matching = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
+                candidates = [
+                    {**span, "object_id": obj["object_id"]}
+                    for obj in self.objects
+                    for span in find_alias_spans(matching, obj.get("aliases") or [obj["name"]])
+                ]
+                for span in resolve_alias_spans(candidates):
+                    grouped.setdefault(span["object_id"], []).append(span)
+            self._resolved_spans_cache[key] = grouped
+        return self._resolved_spans_cache[key]
+
+    def citations(self, region: str, platform_dir: str, qid: int,
+                  repeat: int = 1) -> list[dict]:
+        """引用次数 = 正文 pill（`([来源名][N])`）的出现次数。
+
+        正文没有 pill 的回答计 0 条，不拿供应商字段充数。缺定义行的 pill 按位置
+        回退解析 URL（解析，不是计数来源）；解析不出也**照样计入次数**，只是没有
+        host/canonical_url——分母必须与数据层一致，否则门禁会报假差异。
+        """
+        key = (region, platform_dir, qid, repeat)
+        if key not in self._citations_cache:
+            paths = self.sample_files(region, platform_dir, qid)
+            rows = []
+            if 0 < repeat <= len(paths):
+                payload = json.loads(paths[repeat - 1].read_text(encoding="utf-8"))
+                result = payload.get("task_result") or {}
+                text = str(result.get(answer_field(platform_dir)) or "")
+                if platform_dir == "alexa":
+                    raw_text = str(result.get("raw_text") or "")
+                    refs = {re.sub(r"^(?:cite_)+", "", str(i.get("id"))): i
+                            for i in result.get("references") or [] if isinstance(i, dict) and i.get("id")}
+                    for match in ALEXA_REF.finditer(raw_text):
+                        url = _clean_url(str((refs.get(match.group(1)) or {}).get("url") or "").strip())
+                        host = normalize_host(url) if url else ""
+                        if host and _is_platform_internal(host):
+                            continue
+                        normalized = core_normalize_url(url) if url else None
+                        line_start = raw_text.rfind("\n", 0, match.start()) + 1
+                        rows.append({"url": url or None, "host": host or None,
+                                     "canonical_url": (normalized or {}).get("canonical_url") or (url or None),
+                                     "position": match.start(),
+                                     "in_table_row": raw_text[line_start:].lstrip().startswith("|")})
+                    self._citations_cache[key] = rows
+                    return rows
+                raw_items = result.get(citation_field(platform_dir))
+                raw_items = raw_items if isinstance(raw_items, list) else []
+                # 与 build_report_data 同口径：新格式（字段带 cited_count）直接按次数计，
+                # 一次引用一行；cited_count 缺失按 0、为 0 不计。字段全无 cited_count 时
+                # 回退到正文 pill 计数（旧格式）。
+                if any(isinstance(i, dict) and isinstance(i.get("cited_count"), int)
+                       for i in raw_items):
+                    for order, item in enumerate(raw_items, 1):
+                        count = item.get("cited_count")
+                        count = count if isinstance(count, int) else 0
+                        if count <= 0:
+                            continue
+                        url = _clean_url(str(item.get("url") or item.get("link")
+                                             or item.get("href") or "").strip())
+                        host = normalize_host(url) if url else ""
+                        if host and _is_platform_internal(host):
+                            continue
+                        normalized = core_normalize_url(url) if url else None
+                        canonical = (normalized or {}).get("canonical_url") or (url or None)
+                        for _ in range(count):
+                            rows.append({"url": url or None, "host": host or None,
+                                         "canonical_url": canonical, "position": order,
+                                         "in_table_row": False})
+                    self._citations_cache[key] = rows
+                    return self._citations_cache[key]
+                definitions = {}
+                for number, url, _title in BODY_REF_DEF.findall(text):
+                    definitions[number] = url
+                spans, occurrences = [], []
+                for match in BODY_REF_MARKER.finditer(text):
+                    spans.append(match.span())
+                    occurrences.append((match.group(2), match.start()))
+                for match in BODY_REF_MARKER_BARE.finditer(text):
+                    if any(start <= match.start() < end for start, end in spans):
+                        continue
+                    occurrences.append((match.group(2), match.start()))
+
+                candidates = []
+                occ_canonicals = []
+                for number, position in occurrences:
+                    line_start = text.rfind("\n", 0, position) + 1
+                    in_table = text[line_start:].lstrip().startswith("|")
+                    raw_url = definitions.get(number)
+                    if not raw_url and number.isdigit() and 0 < int(number) <= len(raw_items):
+                        item = raw_items[int(number) - 1]
+                        if isinstance(item, dict):
+                            raw_url = str(item.get("url") or item.get("link")
+                                          or item.get("href") or "").strip()
+                    url = _clean_url(raw_url) if raw_url else ""
+                    host = normalize_host(url) if url else ""
+                    if host and _is_platform_internal(host):
+                        continue
+                    # 去重键必须与数据层一致：core 的 canonical_url 会去掉 www. 与尾斜杠。
+                    normalized = core_normalize_url(url) if url else None
+                    canonical = (normalized or {}).get("canonical_url") or (url or None)
+                    occ_canonicals.append((number, canonical))
+                    candidates.append({
+                        "url": url or None,
+                        "host": host or None,
+                        "canonical_url": canonical,
+                        "position": position,
+                        "in_table_row": in_table,
+                    })
+                # Gemini / AIO 伪拆分折叠：与 build_report_data._citation_keep_mask 完全同口径
+                # （每个 canonical 只保留出现最多的编号、保留同编号真重复），否则门禁报假差异。
+                keep = _citation_keep_mask(
+                    occ_canonicals,
+                    platform_dir in CITATION_URL_COLLAPSE_PLATFORMS)
+                rows = [c for c, keep_it in zip(candidates, keep) if keep_it]
+            self._citations_cache[key] = rows
+        return self._citations_cache[key]
+
+    # --- 切片级复算 ---
+
+    def slice_questions(self, topic: str) -> list[dict]:
+        if not topic:
+            return list(self.questions)
+        return [q for q in self.questions if q["topic"] == topic]
+
+    def slice_platforms(self, platform: str) -> list[str]:
+        return [platform] if platform else list(self.platforms)
+
+    def slice_regions(self, region: str) -> list[str]:
+        """region 为 "" 表示「全部国家」：各市场样本合池。"""
+        return [region] if region else list(self.regions)
+
+    def recompute(self, region: str, platform: str, topic: str) -> dict:
+        cache_key = (region, platform, topic)
+        if cache_key in self._recompute_cache:
+            return self._recompute_cache[cache_key]
+        result = self._recompute(region, platform, topic)
+        self._recompute_cache[cache_key] = result
+        return result
+
+    def _recompute(self, region: str, platform: str, topic: str) -> dict:
+        question_ids = [q["qid"] for q in self.slice_questions(topic)]
+        discovery_ids = [q["qid"] for q in self.slice_questions(topic)
+                         if q["intent"] == DISCOVERY_LABEL]
+
+        discovery_answers = 0          # 有效 discovery 回答数（分母）
+        mention_counts: Counter = Counter()
+        target_ranks: list[int] = []
+        raw_citations = 0
+        target_citations = 0
+        own_citations: Counter = Counter()
+        # 带官网的提及率：被提及的回答里正文引用过自家官网的回答数（分子）
+        linked_answers: Counter = Counter()
+        # 官网引用率：正文至少引用一次目标官网的 Discovery 回答数（分子，按回答计票）
+        target_cited_answers = 0
+        answer_unique_total = 0
+        table_row_markers = 0
+        unique_citation_urls: set[str] = set()
+        target = next(o for o in self.objects if o["object_id"] == "target")
+
+        for platform_label in self.slice_platforms(platform):
+            platform_dir = self.platform_dirs[platform_label]
+            for market in self.slice_regions(region):
+                for qid in question_ids:
+                    # 每题可能采了多次；每条有效回答都进分母
+                    for repeat in range(1, self.repeat_count(market, platform_dir, qid) + 1):
+                        if not self.answer_text(market, platform_dir, qid, repeat).strip():
+                            continue  # 空答案不进任何分母
+                        is_discovery = qid in discovery_ids
+                        mentioned = [o["object_id"] for o in self.objects
+                                     if self.mentions(market, platform_dir, qid,
+                                                      o["object_id"], repeat)]
+                        if is_discovery:
+                            discovery_answers += 1
+                            for object_id in mentioned:
+                                mention_counts[object_id] += 1
+                            if "target" in mentioned:
+                                target_ranks.append(
+                                    self._rank_of(market, platform_dir, qid,
+                                                  target["object_id"], repeat))
+                            seen_in_answer = set()
+                            cited_owners = set()
+                            for citation in self.citations(market, platform_dir, qid, repeat):
+                                raw_citations += 1
+                                if citation.get("in_table_row"):
+                                    table_row_markers += 1
+                                # 解析不出 URL 的 pill 仍计入次数，但不进「去重来源」
+                                if citation.get("canonical_url"):
+                                    seen_in_answer.add(citation["canonical_url"])
+                                    unique_citation_urls.add(citation["canonical_url"])
+                                owner = self._official_owner(citation["host"])
+                                if owner:
+                                    cited_owners.add(owner)
+                                    own_citations[owner] += 1
+                                    if owner == "target":
+                                        target_citations += 1
+                            answer_unique_total += len(seen_in_answer)
+                            if "target" in cited_owners:
+                                target_cited_answers += 1
+                            for object_id in mentioned:
+                                if object_id in cited_owners:
+                                    linked_answers[object_id] += 1
+
+        total_mentions = sum(mention_counts.values())
+        target_mentions = mention_counts.get("target", 0)
+        # 空切片（该切片没有任何有效 Discovery 回答）没有可比较的名次：与
+        # build_report_data.rank_lookup_of 一致返回 `—`，而不是按排序位置给出
+        # 「并列第一」。旧版这里返回 1、builder 写 0，两边对同一条空切片各说各话
+        # （2026-09-21 对齐）。回答存在但无人被提及时 mention_rate 是 0 而非 None，
+        # 不属于空切片，名次照常计算。
+        if discovery_answers == 0:
+            rank_lookup = {o["object_id"]: "—" for o in self.objects}
+        else:
+            order = sorted(self.objects,
+                           key=lambda o: (-mention_counts.get(o["object_id"], 0), o["name"]))
+            rank_lookup, last_value, last_rank = {}, None, 0
+            for index, obj in enumerate(order, 1):
+                value = mention_counts.get(obj["object_id"], 0)
+                if value != last_value:
+                    last_rank, last_value = index, value
+                rank_lookup[obj["object_id"]] = last_rank
+
+        # 每个对象的独立口径，供逐行对账 competition.mention / matrix
+        object_stats = {}
+        own_ranks: dict[str, list[int]] = defaultdict(list)
+        for platform_label in self.slice_platforms(platform):
+            platform_dir = self.platform_dirs[platform_label]
+            for market in self.slice_regions(region):
+                for qid in discovery_ids:
+                    for repeat in range(1, self.repeat_count(market, platform_dir, qid) + 1):
+                        if not self.answer_text(market, platform_dir, qid, repeat).strip():
+                            continue
+                        for obj in self.objects:
+                            if self._spans(market, platform_dir, qid, obj["object_id"], repeat):
+                                own_ranks[obj["object_id"]].append(
+                                    self._rank_of(market, platform_dir, qid,
+                                                  obj["object_id"], repeat))
+        for obj in self.objects:
+            object_id = obj["object_id"]
+            count = mention_counts.get(object_id, 0)
+            ranks = own_ranks.get(object_id, [])
+            object_stats[obj["name"]] = {
+                "mention_rate": _pct(count / discovery_answers) if discovery_answers else "—",
+                "share_of_voice": _pct(count / total_mentions) if total_mentions else "—",
+                "average_rank": f"{sum(ranks) / len(ranks):.1f}" if ranks else "—",
+                "mention_rank": str(rank_lookup[object_id]),
+                "citation_share": (_pct(own_citations.get(object_id, 0) / raw_citations)
+                                   if raw_citations else "—"),
+                "mention_count": count,
+                "linked_mention_rate": (_pct(linked_answers.get(object_id, 0) / count)
+                                        if count else "—"),
+            }
+
+        return {
+            "records": len(question_ids),
+            "mention_rate": _pct(target_mentions / discovery_answers) if discovery_answers else "—",
+            "share_of_voice": _pct(target_mentions / total_mentions) if total_mentions else "—",
+            "official_share": _pct(target_citations / raw_citations) if raw_citations else "—",
+            "official_citation_rate": (_pct(target_cited_answers / discovery_answers)
+                                       if discovery_answers else "—"),
+            "official_citation_counts": f"{target_cited_answers}/{discovery_answers}",
+            "linked_mention_rate": (_pct(linked_answers.get("target", 0) / target_mentions)
+                                    if target_mentions else "—"),
+            "linked_mention_counts": f"{linked_answers.get('target', 0)}/{target_mentions}",
+            "average_rank": (f"{sum(target_ranks) / len(target_ranks):.1f}"
+                             if target_ranks else "—"),
+            "mention_rank": str(rank_lookup["target"]),
+            "total_citations": None,   # 去重后条数，产物内自证
+            "discovery_answers": discovery_answers,
+            "object_stats": object_stats,
+            "citation_units": {
+                "occurrences": raw_citations,
+                "unique_sources": len(unique_citation_urls),
+                "occurrences_in_table_rows": table_row_markers,
+            },
+        }
+
+    # --- 购物层复算（刻意独立于 core shopping.py：两侧口径都改才算一致）---
+
+    def _cards(self, region: str, platform_dir: str, qid: int, repeat: int):
+        """该回答的商品卡；平台无商品字段返回 None。规则与 shopping.py 同口径独立实现。"""
+        if platform_dir not in SHOPPING_PLATFORMS:
+            return None
+        paths = self.sample_files(region, platform_dir, qid)
+        if not 0 < repeat <= len(paths):
+            return []
+        result = json.loads(paths[repeat - 1].read_text(encoding="utf-8")).get("task_result") or {}
+        if platform_dir == "overview":
+            raw = [i for i in result.get("source") or []
+                   if isinstance(i, dict) and str(i.get("type") or "").casefold() == "product"]
+        else:
+            raw = [i for i in result.get("products") or [] if isinstance(i, dict)]
+        cards = []
+        for item in raw:
+            if not str(item.get("title") or "").strip():
+                continue
+            if platform_dir == "chatgpt":
+                merchants = [o.get("merchant_name") for o in item.get("offers") or [] if isinstance(o, dict)]
+                product_names = [o.get("product_name") for o in item.get("offers") or [] if isinstance(o, dict)]
+            else:
+                merchants = [st.get("name") for st in item.get("stores") or [] if isinstance(st, dict)]
+                merchants = merchants or [item.get("website_name") or item.get("seller")]
+                product_names = []
+            cards.append({"brand": item.get("brand") if platform_dir in ("aimode", "gemini") else None,
+                          "title": item["title"], "product_name": next((n for n in product_names if n), None),
+                          "merchants": [m for m in merchants if m]})
+        return cards
+
+    def _owner_of_text(self, text) -> str | None:
+        if not str(text or "").strip():
+            return None
+        candidates = [{**span, "object_id": obj["object_id"]} for obj in self.objects
+                      for span in find_alias_spans(str(text), obj.get("aliases") or [obj["name"]])]
+        resolved = resolve_alias_spans(candidates)
+        return resolved[0]["object_id"] if resolved else None
+
+    def _card_owner(self, card) -> str | None:
+        for text in (card["brand"], card["title"], card["product_name"]):
+            owner = self._owner_of_text(text)
+            if owner:
+                return owner
+        owners = {self._owner_of_text(m) for m in card["merchants"]} - {None}
+        return owners.pop() if len(owners) == 1 else None
+
+    def shopping(self, region: str, platform: str, topic: str) -> dict:
+        """逐平台：有效回答数、触发数、Discovery 触发数、目标品牌出现的 Discovery 触发回答数。"""
+        out = {}
+        questions = self.slice_questions(topic)
+        for platform_label in self.slice_platforms(platform):
+            platform_dir = self.platform_dirs[platform_label]
+            if platform_dir not in SHOPPING_PLATFORMS:
+                continue
+            row = {"valid": 0, "shopping": 0, "discovery": 0, "discovery_shopping": 0, "target": 0}
+            for market in self.slice_regions(region):
+                for q in questions:
+                    qid = q["qid"]
+                    for repeat in range(1, self.repeat_count(market, platform_dir, qid) + 1):
+                        if not self.answer_text(market, platform_dir, qid, repeat).strip():
+                            continue
+                        cards = self._cards(market, platform_dir, qid, repeat)
+                        row["valid"] += 1
+                        row["shopping"] += bool(cards)
+                        if q["intent"] != DISCOVERY_LABEL:
+                            continue
+                        row["discovery"] += 1
+                        if cards:
+                            row["discovery_shopping"] += 1
+                            row["target"] += any(self._card_owner(c) == "target" for c in cards)
+            out[platform_dir] = row
+        return out
+
+    def _official_owner(self, host: str) -> str | None:
+        """与后端 _classify_official 一致：按纳入对象顺序，第一个域名命中的胜出。"""
+        for obj in self.objects:
+            for domain in obj["domains"]:
+                if domain_matches(host, domain):
+                    return obj["object_id"]
+        return None
+
+    def _rank_of(self, region: str, platform_dir: str, qid: int, object_id: str,
+                 repeat: int = 1) -> int:
+        """目标品牌在该答案内的首次出现次序（按正文位置，同位置按配置顺序）。"""
+        positioned = [
+            (self._spans(region, platform_dir, qid, obj["object_id"], repeat)[0]["start"], index,
+             obj["object_id"])
+            for index, obj in enumerate(self.objects)
+            if self._spans(region, platform_dir, qid, obj["object_id"], repeat)
+        ]
+        positioned.sort(key=lambda item: (item[0], item[1]))
+        order = [item[2] for item in positioned]
+        return order.index(object_id) + 1
+
+
+def _clean_url(raw_url: str) -> str:
+    try:
+        parts = urlsplit(str(raw_url))
+        pairs = parse_qsl(parts.query, keep_blank_values=True)
+    except ValueError:
+        return str(raw_url)
+    if not pairs:
+        return str(raw_url)
+    kept = [(k, v) for k, v in pairs if k.casefold() not in INGEST_TRACKING_KEYS]
+    if len(kept) == len(pairs):
+        return str(raw_url)
+    from urllib.parse import urlencode, urlunsplit
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
+
+
+def _is_platform_internal(host: str) -> bool:
+    return any(host == h or host.endswith("." + h) for h in PLATFORM_INTERNAL_HOSTS)
+
+
+def _pct(frac) -> str:
+    return f"{frac * 100:.1f}%"
+
+
+def _num(value) -> float | None:
+    if value is None:
+        return None
+    text = str(value).replace("%", "").replace("—", "").strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _close(actual, expected) -> bool:
+    a, e = _num(actual), _num(expected)
+    if a is None or e is None:
+        return a is None and e is None
+    return abs(a - e) <= TOLERANCE
+
+
+# ------------------------------------------------------------------ 校验
+
+def run_checks(report: dict, collect: Path) -> list[str]:
+    failures: list[str] = []
+    if report.get("schema") != "geo-presales-report-data/v1":
+        failures.append(f"schema 非法：{report.get('schema')!r}")
+
+    meta = report.get("meta") or {}
+    for field in ("brand", "brand_display", "official_domain", "category", "generated_at",
+                  "regions", "platforms", "topics", "intents", "tags",
+                  "questions"):
+        if field not in meta:
+            failures.append(f"meta 缺少字段 {field}")
+    # 情感由 attach_sentiment.py 单独接入：接入前标 pending，接入后标 complete。
+    # 只在「标了 complete 却没有任何情感数据」时报错，避免占位数据冒充成果。
+    status = meta.get("sentiment_claims_status")
+    if status not in {"pending", "complete"}:
+        failures.append(f"meta.sentiment_claims_status 取值异常：{status!r}")
+    elif status == "complete":
+        has_sentiment = any(
+            (slice_value.get("sentiment") or {}).get("summary", {}).get("total")
+            for slice_value in report.get("slices", {}).values()
+        )
+        if not has_sentiment:
+            failures.append("sentiment_claims_status=complete 但全部切片情感样本为 0")
+    # 题数由题库决定：按采集次数展开是 75 行、按真实题目是 5 行，都不是固定值。
+    # 这里只校验结构自洽，不写死条数（旧版写死 50 是 Abrand 案例的形态）。
+    questions = meta.get("questions") or []
+    if not questions:
+        failures.append("meta.questions 为空")
+    else:
+        qids = [q.get("qid") for q in questions]
+        if any(qid is None for qid in qids):
+            failures.append("meta.questions 存在缺失 qid 的条目")
+        elif sorted(qids) != list(range(1, len(qids) + 1)):
+            failures.append(f"meta.questions 的 qid 应为 1..{len(qids)} 连续")
+        incomplete = [q.get("qid") for q in questions
+                      if not str(q.get("en") or "").strip()
+                      or not str(q.get("topic") or "").strip()]
+        if incomplete:
+            failures.append(f"meta.questions 缺 en/topic：{incomplete[:5]}")
+        question_topics = {q.get("topic") for q in questions}
+        if question_topics != set(meta.get("topics") or []):
+            failures.append("meta.questions 覆盖的主题与 meta.topics 不一致")
+
+    recomputer = Recomputer(collect, report)
+    slices = report.get("slices") or {}
+
+    expected_keys = set()
+    for region in [""] + list(meta["regions"]):
+        for platform in [""] + meta["platforms"]:
+            for topic in [""] + meta["topics"]:
+                expected_keys.add(f"{region}|{platform}|{topic}")
+    missing = expected_keys - set(slices)
+    extra = set(slices) - expected_keys
+    if missing:
+        failures.append(f"缺少切片 {sorted(missing)[:5]}（共 {len(missing)}）")
+    if extra:
+        failures.append(f"多出切片 {sorted(extra)[:5]}（共 {len(extra)}）")
+
+    for region in [""] + list(meta["regions"]):
+        for platform in [""] + meta["platforms"]:
+            for topic in [""] + meta["topics"]:
+                key = f"{region}|{platform}|{topic}"
+                slc = slices.get(key)
+                if slc is None:
+                    continue
+                failures.extend(_check_slice(key, slc, recomputer, region, platform, topic, meta))
+
+    # 全局：每个 region 的全量切片必须齐备，sentiment 结构完整
+    for key, slc in slices.items():
+        sentiment = slc.get("sentiment") or {}
+        if "summary" not in sentiment or "claims" not in sentiment or "matrix" not in sentiment:
+            failures.append(f"{key}: sentiment 结构不完整")
+        for metric in ("mention", "share", "rank", "sent", "official"):
+            if metric not in (slc.get("matrix") or {}):
+                failures.append(f"{key}: matrix 缺少 {metric}")
+
+    # 内容规划的官网清单按「目标品牌本该出现却没进回答」取，判据必须与已校验的
+    # mention_rate 自洽——两者矛盾时清单会静默换一批题，页面看不出问题。
+    for key, slc in slices.items():
+        for record in slc.get("records") or []:
+            qid = record.get("qid")
+            for flag in ("discovery", "target_in_question"):
+                if not isinstance(record.get(flag), bool):
+                    failures.append(f"{key}: 题 {qid} 的 {flag} 不是布尔值")
+            rate, mentioned = record.get("mention_rate"), record.get("mentioned")
+            if rate == "—":
+                if mentioned is not None:
+                    failures.append(f"{key}: 题 {qid} 无有效答案，mentioned 应为 null")
+            elif not isinstance(mentioned, bool):
+                failures.append(f"{key}: 题 {qid} 的 mentioned 不是布尔值")
+            elif mentioned != (rate != "0.0%"):
+                failures.append(f"{key}: 题 {qid} 的 mentioned={mentioned} 与 "
+                                f"mention_rate={rate} 矛盾")
+    return failures
+
+
+def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[str]:
+    out = []
+    expected = recomputer.recompute(region, platform, topic)
+    kpis = slc.get("kpis") or {}
+
+    if len(slc.get("records") or []) != expected["records"]:
+        out.append(f"{key}: records 条数 {len(slc.get('records') or [])} != 期望 {expected['records']}")
+    for field in ("mention_rate", "share_of_voice", "official_share", "average_rank",
+                  "mention_rank", "linked_mention_rate", "official_citation_rate"):
+        if not _close(kpis.get(field), expected[field]):
+            out.append(f"{key}: kpis.{field} {kpis.get(field)!r} != 复算 {expected[field]!r}")
+    for field in ("linked_mention_counts", "official_citation_counts"):
+        if kpis.get(field) != expected[field]:
+            out.append(f"{key}: kpis.{field} {kpis.get(field)!r} != 复算 {expected[field]!r}")
+    for row in slc.get("competition_all") or []:
+        peer = expected["object_stats"].get(str(row.get("name") or "").strip())
+        if peer is None or "linked_mention_rate" not in row:
+            continue
+        actual = row["linked_mention_rate"]
+        actual = "—" if actual is None else _pct(actual)
+        if not _close(actual, peer["linked_mention_rate"]):
+            out.append(f"{key}: competition_all[{row.get('name')}].linked_mention_rate "
+                       f"{actual!r} != 复算 {peer['linked_mention_rate']!r}")
+
+    competition = slc.get("competition") or {}
+    mention = competition.get("mention") or []
+    share = competition.get("share") or []
+    if len(mention) != len(share):
+        out.append(f"{key}: competition.mention 与 share 行数不一致")
+    if not mention:
+        out.append(f"{key}: competition.mention 为空")
+    else:
+        stats = expected["object_stats"]
+        for row in mention:
+            name = str(row[0]).replace("★", "").strip()
+            peer = stats.get(name)
+            if peer is None:
+                out.append(f"{key}: competition.mention 出现未纳入对象 {name!r}")
+                continue
+            if not _close(row[2], peer["mention_rate"]):
+                out.append(f"{key}: competition.mention[{name}].rate {row[2]!r} "
+                           f"!= 复算 {peer['mention_rate']!r}")
+            if str(row[5]) != peer["mention_rank"]:
+                out.append(f"{key}: competition.mention[{name}].rank {row[5]!r} "
+                           f"!= 复算 {peer['mention_rank']!r}")
+        target_row = next((r for r in mention if str(r[0]).endswith("★")), None)
+        if target_row is None:
+            out.append(f"{key}: competition.mention 缺少目标品牌行")
+        rates = [_num(r[2]) or 0 for r in mention]
+        if any(rates[i] < rates[i + 1] - TOLERANCE for i in range(len(rates) - 1)):
+            out.append(f"{key}: competition.mention 未按提及率降序")
+        # 开放品牌词表允许无域名（参考词表 96 个里 43 个为空），展示行因此可以为空。
+        # 只有该对象在词表里声明了域名、展示行却为空时才算缺陷。
+        if not all(normalize_text(r[1]) for r in mention):
+            objects = meta.get("objects") or []
+            if not objects:
+                out.append(f"{key}: competition.mention 存在空域名")
+            else:
+                declared = {
+                    str(o.get("name") or "").strip()
+                    for o in objects
+                    if any(str(d).strip() for d in (o.get("domains") or []))
+                }
+                lacking = [
+                    str(r[0]).replace("★", "").strip()
+                    for r in mention
+                    if not normalize_text(r[1])
+                    and str(r[0]).replace("★", "").strip() in declared
+                ]
+                if lacking:
+                    out.append(f"{key}: competition.mention 展示行缺域名（词表内有域名）：{lacking}")
+        for index, row in enumerate(mention):
+            name = str(row[0]).replace("★", "").strip()
+            peer = stats.get(name)
+            if peer is None or index >= len(share):
+                continue
+            if not _close(share[index], peer["share_of_voice"]):
+                out.append(f"{key}: competition.share[{name}] {share[index]!r} "
+                           f"!= 复算 {peer['share_of_voice']!r}")
+
+    rank_rows = competition.get("rank") or []
+    stats = expected["object_stats"]
+    if len(rank_rows) != len(mention):
+        out.append(f"{key}: competition.rank 行数 {len(rank_rows)} != competition.mention "
+                   f"{len(mention)}")
+    for row in rank_rows:
+        name = str(row[0]).replace("★", "").strip()
+        peer = stats.get(name)
+        if peer is None:
+            out.append(f"{key}: competition.rank 出现未纳入对象 {name!r}")
+            continue
+        if not _close(row[2], peer["average_rank"]):
+            out.append(f"{key}: competition.rank[{name}] {row[2]!r} "
+                       f"!= 复算 {peer['average_rank']!r}")
+        if len(row) > 3 and row[3] != "target":
+            out.append(f"{key}: competition.rank 第 4 项只能是 target，得到 {row[3]!r}")
+        if len(row) > 3 and not str(row[0]).endswith("★"):
+            out.append(f"{key}: competition.rank 标记 target 的行品牌名未带 ★")
+
+    sources = slc.get("sources") or {}
+    types = sources.get("types") or []
+    if len(types) != 7:
+        out.append(f"{key}: sources.types 应为 7 类，实际 {len(types)}")
+    else:
+        counts = sum(int(r[2]) for r in types)
+        if counts != sources.get("total_citations"):
+            out.append(f"{key}: sources.types 计数和 {counts} != total_citations "
+                       f"{sources.get('total_citations')}")
+        # 无引用切片（total_citations=0）没有可分配的份额，各类型都是「—」，
+        # 百分比合计不适用；只在有引用时才要求合计为 100。
+        if sources.get("total_citations"):
+            pct_sum = sum(_num(r[1]) or 0 for r in types)
+            if abs(pct_sum - 100) > 0.5:
+                out.append(f"{key}: sources.types 百分比合计 {pct_sum:.1f} != 100")
+
+    # 引用两种计法：次数按标记出现、来源清单去重。两者必须同时给出且各自可复算。
+    units = sources.get("citation_units") or {}
+    expected_units = (expected or {}).get("citation_units") or {}
+    if not units:
+        out.append(f"{key}: sources.citation_units 缺失")
+    else:
+        for field in ("occurrences", "unique_sources", "occurrences_in_table_rows"):
+            if units.get(field) != expected_units.get(field):
+                out.append(f"{key}: sources.citation_units.{field} "
+                           f"{units.get(field)!r} != 复算 {expected_units.get(field)!r}")
+    if not _close(sources.get("official_share"), expected["official_share"]):
+        out.append(f"{key}: sources.official_share {sources.get('official_share')!r} "
+                   f"!= 复算 {expected['official_share']!r}")
+
+    # 购物层：按平台对账触发数与目标品牌购物可见度（分子分母都对）。
+    shopping = slc.get("shopping")
+    if shopping is None:
+        out.append(f"{key}: 缺少 shopping 块")
+    else:
+        expected_shop = recomputer.shopping(region, platform, topic)
+        actual_shop = shopping.get("by_platform") or {}
+        if set(actual_shop) != {p for p, r in expected_shop.items() if r["valid"]}:
+            out.append(f"{key}: shopping.by_platform 平台集合 {sorted(actual_shop)} "
+                       f"!= 复算 {sorted(p for p, r in expected_shop.items() if r['valid'])}")
+        for platform_dir, row in expected_shop.items():
+            got = actual_shop.get(platform_dir)
+            if got is None:
+                continue
+            pairs = (
+                ("valid_answers", got.get("valid_answers"), row["valid"]),
+                ("shopping_answers", got.get("shopping_answers"), row["shopping"]),
+                ("discovery_answers", got.get("discovery_answers"), row["discovery"]),
+                ("discovery_shopping_answers", got.get("discovery_shopping_answers"),
+                 row["discovery_shopping"]),
+                ("target.shopping_visibility.numerator",
+                 ((got.get("target") or {}).get("shopping_visibility") or {}).get("numerator"),
+                 row["target"]),
+                ("target.shopping_visibility.denominator",
+                 ((got.get("target") or {}).get("shopping_visibility") or {}).get("denominator"),
+                 row["discovery_shopping"]),
+            )
+            for field, actual, wanted in pairs:
+                if actual != wanted:
+                    out.append(f"{key}: shopping[{platform_dir}].{field} {actual!r} != 复算 {wanted!r}")
+
+    matrix = slc.get("matrix") or {}
+    if (matrix.get("platforms") or []) != meta["platforms"]:
+        out.append(f"{key}: matrix.platforms 与 meta.platforms 不一致")
+    metric_field = {"mention": "mention_rate", "share": "share_of_voice",
+                    "rank": "average_rank", "official": "citation_share"}
+    for metric in ("mention", "share", "rank", "sent", "official"):
+        rows = matrix.get(metric) or []
+        if len(rows) != len(mention):
+            out.append(f"{key}: matrix.{metric} 行数 {len(rows)} != competition {len(mention)}")
+        for row in rows:
+            vals = row.get("vals") or []
+            if len(vals) != len(meta["platforms"]):
+                out.append(f"{key}: matrix.{metric} 某行 vals 长度不符")
+                break
+            name = str(row.get("name") or "").replace("★", "").strip()
+            if metric == "sent":
+                if any(value is not None for value in vals):
+                    out.append(f"{key}: matrix.sent 应为空（判读待补）")
+                continue
+            for index, platform_label in enumerate(meta["platforms"]):
+                peer = recomputer.recompute(region, platform_label, topic)["object_stats"].get(name)
+                if peer is None:
+                    continue
+                if not _close(vals[index], peer[metric_field[metric]]):
+                    out.append(f"{key}: matrix.{metric}[{name}][{platform_label}] "
+                               f"{vals[index]!r} != 复算 {peer[metric_field[metric]]!r}")
+    return out
+
+
+# ------------------------------------------------------------------ 突变测试
+
+def _mutations(base: dict):
+    def mutate(description, path, action):
+        target = copy.deepcopy(base)
+        node = target
+        for part in path:
+            node = node[part]
+        action(node)
+        return description, target
+
+    # 切片键从产物本身取，不写死市场与主题：旧版写死 MY / SG / 台式净饮机，
+    # 换一个市场或主题的 Case（如 US + LED 驱动电源）会直接 KeyError。
+    slices = base.get("slices") or {}
+    meta = base.get("meta") or {}
+    markets = [str(m) for m in (meta.get("regions") or [])]
+    platforms = [str(p) for p in (meta.get("platforms") or [])]
+    topics = [str(t) for t in (meta.get("topics") or [])]
+
+    def first_key(candidates):
+        return next((k for k in candidates if k in slices and slices[k]), None)
+
+    market_keys = [f"{m}||" for m in markets]
+    key_a = first_key(market_keys) or first_key(slices.keys())
+    key_b = first_key(market_keys[1:]) or key_a
+    key_plat_topic = first_key(
+        [f"|{p}|{t}" for p in platforms for t in topics]) or key_a
+    key_market_plat_topic = first_key(
+        [f"{m}|{p}|{t}" for m in markets for p in platforms for t in topics]) or key_a
+    key_all = "||" if "||" in slices else key_a
+
+    def has(keys, field):
+        return next((k for k in keys
+                     if slices.get(k) and slices[k].get(field)), None)
+
+    key_rank = has([key_plat_topic, key_a, key_b, key_all], "competition") or key_a
+    key_types = has([key_market_plat_topic, key_plat_topic, key_a], "sources") or key_a
+
+    def matrix_index(keys, metric, want):
+        """找一个 vals 长度 > want 的切片，避免单平台 Case 越界。"""
+        for key in keys:
+            rows = ((slices.get(key) or {}).get("matrix") or {}).get(metric) or []
+            if rows and len(rows[0].get("vals") or []) > want:
+                return key, want
+        for key in keys:
+            rows = ((slices.get(key) or {}).get("matrix") or {}).get(metric) or []
+            if rows and rows[0].get("vals"):
+                return key, 0
+        return key_a, 0
+
+    key_matrix_mention, idx_matrix_mention = matrix_index(
+        [key_a, key_b, key_all], "mention", 0)
+    key_matrix_rank, idx_matrix_rank = matrix_index(
+        [key_b, key_a, key_all], "rank", 1)
+    rows_with_target = next(
+        (k for k in slices
+         if any(str(r[0]).endswith("★") for r in
+                (slices[k].get("competition") or {}).get("mention") or [])),
+        key_a)
+
+    return [
+        mutate(f"把 {key_a} 全量提及率改高", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("mention_rate", "99.0%")),
+        mutate(f"把 {key_b} 声量份额改高", ["slices", key_b, "kpis"],
+               lambda n: n.__setitem__("share_of_voice", "40.0%")),
+        mutate(f"把 {key_a} 引用份额改高", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("official_share", "20.0%")),
+        mutate(f"把 {key_a} 带官网的提及率改成 77.0%", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("linked_mention_rate", "77.0%")),
+        mutate(f"把 {key_b} 带官网的提及率分子分母改成 99/99", ["slices", key_b, "kpis"],
+               lambda n: n.__setitem__("linked_mention_counts", "99/99")),
+        mutate(f"把 {key_a} 官网引用率改成 66.0%", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("official_citation_rate", "66.0%")),
+        mutate(f"把 {key_b} 官网引用率分子分母改成 99/99", ["slices", key_b, "kpis"],
+               lambda n: n.__setitem__("official_citation_counts", "99/99")),
+        mutate(f"把 {key_b} 平均提及位置改成 1.2", ["slices", key_b, "kpis"],
+               lambda n: n.__setitem__("average_rank", "1.2")),
+        mutate(f"把 {key_a} 提及率排名改成 1", ["slices", key_a, "kpis"],
+               lambda n: n.__setitem__("mention_rank", "1")),
+        mutate(f"删掉 {key_a} 全量切片的一行 records", ["slices", key_a, "records"],
+               lambda n: n.pop() if n else None),
+        mutate(f"篡改 {rows_with_target} 竞品条里目标品牌的提及率",
+               ["slices", rows_with_target, "competition", "mention"],
+               lambda n: n[[i for i, r in enumerate(n) if str(r[0]).endswith("★")][0]]
+               .__setitem__(2, "88.0%")),
+        mutate(f"篡改 {key_a} 竞品条里开放品牌的提及率",
+               ["slices", key_a, "competition", "mention"],
+               lambda n: n[0].__setitem__(2, "88.0%")),
+        mutate(f"篡改 {key_b} 声量份额数组第一项",
+               ["slices", key_b, "competition", "share"],
+               lambda n: n.__setitem__(0, 45.0)),
+        mutate(f"篡改 {key_matrix_mention} 平台矩阵的提及率",
+               ["slices", key_matrix_mention, "matrix", "mention"],
+               lambda n: n[0]["vals"].__setitem__(idx_matrix_mention, 99.0)),
+        mutate(f"把 {key_matrix_rank} 平台矩阵的平均位置改成 1.0",
+               ["slices", key_matrix_rank, "matrix", "rank"],
+               lambda n: n[0]["vals"].__setitem__(idx_matrix_rank, 1.0)),
+        mutate(f"删掉 {key_rank} 切片 competition.rank 一行",
+               ["slices", key_rank, "competition", "rank"],
+               lambda n: n.pop() if n else None),
+        mutate(f"把 {key_b} 切片引用总数加 7", ["slices", key_b, "sources"],
+               lambda n: n.__setitem__("total_citations", n["total_citations"] + 7)),
+        mutate(f"删掉 {key_types} 切片 sources.types 一行",
+               ["slices", key_types, "sources", "types"],
+               lambda n: n.pop() if n else None),
+        mutate(f"改高「全部国家」全量切片提及率", ["slices", key_all, "kpis"],
+               lambda n: n.__setitem__("mention_rate", "66.0%")),
+        mutate("改高「全部国家」平台×主题切片声量份额",
+               ["slices", key_plat_topic, "kpis"],
+               lambda n: n.__setitem__("share_of_voice", "30.0%")),
+        mutate("删掉「全部国家」全量切片一行 records", ["slices", key_all, "records"],
+               lambda n: n.pop() if n else None),
+        mutate("篡改「全部国家」切片引用总数", ["slices", key_all, "sources"],
+               lambda n: n.__setitem__("total_citations", n["total_citations"] - 5)),
+        mutate("把 sentiment_claims_status 改成 done", ["meta"],
+               lambda n: n.__setitem__("sentiment_claims_status", "done")),
+        mutate(f"把 {key_a} 某题的 discovery 改成字符串", ["slices", key_a, "records"],
+               lambda n: n[0].__setitem__("discovery", "yes") if n else None),
+        mutate(f"把 {key_a} 某题的 target_in_question 改成字符串",
+               ["slices", key_a, "records"],
+               lambda n: n[0].__setitem__("target_in_question", "yes") if n else None),
+        mutate(f"把 {key_a} 某题的 mentioned 改成字符串", ["slices", key_a, "records"],
+               lambda n: n[0].__setitem__("mentioned", "yes") if n else None),
+        *_shopping_mutations(mutate, slices),
+    ]
+
+
+def _shopping_mutations(mutate, slices):
+    """购物层篡改：只在产物里确有购物平台时生成，单平台无商品字段的 Case 不硬造。"""
+    key = next((k for k, v in slices.items() if (v.get("shopping") or {}).get("by_platform")), None)
+    if key is None:
+        return []
+    platform_dir = next(iter(slices[key]["shopping"]["by_platform"]))
+    return [
+        mutate(f"把 {key} 的 {platform_dir} 购物触发数加 3",
+               ["slices", key, "shopping", "by_platform", platform_dir],
+               lambda n: n.__setitem__("shopping_answers", n["shopping_answers"] + 3)),
+        mutate(f"把 {key} 的 {platform_dir} 目标品牌购物可见度分子加 1",
+               ["slices", key, "shopping", "by_platform", platform_dir, "target", "shopping_visibility"],
+               lambda n: n.__setitem__("numerator", n["numerator"] + 1)),
+        mutate(f"删掉 {key} 的 {platform_dir} 购物统计",
+               ["slices", key, "shopping", "by_platform"],
+               lambda n: n.pop(platform_dir)),
+    ]
+
+
+def self_test(report_path: Path, collect: Path) -> int:
+    base = json.loads(report_path.read_text(encoding="utf-8"))
+    original = run_checks(base, collect)
+    print(f"baseline: {'通过' if not original else '失败：' + str(original[:2])}")
+    if original:
+        print("基线未通过，突变测试失去意义", file=sys.stderr)
+        return 1
+
+    failed = []
+    with tempfile.TemporaryDirectory(prefix="geoverify-") as tmp:
+        for index, (description, mutated) in enumerate(_mutations(base), 1):
+            path = Path(tmp) / f"mutated-{index}.json"
+            path.write_text(json.dumps(mutated, ensure_ascii=False), encoding="utf-8")
+            problems = run_checks(json.loads(path.read_text(encoding="utf-8")), collect)
+            status = "检出" if problems else "漏检"
+            print(f"  突变 {index:2d} [{status}] {description}")
+            if not problems:
+                failed.append(description)
+    if failed:
+        print(f"突变测试失败：{len(failed)} 个错误未被发现 -> {failed}", file=sys.stderr)
+        return 1
+    print(f"突变测试通过：{len(_mutations(base))} 个注入错误全部检出")
+    return 0
+
+
+# ------------------------------------------------------------------ 主流程
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="校验 report-data.json")
+    parser.add_argument("--report", type=Path, required=True,
+                        help="待校验的 report-data.json")
+    parser.add_argument("--collect", type=Path, required=True,
+                        help="产出该报告的采集目录，用于独立复算")
+    parser.add_argument("--self-test", action="store_true",
+                        help="对产物做突变，确认校验能发现错误")
+    return parser.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = parse_args(argv)
+    if not args.report.exists():
+        print(f"找不到产物：{args.report}", file=sys.stderr)
+        return 1
+    if args.self_test:
+        return self_test(args.report, args.collect)
+
+    report = json.loads(args.report.read_text(encoding="utf-8"))
+    failures = run_checks(report, args.collect)
+    slices = report.get("slices") or {}
+    recomputer = Recomputer(args.collect, report)
+    print(f"切片 {len(slices)} 个；对象 {len(recomputer.objects)} 个")
+    for region in [""] + list(report["meta"]["regions"]):
+        key = f"{region}||"
+        expected = recomputer.recompute(region, "", "")
+        kpis = slices.get(key, {}).get("kpis", {})
+        print(f"  {key:8s}: 提及率 {kpis.get('mention_rate')}（复算 {expected['mention_rate']}）  "
+              f"声量份额 {kpis.get('share_of_voice')}（复算 {expected['share_of_voice']}）  "
+              f"引用份额 {kpis.get('official_share')}（复算 {expected['official_share']}）  "
+              f"官网引用率 {kpis.get('official_citation_rate')}（复算 {expected['official_citation_rate']}，"
+              f"{expected['official_citation_counts']}）  "
+              f"discovery 分母 {expected['discovery_answers']}")
+        for platform_dir, row in recomputer.shopping(region, "", "").items():
+            got = ((slices.get(key, {}).get("shopping") or {}).get("by_platform") or {}).get(platform_dir) or {}
+            vis = (got.get("target") or {}).get("shopping_visibility") or {}
+            print(f"            购物[{platform_dir}] 触发 {got.get('shopping_answers')}/{got.get('valid_answers')}"
+                  f"（复算 {row['shopping']}/{row['valid']}）  目标购物可见度 "
+                  f"{vis.get('numerator')}/{vis.get('denominator')}（复算 {row['target']}/{row['discovery_shopping']}）")
+    if failures:
+        print(f"\n校验失败 {len(failures)} 项：", file=sys.stderr)
+        for item in failures[:40]:
+            print(f"  - {item}", file=sys.stderr)
+        return 1
+    print(f"\n校验通过：{len(slices)} 个切片全部与独立复算一致")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

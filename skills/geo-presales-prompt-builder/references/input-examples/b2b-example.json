@@ -1,0 +1,44 @@
+{
+  "input_version": "presales-case-input/v1",
+  "case": {
+    "公司名": "Example Travel Group",
+    "业务 / 产品名称": "Corporate Travel Management",
+    "品牌名称": "ExampleBiz",
+    "业务模式": "B2B",
+    "品类": "企业差旅管理平台",
+    "目标企业画像": ["商务旅行与企业服务"],
+    "目标客户": ["企业差旅负责人", "财务与采购负责人"],
+    "痛点": [
+      "差旅预订渠道和供应内容分散",
+      "差旅政策执行与审批效率低"
+    ],
+    "使用场景": [
+      "集中预订机票、酒店、火车和用车",
+      "配置差旅政策并自动处理审批"
+    ],
+    "产品特性": [
+      "一站式网页与移动端差旅预订",
+      "全球旅行库存与企业协议内容"
+    ],
+    "差异化优势": "依托母公司的全球旅行供应链，覆盖预订、审批、支付、分析与人工服务的一体化方案，具备跨境差旅的本地资源和服务网络，支持碳排放追踪与可持续差旅管理",
+    "适用边界": "适用于需要集中管理员工商务出行的企业，不面向个人休闲旅游，也不替代仅处理报销或财务记账的单点工具。",
+    "主题": ["企业差旅管理", "跨国差旅管理"],
+    "官方域名": "https://www.example-biz.example",
+    "竞品": [
+      {"名称": "TravelRival One", "官网域名": "https://www.travel-rival-one.example"},
+      {"名称": "TravelRival Two", "官网域名": "https://www.travel-rival-two.example"}
+    ],
+    "补充内容": ""
+  },
+  "options": {
+    "locale": "en",
+    "generation_stage": "discovery"
+  },
+  "handoff": {
+    "confirmation_status": "partial",
+    "confirmed_fields": ["主题", "竞品"],
+    "sources": [
+      {"url": "https://www.example-biz.example", "summary": "官网产品与服务页"}
+    ]
+  }
+}

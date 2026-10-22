@@ -1,0 +1,35 @@
+{
+  "id": "geo-presales-prompt-builder",
+  "name": "geo-presales-prompt-builder",
+  "display_name": "GEO Presales Prompt Builder",
+  "version": "4.25.0",
+  "owner": "Overseas GEO Project",
+  "updated_at": "2026-10-16",
+  "review_cadence": "monthly",
+  "status": "active",
+  "maturity_tier": "production",
+  "lifecycle_stage": "production",
+  "context_budget_tier": "production",
+  "entrypoint": "SKILL.md",
+  "summary": "Generate Discovery-first v8 GEO Prompts from researched Case inputs, with at least 5 per Topic and at most 50 total, lightweight Attribute evidence, customer-confirmation handoff, and optional diagnostic supplements.",
+  "factory_components": [
+    "agents",
+    "references",
+    "scripts",
+    "evals",
+    "reports"
+  ],
+  "primary_outputs": [
+    "monitoring-ready-v8-question-bank",
+    "attribute-topic-priority-plan",
+    "topic-and-actual-quota-summary",
+    "tags-summary",
+    "brand-scope-tag-summary",
+    "attribute-tag-coverage-summary",
+    "analysis-type-routing-summary",
+    "formal-visibility-eligibility-summary",
+    "research-and-customer-confirmation-handoff",
+    "repair-and-rejection-log",
+    "quality-report"
+  ]
+}

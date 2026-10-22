@@ -1,0 +1,131 @@
+{
+  "purpose": "Offline semantic walkthrough cases for Discovery-first Case and customer-document workflow behavior. These are scenario expectations, not external integration tests.",
+  "cases": [
+    {
+      "id": "new_complete_case",
+      "input": "Create a complete presales Case for one product line from public buyer-demand research. No existing Record or customer document is known.",
+      "context": {
+        "mode": "complete_case",
+        "offline": false,
+        "existing_record": false,
+        "existing_customer_document": false,
+        "internal_customer_evidence": "available"
+      },
+      "expected_actions": [
+        "Research public buyer demand before applying brand USP.",
+        "Propose one Coverage Topic and two distinct same-product buying-scenario Depth Topics, or use one Depth Topic only when evidence is insufficient.",
+        "Reject any Topic that cannot support at least five distinct Discovery buyer intents without synonym padding.",
+        "Create or update the Base Record after schema and existing-record lookup.",
+        "Create the prefilled customer confirmation document only at the final document step, then read back its body and return its actual URL/token."
+      ],
+      "forbidden_outcomes": [
+        "Create a customer document during draft preparation.",
+        "Add a Base field for the customer document URL.",
+        "Report a draft as a created document or treat silence as approval.",
+        "Auto-share the document, change permissions, or send a message."
+      ]
+    },
+    {
+      "id": "existing_document_update_preserves_client_content",
+      "input": "Update an existing Case and its known customer document after new public evidence changes one Topic assumption.",
+      "context": {
+        "mode": "complete_case_update",
+        "offline": false,
+        "existing_record": true,
+        "existing_customer_document": true,
+        "internal_customer_evidence": "available"
+      },
+      "expected_actions": [
+        "Locate the existing Record and customer document before mutation.",
+        "Read back the existing document body before editing.",
+        "Update only affected prefilled sections while preserving client-confirmed answers, client materials, title, and document identity.",
+        "Read back the updated body and return the same document URL/token."
+      ],
+      "forbidden_outcomes": [
+        "Duplicate the customer document.",
+        "Replace client-confirmed content with AI research language.",
+        "Treat existing client content as public evidence."
+      ]
+    },
+    {
+      "id": "topic_only_no_document",
+      "input": "Revise Topics only for an existing Case that has no associated customer document.",
+      "context": {
+        "mode": "topic_only",
+        "offline": false,
+        "existing_record": true,
+        "existing_customer_document": false,
+        "internal_customer_evidence": "not_required"
+      },
+      "expected_actions": [
+        "Update only Topics and necessary Topic-boundary context.",
+        "Explain selected, merged, or rejected Topic candidates.",
+        "Do not force a full customer onboarding flow."
+      ],
+      "forbidden_outcomes": [
+        "Create a new customer confirmation document solely because this is a Topic-only update.",
+        "Research or replace frozen competitors unless the user expands the request."
+      ]
+    },
+    {
+      "id": "no_internal_data_no_approval",
+      "input": "Create a complete Case when the customer has not supplied sales, support, win-loss, GSC, or interview material.",
+      "context": {
+        "mode": "complete_case",
+        "offline": false,
+        "existing_record": false,
+        "existing_customer_document": false,
+        "internal_customer_evidence": "missing"
+      },
+      "expected_actions": [
+        "Mark public-research inferences as research hypotheses or pending customer confirmation.",
+        "Request specific real buyer intents and available internal material in the prefilled document.",
+        "Keep confirmation state pending until the client provides or corrects evidence."
+      ],
+      "forbidden_outcomes": [
+        "Invent customer language or internal evidence.",
+        "Treat document creation, lack of edits, or silence as approval."
+      ]
+    },
+    {
+      "id": "external_permission_failure",
+      "input": "Create a complete Case but the configured Feishu document operation fails because of permissions.",
+      "context": {
+        "mode": "complete_case",
+        "offline": false,
+        "existing_record": true,
+        "existing_customer_document": false,
+        "external_document_operation": "permission_denied"
+      },
+      "expected_actions": [
+        "Keep the prefilled document content as a local handoff artifact.",
+        "Report Base completion and customer-document failure separately, or report the workflow blocked when Base was not completed.",
+        "State the original-identity permission blocker."
+      ],
+      "forbidden_outcomes": [
+        "Report document success without an actual URL/token and readback.",
+        "Switch identity silently, change permissions, auto-share, or send a message."
+      ]
+    },
+    {
+      "id": "readonly_audit_preview",
+      "input": "Audit or preview a Case and recommend changes, without asking to create or maintain records or documents.",
+      "context": {
+        "mode": "read_only",
+        "offline": false,
+        "existing_record": true,
+        "existing_customer_document": true,
+        "write_authorization": false
+      },
+      "expected_actions": [
+        "Read and assess the existing Case and customer document as needed.",
+        "Return findings and recommendations without performing mutations."
+      ],
+      "forbidden_outcomes": [
+        "Update the Base Record.",
+        "Create or edit the customer document.",
+        "Treat the default complete-Case document flow as authorization to write."
+      ]
+    }
+  ]
+}

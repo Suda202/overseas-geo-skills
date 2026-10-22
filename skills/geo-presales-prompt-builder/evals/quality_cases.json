@@ -1,0 +1,262 @@
+[
+  {
+    "name": "short_natural_question_survives",
+    "input": "Which CRM is best?",
+    "expected": "Keep unchanged: it is short, category-visible, and asks for a recommendation; there is no minimum word count."
+  },
+  {
+    "name": "first_person_request_survives",
+    "input": "I'm looking for an AI search visibility tool for a small SEO agency.",
+    "expected": "Accept as a natural conversational request even without a question mark."
+  },
+  {
+    "name": "keyword_phrase_repaired",
+    "input": "AI search tracking tool demo request",
+    "expected": "Rewrite as a standalone natural question and retain the phrase only as retrieval/evidence input."
+  },
+  {
+    "name": "category_ambiguity_repaired",
+    "input": "Which brand tracking tools are best?",
+    "expected": "Add an AI-search or AI-generated-answer qualifier before monitoring."
+  },
+  {
+    "name": "title_field_not_sampled",
+    "input": "Best AI Search Visibility Tools for 2026",
+    "expected": "Store as title_seed, generate a separate user_question, and never sample the title directly."
+  },
+  {
+    "name": "quota_failure_blocks_batch",
+    "input": "A configured 50-question batch contains 49 rows.",
+    "expected": "Fail the batch because the actual row count does not match the recorded allocation; either restore the intentionally planned Prompt or correct the allocation before collection."
+  },
+  {
+    "name": "topic_counts_follow_attribute_value",
+    "input": "Three Topics have 22, 17, and 11 useful Prompts because their P1 and P2 coverage differs, and the batch total is 50.",
+    "expected": "Accept the uneven allocation when every Topic keeps its core diagnostic units, covers all P1 Attributes, records its actual counts, and contains no padding or pseudo-duplicates."
+  },
+  {
+    "name": "presales_evaluation_is_target_only",
+    "input": "A presales Topic has three applicable competitors and one target-brand Evaluation Prompt.",
+    "expected": "Keep only the target-brand Evaluation in presales. Defer competitor sentiment matrices to aftersales Prompt generation so Discovery remains the dominant sample."
+  },
+  {
+    "name": "discovery_is_the_majority_per_topic",
+    "input": "The whole batch has more Discovery Prompts than other roles combined, but one Topic has 9 Discovery and 9 non-Discovery Prompts.",
+    "expected": "Fail that Topic. Discovery must be a strict majority inside every Topic; aggregate balance cannot hide a Topic whose diagnostic add-ons equal or outnumber Discovery."
+  },
+  {
+    "name": "explicit_professional_term_survives",
+    "input": "The topic names answer engine optimization and the audience includes AEO leaders.",
+    "expected": "Add AEO to required_term_coverage and preserve it in natural Generic and Branded questions instead of rewriting every occurrence as AI search visibility."
+  },
+  {
+    "name": "ambiguous_acronym_gets_context",
+    "input": "Which GEO tools are best for agencies?",
+    "expected": "Expand GEO at least once in the bank and add AI-search context to acronym-only standalone questions."
+  },
+  {
+    "name": "professional_term_not_stuffed",
+    "input": "A bank already has three distinct GEO questions and the remaining questions use natural AI search visibility language.",
+    "expected": "Keep the natural-language questions; do not replace synonyms or append GEO merely to increase keyword count."
+  },
+  {
+    "name": "translation_required",
+    "input": "A monitoring row has a natural English user_question but an empty zh_translation.",
+    "expected": "Fail the row until a non-empty Chinese translation accurately represents the English question."
+  },
+  {
+    "name": "generic_product_alias_boundary",
+    "input": "A Generic question avoids brand_name but contains the configured product_name or alias.",
+    "expected": "Fail the row because Generic brand boundaries include brand_name, product_name, aliases, and competitors."
+  },
+  {
+    "name": "promotional_driver_cap",
+    "input": "A large share of the bank uses best, top, most, or review/reviews wording.",
+    "expected": "Do not fail on wording alone; warn and review whether the questions represent distinct condition values and answer boundaries."
+  },
+  {
+    "name": "pseudo_diversity_warning",
+    "input": "A 50-question bank has 49 one-off cluster values and 44 questions start with How, What, or Which.",
+    "expected": "Keep deterministic hard gates separate, but warn for cluster pseudo-diversity and concentrated sentence openings so semantic review can inspect templates."
+  },
+  {
+    "name": "adjacent_competitor_dimension_boundary",
+    "input": "A frozen adjacent competitor allows only AI answer monitoring as a shared comparison dimension.",
+    "expected": "Generate a neutral AI-answer-monitoring comparison only; reject overall superiority, ranking, or full-substitution questions."
+  },
+  {
+    "name": "fallback_without_shared_dimensions",
+    "input": "A frozen fallback competitor has an empty comparison_policy.allowed_dimensions array.",
+    "expected": "Keep it in the formal three, but generate only category-relationship or use-scenario clarification questions and never ask which product is better."
+  },
+  {
+    "name": "term_assessment_cannot_be_omitted",
+    "input": "A newly generated v2 bank omits both professional_term_assessment and required_term_coverage.",
+    "expected": "Fail the bank; new output must record a completed assessment even when no professional term is required."
+  },
+  {
+    "name": "most_and_review_false_positives",
+    "input": "The bank contains 'Which metrics matter most?' and 'Who should review AI-generated claims?'.",
+    "expected": "Do not treat these as commercial-ranking signals; inspect context only if the batch appears repetitive."
+  },
+  {
+    "name": "metadata_pseudo_diversity_warning",
+    "input": "More than 80% of scenario and constraint labels occur only once.",
+    "expected": "Keep the bank structurally valid but warn that metadata granularity may be fabricating diversity."
+  },
+  {
+    "name": "six_cells_have_distinct_answer_endpoints",
+    "input": "Recommendation, Comparison, and Decision questions reuse the same condition values and differ mainly by wording.",
+    "expected": "Recommendation asks for candidates, Comparison asks for differences and a trade-off, and Decision asks for a final fit judgment; identical condition values cannot be reused as separate intents by changing wording."
+  },
+  {
+    "name": "branded_comparison_three_plus_two",
+    "input": "Five Branded Comparison questions cover only two of the three frozen competitors or repeat five one-to-one templates.",
+    "expected": "Require one solo question for each formal competitor plus two key-factor or multi-brand questions, while preserving each competitor's comparison policy."
+  },
+  {
+    "name": "target_audience_coverage",
+    "input": "Some configured audiences appear less often than others in the Generic bank.",
+    "expected": "Report the distribution for semantic review without enforcing per-audience minimums or a 40% cap; every retained question must still have commercial value."
+  },
+  {
+    "name": "pricing_is_dynamic_not_fixed",
+    "input": "The topic has no useful public pricing or cost decision, but the generator adds two generic pricing questions to satisfy a fixed quota.",
+    "expected": "Remove the fixed quota. Ask pricing, plan fit, quote drivers, or total cost only when it materially affects selection, and never invent an amount."
+  },
+  {
+    "name": "brand-i_placeholder_hides_category",
+    "input": "What certification coverage criteria should buyers evaluate when choosing specialized product suppliers?",
+    "expected": "Fail category visibility and the placeholder blacklist because a standalone reader cannot identify rechargeable batteries."
+  },
+  {
+    "name": "category_visible_but_not_commercial",
+    "input": "What certifications should OEM procurement managers evaluate when choosing a rechargeable battery manufacturer?",
+    "expected": "Fail commercial_intent during second-pass review: the answer is a certification checklist rather than battery supplier candidates or a trade-off."
+  },
+  {
+    "name": "category_product_term_is_enough",
+    "input": "Which battery suppliers offer low-MOQ custom LiPo cells for wearable startups?",
+    "expected": "Pass category visibility without mechanically repeating the Topic phrase because battery suppliers and LiPo cells identify the category."
+  },
+  {
+    "name": "yes_no_decision_is_allowed",
+    "input": "Is Ibrand the right rechargeable battery manufacturer for a medical device team needing custom pack validation?",
+    "expected": "Allow the Yes/No form because a useful answer must explain fit, conditions, and risks; Branded questions are not natural-mention scoring prompts."
+  },
+  {
+    "name": "awareness_is_retired",
+    "input": "A new v3 bank contains funnel_intent=awareness.",
+    "expected": "Fail the bank. New commercial question banks only use recommendation, comparison, and decision."
+  },
+  {
+    "name": "intent_counts_are_not_fixed",
+    "input": "A 50-question bank keeps Generic/Branded at 40/10, contains all three commercial intents, but does not use 12/25/13.",
+    "expected": "Pass intent coverage. Do not enforce exact recommendation, comparison, decision, or six-cell counts."
+  },
+  {
+    "name": "commercial_condition_types_are_not_intent_types",
+    "input": "Target audience, evaluation criterion, constraint, and comparison object conditions appear across different question forms.",
+    "expected": "Assign recommendation when the answer should give candidates, comparison when it should give differences and a trade-off, and decision when it should give a final fit judgment; do not bind a condition type to one funnel intent."
+  },
+  {
+    "name": "one_customer_clear_target_evaluation_per_topic",
+    "input": "A Topic omits its target-brand Evaluation, duplicates it, evaluates a competitor, or mechanically inserts the internal Topic into the question.",
+    "expected": "Fail the bank. Require exactly one customer-readable Evaluation Prompt for the target brand and no competitor Evaluation in presales."
+  },
+  {
+    "name": "abstract_topic_label_must_be_expanded",
+    "input": "A question asks how a brand performs on overall value, online trust, technology and sourcing, overall brand fit, or this broad topic without defining the term.",
+    "expected": "Fail standalone review. Expand the label into the actual product/category, user need, and supported decision factors used by this question."
+  },
+  {
+    "name": "translation_must_preserve_evaluation_scope",
+    "input": "The English brand evaluation prompt names the jewelry category and four evaluation dimensions, but the Chinese translation says only '评价该品牌在该广度主题上的表现'.",
+    "expected": "Fail translation review. Preserve the explicit category and dimensions instead of replacing them with an internal topic reference."
+  },
+  {
+    "name": "brand-i_task_89_4768_thermal_management_drift",
+    "input": "Task 89 #4768 evaluates OEM/ODM rechargeable battery manufacturers, but the question asks the AI to select thermal management vendors.",
+    "expected": "Fail topic_aligned and category_aligned. Thermal management vendors are a different purchasing set from rechargeable battery manufacturers."
+  },
+  {
+    "name": "brand-i_task_89_4751_4753_4755_4757_4759_false_recommendation",
+    "input": "Task 89 #4751/#4753–#4755/#4757–#4759 are labeled recommendation but ask only for procurement knowledge, certification criteria, or evaluation frameworks.",
+    "expected": "Fail commercial_intent. A recommendation label is not enough; a Generic answer must name concrete battery manufacturer candidates."
+  },
+  {
+    "name": "brand-i_task_89_4778_containerized_ess_drift",
+    "input": "Task 89 #4778 evaluates OEM/ODM rechargeable battery manufacturers, but the question asks the AI to select containerized energy storage system providers.",
+    "expected": "Fail topic_aligned and category_aligned. A containerized energy storage system provider is not the same purchasing object as a rechargeable battery manufacturer."
+  },
+  {
+    "name": "brand-i_task_89_4789_project_partner_drift",
+    "input": "Task 89 #4789 evaluates OEM/ODM rechargeable battery manufacturers, but the question asks for a long-term partner for a 500 MWh energy storage project.",
+    "expected": "Fail topic_aligned and category_aligned. A project delivery partner is a broader commercial object with a different candidate set and evaluation criteria."
+  },
+  {
+    "name": "generic_specific_names_absent_but_brand_answer_required",
+    "input": "A Generic prompt names no configured brand, but asks only how lab-grown diamonds differ from natural diamonds.",
+    "expected": "Fail commercial_intent. Generic must omit specific brand entities while still requiring the answer to name concrete jewelry brand candidates."
+  },
+  {
+    "name": "incidental_brand_mentions_do_not_qualify",
+    "input": "A Generic prompt asks whether buying lab-grown colored gemstone jewelry online is safe; an AI response might sometimes mention example brands.",
+    "expected": "Fail commercial_intent because general safety advice can fully answer the prompt. Rewrite it to explicitly ask which brands provide verifiable quality evidence and buyer protection."
+  },
+  {
+    "name": "generic_answer_brand_set_is_open",
+    "input": "A Generic prompt explicitly asks which lab-grown jewelry brands buyers should compare, without seeding any specific brand name.",
+    "expected": "Pass the brand-answer rule. The response may name the monitored brand, configured competitors, or relevant peer brands that were not present in the input."
+  },
+  {
+    "name": "broad_topic_coverage_is_batch_level",
+    "input": "A broad jewelry Topic covers lab-grown diamonds and colored gemstones, but one prompt asks only about lab-created sapphire jewelry.",
+    "expected": "Keep the prompt if the category and commercial intent are clear; verify diamonds, other colored gemstones, mixed designs, and broad-category demand across the batch rather than repeating all subcategories in every prompt."
+  },
+  {
+    "name": "invented_low_frequency_condition_is_not_naturalness",
+    "input": "A generator adds 'when diamond sparkle matters most' only to make a lab-grown diamond brand prompt appear distinct.",
+    "expected": "Remove the invented condition and return to a supported buyer factor; naturalness means a plausible purchase request, not simulated verbatim speech or artificial uniqueness."
+  },
+  {
+    "name": "no_fixed_user_question_word_limit",
+    "input": "A standalone commercial question exceeds 30 English words because it includes several necessary conditions that jointly define one brand shortlist.",
+    "expected": "Do not fail on word count alone. Keep it if every condition changes the same candidate set and the wording remains natural; otherwise simplify under the single-intent gate."
+  },
+  {
+    "name": "discovery_without_trigger_noun_returns_advice",
+    "input": "A Discovery prompt asks 'How do I improve LED display uniformity for a conference room?'",
+    "expected": "Fail format-intent alignment: without a candidate trigger noun (manufacturer, supplier, provider, tool, platform, solution, brand) the answer will be tips instead of a brand list. Rewrite to explicitly request concrete candidates."
+  },
+  {
+    "name": "competitor_soft_compare_yields_hedging",
+    "input": "A Competitor prompt says only 'Compare BrandA and BrandB.'",
+    "expected": "Fail the three-element check: it lacks a specific use case and an explicit recommendation ask, so the answer will hedge without a decisive verdict. Add the buyer scenario and require a clear choice."
+  },
+  {
+    "name": "leading_prompt_produces_worthless_data",
+    "input": "A prompt asks 'Why is BrandA the most reliable rechargeable battery manufacturer for medical devices?'",
+    "expected": "Fail neutral-premise review. The question presupposes the desired answer; measurement prompts must reflect the intent being measured, not the answer the brand hopes to see."
+  },
+  {
+    "name": "category_label_variants_from_case_fields",
+    "input": "The Case fields contain both 'LED display manufacturer' and 'commercial display solutions provider', and the builder keeps one baseline Discovery prompt per label.",
+    "expected": "Accept both baseline prompts: visibility can differ sharply per category label, so each Case-supported label is a distinct market entrance. Reject any additional label the builder invents beyond Case fields."
+  },
+  {
+    "name": "phrasing_variant_cannot_pad_majority",
+    "input": "A Topic fails the Discovery strict majority, and the builder adds a reworded duplicate of an existing P1 prompt to restore the majority.",
+    "expected": "Fail as pseudo-duplication. A phrasing variant for a top P1 attribute is allowed only when P1/P2 coverage is already satisfied and quota has room; it must never be used to reach the majority or the count range."
+  },
+  {
+    "name": "attribute_read_is_aggregated_not_per_prompt",
+    "input": "Two Discovery prompts tagged with the same Attribute return different candidate lists on one platform.",
+    "expected": "Do not treat single-prompt divergence as a generation defect; the attribute-level read aggregates across its tagged prompts. Coverage aims at a trustworthy read per P1, not at cataloging every possible phrasing."
+  },
+  {
+    "name": "multi_field_support_raises_p1_confidence",
+    "input": "One capability appears independently in 痛点 2, 产品特性 1, and 差异化优势, while another candidate appears only in one 使用场景 field.",
+    "expected": "Prefer the triangulated capability for P1 and record the single most decision-relevant source_field; the single-source candidate needs its own decision rationale to reach P1."
+  }
+]

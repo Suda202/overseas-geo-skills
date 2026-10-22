@@ -1,0 +1,1495 @@
+{
+ "schema_version": "overseas-geo-question-bank/v8",
+ "mode": "after-sales-strategic-topics",
+ "config": {
+  "brand_name": "Bbrand",
+  "official_domain": "https://www.brand-b.example",
+  "generation_stage": "discovery",
+  "lifecycle_status": "hypothesis",
+  "evidence_status": "after_sales_signal",
+  "customer_confirmation": {
+   "status": "pending",
+   "scope_status": "pending",
+   "prompt_set_status": "pending"
+  },
+  "competitors": [
+   "RivalB1",
+   "RivalB2",
+   "RivalB3"
+  ],
+  "competitor_selection": {
+   "status": "frozen_in_case",
+   "names": [
+    "RivalB1",
+    "RivalB2",
+    "RivalB3"
+   ],
+   "note": "Carried from the Case unchanged. Not used in this Discovery-stage set; no competitor Prompts are written at this stage."
+  },
+  "region": "US",
+  "collection_config": {
+   "market": "US",
+   "language": "en",
+   "platforms": [
+    "ChatGPT",
+    "Gemini",
+    "Perplexity",
+    "Google AI Mode"
+   ],
+   "cadence": "weekly after the candidate baseline",
+   "locale_note": "English (US) wording, USD, US retail and warranty context"
+  },
+  "topics": [
+   {
+    "topic_id": "T1",
+    "topic": "Smart Dash Cams",
+    "group_role": "core",
+    "parent_demand_anchor": "dash cam / best dash cam (Google autocomplete seeds used in the research; no volume figure claimed)",
+    "business_question": "When a US buyer asks the category-level question, which dash cams enter the answer set, and on which attributes are they chosen?",
+    "possible_action": "Category positioning and comparison content; establishes the baseline instrument for every depth Topic.",
+    "facets": [
+     "general recommendation",
+     "budget value",
+     "heat durability",
+     "storage",
+     "installation effort",
+     "warranty confidence",
+     "picture-for-price"
+    ],
+    "target_prompts": 8,
+    "search_demand_note": "Directional only: the parent need is anchored on the research's dash cam autocomplete seeds; no comparable volume or AI-demand figure exists."
+   },
+   {
+    "topic_id": "T2",
+    "topic": "Parking Surveillance",
+    "group_role": "core",
+    "parent_demand_anchor": "dash cam parking mode / 24/7 parking protection",
+    "business_question": "When buyers ask for recording while the car is parked, do answers name cameras that can actually sustain it, and what do they say about wiring, battery drain and extra cost?",
+    "possible_action": "Fix the parking-mode page: hardwire requirement, low-voltage protection, 24-hour limit and accessory cost (the official page currently contradicts itself on the hardwire kit).",
+    "facets": [
+     "continuous vs event recording",
+     "no-hardwire constraint",
+     "battery drain",
+     "accessory kit",
+     "hit-and-run capture",
+     "duration",
+     "phone alert",
+     "shared garage",
+     "total cost"
+    ],
+    "target_prompts": 9
+   },
+   {
+    "topic_id": "T3",
+    "topic": "Multi-Channel Coverage",
+    "group_role": "core",
+    "parent_demand_anchor": "4 channel dash cam / dash cam with side cameras",
+    "business_question": "When buyers ask for front, rear and side coverage, does the answer set include four-channel cameras, and is the side-channel quality treated as usable evidence?",
+    "possible_action": "Publish per-channel resolution and simultaneous-recording proof, and clarify which side cameras ship in the box versus as add-ons.",
+    "facets": [
+     "simultaneous four-channel recording",
+     "wide vehicle / long wheelbase",
+     "side blind spots",
+     "per-channel resolution",
+     "upgrade path",
+     "card capacity",
+     "kit contents"
+    ],
+    "target_prompts": 8
+   },
+   {
+    "topic_id": "T4",
+    "topic": "Night Recording",
+    "group_role": "core",
+    "parent_demand_anchor": "dash cam night vision / license plate at night",
+    "business_question": "When buyers ask for night footage good enough to identify a plate, which cameras are recommended, and on what evidence?",
+    "possible_action": "Publish the sensor and low-light evidence the page currently omits, plus night plate-capture samples; correct or confirm the STARVIS comparison.",
+    "facets": [
+     "plate legibility",
+     "headlight glare",
+     "unlit streets",
+     "insurance-claim usability",
+     "cold-weather night",
+     "dim garage",
+     "night without flagship price"
+    ],
+    "target_prompts": 7
+   }
+  ],
+  "attribute_plan": [
+   {
+    "attribute": "Parking Surveillance Coverage",
+    "priority": "P1",
+    "class": "Use Case",
+    "reason": "Q01 asks for continuous recording while parked rather than collision-only; it is the buying scenario the four-channel line exists for and the strongest brand-side capability.",
+    "carried_by": [
+     "T2Q1",
+     "T2Q5",
+     "T2Q6",
+     "T2Q7",
+     "T2Q8"
+    ]
+   },
+   {
+    "attribute": "Multi-Angle Exterior Coverage",
+    "priority": "P1",
+    "class": "Differentiator",
+    "reason": "Q03 asks for maximum exterior coverage and Q09 shows four-channel demand; this is where the H1 four-camera configuration is a real differentiator rather than parity.",
+    "carried_by": [
+     "T3Q1",
+     "T3Q2",
+     "T3Q3",
+     "T3Q5",
+     "T3Q8"
+    ]
+   },
+   {
+    "attribute": "Night Plate Capture",
+    "priority": "P1",
+    "class": "Evaluation Criteria",
+    "reason": "Q04 and Q05 show buyers name the low-light sensor and plate legibility as the deciding standard; the official page publishes no sensor model, so the brand's real position is an evidence gap.",
+    "carried_by": [
+     "T4Q1",
+     "T4Q2",
+     "T4Q3",
+     "T4Q4",
+     "T4Q5",
+     "T4Q6"
+    ]
+   },
+   {
+    "attribute": "Heat Tolerance",
+    "priority": "P1",
+    "class": "Pain Point",
+    "reason": "Q07 describes batteries swelling and dying in hot summers and Q06 puts heat tolerance ahead of sale price; the supercapacitor rated -20 to 70 °C is a publishable strength.",
+    "carried_by": [
+     "T1Q3",
+     "T1Q8"
+    ]
+   },
+   {
+    "attribute": "Parking Power and Hardwire Setup",
+    "priority": "P1",
+    "class": "Constraint",
+    "reason": "Q02 asks what else must be bought, Q10 asks for parking mode without hardwiring and Q11 asks about battery drain; the official page contradicts itself on whether a hardwire kit is required.",
+    "carried_by": [
+     "T2Q2",
+     "T2Q3",
+     "T1Q5"
+    ]
+   },
+   {
+    "attribute": "Per-Channel Video Clarity",
+    "priority": "P2",
+    "class": "Feature",
+    "reason": "Q04 asks for true 4K; the brand's front channel is 3K with 1080P sides, so clarity is a comparison dimension to be framed as usable per-channel evidence, not a resolution race.",
+    "carried_by": [
+     "T3Q4",
+     "T1Q7"
+    ]
+   },
+   {
+    "attribute": "Storage and Card Support",
+    "priority": "P2",
+    "class": "Feature",
+    "reason": "Q06 lists SD card support among the checks buyers make before price; relevant to four-channel retention but rarely decides the shortlist on its own.",
+    "carried_by": [
+     "T1Q4",
+     "T3Q6"
+    ]
+   },
+   {
+    "attribute": "Warranty and After-Sales Support",
+    "priority": "P2",
+    "class": "Trust & Security",
+    "reason": "Q08 shows quality and customer-service doubt despite good review scores and Q12 shows warranty being searched; brand-controlled but policy-shaped, so it affects purchase more than shortlisting.",
+    "carried_by": [
+     "T1Q6"
+    ]
+   },
+   {
+    "attribute": "Price and Accessory Cost",
+    "priority": "P2",
+    "class": "Evaluation Criteria",
+    "reason": "Q02 and Q04 show budget and total-cost thinking, including accessories; price moves with promotion and the brand's kit pricing, so it is monitored but not a positioning pillar.",
+    "carried_by": [
+     "T1Q2",
+     "T2Q4",
+     "T2Q9",
+     "T3Q7",
+     "T4Q7"
+    ]
+   },
+   {
+    "attribute": "App, Wi-Fi and GPS Usability",
+    "priority": "P3",
+    "class": "Feature",
+    "reason": "Feature-level in the Case; no buyer-language source in the signal pass raises it as a purchase gate.",
+    "no_carrier_reason": "No buyer-language evidence in the signal pass; no Topic opened, no Prompt written, and the attribute stays visible for the client to disagree."
+   },
+   {
+    "attribute": "Cabin and Rideshare Coverage",
+    "priority": "P3",
+    "class": "Buyer Persona / ICP",
+    "reason": "Cabin/IR recording appears on competitor pages, but the Case is private-vehicle owners and explicitly excludes fleet and professional monitoring; rideshare drivers are not a confirmed audience here.",
+    "no_carrier_reason": "Out of the Case's applicable boundary (fleet/professional monitoring excluded) and no confirmed rideshare audience in the inputs."
+   },
+   {
+    "attribute": "Brand Reputation and Review Consensus",
+    "priority": "P3",
+    "class": "Trust & Security",
+    "reason": "Category awareness of established dash cam names is consensus-locked and not movable within the monitoring window; the position is read from the category Topic instead of a separate Topic.",
+    "no_carrier_reason": "Consensus-locked direction: no Topic opened, because a number driven by broad media consensus cannot move in the cycle; the category Topic carries the observation."
+   },
+   {
+    "attribute": "Voice Control and Driver Alerts",
+    "priority": "P3",
+    "class": "Feature",
+    "reason": "Self-described product feature with no buyer demand in the signal pass.",
+    "no_carrier_reason": "Feature with no buyer-language evidence; monitoring it would measure a spec, not a purchase decision."
+   }
+  ],
+  "audience_inputs": [
+   "Q01",
+   "Q02",
+   "Q03",
+   "Q04",
+   "Q05",
+   "Q06",
+   "Q07",
+   "Q08",
+   "Q09",
+   "Q10",
+   "Q11",
+   "Q12"
+  ],
+  "audiences": [
+   {
+    "name": "Safety-focused private car owners",
+    "definition": "Owners who buy a dash cam mainly to prove what happened after an incident, including at night.",
+    "evidence": [
+     "Q04",
+     "Q05",
+     "Q06",
+     "Q07",
+     "Q08",
+     "Q12"
+    ]
+   },
+   {
+    "name": "Multi-direction and parking surveillance drivers",
+    "definition": "Owners who want the car covered on several sides and recorded while it is parked, away from the driver.",
+    "evidence": [
+     "Q01",
+     "Q02",
+     "Q03",
+     "Q09",
+     "Q10",
+     "Q11"
+    ]
+   }
+  ],
+  "expected_total": 32,
+  "trial": {
+   "status": "planned",
+   "planned_runs": 5
+  },
+  "baseline": {
+   "status": "planned",
+   "planned_runs": 5
+  },
+  "market_coverage": {
+   "market": "US",
+   "language": "en",
+   "product_lines": [
+    "H1 4-channel dash cam"
+   ],
+   "audiences": [
+    "Safety-focused private car owners",
+    "Multi-direction and parking surveillance drivers"
+   ],
+   "journey_tasks": [
+    "发现",
+    "解决问题",
+    "交易"
+   ],
+   "buyer_constraints": [
+    "parking without hardwire",
+    "battery drain",
+    "budget",
+    "vehicle size",
+    "shared garage"
+   ],
+   "formal_competitors": [
+    "RivalB1",
+    "RivalB2",
+    "RivalB3"
+   ],
+   "substitutes_or_status_quo": [
+    "front-and-rear two-channel camera",
+    "phone as a recorder",
+    "no camera"
+   ],
+   "intent_decisions": [
+    {
+     "candidate_intent": "continuous recording while parked",
+     "decision": "market_specific",
+     "reason": "US street and shared-garage parking plus hardwire-kit practice appear in Q01/Q10; wording uses US terms.",
+     "destination": "Parking Surveillance"
+    },
+    {
+     "candidate_intent": "four-channel exterior coverage",
+     "decision": "shared_equivalent",
+     "reason": "Q03/Q09 describe the same buyer decision as the category's multi-channel demand.",
+     "destination": "Multi-Channel Coverage"
+    },
+    {
+     "candidate_intent": "night plate legibility",
+     "decision": "localized",
+     "reason": "US wording names the sensor and insurance-claim use; the underlying decision matches Q04/Q05.",
+     "destination": "Night Recording"
+    },
+    {
+     "candidate_intent": "heat durability",
+     "decision": "market_specific",
+     "reason": "Q07 describes hot-summer parking, a US climate constraint the case's supercapacitor claim addresses.",
+     "destination": "Smart Dash Cams"
+    },
+    {
+     "candidate_intent": "rideshare cabin recording",
+     "decision": "not_supported",
+     "reason": "No confirmed rideshare audience in the inputs and the Case excludes fleet/professional monitoring.",
+     "destination": "pending (attribute P3)"
+    }
+   ],
+   "omitted_slices": [
+    {
+     "slice": "rideshare and fleet coverage",
+     "reason": "Outside the Case's applicable boundary; would change the audience set without evidence."
+    },
+    {
+     "slice": "brand comparison and alternatives-to-competitor Prompts",
+     "reason": "Out of scope for the discovery stage; competitor intents are added later under their own evidence."
+    }
+   ]
+  },
+  "parked": [
+   {
+    "idea": "which dash cam subscription or cloud plan is worth it",
+    "reason": "No buyer evidence in the signal pass and no confirmed subscription offer in the inputs."
+   },
+   {
+    "idea": "how to install a hardwire kit step by step",
+    "reason": "Advice-only question with no candidate list; would be Information if buyer demand were evidenced, and the signal does not yet support it."
+   }
+  ],
+  "buyer_quotes": [
+   {
+    "输入编号": "Q01",
+    "原话": "I’m looking for something to continuously record while my vehicle is parked, not just went it’s bumped into.",
+    "约束": "停车持续录像"
+   },
+   {
+    "输入编号": "Q02",
+    "原话": "Also if I need to buy any extra equipment to make this happen I’d like that info as well",
+    "约束": "另购配件"
+   },
+   {
+    "输入编号": "Q03",
+    "原话": "I want to get one which has maximum exterior coverage.",
+    "约束": "车外全覆盖"
+   },
+   {
+    "输入编号": "Q04",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "约束": "STARVIS 2、夜间车牌、100 美元以内"
+   },
+   {
+    "输入编号": "Q05",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
+    "约束": "传感器"
+   },
+   {
+    "输入编号": "Q06",
+    "原话": "what would you check first before caring about the sale price: night footage, heat tolerance, SD card support, rear camera quality, parking mode, or how annoying the screen is at night?",
+    "约束": "促销季、选购清单"
+   },
+   {
+    "输入编号": "Q07",
+    "原话": "i am in search of dashcam that works inhot summers without the internal battery ballooning and dying.",
+    "约束": "高温、电池鼓包"
+   },
+   {
+    "输入编号": "Q08",
+    "原话": "came across a few reddit posts saying quality was bad or faulty products with poor customer service despite seemingly good reviews on trustpilot.",
+    "约束": "客服、200 美元以内"
+   },
+   {
+    "输入编号": "Q09",
+    "原话": "4 channel dash cam with parking mode",
+    "约束": "四路、停车模式"
+   },
+   {
+    "输入编号": "Q10",
+    "原话": "dash cam parking mode without hardwire",
+    "约束": "不接电线"
+   },
+   {
+    "输入编号": "Q11",
+    "原话": "dash cam parking mode drain battery",
+    "约束": "电瓶耗电"
+   },
+   {
+    "输入编号": "Q12",
+    "原话": "rivalb2 dash cam warranty",
+    "约束": "保修"
+   }
+  ],
+  "base_conditions": [
+   "私家车",
+   "日常驾驶",
+   "通勤",
+   "事故证据"
+  ]
+ },
+ "questions": [
+  {
+   "question_id": "T1Q1",
+   "topic_id": "T1",
+   "user_question": "What are the best dash cams for a commuter who wants solid evidence after an accident?",
+   "zh_translation": "对想要在事故后拿到可靠证据的通勤车主来说，最好的行车记录仪是哪些？",
+   "monitoring_prompt": "What are the best dash cams for a commuter who wants solid evidence after an accident?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.commuter-accident-evidence",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "",
+   "evidence_refs": [
+    "Q03",
+    "Q06"
+   ],
+   "constraint_type": "无限定条件",
+   "tags": [
+    "commuter"
+   ],
+   "quality_checks": {
+    "buyer_reality": "A commuter deciding what to buy asks exactly this.",
+    "incremental_value": "Category baseline with no attribute condition; sets the candidate set every depth Topic is read against."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "通勤者",
+    "事故证据"
+   ]
+  },
+  {
+   "question_id": "T1Q2",
+   "topic_id": "T1",
+   "user_question": "Which dash cams are worth buying under $200 without a monthly subscription?",
+   "zh_translation": "两百美元以内、不需要每月订阅的行车记录仪，哪些值得买？",
+   "monitoring_prompt": "Which dash cams are worth buying under $200 without a monthly subscription?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.budget-no-subscription",
+   "journey_stage": "交易",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Price and Accessory Cost",
+   "evidence_refs": [
+    "Q04",
+    "Q08"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "budget"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q04 states a hard budget; Q08 frames the same purchase at under $200.",
+    "incremental_value": "Price and subscription constraints change which brands are listed, not just how they are described."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "200 美元以内",
+    "无月费"
+   ]
+  },
+  {
+   "question_id": "T1Q3",
+   "topic_id": "T1",
+   "user_question": "Which dash cams survive hot summers without the internal battery swelling up?",
+   "zh_translation": "哪些行车记录仪能扛过炎热夏天，内置电池不会鼓包？",
+   "monitoring_prompt": "Which dash cams survive hot summers without the internal battery swelling up?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.heat-battery-swell",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Heat Tolerance",
+   "evidence_refs": [
+    "Q07",
+    "Q06"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "hot-climate"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q07 is almost this sentence in the buyer's own words.",
+    "incremental_value": "Supercapacitor versus battery changes the candidate set; most roundups do not filter on it."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": []
+  },
+  {
+   "question_id": "T1Q4",
+   "topic_id": "T1",
+   "user_question": "Which dash cams include enough storage with the camera so I don't have to buy a card separately?",
+   "zh_translation": "哪些行车记录仪随箱带够存储，不用我再单独买内存卡？",
+   "monitoring_prompt": "Which dash cams include enough storage with the camera so I don't have to buy a card separately?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.storage-and-card",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Storage and Card Support",
+   "evidence_refs": [
+    "Q06"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "storage"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q06 lists SD card support among the checks made before price.",
+    "incremental_value": "Bundled card and maximum capacity change what the purchase costs; a camera without a card is a different offer."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "随箱存储卡"
+   ]
+  },
+  {
+   "question_id": "T1Q5",
+   "topic_id": "T1",
+   "user_question": "Which dash cams are easiest to install for someone who does not want to run wires through the car?",
+   "zh_translation": "对不想在车里走线的人来说，哪些行车记录仪最好安装？",
+   "monitoring_prompt": "Which dash cams are easiest to install for someone who does not want to run wires through the car?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.install-without-wiring",
+   "journey_stage": "解决问题",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Power and Hardwire Setup",
+   "evidence_refs": [
+    "Q02",
+    "Q10"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "installation"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q02 asks what else has to be bought and Q10 asks for parking mode without hardwiring.",
+    "incremental_value": "Wiring effort removes options outright, so it changes the candidate set rather than the ranking."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "不接电线"
+   ]
+  },
+  {
+   "question_id": "T1Q6",
+   "topic_id": "T1",
+   "user_question": "Which dash cam brands actually honor their warranty when a camera fails?",
+   "zh_translation": "摄像头坏了的时候，哪些行车记录仪品牌真的履行保修？",
+   "monitoring_prompt": "Which dash cam brands actually honor their warranty when a camera fails?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.warranty-honored",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Warranty and After-Sales Support",
+   "evidence_refs": [
+    "Q08",
+    "Q12"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "warranty"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q08 doubts quality and service despite good review scores; Q12 shows warranty being searched by model.",
+    "incremental_value": "Service reputation changes willingness to buy, and warranty length differs across the category."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": []
+  },
+  {
+   "question_id": "T1Q7",
+   "topic_id": "T1",
+   "user_question": "Which dash cams give the best picture for the price for a first-time buyer?",
+   "zh_translation": "对第一次买行车记录仪的人，哪些型号在这个价位画面最好？",
+   "monitoring_prompt": "Which dash cams give the best picture for the price for a first-time buyer?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.first-buyer-picture-value",
+   "journey_stage": "交易",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Per-Channel Video Clarity",
+   "evidence_refs": [
+    "Q04",
+    "Q06"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "first-time-buyer"
+   ],
+   "quality_checks": {
+    "buyer_reality": "A first-time buyer weighs picture quality against price in one question.",
+    "incremental_value": "Adds the value-for-money decision that the resolution-only question does not test."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "新手",
+    "性价比"
+   ]
+  },
+  {
+   "question_id": "T1Q8",
+   "topic_id": "T1",
+   "user_question": "Which dash cams do people recommend for a car that sits in the sun all day in a hot climate?",
+   "zh_translation": "在炎热气候里整天暴晒停放的用车人，大家推荐哪些行车记录仪？",
+   "monitoring_prompt": "Which dash cams do people recommend for a car that sits in the sun all day in a hot climate?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.sun-exposed-parking-heat",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Heat Tolerance",
+   "evidence_refs": [
+    "Q07"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "southern-climate"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Heat failure is described by parking situation, which is how owners talk about it.",
+    "incremental_value": "Tests the same attribute through a parking-exposure condition rather than a battery-failure symptom."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": [
+    "暴晒停放"
+   ]
+  },
+  {
+   "question_id": "T2Q1",
+   "topic_id": "T2",
+   "user_question": "Which dash cams keep recording the whole time my car is parked, not just when it gets hit?",
+   "zh_translation": "哪些行车记录仪在停车期间一直录像，而不是只在被撞时才录？",
+   "monitoring_prompt": "Which dash cams keep recording the whole time my car is parked, not just when it gets hit?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-continuous",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Surveillance Coverage",
+   "evidence_refs": [
+    "Q01",
+    "Q09"
+   ],
+   "constraint_type": "无限定条件",
+   "tags": [
+    "continuous-recording"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q01 is this question in the buyer's own words.",
+    "incremental_value": "The Topic's natural baseline: continuous versus collision-only recording separates cameras that cannot do it at all."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": []
+  },
+  {
+   "question_id": "T2Q2",
+   "topic_id": "T2",
+   "user_question": "Which dash cams can run parking mode without a hardwire kit?",
+   "zh_translation": "哪些行车记录仪不接专用接电线也能用停车模式？",
+   "monitoring_prompt": "Which dash cams can run parking mode without a hardwire kit?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-no-hardwire",
+   "journey_stage": "解决问题",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Power and Hardwire Setup",
+   "evidence_refs": [
+    "Q02",
+    "Q10"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "hardwire"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q10 is the literal autocomplete demand for parking mode without hardwiring.",
+    "incremental_value": "A hardwire requirement removes cameras for renters and lease holders, changing the candidate set."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "不接电线"
+   ]
+  },
+  {
+   "question_id": "T2Q3",
+   "topic_id": "T2",
+   "user_question": "Which dash cams will not drain my car battery when they record overnight?",
+   "zh_translation": "哪些行车记录仪整夜录像也不会把车电瓶耗光？",
+   "monitoring_prompt": "Which dash cams will not drain my car battery when they record overnight?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-battery-drain",
+   "journey_stage": "解决问题",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Power and Hardwire Setup",
+   "evidence_refs": [
+    "Q11"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "battery-drain"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q11 is the highest-intent parking-mode worry surfaced by the search data.",
+    "incremental_value": "Low-voltage protection is a different decision from whether parking mode exists."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "电瓶耗电"
+   ]
+  },
+  {
+   "question_id": "T2Q4",
+   "topic_id": "T2",
+   "user_question": "Which dash cams include the hardwire kit needed for parking mode in the box?",
+   "zh_translation": "哪些行车记录仪把停车模式需要的接电线随箱附带？",
+   "monitoring_prompt": "Which dash cams include the hardwire kit needed for parking mode in the box?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-kit-included",
+   "journey_stage": "交易",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Price and Accessory Cost",
+   "evidence_refs": [
+    "Q02"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "accessory-kit"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q02 asks for exactly this before buying.",
+    "incremental_value": "What ships in the box changes the total price and therefore the candidate set."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "另购配件"
+   ]
+  },
+  {
+   "question_id": "T2Q5",
+   "topic_id": "T2",
+   "user_question": "Which dash cams capture a hit-and-run while the car is parked on the street overnight?",
+   "zh_translation": "哪些行车记录仪能在车整夜停在路边时拍到肇事逃逸？",
+   "monitoring_prompt": "Which dash cams capture a hit-and-run while the car is parked on the street overnight?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.street-parking-hit-and-run",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Surveillance Coverage",
+   "evidence_refs": [
+    "Q01"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "street-parking"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Street parking with no witness is the reason owners want parking recording.",
+    "incremental_value": "Adds the outdoor, no-power street condition that garage prompts do not test."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": [
+    "肇事逃逸",
+    "街边过夜"
+   ]
+  },
+  {
+   "question_id": "T2Q6",
+   "topic_id": "T2",
+   "user_question": "Which dash cams can keep parking surveillance running for a full 24 hours?",
+   "zh_translation": "哪些行车记录仪能把停车监控连续跑满 24 小时？",
+   "monitoring_prompt": "Which dash cams can keep parking surveillance running for a full 24 hours?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-24-hour-duration",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Surveillance Coverage",
+   "evidence_refs": [
+    "Q01",
+    "Q09"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "duration"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Duration is the first follow-up an owner asks once parking mode is on the table.",
+    "incremental_value": "A 24-hour claim separates timelapse-capable units from event-only ones."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "24 小时"
+   ]
+  },
+  {
+   "question_id": "T2Q7",
+   "topic_id": "T2",
+   "user_question": "Which dash cams send an alert to my phone when someone hits the parked car?",
+   "zh_translation": "哪些行车记录仪能在车被撞时给手机发提醒？",
+   "monitoring_prompt": "Which dash cams send an alert to my phone when someone hits the parked car?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-phone-alert",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Parking Surveillance Coverage",
+   "evidence_refs": [
+    "Q01"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "notification"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Owners parking away from home want to know in the moment, not after reviewing footage.",
+    "incremental_value": "Connectivity/alert capability changes which cameras qualify; recording alone does not."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "手机提醒",
+    "被撞"
+   ]
+  },
+  {
+   "question_id": "T2Q8",
+   "topic_id": "T2",
+   "user_question": "Which dash cams are recommended for apartment residents who park in a shared garage?",
+   "zh_translation": "对把车停在共用地下车库的公寓住户，推荐哪些行车记录仪？",
+   "monitoring_prompt": "Which dash cams are recommended for apartment residents who park in a shared garage?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.shared-garage-parking",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "experimental",
+   "attribute_ref": "Parking Surveillance Coverage",
+   "evidence_refs": [
+    "Q01"
+   ],
+   "constraint_type": "目标用户",
+   "tags": [
+    "apartment",
+    "shared-garage"
+   ],
+   "quality_checks": {
+    "buyer_reality": "A renter with a shared garage cannot hardwire and worries about the neighbour's door.",
+    "incremental_value": "The no-outlet, no-owner-consent condition changes the candidate set; kept experimental because the signal pass does not name this audience explicitly."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": [
+    "公寓住户",
+    "共用车库"
+   ]
+  },
+  {
+   "question_id": "T2Q9",
+   "topic_id": "T2",
+   "user_question": "Which parking mode setups are worth the total cost once the hardwire kit and memory card are added?",
+   "zh_translation": "把接电线、内存卡都算进去之后，哪些停车监控方案值得这个总价？",
+   "monitoring_prompt": "Which parking mode setups are worth the total cost once the hardwire kit and memory card are added?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.parking-total-cost",
+   "journey_stage": "交易",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Price and Accessory Cost",
+   "evidence_refs": [
+    "Q02",
+    "Q11"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "total-cost"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q02 shows the buyer pricing the accessories before committing.",
+    "incremental_value": "Total-cost framing changes value ranking even when the camera price is unchanged."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "另购配件"
+   ]
+  },
+  {
+   "question_id": "T3Q1",
+   "topic_id": "T3",
+   "user_question": "Which dash cams record the front, rear and both sides of the car at the same time?",
+   "zh_translation": "哪些行车记录仪能同时录前后和左右两侧？",
+   "monitoring_prompt": "Which dash cams record the front, rear and both sides of the car at the same time?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.four-channel-simultaneous",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Multi-Angle Exterior Coverage",
+   "evidence_refs": [
+    "Q03",
+    "Q09"
+   ],
+   "constraint_type": "无限定条件",
+   "tags": [
+    "four-channel"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q09 is the four-channel with parking mode demand; Q03 asks for maximum coverage.",
+    "incremental_value": "Simultaneous multi-channel recording is the attribute that makes four-channel cameras a separate class."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": []
+  },
+  {
+   "question_id": "T3Q2",
+   "topic_id": "T3",
+   "user_question": "Which dash cams give the widest exterior coverage for a large SUV or pickup?",
+   "zh_translation": "对于大型 SUV 或皮卡，哪些行车记录仪的车外覆盖范围最大？",
+   "monitoring_prompt": "Which dash cams give the widest exterior coverage for a large SUV or pickup?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.large-vehicle-coverage",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Multi-Angle Exterior Coverage",
+   "evidence_refs": [
+    "Q03"
+   ],
+   "constraint_type": "目标用户",
+   "tags": [
+    "suv",
+    "pickup"
+   ],
+   "quality_checks": {
+    "buyer_reality": "US buyers of large vehicles ask about coverage because a front camera cannot see the sides.",
+    "incremental_value": "Vehicle size changes which camera angles are enough."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "大型 SUV",
+    "皮卡"
+   ]
+  },
+  {
+   "question_id": "T3Q3",
+   "topic_id": "T3",
+   "user_question": "Which dash cams cover the blind spots on both sides while I am driving?",
+   "zh_translation": "哪些行车记录仪能在我行驶时覆盖左右两侧的盲区？",
+   "monitoring_prompt": "Which dash cams cover the blind spots on both sides while I am driving?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.side-blind-spots-driving",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Multi-Angle Exterior Coverage",
+   "evidence_refs": [
+    "Q03"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "blind-spots"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Side blind spots are the concrete version of Q03's maximum exterior coverage.",
+    "incremental_value": "Moves coverage from parked to driving, where side cameras are judged differently."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": []
+  },
+  {
+   "question_id": "T3Q4",
+   "topic_id": "T3",
+   "user_question": "Which multi-channel dash cams keep every camera at usable resolution instead of blurry side footage?",
+   "zh_translation": "哪些多路行车记录仪每一路都保持可用清晰度，而不是侧摄像头画面糊掉？",
+   "monitoring_prompt": "Which multi-channel dash cams keep every camera at usable resolution instead of blurry side footage?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.per-channel-resolution",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Per-Channel Video Clarity",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "resolution"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q04's plate-legibility standard turns into a per-channel quality question once four cameras are involved.",
+    "incremental_value": "Separates cameras with a strong front channel and weak side channels from genuinely usable four-channel systems."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "多路"
+   ]
+  },
+  {
+   "question_id": "T3Q5",
+   "topic_id": "T3",
+   "user_question": "Which dash cam setups let me add side cameras later instead of replacing the whole system?",
+   "zh_translation": "哪些行车记录仪方案可以以后再补侧摄像头，而不用整套替换？",
+   "monitoring_prompt": "Which dash cam setups let me add side cameras later instead of replacing the whole system?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.expandable-side-cameras",
+   "journey_stage": "交易",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Multi-Angle Exterior Coverage",
+   "evidence_refs": [
+    "Q02"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "upgrade"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Owners who already own a two-channel setup ask this before spending again.",
+    "incremental_value": "Expandability changes the candidate set for upgrade buyers, who are not the same as first-time buyers."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "后补侧摄"
+   ]
+  },
+  {
+   "question_id": "T3Q6",
+   "topic_id": "T3",
+   "user_question": "Which multi-channel dash cams support a 512GB card so all four cameras can record for weeks?",
+   "zh_translation": "哪些多路行车记录仪支持 512GB 卡，让四路画面都能录上几周？",
+   "monitoring_prompt": "Which multi-channel dash cams support a 512GB card so all four cameras can record for weeks?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.multi-channel-card-capacity",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Storage and Card Support",
+   "evidence_refs": [
+    "Q06"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "card-capacity"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q06 lists card support among the pre-price checks; four channels multiply the need.",
+    "incremental_value": "Capacity limits disqualify cameras once several channels write at once."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "512GB",
+    "四路"
+   ]
+  },
+  {
+   "question_id": "T3Q7",
+   "topic_id": "T3",
+   "user_question": "Which four-camera dash cam kits include the side cameras in the box rather than selling them separately?",
+   "zh_translation": "哪些四路行车记录仪套装把侧摄像头包含在内，而不是单独卖？",
+   "monitoring_prompt": "Which four-camera dash cam kits include the side cameras in the box rather than selling them separately?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.four-camera-kit-contents",
+   "journey_stage": "交易",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "core",
+   "attribute_ref": "Price and Accessory Cost",
+   "evidence_refs": [
+    "Q02"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "kit-contents"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q02 shows buyers want to know about extra purchases before they commit.",
+    "incremental_value": "Kit contents decide the real four-channel price and which offers are comparable."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "四路",
+    "另购配件"
+   ]
+  },
+  {
+   "question_id": "T3Q8",
+   "topic_id": "T3",
+   "user_question": "Which dash cams are recommended for a long minivan where the rear camera sits far from the front?",
+   "zh_translation": "对后摄像头离前摄很远的长轴距 MPV，推荐哪些行车记录仪？",
+   "monitoring_prompt": "Which dash cams are recommended for a long minivan where the rear camera sits far from the front?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.long-wheelbase-routing",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "experimental",
+   "attribute_ref": "Multi-Angle Exterior Coverage",
+   "evidence_refs": [
+    "Q03"
+   ],
+   "constraint_type": "目标用户",
+   "tags": [
+    "minivan",
+    "cable-run"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Minivan owners must plan cable runs to a distant rear camera before buying.",
+    "incremental_value": "Cable length and routing can disqualify a kit; kept experimental because the signal pass does not name this vehicle class explicitly."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "长轴距 MPV"
+   ]
+  },
+  {
+   "question_id": "T4Q1",
+   "topic_id": "T4",
+   "user_question": "Which dash cams capture license plates clearly at night?",
+   "zh_translation": "哪些行车记录仪在夜间能清楚拍到车牌？",
+   "monitoring_prompt": "Which dash cams capture license plates clearly at night?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-plate-legibility",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q04",
+    "Q05"
+   ],
+   "constraint_type": "无限定条件",
+   "tags": [
+    "plate-legibility"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q04 states plate capture at night as the purchase requirement.",
+    "incremental_value": "The natural low-condition entry for the night Topic; plate legibility is the outcome buyers want."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": []
+  },
+  {
+   "question_id": "T4Q2",
+   "topic_id": "T4",
+   "user_question": "Which dash cams handle headlight glare from oncoming traffic without washing out the plate?",
+   "zh_translation": "哪些行车记录仪能处理对向车灯眩光，不会把车牌拍到过曝？",
+   "monitoring_prompt": "Which dash cams handle headlight glare from oncoming traffic without washing out the plate?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-headlight-glare",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "glare"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Oncoming headlights are the standard reason a night plate shot fails.",
+    "incremental_value": "Dynamic range is a distinct failure mode from low-light sensitivity."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "对向眩光"
+   ]
+  },
+  {
+   "question_id": "T4Q3",
+   "topic_id": "T4",
+   "user_question": "Which dash cams record usable footage on unlit residential streets at night?",
+   "zh_translation": "哪些行车记录仪在没有路灯的住宅街道夜间也能录到可用画面？",
+   "monitoring_prompt": "Which dash cams record usable footage on unlit residential streets at night?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-unlit-streets",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q05"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "unlit-street"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Suburban owners judge night quality on their own unlit street, not on lit highways.",
+    "incremental_value": "Removes street lighting as a confound, so it tests sensor sensitivity itself."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": [
+    "无路灯",
+    "住宅街道"
+   ]
+  },
+  {
+   "question_id": "T4Q4",
+   "topic_id": "T4",
+   "user_question": "What do owners recommend for night footage that holds up in an insurance claim?",
+   "zh_translation": "车主们推荐哪种夜间录像，能在保险理赔时站得住？",
+   "monitoring_prompt": "What do owners recommend for night footage that holds up in an insurance claim?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-insurance-claim",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "偏好标准",
+   "tags": [
+    "insurance-claim"
+   ],
+   "quality_checks": {
+    "buyer_reality": "The purchase justification is a claim, so buyers ask by outcome rather than by sensor.",
+    "incremental_value": "Outcome phrasing catches recommendations that spec-phrased questions miss."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "保险理赔"
+   ]
+  },
+  {
+   "question_id": "T4Q5",
+   "topic_id": "T4",
+   "user_question": "Which dash cams keep night recording reliable in freezing weather?",
+   "zh_translation": "哪些行车记录仪在结冰天气下夜间录像依然可靠？",
+   "monitoring_prompt": "Which dash cams keep night recording reliable in freezing weather?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-cold-weather",
+   "journey_stage": "发现",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q07",
+    "Q04"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "cold-weather"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q07 shows temperature is a real operating worry; night and cold combine in winter driving.",
+    "incremental_value": "A meaningful compound: cold-weather power behaviour and low-light capture change the candidate set together."
+   },
+   "status": "hypothesis",
+   "market_decision": "market_specific",
+   "constraints": [
+    "严寒"
+   ]
+  },
+  {
+   "question_id": "T4Q6",
+   "topic_id": "T4",
+   "user_question": "Which dash cams have the best night vision for dim parking garages?",
+   "zh_translation": "哪些行车记录仪在昏暗的地下车库里夜视效果最好？",
+   "monitoring_prompt": "Which dash cams have the best night vision for dim parking garages?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-dim-garage",
+   "journey_stage": "发现",
+   "audience": "Multi-direction and parking surveillance drivers",
+   "group_role": "experimental",
+   "attribute_ref": "Night Plate Capture",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "garage"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Garage lighting is the low-light case that applies while parked as well as while driving.",
+    "incremental_value": "Adds the indoor low-light scene; kept experimental because the signal pass does not state this scene directly."
+   },
+   "status": "hypothesis",
+   "market_decision": "localized",
+   "constraints": [
+    "昏暗车库"
+   ]
+  },
+  {
+   "question_id": "T4Q7",
+   "topic_id": "T4",
+   "user_question": "Which dash cams record clear night footage without paying flagship prices?",
+   "zh_translation": "哪些行车记录仪不花旗舰价也能录清楚夜间画面？",
+   "monitoring_prompt": "Which dash cams record clear night footage without paying flagship prices?",
+   "region": "US",
+   "prompt_type": "Discovery",
+   "analysis_type": "visibility",
+   "formal_visibility_eligible": true,
+   "intent_key": "discovery.night-value",
+   "journey_stage": "交易",
+   "audience": "Safety-focused private car owners",
+   "group_role": "core",
+   "attribute_ref": "Price and Accessory Cost",
+   "evidence_refs": [
+    "Q04"
+   ],
+   "constraint_type": "约束",
+   "tags": [
+    "value"
+   ],
+   "quality_checks": {
+    "buyer_reality": "Q04 pairs a specific night requirement with a hard budget, which is how value buyers ask.",
+    "incremental_value": "Adds the price ceiling to the night decision, changing which cameras are recommended."
+   },
+   "status": "hypothesis",
+   "market_decision": "shared_equivalent",
+   "constraints": [
+    "非旗舰价"
+   ]
+  }
+ ]
+}
