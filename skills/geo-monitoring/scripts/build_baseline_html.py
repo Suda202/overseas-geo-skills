@@ -12,6 +12,8 @@ render_report.py），只做售后口径适配，不改那个 skill 的源码：
    gov.sg 这类二级后缀；「竞品网站」= 配置竞品与开放品牌官网 + config 里列的同类平台域名（不限配置竞品）。
    声量份额由 core 按回答计（一个回答一个品牌只算一次）。
 4. 页面：顶部多一个「引用率」指标（= 官网引用率，售前页面不展示），03 引用模块同时给引用份额与引用率；
+   「全部类型」时 KPI 引用份额/引用率与 03 引用模块只统计发现＋品类认知题，点名题合计在 03 单列一行
+   （Profound ch4，Suda 2026-10-22）；选中单一类型时按该类型统计，逐题读数各算各的。
    问题明细逐题给本品 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率，展开「与竞品对比」看竞品的前四项；主题行取主题
    切片的合计值，不对逐题读数取平均。平台筛选即分平台读数。
 5. 校验：verify_report_data 独立复算全部切片，不一致就不渲染。
@@ -48,6 +50,16 @@ INTENT_ZH = {"discovery": "发现", "information": "信息", "evaluation": "评�
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
 INTENT_ORDER = ["发现", "信息", "评价", "验证", "竞品", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
+# 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
+# Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是提示词类型，
+# 所以「全部类型」切片的引用口径 = 只合池这两类 region；单类型切片仍按该类型自己的回答算，逐题读数不受影响。
+CITATION_SCOPE_TYPES = ("发现", "品类认知")
+CITATION_KPI_FIELDS = ("official_share", "official_citation_rate", "official_citation_counts")
+
+
+def citation_regions(regions) -> list:
+    """「全部类型」引用聚合合池的 region（= 提示词类型）。build 与 verify 两侧共用这一个判断。"""
+    return [r for r in regions if r in CITATION_SCOPE_TYPES]
 
 
 def load_config(path: Path) -> dict:
@@ -98,6 +110,8 @@ def install_patches(cfg: dict):
 
     def build_sources(metrics, answers, source_limit=brd.DEFAULT_SOURCE_LIMIT):
         out = orig_sources(metrics, answers, source_limit)
+        # 与上游 build_sources 同一个回答池；「全部类型」时传进来的 answers 已由 build_slice 补丁收窄到
+        # citation_regions（发现＋品类认知），这里不再另判类型
         pool = [a for a in answers if brd.is_valid(a) and brd.is_discovery(a)]
         dom, url, typ = Counter(), Counter(), Counter()
         for a in pool:
@@ -118,7 +132,80 @@ def install_patches(cfg: dict):
         return out
 
     brd.build_sources = build_sources
+
+    # 「全部类型」切片（region == ""）的引用聚合只合池发现＋品类认知：KPI 引用份额/引用率、03 引用模块
+    # （sources 整块）、品牌 citation_share（供平台矩阵）换成只用这两类 region 重算的值；提及/声量/排名/
+    # 逐题 records 仍取全部类型。另算一份点名题合计挂在 sources.named_scope，03 模块单列一行。
+    orig_slice = brd.build_slice
+
+    def build_slice(region, platform, topic, config, bank, index, per_platform, regions,
+                    source_limit=brd.DEFAULT_SOURCE_LIMIT):
+        full = orig_slice(region, platform, topic, config, bank, index, per_platform, regions, source_limit)
+        if region:
+            return full
+        scoped = citation_regions(regions)
+        cite = orig_slice("", platform, topic, config, bank, index, per_platform, scoped, source_limit)
+        for f in CITATION_KPI_FIELDS:
+            full["kpis"][f] = cite["kpis"][f]
+        full["sources"] = cite["sources"]
+        for oid, row in full["_rows"].items():
+            row["citation_share"] = cite["_rows"][oid]["citation_share"]
+        named = [r for r in regions if r not in scoped]
+        if named:
+            nk = orig_slice("", platform, topic, config, bank, index, per_platform, named, source_limit)["kpis"]
+            full["sources"]["named_scope"] = {"types": named, **{f: nk[f] for f in CITATION_KPI_FIELDS}}
+        full["sources"]["citation_scope_types"] = scoped
+        return full
+
+    brd.build_slice = build_slice
     return brd, core_util, find_alias_spans
+
+
+def patch_verify(vr):
+    """verify 独立复算与 build 同口径：「全部类型」切片的引用字段改用只合池发现＋品类认知 region 的复算，
+    点名题合计（sources.named_scope）用只合池点名类型的复算对账。复算本身仍是 verify 自己的实现。"""
+    orig = vr.Recomputer._recompute
+
+    def scoped(self, markets, platform, topic):
+        self.slice_regions = lambda region: list(markets)
+        try:
+            return orig(self, "", platform, topic)
+        finally:
+            del self.slice_regions
+
+    def _recompute(self, region, platform, topic):
+        full = orig(self, region, platform, topic)
+        if region:
+            return full
+        cite = scoped(self, citation_regions(self.regions), platform, topic)
+        for f in CITATION_KPI_FIELDS + ("citation_units",):
+            full[f] = cite[f]
+        for name, st in full["object_stats"].items():
+            st["citation_share"] = cite["object_stats"][name]["citation_share"]
+        return full
+
+    vr.Recomputer._recompute = _recompute
+    orig_check = vr._check_slice
+
+    def _check_slice(key, slc, recomputer, region, platform, topic, meta):
+        out = orig_check(key, slc, recomputer, region, platform, topic, meta)
+        if region:
+            return out
+        named = [r for r in recomputer.regions if r not in citation_regions(recomputer.regions)]
+        got = (slc.get("sources") or {}).get("named_scope")
+        if bool(named) != bool(got):
+            out.append(f"{key}: sources.named_scope 与点名类型 {named} 不符")
+        elif named:
+            exp = scoped(recomputer, named, platform, topic)
+            for f in ("official_share", "official_citation_rate"):
+                if not vr._close(got.get(f), exp[f]):
+                    out.append(f"{key}: sources.named_scope.{f} {got.get(f)!r} != 复算 {exp[f]!r}")
+            if got.get("official_citation_counts") != exp["official_citation_counts"]:
+                out.append(f"{key}: sources.named_scope.official_citation_counts "
+                           f"{got.get('official_citation_counts')!r} != 复算 {exp['official_citation_counts']!r}")
+        return out
+
+    vr._check_slice = _check_slice
 
 
 def intent_of(cfg: dict) -> dict:
@@ -700,6 +787,13 @@ SOURCES_JS = r"""  function renderSources() {
     var badge = document.getElementById("sourceShareBadge");
     if (badge) {
       badge.innerHTML = "引用份额 <b>" + esc(sources.official_share || "—") + "</b> · 引用率 <b>" + esc(k.official_citation_rate || "—") + "</b>";
+      // 全部类型：引用只统计发现＋品类认知题；点名题合计单列（Suda 2026-10-22）
+      var ns = sources.named_scope;
+      if (sources.citation_scope_types) {
+        badge.innerHTML += '<span class="hb-scope">仅统计' + esc((sources.citation_scope_types || []).join("、") || "发现、品类认知") + "题" +
+          (ns ? "；点名题（" + esc((ns.types || []).join("、")) + "）引用份额 <b>" + esc(ns.official_share || "—") +
+            "</b> · 引用率 <b>" + esc(ns.official_citation_rate || "—") + "</b>，不计入本模块" : "") + "</span>";
+      }
     }
 
     var typesEl = document.getElementById("sourceTypes");
@@ -768,7 +862,8 @@ SOURCES_CSS = (".hb-src{display:grid;gap:8px;align-items:center;padding:10px 0;b
                ".hb-src .page-title-with-logo{min-width:0}"
                ".hb-src small.page-url{display:block;min-width:0;font:12px/1.45 var(--mono);color:var(--blue);"
                "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}"
-               "#sources .source-head.with-cat{display:none}")
+               "#sources .source-head.with-cat{display:none}"
+               ".hb-scope{display:block;margin-top:4px;font-size:12px;font-weight:400;color:var(--quiet)}")
 
 
 RECORDS_JS = r'''  var RECORD_HEAD = "<thead><tr>" +
@@ -873,19 +968,25 @@ def render(cfg, data_path: Path, out: Path):
         return slim_data
 
     rr.slim_for_html = slim
-    html = rr.build_html(json.loads(data_path.read_text(encoding="utf-8")))
+    data = json.loads(data_path.read_text(encoding="utf-8"))
+    # 有数据的模块展示，没数据的整块隐藏（Suda 2026-10-22）：情感没接入就不出 04 和回答详情里的情感，一条引用都没有就不出 03
+    has_sent = data["meta"].get("sentiment_claims_status") == "complete"
+    has_cites = any((s.get("sources") or {}).get("total_citations") for s in data["slices"].values())
+    drawer_js = DRAWER_RUNS_JS if has_sent else (
+        DRAWER_RUNS_JS.replace("<th>正向情感占比</th>", "").replace(' + "</td><td>" + esc(r[7] || "—")', ""))
+    html = rr.build_html(data)
     replace = [
         ('"全部地区"', '"全部类型"'),
         ('shown.push("地区")', 'shown.push("提示词类型")'),
         ('aria-label="地区筛选"', 'aria-label="提示词类型筛选"'),
         ('["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"]',
-         '["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"],\n'
-         '      ["引用率", k.official_citation_rate, "正文至少引用一次监测对象官网的回答 ÷ 有效回答。按回答计，一条回答引用多次只算一次。"]'),
+         '["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。全部类型时只统计发现与品类认知题（题面点名品牌会把它的官网拉进引用），选中某一类型时按该类型统计。"],\n'
+         '      ["引用率", k.official_citation_rate, "正文至少引用一次监测对象官网的回答 ÷ 有效回答。按回答计，一条回答引用多次只算一次。统计范围同引用份额。"]'),
         ('"官网引用份额 " + esc(sources.official_share || "—") + "。",',
          '"官网引用份额 " + esc(sources.official_share || "—") + "，引用率 " + esc(k.official_citation_rate || "—") + '
          '"（至少引用一次官网的回答占比）。",'),
         # 抽屉：先列每次运行，点某一次再看那次的回答（Suda 2026-10-21）
-        ('    var ranking = (entry.brands || []).map(function (row) {', DRAWER_RUNS_JS + '    var ranking = (entry.brands || []).map(function (row) {'),
+        ('    var ranking = (entry.brands || []).map(function (row) {', drawer_js + '    var ranking = (entry.brands || []).map(function (row) {'),
         ('\'<div class="detail-meta-cell"><span>标签</span><strong>\' + esc(record ? record.tag : "—")',
          '\'<div class="detail-meta-cell"><span>平台 · 采集时间</span><strong>\' + esc(entry.__hbRunLabel || (record ? record.tag : "—"))'),
         # 情感只给合计口径（正向信号之和 ÷ 正负信号之和），不展示跨平台等权值和附注（Suda 2026-10-21）
@@ -898,9 +999,9 @@ def render(cfg, data_path: Path, out: Path):
         # 意图筛选（借用地区层）选中时，明细只列该意图的题；抽屉按全部意图找回答（一道题只属于一个意图）
         ('    var all = slice.records || [];', '    var all = (slice.records || []).filter(function (r) { return !state.region || r.intent === state.region; });'),
         ('    var regions = state.region ? [state.region] : (META.regions || []);', '    var regions = META.regions || [];'),
-        # 品牌情感：没有识别到时也展示这一块，写明未识别到
+        # 品牌情感：没有识别到时也展示这一块，写明未识别到；情感没接入时整块不出
         ('    if (sentimentBrands.length) {',
-         '    if (!sentimentBrands.length) {\n      sentimentSection = \'<section class="detail-section"><div class="detail-section-head"><h4>品牌情感</h4></div>\' +\n'
+         '    if (' + ("true" if has_sent else "false") + ' && !sentimentBrands.length) {\n      sentimentSection = \'<section class="detail-section"><div class="detail-section-head"><h4>品牌情感</h4></div>\' +\n'
          '        \'<p class="support-line">这次回答没有对品牌的明确褒贬</p></section>\';\n    }\n    if (sentimentBrands.length) {'),
         # 品牌提及识别的是全部同类平台与竞品，不只是配置品牌
         ("该回答未提及已配置品牌", "这次回答没有提到任何同类平台或竞品"),
@@ -955,11 +1056,26 @@ def render(cfg, data_path: Path, out: Path):
     if start < 0 or end < start:
         raise SystemExit("售前渲染模板变了，找不到明细表代码段")
     html = html[:start] + RECORDS_JS + html[end:]
-    # config.hide_sections 里的模块整段隐藏（连同顶部导航），如 opportunities = 05 内容规划（Suda 2026-10-21 先隐藏）
+    # config.hide_sections 里的模块整段隐藏（连同顶部导航），如 opportunities = 05 内容规划（Suda 2026-10-21 先隐藏）；
+    # 没数据的模块自动加进来，剩下的模块按顺序重新编号
     hide = [h for h in (cfg.get("hide_sections") or []) if re.fullmatch(r"[a-z_-]+", h)]
+    auto = [h for h, ok in (("distribution", has_sent), ("sources", has_cites)) if not ok and h not in hide]
+    if auto:
+        print("没数据、自动隐藏的模块：" + "、".join(auto))
+    hide += auto
     if hide:
         css = "".join(f'#{h},a[href="#{h}"]{{display:none!important}}' for h in hide)
         html = html.replace("</style>", css + "\n</style>", 1)
+    n = 0
+
+    def renumber(m):
+        nonlocal n
+        if m.group(1) in hide or not m.group(3).isdigit():
+            return m.group(0)
+        n += 1
+        return f"{m.group(2)}{n:02d}</span>"
+    html = re.sub(r'(?s)(<section class="section" id="([a-z_-]+)">.*?<span class="section-no">)(\d+|[^<]*)</span>',
+                  lambda m: renumber(type("M", (), {"group": lambda self, i: (m.group(0), m.group(2), m.group(1), m.group(3))[i]})()), html)
     # 「官网引用份额 / 官网引用率」统一叫「引用份额 / 引用率」（Suda 2026-10-21）
     html = html.replace("官网引用份额", "引用份额").replace("官网引用率", "引用率")
     # 数据筛选挪到核心洞察前面（Suda 2026-10-21）
@@ -1103,6 +1219,7 @@ def main(argv=None) -> int:
         # 校验在回写真实意图之前跑：校验脚本按 meta.questions 的意图挑可见度样本，回写后它只认发现题
         import verify_report_data as vr
         vr.find_alias_spans = find_alias_spans
+        patch_verify(vr)
         if vr.main(["--report", str(data_path), "--collect", str(out / "collect")]):
             raise SystemExit("verify_report_data 未通过，不渲染")
         attach_sentiment(cfg, data_path)

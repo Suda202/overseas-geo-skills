@@ -52,7 +52,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 - **Filters** above 核心洞察, acting on every module: 提示词类型 × 平台 × 主题. Every Prompt counts in the candidate baseline, named-brand ones included (Suda 2026-10-20); choose 发现 for natural visibility.
 - **01 KPI row**: 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率. Labels never say 官网引用份额 / 官网引用率; tooltips never say 「可见度问题」.
 - **02 可见度**: presales modules; the platform × brand matrix has logos.
-- **03 引用**: every 引用份额 is paired with 引用率 (answers citing that source at least once ÷ valid answers) — official pages, source categories, domains, pages; URLs on one line, full on hover; no top-N cut.
+- **03 引用**: every 引用份额 is paired with 引用率 (answers citing that source at least once ÷ valid answers) — official pages, source categories, domains, pages; URLs on one line, full on hover; no top-N cut. **The whole module and the KPI-row 引用份额 / 引用率 count Discovery and Category Awareness answers only** (Profound ch4, adopted 2026-10-22: "scope your citation analysis to discovery prompts" — a Prompt that names a brand pulls that brand's own pages into the citations and inflates its share). Named-brand types (Competitor, Alternatives, Evaluation, Verification, Accuracy) are excluded from these aggregates and read citation-wise only in 问题明细 and the Prompt detail, where every type still shows its own per-Prompt 引用份额.
 - **04 情感**: the brand's pooled positive share (positive signals ÷ all signals, no cross-platform equal-weight line), competitor shares and the theme × brand matrix whose cells show the top attribute phrase; themes where no shown brand has a signal are dropped.
 - **问题明细**: one row per Prompt with the brand's 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率; Topic rows read the Topic slice's pooled value, never an average of Prompt rows. No inline expansion, no extra columns. Its own 提示词类型 and 平台 dropdowns (the 平台 dropdown moves the page filter).
 - **查看 (Prompt detail)**, top to bottom (Suda 2026-10-22, a simplified take on Profound's Prompt page):
@@ -65,7 +65,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 ## Display rules
 
-- Zero reads 「0%」, never 「0.0%」. A run with no citations reads 「无引用」 (its 引用份额 has no denominator); 「—」 is kept for values with no denominator, e.g. 声量份额 when no brand was mentioned.
+- Zero reads 「0%」, never 「0.0%」. A run with no citations reads 「无引用」 (its 引用份额 has no denominator); 「—」 is kept for values with no denominator, e.g. 声量份额 when no brand was mentioned, or a topic made only of named-brand Prompts whose citation aggregates under 全部类型 have no eligible answers (its per-Prompt rows still show).
 - Citation pills show the full source name and number (the presales style cut them at 120–180 px), link to the run's own citation, and are restored as pills in the translation.
 - Answer HTML is cleaned of crawler leftovers: empty-target images, empty links, `[text](<url>)`, `---`, ChatGPT widget residue (`:::writing`, `{#each}`, `{@body}`, `<Entity value=…>`), LaTeX (written as × ÷ ≥ ≈), double-escaped entities and markdown escapes. Translated tables (flattened to `a | b |` lines) are rebuilt as tables; heading-style `1.` lines keep their own numbers. The remaining few hits in 渲染残留自检 are answers the crawler cut off mid-markup.
 - Payload is gzipped into the page and unpacked in the browser; Hbrand with 5 runs' answers and translations is about 6 MB (15 MB uncompressed, which the app side panel could not open).

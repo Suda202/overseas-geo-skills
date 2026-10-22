@@ -294,9 +294,17 @@ def wording_checks(
              for row in questions}
     df = Counter(unit for unit_set in units.values() for unit in unit_set)
     common = {unit for unit, count in df.items() if count >= max(3, 0.4 * len(questions))}
+    # Two Prompts that differ only by which name the buyer uses for the category
+    # (config.category_aliases) test the same decision in different words on purpose.
+    alias_units: set[str] = set()
+    for alias in config.get("category_aliases") or []:
+        if isinstance(alias, str):
+            alias_units |= similarity_units(alias, script or "latin")
     for a, b in combinations(questions, 2):
         ua, ub = units[a.get("question_id")] - common, units[b.get("question_id")] - common
         if not ua or not ub:
+            continue
+        if alias_units and (ua ^ ub) and (ua ^ ub) <= alias_units:
             continue
         sim = len(ua & ub) / len(ua | ub)
         same_slice = (
@@ -319,6 +327,7 @@ def scope_checks(
     stage: str | None,
     errors: list[str],
     warnings: list[str],
+    intents: dict[int, str] | None = None,
 ) -> None:
     """Gates 36–37: conditions outside the cited evidence; one decision asked twice.
 
@@ -329,6 +338,12 @@ def scope_checks(
     """
     if stage is None:
         return
+    # A Competitor verdict hinges on a scenario; with no use case AI answers "it
+    # depends". Independent of buyer_quotes, so it runs before the early return below.
+    for row in questions:
+        if (intents or {}).get(id(row)) == "Competitor" and not row.get("constraints"):
+            fail(f"{row.get('question_id')}: Competitor Prompt has no use case (empty constraints); without one "
+                 f"AI answers \"it depends\" instead of a verdict — name the scenario the verdict hinges on", errors)
     quote_constraints, quote_texts = _scope_gates.quote_index(config)
     if not quote_constraints:
         warnings.append("config.buyer_quotes missing: gates 36–37 (conditions outside the 约束 column, one "
@@ -724,7 +739,7 @@ def main() -> int:
 
     wording_checks(config, questions, row_intents, errors, warnings)
     field_contract_checks(config, questions, row_intents, stage, errors, warnings)
-    scope_checks(config, questions, stage, errors, warnings)
+    scope_checks(config, questions, stage, errors, warnings, row_intents)
 
     # Attribute <-> Prompt alignment. Dropping a Topic takes its Prompts with it
     # but leaves the Attributes behind, so a plan row can silently end up with

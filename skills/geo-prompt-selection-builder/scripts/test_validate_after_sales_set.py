@@ -330,6 +330,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         # 旧库的替代题标 Competitor 仍合法（不迁移）
         row["journey_stage"] = "替代方案"
         row["prompt_type"] = "Competitor"
+        row["constraints"] = ["租房"]  # 选词阶段 Competitor 题须带用例
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
 
     def test_legacy_intent_field_is_read_as_prompt_type(self) -> None:
@@ -455,6 +456,83 @@ class ScopeGateTests(unittest.TestCase):
         for row in data["questions"]:
             row["slice_ref"] = "M-007"
         self.assertIn("asked 2 times", validate(data).stdout)
+
+
+class CompetitorUseCaseGateTests(unittest.TestCase):
+    """Selection-stage Competitor Prompts must name a use case (constraints non-empty)."""
+
+    GATE = "Competitor Prompt has no use case"
+
+    def bank(self, constraints, stage="diagnostic") -> dict[str, object]:
+        data = scoped_bank([("Is Hbrand or RivalH1 better for HDB rentals?", "", constraints, ["Q01"])])
+        row = data["questions"][0]
+        row.update({"prompt_type": "Competitor", "journey_stage": "对比", "group_role": "monitoring"})
+        if stage is None:
+            data["config"].pop("generation_stage")
+        else:
+            data["config"]["generation_stage"] = stage
+        return data
+
+    def test_empty_constraints_fail_at_selection_stage(self) -> None:
+        for constraints in ([], None):
+            data = self.bank([])
+            if constraints is None:
+                data["questions"][0].pop("constraints")
+            with self.subTest(constraints=constraints):
+                result = validate(data)
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertIn(self.GATE, result.stdout)
+
+    def test_gate_does_not_need_buyer_quotes(self) -> None:
+        data = self.bank([])
+        data["config"].pop("buyer_quotes")
+        self.assertIn(self.GATE, validate(data).stdout)
+
+    def test_non_empty_constraints_pass(self) -> None:
+        self.assertNotIn(self.GATE, validate(self.bank(["停车持续录像"])).stdout)
+
+    def test_missing_stage_skips_gate_for_legacy_banks(self) -> None:
+        self.assertNotIn(self.GATE, validate(self.bank([], stage=None)).stdout)
+
+    def test_alternatives_are_not_checked(self) -> None:
+        data = self.bank([])
+        data["questions"][0].update({"prompt_type": "Alternatives", "journey_stage": "替代方案"})
+        self.assertNotIn(self.GATE, validate(data).stdout)
+
+
+class CategoryAliasNearDuplicateTests(unittest.TestCase):
+    """Prompts that differ only by the buyer's name for the category are not near-duplicates."""
+
+    ALIASES = ["GEO tools", "AI visibility tools"]
+    A = "Which GEO tools help brands track AI answers?"
+    B = "Which AI visibility tools help brands track AI answers?"
+    C = "Which AI visibility tools help brands track AI answers cheaply?"
+
+    def bank(self, texts, aliases) -> dict[str, object]:
+        data = scoped_bank([(t, "Tracking", [], ["Q01"]) for t in texts])
+        if aliases is not None:
+            data["config"]["category_aliases"] = aliases
+        return data
+
+    def warned(self, data) -> bool:
+        return "near-duplicate wording" in validate(data).stdout
+
+    def test_category_wording_only_difference_is_allowed(self) -> None:
+        self.assertFalse(self.warned(self.bank([self.A, self.B], self.ALIASES)))
+
+    def test_without_aliases_the_warning_stays(self) -> None:
+        self.assertTrue(self.warned(self.bank([self.A, self.B], None)))
+
+    def test_difference_beyond_category_wording_still_warns(self) -> None:
+        self.assertTrue(self.warned(self.bank([self.A, self.C], self.ALIASES)))
+
+    def test_same_slice_warning_is_also_skipped(self) -> None:
+        # Overlap ~43%: below 0.6, so only the same-slice (0.35) warning can fire.
+        a = "Which GEO software platform for small agencies tracking brand answers do you recommend?"
+        b = "Which AI search visibility monitoring tools for small agencies tracking brand answers do you recommend?"
+        aliases = ["GEO software platform", "AI search visibility monitoring tools"]
+        self.assertIn("same Topic, intent and attribute", validate(self.bank([a, b], None)).stdout)
+        self.assertNotIn("same Topic, intent and attribute", validate(self.bank([a, b], aliases)).stdout)
 
 
 class ScopeGateRegressionTests(unittest.TestCase):
