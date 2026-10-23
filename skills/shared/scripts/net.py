@@ -36,11 +36,25 @@ def http(url, data=None, headers=None, timeout=60):
         return 0, str(e).encode(), url
 
 
+def cacheable(data):
+    """只有成功结果才可进缓存：限流/鉴权等失败（如 code 100429、100401）落盘后会把后续重试全部卡死。"""
+    code = data.get("code")
+    if isinstance(code, int) and code >= 400:
+        return False
+    return bool(data.get("organic_results"))
+
+
 def search(q, gl="sg", hl="en"):
     f = CACHE / (hashlib.md5((q if gl == "sg" and hl == "en" else f"{q}|{gl}|{hl}").encode()).hexdigest() + ".json")
+    data = {}
     if f.exists():
-        data = json.loads(f.read_text())
-    else:
+        try:
+            data = json.loads(f.read_text())
+        except Exception:  # noqa: BLE001
+            data = {}
+        if not cacheable(data):
+            f.unlink(missing_ok=True); data = {}  # 旧缓存里的失败结果视为未命中，重新请求
+    if not cacheable(data):
         k = key(); hdr = {"x-api-token": k, "Content-Type": "application/json"}
         s, b, _ = http(API + "/api/v1/scraper/request", {"actor": "scraper.google.search",
                        "input": {"q": q, "gl": gl, "hl": hl, "google_domain": "google.com"}}, hdr)
@@ -51,12 +65,14 @@ def search(q, gl="sg", hl="en"):
             time.sleep(3)
             s, b, _ = http(API + "/api/v1/scraper/result/" + tid, None, hdr)
             data = json.loads(b or b"{}")
-        f.write_text(json.dumps(data, ensure_ascii=False))
+        if cacheable(data):
+            f.write_text(json.dumps(data, ensure_ascii=False))
     cites = {}
     raw = CACHE / (f.stem + ".html")
     if not raw.exists() and (data.get("metadata") or {}).get("rawUrl"):
         s, b, _ = http(data["metadata"]["rawUrl"], None, {"x-api-token": key()})
-        raw.write_bytes(b if s == 200 else b"")
+        if s == 200 and b:
+            raw.write_bytes(b)
     page = raw.read_text("utf-8", "replace") if raw.exists() else ""
     for r in data.get("organic_results") or []:
         i = page.find(">" + html.escape(r.get("title") or "", quote=False) + "</h3>")
