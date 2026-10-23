@@ -187,8 +187,9 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
                 result = validate(data)
                 self.assertEqual(result.returncode, 0, result.stdout)
 
-    def test_trial_run_range_rejects_non_five_plans(self) -> None:
-        for planned, valid in ((2, 2), (3, 3), (7, 7)):
+    def test_trial_run_range_rejects_non_three_or_five_plans(self) -> None:
+        # 2026-10-23: 候选基线取消，trial 改为 ChatGPT 3 次质量试跑；旧题库的 5 仍兼容。
+        for planned, valid in ((2, 2), (7, 7)):
             with self.subTest(planned_runs=planned):
                 data = staged_bank(5, "locked")
                 data["config"]["customer_confirmation"] = {
@@ -204,7 +205,25 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
                 }
                 result = validate(data)
                 self.assertEqual(result.returncode, 1)
-                self.assertIn("trial.planned_runs must be 5", result.stdout)
+                self.assertIn("trial.planned_runs must be 3", result.stdout)
+
+    def test_trial_accepts_three_and_legacy_five(self) -> None:
+        for planned in (3, 5):
+            with self.subTest(planned_runs=planned):
+                data = staged_bank(5, "locked")
+                data["config"]["customer_confirmation"] = {
+                    "status": "confirmed",
+                    "scope_status": "confirmed",
+                    "prompt_set_status": "confirmed",
+                }
+                data["config"]["trial"] = {
+                    "status": "passed",
+                    "planned_runs": planned,
+                    "valid_runs": planned,
+                    "evidence_refs": ["trial/run-1.json"],
+                }
+                result = validate(data)
+                self.assertEqual(result.returncode, 0, result.stdout)
 
     def test_formal_set_caps_each_topic_at_ten(self) -> None:
         def locked(count: int, lifecycle: str = "locked") -> dict:
@@ -316,9 +335,9 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         row["formal_visibility_eligible"] = False
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        # 列入率不进可见度：formal_visibility_eligible 不许为 true
+        # 替代型计不计入提及率考核未定（Suda 2026-10-23）：formal_visibility_eligible 两种值都接受
         row["formal_visibility_eligible"] = True
-        self.assertIn("must set formal_visibility_eligible: false", validate(data).stdout)
+        self.assertNotIn("must set formal_visibility_eligible: false", validate(data).stdout)
         row["formal_visibility_eligible"] = False
         # 不许进核心层
         row["group_role"] = "core"

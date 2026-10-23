@@ -15,9 +15,9 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
-- candidate-baseline / lock handoff.
+- trial / selection / lock handoff.
 
-In the Base there is no `客户确认` column: the brand party edits cells directly and marks 状态 (待审核 / 需修改 / 已批准, then 正式 / 停测 after the baseline) on 提示词库; only 已批准 Prompts enter the candidate baseline. Document-format pieces keep a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
+In the Base there is no `客户确认` column: the brand party edits cells directly and marks 状态 (待审核 / 需修改 / 已批准, then 正式 / 停测 at lock, before the formal baseline; was: after the baseline) on 提示词库; only 已批准 Prompts are eligible for formal selection. Document-format pieces keep a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
 
 ## JSON
 
@@ -43,7 +43,7 @@ Recommended root fields:
     "expected_total": 0,
     "competitor_selection": {},
     "trial": {"status": "planned", "planned_runs": 3},
-    "baseline": {"status": "planned", "planned_runs": 5}
+    "baseline": {"status": "planned", "planned_runs": 30}
   },
   "questions": []
 }
@@ -138,6 +138,12 @@ backed by the 约束 column of a quote the Prompt cites, not by the quote text
 (Suda 2026-10-22): research writes there what the post states in its title or
 thread. A missing `constraints` list is read as `[]`.
 
+`config.audience_terms` maps each non-base audience to the words that state
+or imply it — buyers' self-descriptions and the terms that give the asker away
+(「HDB resale」 for a citizen or PR buyer) (gate 39). The audience in the wording is not a condition:
+keep it out of `constraints`. `audience_implicit` on a Prompt holds the reason
+when its condition already implies the audience.
+
 Recommended additional per-question metadata when useful:
 
 - `region`
@@ -158,7 +164,7 @@ If the downstream uploader cannot accept these extra fields, keep them in a sepa
 An alternatives question stays `Discovery` only when it is a non-branded
 candidate-selection question that passes the Discovery contract. Named-brand
 alternatives are `Alternatives` (替代, split out of `Competitor` 2026-10-22;
-read as 列入率 + sentiment, `formal_visibility_eligible: false`; banks written
+read as 提及率 within the alternatives list (formerly 列入率) + sentiment; KPI inclusion undecided, default `formal_visibility_eligible: false`, either value accepted; banks written
 before keep them typed `Competitor`, no migration); transaction-only, post-purchase support, and
 source research questions need their own evidence/collection contract; do not
 force them into natural visibility metrics.
@@ -251,17 +257,16 @@ derive a separate schedule/evidence sidecar from the validated set rather than
 silently dropping them:
 
 - `customer_confirmation.scope_status`: customer confirmed business priority,
-  product/buyer/market scope, and factual/exclusion boundaries before the
-  candidate baseline;
-- `trial` (the candidate baseline): `planned_runs` 5; after the valid runs for each candidate Prompt
-  on each proposed platform, `status: passed`, `valid_runs` equal to the runs
-  actually completed, and raw
-  `evidence_refs`. These counts are per Prompt/platform, not a total for the bank;
-- `customer_confirmation.prompt_set_status`: formal set confirmed after the candidate baseline; retain the
+  product/buyer/market scope, and factual/exclusion boundaries before the trial;
+- `trial` (the quality trial, **not** a baseline): `planned_runs` 3
+  per candidate Prompt on each monitored platform, five at most per platform; `status: passed` once every
+  kept Prompt passed the quality checks, `valid_runs` equal to the runs
+  actually completed, raw `evidence_refs`. Its readings are exploratory and
+  never enter a statistic (Suda 2026-10-23 — the candidate baseline is retired);
+- `customer_confirmation.prompt_set_status`: formal set confirmed after the trial and the ranking; retain the
   existing summary `status` separately;
 - `prompt_version`: immutable market/language set version after final approval;
-- `baseline`: `status`, `planned_runs` (5 per Prompt/platform; legacy
-  `window_days` × `runs_per_day` is read as the total), `conditions_key`,
+- `baseline`: `status`, `planned_runs` (**30 per query per platform per country per language**, Suda 2026-10-23; legacy banks declaring 5 or `window_days` × `runs_per_day` stay valid), `conditions_key`,
   `valid_samples_only`, and for a
   formal baseline `prompt_version` matching the locked set;
 - `collection_config`: market, language, platforms, model/mode, cadence, and
@@ -270,8 +275,9 @@ silently dropping them:
 `locked`/`formal_baseline`/`active` requires both confirmations, completed
 trial evidence, and a locked Prompt version. `hypothesis` or
 `after_sales_signal` evidence cannot be formal-ready. A locked set holds at most
-10 Prompts per purchased Topic. Unchanged formal Prompts reuse their
-candidate-baseline readings as the Before baseline; reworded ones are rerun. Any addition, deletion, or wording change requires a new
+10 Prompts per purchased Topic. The formal baseline is the Before baseline
+(there is no candidate baseline to reuse); once 30 runs are split across days the
+split is recorded in `collection_config`. Any addition, deletion, or wording change requires a new
 set version and a separate formal baseline for the affected market/group;
 retain history but do not concatenate old and new set-level series.
 
@@ -320,7 +326,7 @@ Before delivery:
 11. **[validator: 仅 tags<200]** CSV rows match JSON rows and all upload length limits.
 12. **[validator]** Discovery Prompts contain no brand names, ask a commercial recommendation/selection question, and test one primary intent. The validator fails on a Discovery Prompt naming `brand_name`, any `aliases`, or any name in `competitor_selection`; a brand written in a non-Latin script is caught only when that spelling is listed in `aliases`.
 13. **[manual]** Trial review checks category/task fit, ambiguity, leading language, and duplication; target-brand mention is not a trial pass/fail criterion.
-14. **[validator: planned_runs=5]** Formal baseline plans 5 runs per Prompt/platform. Audit observed valid
+14. **[validator: baseline planned_runs]** Formal baseline plans 30 runs per query × platform × country × language (legacy banks declaring 5 or a 3–7 day window remain valid). Audit observed valid
     samples separately; failures are not zeroes, and old/new Prompt versions are
     not concatenated.
 15. **[manual]** Each Topic records a parent Search-Demand anchor or an explicit reason why no reliable Search-Demand signal is available.
@@ -367,7 +373,7 @@ Before delivery:
     resolved this way is a correction, not padding.
 25. **[manual]** Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `重要性` (购买影响 in documents before 2026-10-22), `相对竞品`, `优先级`, evidence gaps and `客户确认`; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; every table uses the write-what-to-change `客户确认` convention; question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
 26. **[validator: 确认状态与 10 题上限]** The attribute pool and business scope were confirmed before the candidate
-    baseline (5 runs per Prompt/platform); the formal set (at most 10 per
+    baseline (30 runs per query × platform × country × language); the formal set (at most 10 per
     purchased Topic) was selected by attribute priority, confirmed and
     version-locked; reworded Prompts were rerun before reuse.
 27. **[manual]** The customer-facing document contains the resulting brand facts, attribute
@@ -389,6 +395,8 @@ Before delivery:
 36. **[validator]** **No condition outside the evidence.** The validator fails a Prompt whose `constraints` hold a keyword that no cited quote's 约束 backs, or whose market-language query states a number that neither the cited 约束 cells nor the cited quotes state (model names such as STARVIS 2, 24/7 and years are not conditions; Chinese numerals in 约束 are read as digits, so 「四路」 backs "4-channel"). Fix it by citing the quote whose 约束 carries the condition, by adding the condition to that quote's 约束 when research supports it, or by dropping it from the Prompt — never by leaving it undeclared, because gate 37 then folds the Prompt into its base decision. It warns on `evidence_refs` absent from `config.buyer_quotes`, and skips both gates with one warning when the bank carries no `config.buyer_quotes`.
 37. **[validator: 告警]** **One purchase decision is asked once.** Prompts with the same Topic, prompt type, `attribute_ref` (or client-Base `slice_ref`) and evidence-backed constraints are one decision; the validator warns once per group. Only a condition a cited 约束 backs makes a new decision — a scenery change without evidence (parked on the street, a minivan, freezing weather) is the same decision reworded. Keep one, or give the others a condition their evidence carries. Two misses are known: the same need filed under two attribute names, and the same decision across Topics. The A/B replay (2026-10-22, six banks, blind review): gates 36–37 together flag 84% of the Prompts the review failed, and 23% of the ones it passed; `evals/scope-gates-ab-20261022/` holds the banks and verdicts the regression test reads.
 38. **[validator] A selection-stage Competitor Prompt carries a concrete use case.** Its `constraints` list is non-empty and names the scenario the verdict hinges on; empty or missing fails (without a use case AI answers "it depends" instead of picking a side — Profound ch3, adopted 2026-10-22). Alternatives Prompts are not checked, and banks validated without a `generation_stage` (legacy) are exempt. Win rate on these Prompts is reported both over all answers and with ties stripped; the tie-stripped number is the one to watch.
+39. **[validator: 告警]** **A Prompt filed under a non-base audience shows who is asking, stated or implied** (Suda 2026-10-23; after-sales-rules.md → *Audience Segments* Step 6). The bank carries `config.audience_terms` — `{"多猫家庭": ["three cats", "multiple cats", "multi-cat"], "公民与 PR 购房者": ["hdb resale", "bto", …], …}`, the words from each audience's 买家原话 that state it or imply it. For every Prompt whose `audience` holds a value that is neither 「通用」 nor in `config.base_conditions`, the validator warns when no term of any of its audiences appears in the query (case-insensitive; hyphens read as spaces; substring match, so Thai and Chinese work without word boundaries). Skipped: Verification and Accuracy Prompts, and a Prompt with a non-empty `audience_implicit` reason. It warns once listing audiences used by Prompts but absent from `config.audience_terms`, and once when the bank has non-base audiences and no `config.audience_terms` at all. Warning only: term matching is a heuristic, and the fix is a reworded Prompt or a registered term, never a term added just to pass.
+40. **[validator: 告警]** **Discovery is at least half of the set** (Suda 2026-10-23; SKILL step 7). Every staged bank warns when Discovery Prompts are below 50% of all Prompts. Warning at every lifecycle stage, never an error: the share is a coverage target, and a set legitimately below it (a leader-default category) records why in the internal diff instead of padding Discovery.
 
 The validator ends with a one-line verdict in three tiers: `Not ready: N errors to fix` (printed as `READINESS:` after the errors, exit 1), `Usable: N warnings to review`, or `Ready for the next lifecycle stage` (both in the summary JSON's `readiness` field). Quote this line in the validation summary handed over with the set.
 

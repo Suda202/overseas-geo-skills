@@ -371,6 +371,67 @@ def scope_checks(
                         f"condition their evidence carries")
 
 
+def audience_values(row: dict) -> list[str]:
+    value = row.get("audience")
+    if value is None:
+        value = row.get("persona") if row.get("persona") is not None else row.get("buyer")
+    items = value if isinstance(value, (list, tuple)) else [value]
+    return [str(item).strip() for item in items if str(item or "").strip()]
+
+
+def audience_checks(
+    config: dict,
+    questions: list[dict],
+    stage: str | None,
+    warnings: list[str],
+    intents: dict[int, str],
+) -> None:
+    """Gate 39: a Prompt filed under a non-base audience shows who is asking, stated or implied.
+
+    A segment exists because it changes the candidates, the criteria or the
+    answer; a Prompt that does not say who is asking is answered for the
+    generic buyer, so its audience label measures nothing. Warning only:
+    matching the buyer's own words is a heuristic.
+    """
+    if stage is None:
+        return
+    base = {str(item).strip() for item in config.get("base_conditions") or []} | {"通用"}
+    raw_terms = config.get("audience_terms")
+    terms = raw_terms if isinstance(raw_terms, dict) else {}
+
+    def fold(text: object) -> str:
+        return " ".join(str(text or "").casefold().replace("-", " ").split())
+
+    used: set[str] = set()
+    unnamed: list[str] = []
+    for row in questions:
+        audiences = [a for a in audience_values(row) if a not in base]
+        if not audiences:
+            continue
+        used.update(audiences)
+        if intents.get(id(row)) in {"Verification", "Accuracy"} or str(row.get("audience_implicit") or "").strip():
+            continue
+        registered = [fold(term) for a in audiences for term in (terms.get(a) or []) if fold(term)]
+        if not registered:
+            continue  # reported once below as an audience with no terms
+        query = fold(row.get("user_question"))
+        if not any(term in query for term in registered):
+            unnamed.append(f"{row.get('question_id')}({'/'.join(audiences)})")
+    if not used:
+        return
+    if not terms:
+        warnings.append(f"config.audience_terms missing: gate 39 (wording names the non-base audience) was "
+                        f"skipped for {len(used)} audiences; register each audience's own words from its 买家原话")
+        return
+    missing = sorted(a for a in used if not [t for t in terms.get(a) or [] if fold(t)])
+    if missing:
+        warnings.append(f"audiences with no entry in config.audience_terms ({len(missing)}): {', '.join(missing)}")
+    if unnamed:
+        warnings.append(f"Prompts filed under a non-base audience whose wording neither states nor implies it ({len(unnamed)}): "
+                        f"{', '.join(unnamed[:8])}{' …' if len(unnamed) > 8 else ''}; register the implying term in "
+                        f"config.audience_terms, state who is asking in the buyer's words, or record audience_implicit")
+
+
 def normalized_intent(row: dict, errors: list[str]) -> str:
     """Normalize the prompt_type field and inherited presales Prompt Type tags."""
     explicit = str(row.get("prompt_type") or "").strip()
@@ -544,7 +605,9 @@ def field_contract_checks(
                 and fields[id(r)]["journey_stage"] not in INTENT_STAGES[intents[id(r)]]]
     report("prompt_type does not fit journey_stage (评估 asks for a judgement, 验证 for one checkable "
            "answer; see client-facing-attribute-pool.md → 旅程阶段)", bad_pair, True)
-    leaking = [r for r in questions if intents.get(id(r)) in NON_VISIBILITY_INTENTS
+    # Alternatives stays out of this check: whether its mention rate counts toward the KPI is undecided
+    # (Suda 2026-10-23), so formal_visibility_eligible may be either value until it is settled.
+    leaking = [r for r in questions if intents.get(id(r)) in NON_VISIBILITY_INTENTS - {"Alternatives"}
                and r.get("formal_visibility_eligible") is True]
     report("Category Awareness, Verification, Accuracy and Information Prompts must set formal_visibility_eligible: false", leaking, True)
     # Information is an experimental-layer intent (Suda 2026-10-20): measured, but never in the formal set.
@@ -737,9 +800,21 @@ def main() -> int:
     ):
         fail("discovery stage must contain Discovery or Information Prompts only", errors)
 
+    # Gate 40 (Suda 2026-10-23): Discovery is at least half of the set. It is
+    # the only type that feeds the mention-rate KPI most clients buy. Warning
+    # only: the share is a coverage target, never a reason to pad Discovery —
+    # a leader-default category (Hbrand) is legitimately below it.
+    if stage is not None and questions:
+        share = role_counts.get("Discovery", 0) / len(questions)
+        if share < 0.5:
+            warnings.append(f"Discovery is {role_counts.get('Discovery', 0)} of {len(questions)} Prompts ({share:.0%}); "
+                            "target is at least 50% — add evidence-backed Discovery Prompts or record why this "
+                            "set sits below (never pad to reach it)")
+
     wording_checks(config, questions, row_intents, errors, warnings)
     field_contract_checks(config, questions, row_intents, stage, errors, warnings)
     scope_checks(config, questions, stage, errors, warnings, row_intents)
+    audience_checks(config, questions, stage, warnings, row_intents)
 
     # Attribute <-> Prompt alignment. Dropping a Topic takes its Prompts with it
     # but leaves the Attributes behind, so a plan row can silently end up with
@@ -958,17 +1033,18 @@ def main() -> int:
 
     trial = config.get("trial") or {}
     if trial or lifecycle in {"locked", "formal_baseline", "active"}:
-        # trial = 候选题基线：候选题每题每平台统一跑 5 次，同一批数据既查题目质量也测当前差距。
+        # trial = 候选题质量试跑：ChatGPT 每题 3 次（异常补到 5 次封顶）。候选基线已于 2026-10-23 取消，不再多平台 × 5 次。
+        # 旧题库写的 5 仍接受，不迁移。
         planned = trial.get("planned_runs")
-        if not isinstance(planned, int) or planned != 5:
-            fail("trial.planned_runs must be 5 (one run per question per platform, five times)", errors)
+        if isinstance(planned, bool) or not isinstance(planned, int) or planned not in {3, 5}:
+            fail("trial.planned_runs must be 3 (ChatGPT quality trial; legacy 5 still accepted)", errors)
     if trial.get("status") in {"running", "passed"} and confirmation.get("scope_status") != "confirmed":
         fail("customer_confirmation.scope_status must be confirmed before trial", errors)
     if lifecycle in {"locked", "formal_baseline", "active"}:
         valid = trial.get("valid_runs")
         ceiling = trial.get("planned_runs") if isinstance(trial.get("planned_runs"), int) else 5
         if trial.get("status") != "passed" or not isinstance(valid, int) or not 3 <= valid <= ceiling:
-            fail("locked set requires 3 to 5 valid candidate-baseline runs (planned 5; failures are not zeros)", errors)
+            fail("locked set requires 3 to 5 valid trial runs (planned 3; failures are not zeros)", errors)
         if not trial.get("evidence_refs"):
             fail("locked set requires trial.evidence_refs", errors)
 
@@ -985,16 +1061,16 @@ def main() -> int:
     if lifecycle == "formal_baseline" and baseline.get("status") not in {"formal", "active"}:
         fail("formal_baseline lifecycle requires baseline.status formal or active", errors)
     if baseline or lifecycle == "formal_baseline":
-        # 正式基线统一每题每平台跑 5 次，可一次跑完也可分天跑。
-        # 旧题库写的 window_days × runs_per_day 按总次数换算，总次数 3–7 作旧合同兼容。
+        # 正式基线：每个 query × 平台 × 国家 × 语言跑 30 次（Suda 2026-10-23）。是否跨天由项目约定，写在 collection_config。
+        # 旧题库的 5 与 window_days × runs_per_day（3–7）兼容，不迁移。
         runs = baseline.get("planned_runs")
         if runs is None and "window_days" in baseline:
             days, per_day = baseline.get("window_days"), baseline.get("runs_per_day", 1)
             legacy = days * per_day if all(isinstance(v, int) and not isinstance(v, bool) for v in (days, per_day)) else None
             if not isinstance(legacy, int) or not 3 <= legacy <= 7:
                 fail("legacy baseline window_days x runs_per_day must total 3 to 7", errors)
-        elif not isinstance(runs, int) or isinstance(runs, bool) or runs != 5:
-            fail("baseline.planned_runs must be 5 (one run per question per platform, five times)", errors)
+        elif isinstance(runs, bool) or not isinstance(runs, int) or runs not in {5, 30}:
+            fail("baseline.planned_runs must be 30 (per query x platform x country x language; legacy 5 still accepted)", errors)
     if formal_collection:
         if not str(baseline.get("conditions_key") or "").strip():
             fail("formal baseline requires conditions_key", errors)

@@ -19,7 +19,8 @@ render_report.py），只做售后口径适配，不改那个 skill 的源码：
 5. 校验：verify_report_data 独立复算全部切片，不一致就不渲染。
 
 售前模板只容 3 个配置竞品：config.competitors 填答案层前三，其余竞品放 open_brands，
-compare_brands 决定逐题对比显示哪些。情感与中文译文不在本脚本内，页面情感模块显示「尚未接入」。
+compare_brands 决定逐题对比显示哪些。没数据的模块整块隐藏、其余按顺序重新编号：情感没接入就不出 04 情感和回答详情里的情感，
+一条引用都没有就不出 03 引用（Suda 2026-10-22）。
 
 用法（在客户的基线目录运行，config 里的相对路径相对 config 所在目录）：
     python3 -I <项目根>/.agents/skills/geo-monitoring/scripts/build_baseline_html.py --config baseline-html.json
@@ -46,10 +47,10 @@ for p in (str(SK), str(CORE)):
         sys.path.insert(0, p)
 
 INTENT_ZH = {"discovery": "发现", "information": "信息", "evaluation": "评价", "sentiment": "评价",
-             "verification": "验证", "validation": "验证", "competitor": "竞品对比", "alternatives": "替代",
+             "verification": "验证", "validation": "验证", "competitor": "对比", "alternatives": "替代",
              "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
-INTENT_ORDER = ["发现", "信息", "评价", "验证", "竞品对比", "替代", "准确性", "品类认知"]
+INTENT_ORDER = ["发现", "信息", "评价", "验证", "对比", "替代", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
 # 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
 # Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是提示词类型，
@@ -212,7 +213,8 @@ def patch_verify(vr):
 def intent_of(cfg: dict) -> dict:
     bank = json.loads(cfg["bank_json"].read_text(encoding="utf-8"))
     out = {}
-    for q in bank["questions"]:
+    # 停测的题（config.retired）不在 questions 里，但它们的基线回答是真实采到的，照样要分类型
+    for q in bank["questions"] + (bank.get("config") or {}).get("retired", []):
         raw = str(q.get("prompt_type") or q.get("intent") or q.get("diagnosis_intent") or "").strip().casefold()
         if raw not in INTENT_ZH:
             raise SystemExit(f"{q['question_id']} 提示词类型 {raw!r} 不认识")
@@ -299,12 +301,12 @@ def attach_sentiment(cfg, data_path: Path):
 
     config.sentiment = {"units", "claims", "metrics"}，由 geo-presales-sentiment-judge 产出：
     extract 用本脚本合成的 out_dir/collect 与 out_dir/questions.csv（单元的 region 即意图、文件名带轮次），
-    抽 Claim、两趟聚类、claims-assemble、claims-metrics。缺省则情感模块显示「尚未接入」。
+    抽 Claim、两趟聚类、claims-assemble、claims-metrics。缺省则不出情感模块。
     必须在 patch_report_data 之前跑：attach 按「意图|平台|0001-r01」找每次运行的明细。
     """
     sent = cfg.get("sentiment") or {}
     if not sent or not all((cfg["_config_dir"] / sent.get(k, "_missing_")).exists() for k in ("units", "claims", "metrics")):
-        print("情感结果不全（需要 units / claims / metrics），情感模块保持「尚未接入」")
+        print("情感结果不全（需要 units / claims / metrics），不出情感模块")
         return
     base = cfg["_config_dir"]
     paths = {k: (base / v).resolve() for k, v in sent.items()}
@@ -1071,12 +1073,13 @@ def render(cfg, data_path: Path, out: Path):
 
     def renumber(m):
         nonlocal n
-        if m.group(1) in hide or not m.group(3).isdigit():
+        sec, head, no = m.group(1), m.group(0)[:-len(m.group(2)) - 7], m.group(2)
+        if sec in hide or not no.isdigit():
             return m.group(0)
         n += 1
-        return f"{m.group(2)}{n:02d}</span>"
-    html = re.sub(r'(?s)(<section class="section" id="([a-z_-]+)">.*?<span class="section-no">)(\d+|[^<]*)</span>',
-                  lambda m: renumber(type("M", (), {"group": lambda self, i: (m.group(0), m.group(2), m.group(1), m.group(3))[i]})()), html)
+        return f"{head}{n:02d}</span>"
+    html = re.sub(r'<section class="section" id="([a-z_-]+)"><div class="section-head"><div class="section-title">'
+                  r'<span class="section-no">([^<]*)</span>', renumber, html)
     # 「官网引用份额 / 官网引用率」统一叫「引用份额 / 引用率」（Suda 2026-10-21）
     html = html.replace("官网引用份额", "引用份额").replace("官网引用率", "引用率")
     # 数据筛选挪到核心洞察前面（Suda 2026-10-21）

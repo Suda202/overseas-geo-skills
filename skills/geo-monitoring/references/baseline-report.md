@@ -1,6 +1,6 @@
 # 基线报告（HTML）
 
-Candidate-baseline results go to the brand party as one HTML file, never as Base tables (Suda 2026-10-21). A Base dashboard can only SUM / AVG / MAX / MIN and cannot divide across rows, so every rate had to be precomputed per filter combination (Hbrand: 1,344 helper rows), and a dashboard-level filter cannot be created through the API. The HTML is precomputed and verified too, but filters freely. The Base keeps only what the brand party confirms or edits (AI 认知差距 stays on 提示词库).
+Formal-baseline results go to the brand party as one HTML file (the candidate baseline was retired 2026-10-23; old candidate-baseline reports built with this script stay valid), never as Base tables (Suda 2026-10-21). A Base dashboard can only SUM / AVG / MAX / MIN and cannot divide across rows, so every rate had to be precomputed per filter combination (Hbrand: 1,344 helper rows), and a dashboard-level filter cannot be created through the API. The HTML is precomputed and verified too, but filters freely. The Base keeps only what the brand party confirms or edits (AI 认知差距 stays on 提示词库).
 
 Script: `scripts/build_baseline_html.py`. It reuses `geo-presales-report-builder` (build_report_data → verify_report_data → render_report) and `geo-presales-sentiment-judge`, patching them at run time; it never edits those skills' source.
 
@@ -16,7 +16,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 1. **Collect** each round into its own directory (`collect_r1` … `collect_rN`, `scraper.<platform>/<region>/NNNN.json`, numbered by `questions_csv` row order) and run `geo-presales-crawl-integrity` on each.
 2. **Prepare** — `python3 -I $S --config baseline-html.json --prepare`. Writes `out_dir/collect` (all rounds merged, files `<NNNN>-r<RR>.json`, region directory = 提示词类型), `out_dir/questions.csv` and `out_dir/lexicon.json`. Nothing is computed yet.
-3. **Sentiment** (skip it and 04 情感 shows 「尚未接入」):
+3. **Sentiment** (skip it and the 04 情感 module and the per-answer sentiment are left out):
    - `python3 <sentiment-judge>/scripts/sentiment_sentences.py extract --bank out_dir/questions.csv --crawl-dir out_dir/collect --lexicon out_dir/lexicon.json --output sentiment/units.json`
    - `python3 -I $S --config baseline-html.json --export-claim-batches sentiment/batches` → hand each `batch-NN.json` to a subagent that writes `batch-NN.claims.json` (`unit_index / brand / claim / sentiment`, rules in sentiment-judge `judgment-rules.md`). One subagent per one or two batches; it must not delegate.
    - `python3 -I $S --config baseline-html.json --merge-claims sentiment/batches` → `sentiment/claims-raw.json` (unit index and brand checked).
@@ -44,12 +44,12 @@ Sentiment and translations are prepared before the report is built, so the repor
 | `domain_categories` | `ugc / media_review / press_release / institutional` domain lists |
 | `sentiment` | `{units, claims, metrics}` paths; ignored until all three exist |
 | `translations` | Folder of `batch-*.zh.json` |
-| `hide_sections` | Module ids to hide with their nav link, e.g. `opportunities` (05 内容规划) until content work starts |
+| `hide_sections` | Module ids to hide with their nav link, e.g. `opportunities` (05 内容规划) until content work starts. Modules with no data are hidden without being listed here: `distribution` (04 情感) when sentiment is not attached, `sources` (03 引用) when no answer cites anything. Remaining modules are renumbered in order (Suda 2026-10-22) |
 | `title`, `out_dir`, `out_name` | Page title and output |
 
 ## What the page shows
 
-- **Filters** above 核心洞察, acting on every module: 提示词类型 × 平台 × 主题. Every Prompt counts in the candidate baseline, named-brand ones included (Suda 2026-10-20); choose 发现 for natural visibility.
+- **Filters** above 核心洞察, acting on every module: 提示词类型 × 平台 × 主题. Every formal Prompt counts in the baseline report, named-brand ones included (Suda 2026-10-20); choose 发现 for natural visibility.
 - **01 KPI row**: 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率. Labels never say 官网引用份额 / 官网引用率; tooltips never say 「可见度问题」.
 - **02 可见度**: presales modules; the platform × brand matrix has logos.
 - **03 引用**: every 引用份额 is paired with 引用率 (answers citing that source at least once ÷ valid answers) — official pages, source categories, domains, pages; URLs on one line, full on hover; no top-N cut. **The whole module and the KPI-row 引用份额 / 引用率 count Discovery and Category Awareness answers only** (Profound ch4, adopted 2026-10-22: "scope your citation analysis to discovery prompts" — a Prompt that names a brand pulls that brand's own pages into the citations and inflates its share). Named-brand types (Competitor, Alternatives, Evaluation, Verification, Accuracy) are excluded from these aggregates and read citation-wise only in 问题明细 and the Prompt detail, where every type still shows its own per-Prompt 引用份额.
@@ -62,6 +62,23 @@ Sentiment and translations are prepared before the report is built, so the repor
   4. Query Fan-outs — ChatGPT `search_model_queries`, Gemini `related_queries`, with counts; an empty state when the collection returned none.
   5. 回答记录 — one row per run: 平台, 采集时间 (the collection file's time; the payload has none), brand mentioned, brands named, 引用份额, 操作. No 「第 n 次」.
   6. A run's answer: only 「← 返回列表」 on top; meta shows 平台 · 采集时间; 中文译文 / 回答原文 tabs; 品牌提及 (all same-category brands; empty state 「这次回答没有提到任何同类平台或竞品」), 品牌情感 (all brands; empty state 「这次回答没有对品牌的明确褒贬」), citations, search sources.
+
+## 优化顺序 (Suda 2026-10-23)
+
+The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 (待判 / 来源追不上 / 无). They are computed per formal Prompt from the formal baseline (30 runs per query × platform × country × language), pooled across platforms, and used **only** to order optimisation work. They never change the Base 优先级, which is the selection priority.
+
+Applies to Discovery and Alternatives Prompts only; named-brand types put the brand in the question and would always read as mentioned. Let t = the brand's mention rate on the Prompt and L = the highest rate among the other brands named as candidates:
+
+| Pattern | How to tell | Place in the optimisation order |
+|---|---|---|
+| 部分出现仍落后 | t > 20% and L − t ≥ 30 points | First within the tier — closest to winning |
+| 竞品领先（引用以竞品官网为主） | t ≤ 20%, L − t ≥ 30 points, citations mostly competitor official pages | Next — write the equivalent on the brand's own site |
+| 竞品领先（引用以第三方为主） | Same, citations mostly review sites, communities, trade media | Next — reachable, but off-site work takes longer |
+| 无品牌点名 | t ≤ 20% and L − t < 30 points | Next — an open slot; first confirm the wording asks for candidates |
+| 已打平或领先 | t > 20% and L − t < 30 points | Last — the job is to hold; monitoring continues unchanged |
+| 来源追不上 | The Base 信源壁垒 is 来源追不上 (re-checked on these answers) | Already one tier down in the Base; within its tier, last |
+
+Order: tier (the Base 优先级, which already carries the 来源追不上 drop) → pattern as above → 相对竞品 (领先 before 持平). Content effort is not a key; changeability already sits in the tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细; do not write them back into the Base.
 
 ## Display rules
 

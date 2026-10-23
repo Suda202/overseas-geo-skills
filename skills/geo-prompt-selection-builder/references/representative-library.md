@@ -43,9 +43,15 @@ confirmation, so record only what is missing:
 - which competitors apply per product line, market or audience;
 - **which conversion path the visibility should feed** — purchase, lead or
   enquiry, signup, demo, booking, subscription, store visit. It decides which
-  journey stages and Topics carry weight;
+  journey stages and Topics carry weight. The brand party fills it in its own
+  industry's terms and marks the priority one — no fixed option list
+  (Suda 2026-10-23; rows in client-facing-attribute-pool.md → 业务范围);
 - which visibility gaps would actually change what we optimise next. A slice
   whose result would change nothing is planning context, not a Prompt.
+- **what this service period's business goal is, and which marketing
+  campaigns fall inside it** (Suda 2026-10-23; the 业务目标 / 营销活动 rows of
+  业务范围). The goal ranks the audiences and decides where the Prompt count
+  goes; campaign dates shape the collection plan. Neither is buyer evidence.
 
 ## Internal Coverage Pass
 
@@ -83,7 +89,7 @@ Dimensions that sound separate but are not:
 - **Business priority vs attribute priority.** Rating audiences 高/中 by
   whether the brand party listed them restates importance; rating them by
   where P1 attributes cluster restates attribute priority. Keep only the
-  attribute priority, judged per row through 购买影响.
+  attribute priority, judged per attribute through 重要性 in 属性池 (the per-slice 购买影响 column was removed 2026-10-22).
 
 Adapt the uncertainty to the business model: ecommerce may hinge on
 availability, delivery and returns; SaaS on integration, onboarding,
@@ -236,9 +242,9 @@ possible action its answer would inform, such as positioning, owned content,
 third-party evidence, product proof or a market decision. This is a planning
 purpose, not an observed finding or impact promise.
 
-## Review Before the Candidate Baseline
+## Review Before the Trial
 
-Before running the candidate baseline (Aleyda step 18), check the set by hand,
+Before running the trial (Aleyda step 18), check the set by hand,
 not only through the validator:
 
 - do the Prompts sound like real buyers, in local wording;
@@ -280,19 +286,19 @@ mention-rate KPI counts only the core Discovery Prompts in the formal set
 (Suda 2026-10-20).
 
 **Competitor, Category Awareness and Accuracy Prompts are research
-instruments, collected during research rather than in the candidate baseline**
-(Suda 2026-10-15). Generate them while building the attribute pool and run them
-5 times per platform then: competitor answers settle `相对竞品`, and AI's
+instruments: they go through the trial while the attribute pool is being
+judged, not in a separate collection round** (Suda 2026-10-15; the trial is the
+only one collection on candidates since 2026-10-23). Generate them while building the attribute pool and run them
+3 times on each monitored platform then (Suda 2026-10-23): competitor answers settle `相对竞品`, and AI's
 buying criteria show whether our P1 attributes are on the list, which feeds
-changeability. Accuracy Prompts can be collected at the same time but are
-scored only after the brand party confirms the right answer. That research run
-is their baseline; they do not run again in the candidate baseline. Category
+changeability. Accuracy Prompts are trialled at the same time but are
+scored only after the brand party confirms the right answer. That trial run
+is their research reading; they do not run a second time. Category
 Awareness and Accuracy take no formal-set slot. Competitor Prompts are
 `monitoring` (or `experimental`) and the brand party may buy them into the
 formal set (Suda 2026-10-20): they then run every period, feed sentiment, stay
-out of the mention-rate KPI, and reuse the research run as their Before
-baseline when the wording is unchanged. Evaluation Prompts and the `experimental` price/stock/delivery
-Discovery Prompts stay in the candidate baseline.
+out of the mention-rate KPI, and get the same 30-run formal baseline as every other formal Prompt (2026-10-23: the research run is no longer reused as Before). Evaluation Prompts and the `experimental` price/stock/delivery
+Discovery Prompts go through the trial like Discovery.
 
 **Re-runs** (Aleyda step 20). After their first readings, `monitoring` and
 `experimental` Prompts are re-run only on a trigger: an optimisation shipped

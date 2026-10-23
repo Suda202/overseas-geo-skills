@@ -106,7 +106,7 @@ def main() -> int:
     if not empty:
         print("无空格子。")
         return 0
-    print("\n空格子（逐格写一行原因进内部交接件：无买家证据 / 超出范围 / 留到后续周期）：\n")
+    print("\n空格子（逐格写一行原因进内部交接件：无买家证据＝研究缺口 / 低业务优先，留到后续周期＝品牌方取舍 / 超出范围）：\n")
     print("| 产品线 | 受众 | 空的旅程阶段 |")
     print("|---|---|---|")
     by_pair: dict[tuple[str, str], list[str]] = {}

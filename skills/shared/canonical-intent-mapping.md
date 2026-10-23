@@ -11,7 +11,8 @@
 | 题库标签 | 后端 diagnostic_intent | 中文客户标签 | analysis_type | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
 | `Prompt Type: Discovery` | `discovery` | 发现（发现类问题） | `visibility,sentiment` | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
-| `Prompt Type: Competitor` | `competitor` | 竞品（竞品类问题） | `sentiment` | `false` | M02 竞品表现 |
+| `Prompt Type: Competitor` | `competitor` | 竞品对比（原「竞品」，2026-10-22 改名） | `sentiment` | `false` | M02 竞品表现（决胜与情感） |
+| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持，接入前需后端加枚举；临时上传按 `competitor` 适配） | 替代（替代类问题） | `sentiment` | `false` | **仅售后**（2026-10-22 从 Competitor 拆出）：点名竞品问替代方案（「[领头竞品] 最好的替代方案」），品牌不是对比的一边、答案是名单，读数是**提及率**（替代方案名单里的提及：5 次里几次被列入、列第几；Suda 2026-10-23 起不再另叫列入率）+ 情感，单独成行报；计不计入提及率考核未定（Suda 2026-10-23），formal_visibility_eligible 暂按 false，validator 两种值都接受；列入≠推荐。不点名的替代问法仍是 Discovery。2026-10-22 前的题库维持 Competitor 不迁移 |
 | `Prompt Type: Verification` | `validation` | 验证（验证类问题） | —（空） | `false` | 无独立模块；作为属性诊断输入 M04 品牌表达与 M01 数据总览 |
 | `Prompt Type: Accuracy` | `accuracy` | 准确性（准确性类问题） | `accuracy` | `false` | 无独立模块；作为准确性输入 M05 品牌进入 |
 | `Prompt Type: Evaluation` | `sentiment` | 评价（评价类问题） | `sentiment` | `false` | M04 品牌表达 |
@@ -42,7 +43,8 @@
 |---|---|
 | Discovery（发现） | 发现 / 解决问题 / 交易 |
 | Category Awareness（品类认知） | 发现 / 解决问题 |
-| Competitor（竞品） | 对比 / 替代方案 |
+| Competitor（对比；2026-10-23 前客户标签叫 竞品对比/竞品） | 对比（旧题库的替代方案题仍标 Competitor，validator 兼容 替代方案） |
+| Alternatives（替代，仅售后） | 替代方案 |
 | Evaluation（评价） | 评估 / 验证 |
 | Verification（验证） | 验证 / 购后支持 |
 | Accuracy（准确性） | 验证 / 购后支持 |
