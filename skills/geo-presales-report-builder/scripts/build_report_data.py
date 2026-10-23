@@ -2057,9 +2057,13 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                 answer = str(result.get(ANSWER_FIELD.get(platform_dir, "result_text")) or "").strip()
                 if not answer:
                     continue
+                # 品牌提及与指标层同口径：在去引用正文上匹配（剥引用标签/定义行/图片 alt + 清商品卡
+                # 商家列），否则 ([RivalH1][4]) 这类引用标签会被算成提及（Hbrand 2026-10-22）。
+                # answer 原文仍用于正文渲染与引用抽取。
+                ranking_text = de_cite.blank_merchant_columns(de_cite.strip_citations(answer))
                 ranked = []
                 for obj in display_objects:
-                    spans = find_alias_spans(answer, obj["aliases"])
+                    spans = find_alias_spans(ranking_text, obj["aliases"])
                     if spans:
                         ranked.append((spans[0]["start"], obj))
                 # 目标品牌置顶，其余按正文首次出现位置排序

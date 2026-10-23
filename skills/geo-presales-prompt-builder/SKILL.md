@@ -16,7 +16,7 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 
 接口中的原始 Case 业务字段就是 Builder 的直接输入。不要另造 `target_audiences / pain_points / use_cases` 等平行输入合同。
 
-题量硬门槛：每个 Topic 至少 5 条，整批（含后补题）不超过 60 条；单产品单市场的起步参考是 30–60 条（Aleyda 提示词库区间），30 不是硬下限——这是下限和总量上限，不是均衡配额。不同 Topic 可以有不同数量，只有在重要买家关注点尚未覆盖时才增加问题。若已知后续要补 diagnostic 题，先为后补题预留总量，不把 Discovery 机械扩到 60 条。发现型阶段全部为 Discovery；其他阶段没有固定竞品、评价或品类认知配额。旧题库省略 `generation_stage` 时仍按历史完整诊断合同校验，不能通过漏题自动降级为发现型。
+题量硬门槛：每个 Topic 至少 5 条，整批（含后补题）不超过 60 条；单产品线单市场题库总量 30–60 条（三层合计），其中核心层 20–30 条就够（Suda 2026-10-23），核心层超过 30 只为覆盖否则无题的 P1 切片——这是下限和总量上限，不是均衡配额。不同 Topic 可以有不同数量，只有在重要买家关注点尚未覆盖时才增加问题。若已知后续要补 diagnostic 题，先为后补题预留总量，不把 Discovery 机械扩到 60 条。发现型阶段全部为 Discovery；其他阶段没有固定竞品、评价或品类认知配额。旧题库省略 `generation_stage` 时仍按历史完整诊断合同校验，不能通过漏题自动降级为发现型。
 
 ## 和选词 skill 的关系
 
@@ -98,7 +98,7 @@ Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评
 
 ## 输出与验证
 
-- 新产物显式写 `generation_stage`；每 Topic 至少 5 条、整批不超过 60（单产品单市场起步参考 30–60 条）。默认只输出 Discovery；补充题型没有固定数量。保留 `attribute_plan`、实际配额、Tags 和失败/重写原因。按独立购买决策解释题量，不用产品线、市场和任务类型的笛卡尔积凑题。客户文档、来源、版本、市场任务查漏和待确认状态写入独立交接文件，不塞进闭合 `config` 或上传 CSV。
+- 新产物显式写 `generation_stage`；每 Topic 至少 5 条、整批不超过 60（单产品线单市场总量 30–60、核心层 20–30）。默认只输出 Discovery；补充题型没有固定数量。保留 `attribute_plan`、实际配额、Tags 和失败/重写原因。按独立购买决策解释题量，不用产品线、市场和任务类型的笛卡尔积凑题。客户文档、来源、版本、市场任务查漏和待确认状态写入独立交接文件，不塞进闭合 `config` 或上传 CSV。
 - 每题包含 `question_id / topic_id / tags / analysis_type / formal_visibility_eligible / intent_key / user_question / zh_translation / monitoring_prompt / quality_checks`；不包含 `diagnosis_intent` 或单独的 `attributes`。
 - 默认题库不含 Verification 题与 `validation_items`、Accuracy 题或事实包字段；上传 CSV 固定字段顺序为 `query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`。`diagnosis_intent` 从 JSON 唯一默认 Intent Tag 转写为 `discovery / competitor / verification / accuracy / evaluation / category_awareness`。`tags` 为上传适配列：允许留空；如果填写，必须是短于 200 字符的字符串，并使用英文逗号、中文逗号或换行分隔，优先保留可上传的最小化摘要，不要把 JSON 里的完整 Attribute 列表直接搬进来。`question_types` 按上传合同填写：Discovery 为 `visibility,sentiment`，Competitor 与 Evaluation 为 `sentiment`，Verification、Accuracy 与 Category Awareness 为 `visibility`——这三类不得带 `sentiment`，否则下游 `geo-presales-sentiment-judge` 会把它们错误纳入情绪样本（样本口径见 `../shared/canonical-intent-mapping.md`）。`purchase_intent / persona_name / scene_name` 没有可靠来源时留空，不臆造。JSON 仍不生成独立 `diagnosis_intent` 或 `question_type` 字段；这两个 CSV 字段只由上传适配器导出。
 
