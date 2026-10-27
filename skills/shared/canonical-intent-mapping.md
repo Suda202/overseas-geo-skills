@@ -11,13 +11,13 @@
 | 题库标签 | 后端 diagnostic_intent | 中文客户标签 | analysis_type | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
 | `Prompt Type: Discovery` | `discovery` | 发现（发现类问题） | `visibility,sentiment` | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
-| `Prompt Type: Competitor` | `competitor` | 竞品对比（原「竞品」，2026-10-22 改名） | `sentiment` | `false` | M02 竞品表现（决胜与情感） |
+| `Prompt Type: Competitor` | `competitor` | 对比（原「竞品」→「竞品对比」，2026-10-23 简化为「对比」） | `sentiment` | `false` | M02 竞品表现（决胜与情感） |
 | `Prompt Type: Alternatives` | `alternatives`（后端尚未支持，接入前需后端加枚举；临时上传按 `competitor` 适配） | 替代（替代类问题） | `sentiment` | `false` | **仅售后**（2026-10-22 从 Competitor 拆出）：点名竞品问替代方案（「[领头竞品] 最好的替代方案」），品牌不是对比的一边、答案是名单，读数是**提及率**（替代方案名单里的提及：5 次里几次被列入、列第几；Suda 2026-10-23 起不再另叫列入率）+ 情感，单独成行报；计不计入提及率考核未定（Suda 2026-10-23），formal_visibility_eligible 暂按 false，validator 两种值都接受；列入≠推荐。不点名的替代问法仍是 Discovery。2026-10-22 前的题库维持 Competitor 不迁移 |
 | `Prompt Type: Verification` | `validation` | 验证（验证类问题） | —（空） | `false` | 无独立模块；作为属性诊断输入 M04 品牌表达与 M01 数据总览 |
 | `Prompt Type: Accuracy` | `accuracy` | 准确性（准确性类问题） | `accuracy` | `false` | 无独立模块；作为准确性输入 M05 品牌进入 |
 | `Prompt Type: Evaluation` | `sentiment` | 评价（评价类问题） | `sentiment` | `false` | M04 品牌表达 |
 | `Prompt Type: Category Awareness` | `market_perception` | 品类认知（品类认知类问题） | —（空） | `true` | M08 购买框架（品类认知 / Market Perception） |
-| `Prompt Type: Information` | `information`（后端尚未支持，接入前需后端加枚举） | 信息（信息类问题） | `citation` | `false` | **仅售后**（Suda 2026-10-19）：买家自己的政策、流程、费用、纠纷问题，AI 给建议不列候选，只统计品牌官网是否被引用；售前不使用 |
+| `Prompt Type: Information` | `information`（后端尚未支持，接入前需后端加枚举） | 问题解决 | `citation` | `false` | **仅售后**（Suda 2026-10-19; client label renamed from 信息 and scope narrowed to problem-solving on 2026-10-26）：买家的问题解决型问题，AI 给建议不列候选，只统计品牌官网是否被引用；售前不使用 |
 
 **验证与准确性是两种独立的提示词类型（2026-10-16 起，售前售后一致）。** 分界按 AI 错在哪：AI 不知道品牌有这个能力 → 验证；AI 能说出这个事实但说错了 → 准确性。两者都不进可见度指标，都只作诊断输入。Prompt Builder 不做别名转换，题库里写哪个就是哪个。
 
@@ -33,7 +33,7 @@
 
 ## 提示词类型 × 旅程阶段：允许组合（售后）
 
-旅程阶段和提示词类型是两条独立的轴，不合并（Suda 2026-10-22，用 Hbrand 76 题交叉验证过：同是「解决问题」阶段，答案是候选名单的为发现、是建议的为信息，这条分界决定指标路由；同是「信息」类型，又横跨解决问题/交易/验证/购后四个阶段，这条展开决定旅程覆盖读数——两个方向都推不出来）。旅程阶段按**买家处境**判，挂在切片和买家原话上；提示词类型按**答案怎么读**判，挂在提示词库上。
+旅程阶段和提示词类型是两条独立的轴，不合并（Suda 2026-10-22，用 Hbrand 76 题交叉验证过：同是「解决问题」阶段，答案是候选名单的为发现、是建议的为问题解决，这条分界决定指标路由；同是「问题解决」类型，又横跨解决问题/交易/验证/购后四个阶段，这条展开决定旅程覆盖读数——两个方向都推不出来）。旅程阶段按**买家处境**判，挂在切片和买家原话上；提示词类型按**答案怎么读**判，挂在提示词库上。
 
 **同词不同义，注意「验证」「评估」两处重名**：提示词类型的「验证」＝AI 认不认品牌有这个能力、「评价」＝要 AI 对具名品牌下判断；旅程阶段的「验证」＝买家在查可信度与事实、「评估」＝买家在判断某个具名选项合不合适。对客解释在确认表《使用说明》里写一句即可。
 
@@ -48,7 +48,7 @@
 | Evaluation（评价） | 评估 / 验证 |
 | Verification（验证） | 验证 / 购后支持 |
 | Accuracy（准确性） | 验证 / 购后支持 |
-| Information（信息） | 解决问题 / 交易 / 验证 / 购后支持 |
+| Information（问题解决） | 解决问题 / 交易 / 验证 / 购后支持 |
 
 ## 问题类型（后端枚举）
 

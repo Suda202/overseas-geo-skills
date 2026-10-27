@@ -65,7 +65,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 ## 优化顺序 (Suda 2026-10-23)
 
-The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 (待判 / 来源追不上 / 无). They are computed per formal Prompt from the formal baseline (30 runs per query × platform × country × language), pooled across platforms, and used **only** to order optimisation work. They never change the Base 优先级, which is the selection priority.
+The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 (待判 / 来源追不上 / 无). They are computed per formal Prompt from the formal baseline (30 runs per query × platform × country × language), pooled across platforms, and used to order optimisation work. They never change the selection 优先级 (属性池 attribute tier, 提示词库 建议优先级/优先级).
 
 Applies to Discovery and Alternatives Prompts only; named-brand types put the brand in the question and would always read as mentioned. Let t = the brand's mention rate on the Prompt and L = the highest rate among the other brands named as candidates:
 
@@ -78,7 +78,7 @@ Applies to Discovery and Alternatives Prompts only; named-brand types put the br
 | 已打平或领先 | t > 20% and L − t < 30 points | Last — the job is to hold; monitoring continues unchanged |
 | 来源追不上 | The Base 信源壁垒 is 来源追不上 (re-checked on these answers) | Already one tier down in the Base; within its tier, last |
 
-Order: tier (the Base 优先级, which already carries the 来源追不上 drop) → pattern as above → 相对竞品 (领先 before 持平). Content effort is not a key; changeability already sits in the tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细; do not write them back into the Base.
+Order: tier (提示词库 优先级, which already carries the 来源追不上 drop) → pattern as above → 相对竞品 (领先 before 持平). Content effort is not a key; changeability already sits in the tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, **and write the computed order back into the client Base as the 提示词库 优化顺序 text column** (Suda 2026-10-26, reversing the 2026-10-23 report-only rule): one value per Prompt, 「第 N 档（优先级 · pattern · 相对竞品）」, one line per market when the row spans markets. Only this derived order is written back — the patterns' inputs (t, L, citation mix) stay in the report, and the selection 优先级 is never rewritten.
 
 ## Display rules
 

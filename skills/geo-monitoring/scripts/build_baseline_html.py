@@ -5,7 +5,7 @@
 render_report.py），只做售后口径适配，不改那个 skill 的源码：
 
 1. 合成采集目录：N 轮采集放进同一个「平台 × 意图」目录。售前报告的「地区」一层在这里放意图，页面上的
-   地区筛选就成了提示词类型筛选（全部类型 / 发现 / 信息 / …），与平台、主题两行筛选任意组合。每题 N 个文件，
+   地区筛选就成了提示词类型筛选（全部类型 / 发现 / 问题解决 / …），与平台、主题两行筛选任意组合。每题 N 个文件，
    文件里补上题面（AI Overviews 不回传题面，build_report_data 靠题面把文件归到题）。
 2. 选词阶段所有题都计入可见度（Suda 2026-10-20）：题库 CSV 统一标 discovery，真实意图回写到页面数据。
 3. 售后口径：品牌识别前去掉裸 URL；指定别名区分大小写（ERA、SRX 这类缩写撞普通词）；可选按机构拆
@@ -46,11 +46,11 @@ for p in (str(SK), str(CORE)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-INTENT_ZH = {"discovery": "发现", "information": "信息", "evaluation": "评价", "sentiment": "评价",
+INTENT_ZH = {"discovery": "发现", "information": "问题解决", "evaluation": "评价", "sentiment": "评价",
              "verification": "验证", "validation": "验证", "competitor": "对比", "alternatives": "替代",
              "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
-INTENT_ORDER = ["发现", "信息", "评价", "验证", "对比", "替代", "准确性", "品类认知"]
+INTENT_ORDER = ["发现", "问题解决", "评价", "验证", "对比", "替代", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
 # 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
 # Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是提示词类型，
