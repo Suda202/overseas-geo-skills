@@ -424,6 +424,15 @@ class ScopeGateTests(unittest.TestCase):
         self.assertEqual(self.outside([("Which 4-channel dash cams have parking mode?", "Coverage", ["四路"], ["Q09"])]), "")
         self.assertEqual(self.outside([("Which 4-channel dash cams have parking mode?", "Coverage", ["4 路"], ["Q09"])]), "")
 
+    def test_bare_cjk_one_is_not_a_number_without_a_measure_word(self) -> None:  # Nbrand 2026-10-23
+        # 一般 / 一直 / 一起 / 一有 are adverbs, not the quantity 1; gate 36 used to
+        # fail all four as 「数字 1」 on ordinary Traditional-Chinese prompts.
+        for query in ("除了一般聊天機器人，有哪些 AI 會接即時行情？",
+                      "有哪些非託管的加密貨幣 AI 助手，資產一直留在自己錢包裡？",
+                      "有沒有巨鯨追蹤助手，大戶一有動作就通知我？",
+                      "有沒有 AI 能把賠率和新聞放在一起分析？"):
+            self.assertEqual(self.outside([(query, "Condition", [], ["Q01"])]), "", query)
+
     def test_numbers_that_are_not_conditions_pass(self) -> None:  # F4
         rows = [("Which dash cams use Sony STARVIS 2 sensors for 24/7 parking monitoring in 2026?", "Night", [], ["Q01"])]
         self.assertEqual(self.outside(rows), "")

@@ -30,8 +30,9 @@ INTENTS = {
 }
 # Verification and Accuracy are two distinct intents (Suda 2026-10-16): Verification
 # covers a capability AI does not recognise, Accuracy a fact AI states wrongly. No aliasing.
-# Information (信息, after-sales only, Suda 2026-10-19): a buyer's own policy / process / cost /
-# dispute question that AI answers with advice, not a candidate list; only own-domain citation is read.
+# Information (问题解决, after-sales only, Suda 2026-10-19; client label renamed and scope narrowed on 2026-10-26):
+# a buyer asking how to solve a problem or reach a goal; AI answers with advice, not a candidate
+# list; only own-domain citation is read. Pure knowledge questions are not this type.
 STAGES = {"discovery", "diagnostic"}
 LIFECYCLE_STATES = {
     "hypothesis",
@@ -491,7 +492,7 @@ INTENT_STAGES = {
     "Information": {"解决问题", "交易", "验证", "购后支持"},
 }
 NON_VISIBILITY_INTENTS = {"Category Awareness", "Verification", "Accuracy", "Information", "Alternatives"}
-# Discovery-stage sets may also carry Information Prompts: both go into the candidate baseline.
+# Discovery-stage sets may also carry Information Prompts: both go into the trial.
 DISCOVERY_STAGE_INTENTS = {"Discovery", "Information"}
 LAYER_TO_ROLE = {"核心": "core", "实验": "experimental", "监测": "monitoring",
                  "core": "core", "experimental": "experimental", "monitoring": "monitoring"}
@@ -1033,11 +1034,11 @@ def main() -> int:
 
     trial = config.get("trial") or {}
     if trial or lifecycle in {"locked", "formal_baseline", "active"}:
-        # trial = 候选题质量试跑：ChatGPT 每题 3 次（异常补到 5 次封顶）。候选基线已于 2026-10-23 取消，不再多平台 × 5 次。
+        # trial = 候选题质量试跑：每题在每个监测平台各 3 次（异常补到 5 次封顶）。候选基线已于 2026-10-23 取消，不再多平台 × 5 次。
         # 旧题库写的 5 仍接受，不迁移。
         planned = trial.get("planned_runs")
         if isinstance(planned, bool) or not isinstance(planned, int) or planned not in {3, 5}:
-            fail("trial.planned_runs must be 3 (ChatGPT quality trial; legacy 5 still accepted)", errors)
+            fail("trial.planned_runs must be 3 (quality trial on each monitored platform; legacy 5 still accepted)", errors)
     if trial.get("status") in {"running", "passed"} and confirmation.get("scope_status") != "confirmed":
         fail("customer_confirmation.scope_status must be confirmed before trial", errors)
     if lifecycle in {"locked", "formal_baseline", "active"}:
