@@ -19,12 +19,26 @@ _ABSTRACT_NOUN = re.compile(
     r"considerations?|benefits?|risks?|differences?|tradeoffs?|look for)\b"
 )
 _METHOD_SUPERLATIVE = re.compile(
-    r"\b(?:best|top)\s+(?:ways?|practices?|times?|tips?|steps?|methods?|strategies)\b"
+    r"\b(?:best|top)\s+(?:ways?|practices?|times?|tips?|steps?|methods?|strategies|"
+    r"approach(?:es)?|settings?|temperatures?)\b"
 )
-# "Best dash cams for rideshare drivers": a superlative before a plural product noun.
-_SUPERLATIVE_PLURAL = re.compile(
-    r"^(?:what\s+(?:are|is)\s+the\s+)?(?:best|top)\s+(?:[\w-]+\s+){0,5}[\w-]+s\b"
+# "Best dash cams for rideshare drivers", "What is the best dash cam for night
+# driving?": a superlative before a product noun, singular or plural. Method nouns
+# are rejected by _METHOD_SUPERLATIVE first; "best dash cam features" by _ABSTRACT_NOUN.
+_SUPERLATIVE_PRODUCT = re.compile(
+    r"^(?:what\s+(?:are|is)\s+the\s+)?(?:best|top)(?:[\s-]+rated)?\s+(?=[\w$-])"
 )
+
+
+def _superlative_product(lowered: str) -> bool:
+    opener = _SUPERLATIVE_PRODUCT.match(lowered)
+    if not opener:
+        return False
+    rest = lowered[opener.end():]
+    # "Best for a finished kitchen", "Best if you want RO", "Best price": no product named.
+    if re.match(r"^(?:for|if|in|to|with|of|when|at|overall|price)\b", rest):
+        return False
+    return not re.match(rf"^(?:[\w-]+\s+){{0,2}}?(?:{_ABSTRACT_NOUN.pattern})", rest)
 # "What are the alternatives to managing X manually": AI answers with approaches,
 # not providers (2026-10-22 test). The provider form "Which X providers can ...
 # instead of ..." passes through the candidate-noun rule instead.
@@ -50,7 +64,7 @@ def _clause_requests_candidates(lowered: str) -> bool:
         return False
     if re.match(r"^(?:how|why|when)\b", lowered):
         return False
-    if re.match(r"^what\s+(?:is|does)\b", lowered) and not _SUPERLATIVE_PLURAL.match(lowered):
+    if re.match(r"^what\s+(?:is|does)\b", lowered) and not _superlative_product(lowered):
         return False
     if _STATUS_QUO_APPROACH.match(lowered):
         return False
@@ -58,7 +72,7 @@ def _clause_requests_candidates(lowered: str) -> bool:
         return False
     if re.match(r"^what\s+should\s+(?:i|we|you)\s+look\s+for\b", lowered):
         return False
-    if _SUPERLATIVE_PLURAL.match(lowered):
+    if _superlative_product(lowered):
         return True
     if re.match(r"^who\b", lowered):
         return True
@@ -100,6 +114,13 @@ def _clause_requests_candidates(lowered: str) -> bool:
 REGRESSION_CASES = (
     ("Which dash cam brands should rideshare drivers consider?", True),
     ("Best dash cams for rideshare drivers", True),
+    ("Best dash cam for night driving", True),
+    ("What is the best dash cam for night driving?", True),
+    ("best robot vacuum for pet hair", True),
+    ("Best time to buy a dash cam", False),
+    ("What is the best temperature to store probiotics?", False),
+    ("Best dash cam features for night driving", False),
+    ("Best price for a portable oxygen concentrator", False),
     ("What are the best automatic litter boxes for multi-cat homes?", True),
     ("Which models of litter box handle multiple cats?", True),
     ("Where can I buy a portable oxygen concentrator in Singapore?", True),

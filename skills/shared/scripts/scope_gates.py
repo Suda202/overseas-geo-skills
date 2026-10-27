@@ -36,7 +36,7 @@ import re
 import unicodedata
 from collections import defaultdict
 
-CJK_DIGITS = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+CJK_DIGITS = {"零": 0, "一": 1, "二": 2, "两": 2, "兩": 2, "三": 3, "四": 4, "五": 5,
               "六": 6, "七": 7, "八": 8, "九": 9}
 
 # Digits that name a model, belong to the attribute itself, or date the
@@ -49,6 +49,14 @@ _NOT_A_CONDITION = re.compile(
 )
 _NUMBER = re.compile(r"(?<![A-Za-z0-9.])\$?\d+(?:[.,]\d+)?\s*(?:k|gb|tb|mp|p|%|°)?", re.I)
 _SPLIT = re.compile(r"[、，,;；/|]")
+
+
+# A bare CJK digit only states a quantity when a measure word follows it.
+# 一般 / 一直 / 一起 / 一定有 / 一直留在自己錢包裡 are adverbs, not the number 1;
+# without this list gate 36 reported 「数字 1」 against ordinary Taiwanese and
+# Korean wording (Nbrand 2026-10-23: 4 false errors on 一般, 一直, 一有).
+_UNITS = set("路个個支台款次倍年月天秒时時分条條张張部種种颗顆片件套档檔层層期轮輪人只手隻美元块塊米克斤升度折成笔筆家间間座门門")
+
 
 
 def _cjk_numbers(text: str) -> str:
@@ -65,8 +73,20 @@ def _cjk_numbers(text: str) -> str:
         if "十" in s:
             head, _, tail = s.partition("十")
             return str((CJK_DIGITS.get(head, 1) if head else 1) * 10 + (CJK_DIGITS.get(tail, 0) if tail else 0))
+        # Bare digit: needs a following measure word, otherwise it is an adverb
+        # or part of a word (一般, 一直, 一起), not a buyer condition.
+        nxt = text[m.end():m.end() + 1]
+        if s in CJK_DIGITS and nxt not in _UNITS:
+            return s
+        # A bare 「一」 is the indefinite article or an adverb (一般, 一直,
+        # 一起, 一次找出, 一個工具), not a count; only 十/百 compounds and
+        # 兩 / 三 / 四… still convert. A real "one X" condition is written 1 個
+        # or 單一, and a miss only leaves a gate ungated while a false error
+        # blocks delivery (Nbrand 2026-10-23: 6 false 「数字 1」 errors).
+        if s == "一":
+            return s
         return str(CJK_DIGITS.get(s, s))
-    return re.sub(r"[零一二两三四五六七八九]?[百十]?[零一二三四五六七八九]?", repl, text)
+    return re.sub(r"[零一二两兩三四五六七八九]?[百十]?[零一二两兩三四五六七八九]?", repl, text)
 
 
 def _fold(text: object) -> str:
