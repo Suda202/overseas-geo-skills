@@ -9,6 +9,13 @@
 - Ahrefs《How to choose prompts to track》
   https://ahrefs.com/aeo/choose-prompts-to-track
 
+补充对照（2026-10-26 读）：
+
+- Ahrefs《AI adjusted volume: How Ahrefs approaches the challenge of estimating AI Search demand》
+  https://ahrefs.com/blog/how-ahrefs-estimates-ai-search-demand/
+- Ahrefs 帮助中心《What is AI adjusted volume and how is it calculated》
+  https://help.ahrefs.com/en/articles/16755865-what-is-ai-adjusted-volume-and-how-is-it-calculated
+
 三篇里我们原本缺的集中在一件事：收来的材料各自能决定什么。其余大多已有，少数是刻意不同。
 
 ## 采纳并写进 skill
@@ -16,11 +23,12 @@
 | 文章里的做法 | 落在哪 |
 |---|---|
 | 信源分层：只从 AI 真实提示词样本和买家语言来源取措辞；官网、竞品页、人设文档、内部访谈、关键词工具只管覆盖和查漏；各来源的偏差（评价偏极端、论坛偏年轻懂技术、客服记录偏投诉退货、竞品术语的镜像陷阱）（GEO Bubbles） | [signal-sources.md](signal-sources.md) →「每类信源能用来干什么」；共享原则第 16 条；SKILL Step 8 |
-| GSC 筛法：先剔品牌词；排名 11–30 有展示低点击；问句正则与 6 词以上（GEO Bubbles、Ahrefs） | signal-sources.md →「客户提供什么」GSC 行 |
+| GSC 筛法：先剔品牌词；问句正则与 6 词以上（GEO Bubbles、Ahrefs）。原文另有「排名 11–30 有展示低点击」一类，2026-10-27 删去：排名高低不影响该不该出题，属于 SEO 优化顺序 | signal-sources.md →「客户提供什么」GSC 行 |
 | 搜索词改写成题面：不改意图、原查询越长改得越少、年份改成当年（Ahrefs）；补进的条件要有原话依据（GEO Bubbles 的约束与人设扩展，按我们的证据门收紧） | signal-sources.md →「搜索词改写成题面」 |
 | Perplexity 相关问题是模型按原查询和结果生成的，不是历史查询（Ahrefs）；让 ChatGPT 列顾虑（Peec） | signal-sources.md →「模型生成的联想不算买家信号」；SKILL Step 2，与 query fan-out 同一处理 |
 | Google 搜索加 `&udm=18` 只看论坛讨论（Ahrefs） | signal-sources.md 开头 |
 | 服务器日志里 ChatGPT-User 等用户触发型抓取，看 AI 实际在读哪些页（Ahrefs） | signal-sources.md →「客户提供什么」AI 来源流量行 |
+| 主题量取父关键词：几个关键词出同一条 PAA 时取搜索量最大的那个，不相加（Ahrefs AI adjusted volume 的取词法）；韩国改用 Naver 量（Ahrefs 以谷歌占九成以上搜索份额为前提，韩国不成立） | signal-sources.md →「每类信源能用来干什么」关键词工具行 |
 
 ## 原本就有
 
@@ -33,3 +41,4 @@
 3. **Bing AI Performance 的 grounding 查询作为第一层来源**（GEO Bubbles）。它是 AI 检索时改写出的查询，我们只用它检验措辞和信源覆盖，不当题面。
 4. **题面加 "in 2026" 逼 ChatGPT 联网**（Ahrefs）。加年份会改变 AI 是否检索，新旧读数不可比，规则里没写；改写规则只要求原查询本身带年份时改成当年。
 5. **人设题模板**（Ahrefs 的「处境、约束、优先需求、痛点、问题」五段式）。条件只在改变候选集合时才加（SKILL Step 9），不按模板叠条件；Ahrefs 自己也把人设题放在低优先级。
+6. **AI adjusted volume 作主题或题目的量**（Ahrefs Brand Radar，公式为父关键词谷歌月搜索量 × 平台系数）。同一平台、同一国家内系数是常数，排序和谷歌搜索量完全一样，加这一列不改变任何选择；系数取自 AI 平台导流量与谷歌自然流量之比，量的是点击不是提问，且全球统一、不分国家和品类。我们继续只填谷歌（韩国为 Naver）关键词量的四档，不换算成 AI 量。

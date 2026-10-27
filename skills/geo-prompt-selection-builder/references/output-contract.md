@@ -11,13 +11,13 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
 - a separate `品牌事实【请核对】` table (the Base's 业务范围);
 - a `品牌事实核查` table (the Base's 品牌事实核查; document format: `事实项 | 官方值 | 来源页面 | 冲突说法 | 冲突来源 | 品牌方要做什么`) holding facts that are contradictory on the official site or asserted without external support, one row each, with full source URLs; 品牌方要做什么 is 改官网 or 提供材料 (see [client-facing-attribute-pool.md](client-facing-attribute-pool.md) → *品牌事实核查*);
-- the attribute judgements — `重要性`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 约束 and 目标题数 — split between 属性池 (one row per attribute: `重要性`, `相对竞品`, `可改变性`, evidence and 还缺什么) and 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号, linked to 属性池 through 属性关联, carrying 约束, 目标题数 and the formula `优先级`; the per-slice `购买影响` column was removed 2026-10-22 — a situation that genuinely changes importance splits the pool row instead);
+- the attribute judgements — `重要性`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 约束 and 目标题数 — split between 属性池 (one row per attribute: `重要性`, `相对竞品`, `可改变性`, the formula `优先级` = 重要性 × 可改变性, evidence and 还缺什么) and 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号, linked to 属性池 through 属性关联, carrying 约束 and 目标题数, **no priority column** — Suda 2026-10-26; the per-Prompt selection priority, with the 信源壁垒 drop applied and no audience cap, is 提示词库 建议优先级, and the post-baseline order is 提示词库 优化顺序); the per-slice `购买影响` column was removed 2026-10-22 — a situation that genuinely changes importance splits the pool row instead;
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
 - trial / selection / lock handoff.
 
-In the Base there is no `客户确认` column: the brand party edits cells directly and marks 状态 (待审核 / 需修改 / 已批准, then 正式 / 停测 at lock, before the formal baseline; was: after the baseline) on 提示词库; only 已批准 Prompts are eligible for formal selection. Document-format pieces keep a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
+In the Base there is no `客户确认` column: the brand party edits cells directly and marks 状态 (待审核 / 需修改 / 已批准, then 正式 at lock, before the formal baseline; was: after the baseline) on 提示词库 — candidates not selected are deleted from the Base and recorded in `config.retired`, so 停测 lives only in the bank JSON (2026-10-23); only 已批准 Prompts are eligible for formal selection. Document-format pieces keep a `客户确认` column. Use write-what-to-change: the brand party writes only rows requiring correction, deletion, or addition; blank means reviewed without change. Do not put internal methodology, question numbering, or unstable evidence mappings in the customer document. Use `品牌方`, not `贵司`.
 
 ## JSON
 
@@ -286,7 +286,7 @@ it does not read crawler answers or prove collection occurred. Before marking
 trial or baseline collection complete, the collection workflow must audit the
 raw results for each Prompt/platform run and retain their locations.
 
-Compute only from observed valid runs (5 per Prompt/platform). Diagnose
+Compute only from observed valid runs (30 per cell in the formal baseline; 3, at most 5, per platform in the trial). Diagnose
 failed or missing runs and rerun them rather than imputing zeroes. The baseline
 runs establish an initial benchmark, not proof of a stable long-term gap.
 
@@ -339,8 +339,8 @@ Before delivery:
     decisions; it is not limited to product features or technical parameters.
 18. **[manual]** Attributes were derived in the rule document's four steps — twelve-category
     gap sweep, category-specific attributes from the three sources, one B2B/B2C
-    line or an explicit split — and graded P1 / P2 / P3 by purchase-decision
-    importance before Topics were named. The delivery states the resulting
+    line or an explicit split — and graded P1 / P2 / P3 by importance ×
+    changeability before Topics were named. The delivery states the resulting
     grades.
 19. **[manual]** The internal market coverage pass was completed before Prompt lock. Each
     retained market delta has evidence, each omitted slice has a reason, and
@@ -371,9 +371,9 @@ Before delivery:
     re-checked: Prompts filed under the wrong Topic were moved to where their
     actual purchase decision belongs and the counts recomputed. A shortfall
     resolved this way is a correction, not padding.
-25. **[manual]** Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `重要性` (购买影响 in documents before 2026-10-22), `相对竞品`, `优先级`, evidence gaps and `客户确认`; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; every table uses the write-what-to-change `客户确认` convention; question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
-26. **[validator: 确认状态与 10 题上限]** The attribute pool and business scope were confirmed before the candidate
-    baseline (30 runs per query × platform × country × language); the formal set (at most 10 per
+25. **[manual]** Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `重要性` (购买影响 in documents before 2026-10-22), `相对竞品`, `优先级`, evidence gaps, and `客户确认` in document format; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; in document format every table uses the write-what-to-change `客户确认` convention (the Base has none — the brand party edits cells); question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
+26. **[validator: 确认状态与 10 题上限]** The attribute pool and business scope were confirmed before the trial
+    (3 runs per Prompt on each monitored platform); the formal set (at most 10 per
     purchased Topic) was selected by attribute priority, confirmed and
     version-locked; reworded Prompts were rerun before reuse.
 27. **[manual]** The customer-facing document contains the resulting brand facts, attribute

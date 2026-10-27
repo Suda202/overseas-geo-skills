@@ -209,7 +209,7 @@ just to cover a shape.
 | Price, availability, purchase | Discovery when it asks for candidates | "Which … are on sale / in stock" lists brands; kept in the `experimental` layer because answers move with prices and stock |
 | Return, warranty, subscription terms | Accuracy | Troubleshooting is not written as a Prompt |
 | Understand a category and how to choose | Category Awareness | `formal_visibility_eligible: false` |
-| Policy, process, cost or dispute advice | Information (after-sales only) | Only when the answer leaves a next step the brand serves |
+| Problem-solving or goal-reaching advice | Information (after-sales only) | Only when the answer leads to a next step the brand serves |
 | Which sources or reviews shape the answer | Separate research task | Studies the source ecosystem, not brand visibility |
 
 ## Library Sizing
@@ -285,26 +285,28 @@ without it there is no comparable trend. Whatever else is bought, the
 mention-rate KPI counts only the core Discovery Prompts in the formal set
 (Suda 2026-10-20).
 
-**Competitor, Category Awareness and Accuracy Prompts are research
-instruments: they go through the trial while the attribute pool is being
-judged, not in a separate collection round** (Suda 2026-10-15; the trial is the
-only one collection on candidates since 2026-10-23). Generate them while building the attribute pool and run them
-3 times on each monitored platform then (Suda 2026-10-23): competitor answers settle `相对竞品`, and AI's
-buying criteria show whether our P1 attributes are on the list, which feeds
-changeability. Accuracy Prompts are trialled at the same time but are
-scored only after the brand party confirms the right answer. That trial run
-is their research reading; they do not run a second time. Category
-Awareness and Accuracy take no formal-set slot. Competitor Prompts are
+**Competitor and Category Awareness Prompts go through the same trial as every
+other candidate Prompt, not a separate collection round** (Suda 2026-10-15 /
+2026-10-27). The one write-back pass after the trial uses their answers:
+competitor answers re-check `相对竞品`, and AI's buying criteria show whether
+our P1 attributes are on the list. Category Awareness takes no formal-set
+slot. Verification and Accuracy are not trialled: they are diagnostics written
+after the formal baseline or once the brand party confirms a fact, and take no
+formal-set slot either. Competitor Prompts are
 `monitoring` (or `experimental`) and the brand party may buy them into the
-formal set (Suda 2026-10-20): they then run every period, feed sentiment, stay
+formal set (Suda 2026-10-20): they are then re-tested monthly (Suda 2026-10-26), feed sentiment, stay
 out of the mention-rate KPI, and get the same 30-run formal baseline as every other formal Prompt (2026-10-23: the research run is no longer reused as Before). Evaluation Prompts and the `experimental` price/stock/delivery
 Discovery Prompts go through the trial like Discovery.
 
-**Re-runs** (Aleyda step 20). After their first readings, `monitoring` and
-`experimental` Prompts are re-run only on a trigger: an optimisation shipped
-for the attribute they test, a change to the underlying fact (new model,
-repricing, policy change), a named competitor's major move, or a quarterly
-review. A re-run after an optimisation checks whether AI changed its answer on
+**Re-runs** (Aleyda step 20; cadence by prompt type, Suda 2026-10-26 — the
+table lives in `geo-monitoring` → 采集频率与重跑). Formal Discovery runs daily;
+formal Competitor, Alternatives and Evaluation Prompts (and Information when
+bought in) are re-tested monthly; Verification and Accuracy are re-run only on
+an event — first diagnosis, an error found, the related fix going live, an
+important product-information change. Prompts outside the formal set are
+re-run only on such a trigger: an optimisation shipped for the attribute they
+test, a change to the underlying fact (new model, repricing, policy change),
+or a named competitor's major move. A re-run after an optimisation checks whether AI changed its answer on
 the Prompts tied to that attribute; it is read against that group's first
 readings, never spliced into the core trend.
 
