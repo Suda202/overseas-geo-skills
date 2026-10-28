@@ -1,0 +1,26 @@
+schema: spec-driven
+
+context: |
+  Project: GEO Presales Skills — Python "skill" packages that do generative-
+  engine-optimization work (competitor research, prompt/question-bank
+  generation, sentiment judging, report building) for overseas presales cases.
+
+  Tech stack:
+    - Python 3.9 (stdlib http.server for the existing skills API at server.py)
+    - FastAPI + pydantic v2 + httpx for the new orchestration platform
+    - Dify workflows as one execution backend (dify-agent-a-v2/workflow.dsl.yaml)
+    - OpenSpec for spec-driven development
+
+  Existing layout:
+    - skills/<skill-name>/            Python skill packages, each with scripts/
+    - server.py                       Flat tool API: POST /api/v1/tools/<tool_name>
+    - search_server.py                web_search / web_fetch (Scrapeless)
+    - dify-agent-a-v2/                A working 17-node Dify workflow that turns
+                                      a presales case into a question-bank JSON
+    - platforms/geo-orchestrator/     NEW: the platform being built here
+
+  Conventions:
+    - Skills API contract: every tool returns {ok, data|error}
+    - English field names end to end
+    - No new third-party deps unless they remove real complexity
+    - New platform code lives under platforms/, never mutates skills/ or server.py

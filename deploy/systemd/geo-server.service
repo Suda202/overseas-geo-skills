@@ -1,0 +1,28 @@
+[Unit]
+Description=GEO Skills unified HTTP API (server.py)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=geopress
+Group=geopress
+WorkingDirectory=/opt/geo-presales-skills
+EnvironmentFile=/etc/geo-presales/env
+Environment=HOST=127.0.0.1
+Environment=PORT=8090
+Environment=GEO_PRESALES_SKILLS_ROOT=/opt/geo-presales-skills/skills
+ExecStart=/usr/bin/python3 /opt/geo-presales-skills/server.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+# 长任务（collect_answers 最长 1h）不要被默认 90s 杀掉
+DefaultTimeoutStopSec=120
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

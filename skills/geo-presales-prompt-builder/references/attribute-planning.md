@@ -24,6 +24,33 @@ P1 / P2 / P3 是本项目为了安排首批监测问题覆盖而增加的属性�
 
 只能从 `品类 / 目标企业画像 n / 目标客户 n / 痛点 n / 使用场景 n / 产品特性 n / 差异化优势 / 适用边界 / 购买标准 / 集成与兼容 / 信任与合规 / 地理与市场 / 补充内容` 抽取。先合并同义和强重叠的陈述，再评估：
 
+> ⚠ **`source_field` 写入题库时必须用英文规范名**——上表中文是给业务侧看的标签，`validate_question_bank` 只认 `normalize_case` 输出的 `case_fields` 键名：
+>
+> | 中文（人读） | 英文（写进 attribute_plan） |
+> |---|---|
+> | 公司名 | `company_name` |
+> | 品牌名称 | `brand_name` |
+> | 业务模式 | `business_mode` |
+> | 业务/产品名称 | `business_product_name` |
+> | 品类 | `category` |
+> | 官方域名 | `official_domain` |
+> | 目标企业画像 n | `target_customer_profiles n` |
+> | 目标客户 n | `target_customers n` |
+> | 痛点 n | `pain_points n` |
+> | 使用场景 n | `use_cases n` |
+> | 产品特性 n | `product_features n` |
+> | 差异化优势 | `differentiation` |
+> | 适用边界 | `applicable_boundary` |
+> | 购买标准 | `purchase_criteria` |
+> | 集成与兼容 | `integration_compatibility` |
+> | 信任与合规 | `trust_compliance` |
+> | 地理与市场 | `geography_market` |
+> | 补充内容 | `supplemental` |
+> | 主题 n | `topics n (broad)` / `topics n (narrow)` |
+> | 竞品 n | `competitors n` / `competitors n official_domain` |
+>
+> 多值字段必须带序号（`product_features 1`，不是 `product_features`）；写中文键或漏序号都会被 validate 拒绝："source_field must reference an existing supported Case field"。
+
 1. 是否对当前 Topic 的买家有意义。
 2. 是否会改变供应商入围、对比、偏好或选型。
 3. Case 原字段是否足以支持，英文转写是否会扩张成新事实。
@@ -85,7 +112,7 @@ Topic 下的买家决策：
     "P1": [
       {
         "attribute": "视觉规格选型",
-        "source_field": "产品特性 1",
+        "source_field": "product_features 1",
         "source_value": "Case 原字段完整值",
         "decision_reason": "像素间距、亮度和刷新率决定显示屏能否匹配场馆。",
         "verification_statement": "It supports LED display selection based on pixel pitch, brightness, refresh rate, color, and image quality."
@@ -94,7 +121,7 @@ Topic 下的买家决策：
     "P2": [
       {
         "attribute": "项目总成本控制",
-        "source_field": "痛点 1",
+        "source_field": "pain_points 1",
         "source_value": "Case 原字段完整值",
         "decision_reason": "会明显影响供应商比较和最终选择。"
       }
@@ -104,7 +131,7 @@ Topic 下的买家决策：
   "excluded": [
     {
       "candidate": "官网将 LED 显示屏列为独立产品类别",
-      "source_field": "差异化优势",
+      "source_field": "differentiation",
       "source_value": "Case 原字段完整值",
       "reason": "仅说明官网信息架构，不改变入围或选型。",
       "route": "exclude"
@@ -114,6 +141,8 @@ Topic 下的买家决策：
 ```
 
 历史规划 P1 比 P2/P3 多一个 `verification_statement`，新分阶段产物可省略。当前 Topic 的 `validation_items` 与 Verification Attribute Tags 对 P1 的强绑定已随 Verification 配额归 0 暂停使用；Verification 不在默认售前题库中，只有另行确认的验证合同才使用。
+
+**常见拼错（validator 会逐条报 `CONFIG attribute_plan[...]`）**：`excluded` 是**条目外层**字段，与 `priorities` 平级，不要塞进 `priorities`；`priorities` 里只允许 `P1 / P2 / P3` 三个键，且每个都必须是数组（空也要写 `[]`，不要省略）。即形状是 `{"topic_id", "priorities": {"P1": [], "P2": [], "P3": []}, "excluded": []}`，不是 `{"topic_id", "priorities": {"P1": ..., "P2": ..., "P3": ..., "excluded": ...}}`。
 
 ## 题型分配检查
 

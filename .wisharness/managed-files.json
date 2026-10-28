@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "files": {
+    ".wisharness/rules/config-reference.md": "b1d9c7051f522ff6639a9d59bd75508fdfa793c78247c46600948d106f7100f0",
+    ".wisharness/rules/core.md": "6023d2a56484f5d20f43f65bd5292f1f0bc9633c6fbbda4ea3acc26445e6effa",
+    ".wisharness/rules/cross-platform.md": "c582b0bb0ef980d4205a4d12580971896b94e981288706aa293c58389837c775",
+    ".wisharness/rules/git-collaboration.md": "77b36e4b1cf2465abc4ea9616a79d64d3e7627f874832dc7aa25fbec4b3816fe",
+    ".wisharness/rules/method-design-planning.md": "a4b75c9397d5d28b4d164af1cab72363c5037d6c93352d198f3290ca325ef7e9",
+    ".wisharness/rules/method-diagnosis.md": "b18c35ff3a2da039900275ef4844397249b79faef7951224b1a57054fcde73dc",
+    ".wisharness/rules/method-requirements.md": "8029f0b6943c8e305dd5ee344f01fdb5de9e369f4e6915ebae339b2b6e5109c3",
+    ".wisharness/rules/method-retrospective.md": "d67c04e843245c2f6a637ac1d08feb7318238ec60485fc2b5f122e692bee9f72",
+    ".wisharness/rules/method-review.md": "a29791cc42be7a345610f1d9b0440b6931c4ad03cd41ceba83c571267e9123ff",
+    ".wisharness/rules/method-test-design.md": "bfc8f6f5be8bf4bdaf1a22b6243291f964d04ba6b20457baf467b9b67b4f45bb",
+    ".wisharness/rules/team-collaboration.md": "96ca9646c59cbdd309c943051e2bddffee1c342498f324be815528d5850ab0b8",
+    ".wisharness/rules/ui-visual-contract.md": "5fb33bc01798ac407ae2a80eef15fe440065ed60f719771ace6eeaaef8c4bb6f",
+    ".wisharness/templates/change-record.yaml": "ba93ba1e0923a3fe31bb5961a1eee2aa5e7f2ffd7050dac5b0446a681103bbd5",
+    ".wisharness/templates/handoff.md": "0b0d5b1059e772583c6829bd6b2995701ff1a0708d78c478e25f20e4e38d2434",
+    ".wisharness/templates/plan.md": "6852a30a7c4c95bf45776d45223df92deee066f8edfe7b223a1f1786d557f702",
+    ".wisharness/templates/platform-matrix.md": "a6184d7eb0422dbf726fdc532032aa8f48a523a0ec2d2ff39d8d509ee5c7bfcc",
+    ".wisharness/templates/spec.md": "8a44d828c490f3eb49c61b2062bf13111e95a09eb7c8bd384ef7a7c8764ae7f2",
+    ".wisharness/templates/visual-contract.md": "bac37debd1621bf793f7ee1245744f4f967cac38106a026f9df3e7893deca2b4"
+  }
+}

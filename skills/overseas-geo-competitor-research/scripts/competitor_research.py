@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import tempfile
 from datetime import date, datetime
 from pathlib import Path
@@ -57,6 +58,46 @@ def domain_matches(host, domain):
     host = host_of(host)
     domain = host_of(domain)
     return bool(host and domain and (host == domain or host.endswith("." + domain)))
+
+
+# 常见二级公共后缀：品牌的"根名"要把这层去掉才对得上地区站。
+_SECOND_LEVEL = {"com", "net", "org", "co", "gov", "edu", "ac"}
+
+
+def _brand_root(domain):
+    """取域名的品牌根名：swisse.com → swisse，swisse.com.au → swisse。
+
+    只用于判断"是不是同一个品牌的站点"，不用于放宽到无关域名。
+    """
+    domain = host_of(domain)
+    if not domain:
+        return ""
+    labels = domain.split(".")
+    if len(labels) >= 3 and labels[-2] in _SECOND_LEVEL:
+        # swisse.com.au → swisse；www.swisse.co.uk → swisse
+        return labels[-3]
+    return labels[-2] if len(labels) >= 2 else labels[0]
+
+
+def same_brand_site(host, domain):
+    """判断 host 是否为 domain 所属品牌的地区站/子站。
+
+    真实品牌常拆成多站：swisse.com（全球）、swisse.us（美国）、swisse.com.au（澳洲）。
+    这些在"当前活跃"判定上等价，但**只在品牌根名完全相同时**成立，
+    避免把无关域名当成官网。
+    """
+    host = host_of(host)
+    domain = host_of(domain)
+    if not host or not domain:
+        return False
+    if host == domain or host.endswith("." + domain):
+        return True
+    root = _brand_root(domain)
+    if not root:
+        return False
+    host_labels = host.split(".")
+    # host 的某一层必须恰好等于品牌根名（swisse.us → swisse；us.swisse.com 已由上面覆盖）
+    return root in host_labels
 
 
 def parse_date(value, field):
@@ -186,7 +227,10 @@ def evidence_index(research, config):
         if not evidence_id or evidence_id in result or not host_of(url):
             raise ContractError("证据必须有唯一 evidence_id 和合法 URL")
         if source_type not in {"official", "independent_review", "market_report", "news", "directory"}:
-            raise ContractError(f"证据 {evidence_id} 的 source_type 不合法")
+            raise ContractError(
+                f"证据 {evidence_id} 的 source_type 不合法：{source_type!r}；"
+                "只允许 official / independent_review / market_report / news / directory"
+            )
         accessed_at = parse_date(item.get("accessed_at"), f"evidence.{evidence_id}.accessed_at")
         published_at = parse_date(item["published_at"], f"evidence.{evidence_id}.published_at") if item.get("published_at") else None
         claims = item.get("claims") or []
@@ -218,7 +262,7 @@ def match_known_competitor(name, domain, aliases, config):
     return None
 
 
-def score_candidate(candidate, evidence, config):
+def score_candidate(candidate, evidence, config, research=None):
     name = str(candidate.get("canonical_name") or "").strip()
     domain = host_of(candidate.get("official_domain"))
     if not name or not domain:
@@ -250,7 +294,15 @@ def score_candidate(candidate, evidence, config):
     if not isinstance(candidate_evidence_ids, list) or any(item not in evidence for item in candidate_evidence_ids):
         raise ContractError(f"候选 {name} 引用了不存在的 evidence_id")
     candidate_evidence = [evidence[item] for item in candidate_evidence_ids]
-    official = [item for item in candidate_evidence if item["source_type"] == "official" and domain_matches(item["host"], domain)]
+    # 用于诊断"绑定了别家证据"：收集所有候选的 evidence_ids 归属
+    evidence_owners = {}
+    for other in (research.get("candidates") or []) if isinstance(research, dict) else []:
+        other_name = other.get("canonical_name") or other.get("name") or "?"
+        for eid in other.get("evidence_ids") or []:
+            evidence_owners.setdefault(eid, other_name)
+    official = [item for item in candidate_evidence
+                if item["source_type"] == "official"
+                and (domain_matches(item["host"], domain) or same_brand_site(item["host"], domain))]
     independent = [item for item in candidate_evidence if item["source_type"] != "official"]
     current_date = date.fromisoformat(config["current_date"])
     current_official = [item for item in official if (current_date - item["accessed_date"]).days <= 30]
@@ -266,8 +318,21 @@ def score_candidate(candidate, evidence, config):
         ids = evidence_bindings.get(field) or []
         if not isinstance(ids, list):
             raise ContractError(f"候选 {name} 的 evidence_bindings.{field} 必须是数组")
-        if any(item not in candidate_evidence_ids for item in ids):
-            raise ContractError(f"候选 {name} 的 evidence_bindings.{field} 引用了候选证据范围外的 ID")
+        strays = [item for item in ids if item not in candidate_evidence_ids]
+        if strays:
+            # 指出越界 ID 属于哪个候选，避免 agent 反复猜
+            described = []
+            for stray in strays:
+                owner = evidence_owners.get(stray)
+                described.append(
+                    f"{stray}（属于 {owner}）" if owner
+                    else f"{stray}（未出现在任何候选的 evidence_ids 中）"
+                )
+            raise ContractError(
+                f"候选 {name} 的 evidence_bindings.{field} 引用了候选证据范围外的 ID："
+                f"{'、'.join(described)}；该候选自己的 evidence_ids 是 {candidate_evidence_ids}。"
+                "证据绑定只能用本候选 evidence_ids 里的 ID，不能借用其他竞品的证据。"
+            )
         return [evidence[item] for item in ids]
 
     dimension_sources = {key: bound_evidence(key) for key in required_dimensions}
@@ -300,9 +365,12 @@ def score_candidate(candidate, evidence, config):
     if values["target_users"] < 3:
         reasons.append("目标用户重叠不足")
     if not official:
-        reasons.append("缺少与官网域名一致的官方证据")
+        hosts = [item["host"] for item in candidate_evidence if item["source_type"] == "official"]
+        hint = f"（已有的 official 证据 host：{hosts}，与官网域名 {domain} 不匹配）" if hosts else ""
+        reasons.append(f"缺少与官网域名一致的官方证据{hint}")
     elif not current_official:
-        reasons.append("官网活跃状态缺少近 30 天访问证据")
+        hosts = [f"{item['host']}（accessed {item['accessed_date']}）" for item in official]
+        reasons.append(f"官网活跃状态缺少近 30 天访问证据：{hosts}")
     if not independent:
         reasons.append("缺少独立来源证据")
     if not activity_sources or not any(item in current_official for item in activity_sources):
@@ -468,13 +536,27 @@ def finalize(config, research):
     candidates = research.get("candidates") or []
     if not isinstance(candidates, list):
         raise ContractError("candidates 必须是数组")
-    scored = [score_candidate(item, evidence, config) for item in candidates]
+    scored = [score_candidate(item, evidence, config, research) for item in candidates]
     domains = [item["official_domain"] for item in scored if item.get("official_domain")]
     if len(domains) != len(set(domains)):
         raise ContractError("候选中存在重复官网域名")
     eligible = [item for item in scored if item["same_purchase_set_eligible"]]
     if len(eligible) < 3:
-        raise ContractError("同一购买集合的合格候选少于 3 个；请继续自动检索并重跑，不能用相邻产品或不同购买决策的品牌补位")
+        detail = []
+        for item in scored:
+            if item["same_purchase_set_eligible"]:
+                detail.append(f"  ✓ {item['canonical_name']}：合格")
+            else:
+                reasons = "；".join(item["purchase_set_reasons"]) or "未说明"
+                detail.append(f"  ✗ {item['canonical_name']}：{reasons}")
+        raise ContractError(
+            "同一购买集合的合格候选少于 3 个；请继续自动检索并重跑，"
+            "不能用相邻产品或不同购买决策的品牌补位。\n逐候选诊断：\n" + "\n".join(detail) + "\n"
+            "常见缺项：每个候选都需要 ①与自己官网域名一致的 official 证据（近 30 天访问）"
+            "②至少一条独立来源（independent_review / market_report / news / directory）"
+            "③same_purchase_set 绑定一条独立来源证据"
+            "④direct_substitute 绑定本候选自己的证据（不能借用其他竞品的 evidence_id）"
+        )
     selected = choose_portfolio(scored, config)
     if len(selected) != 3:
         raise ContractError("未能自动补足 3 个竞品；请扩大自动候选池并重跑，不能返回 needs_manual_input")
@@ -596,7 +678,12 @@ def finalize(config, research):
 def command_prepare(args):
     root = Path(args.run_dir).expanduser().resolve()
     if root.exists() and any(root.iterdir()):
-        raise ContractError(f"运行目录非空：{root}")
+        if args.overwrite:
+            shutil.rmtree(root)
+        else:
+            raise ContractError(
+                f"运行目录非空：{root}（如需重跑请传 --overwrite 清空旧产物）"
+            )
     root.mkdir(parents=True, exist_ok=True)
     config = normalize_input(read_json(args.input))
     plan = build_plan(config)
@@ -619,6 +706,11 @@ def build_parser():
     prepare = sub.add_parser("prepare", help="冻结输入并生成联网检索计划")
     prepare.add_argument("--input", required=True)
     prepare.add_argument("--run-dir", required=True)
+    prepare.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="run-dir 已存在且非空时先清空再写入；默认拒绝覆盖以防错配旧证据",
+    )
     prepare.set_defaults(func=command_prepare)
     finalize_parser = sub.add_parser("finalize", help="校验研究证据并自动选择三个竞品")
     finalize_parser.add_argument("--run-dir", required=True)

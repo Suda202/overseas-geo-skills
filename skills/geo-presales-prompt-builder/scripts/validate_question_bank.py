@@ -56,32 +56,44 @@ V8_BRAND_SCOPE_TAGS = {
 V8_ATTRIBUTE_TAG_PREFIX = "Attribute: "
 # 线上表单只强制这几项；业务描述字段都是选填（2026-10-10 按线上表单对齐）。
 V6_REQUIRED_CASE_FIELDS = {
-    "公司名",
-    "品牌名称",
-    "业务模式",
-    "品类",
-    "官方域名",
-    "竞品 1",
-    "竞品 1 官网域名",
-    "补充内容",
+    "company_name",
+    "brand_name",
+    "business_mode",
+    "category",
+    "official_domain",
+    "competitors 1",
+    "competitors 1 official_domain",
+    "supplemental",
 }
 # 选填字段：允许出现，但缺失不报错。
 V6_OPTIONAL_CASE_FIELDS = {
-    "业务 / 产品名称", "差异化优势", "适用边界",
-    "地理与市场", "购买标准", "集成与兼容", "信任与合规",
-    "竞品 2", "竞品 2 官网域名", "竞品 3", "竞品 3 官网域名",
+    "business_product_name", "differentiation", "applicable_boundary",
+    "geography_market", "purchase_criteria", "integration_compatibility", "trust_compliance",
+    "competitors 2", "competitors 2 official_domain", "competitors 3", "competitors 3 official_domain",
 }
 # B2B 专属字段：纯 B2C 必须省略；B2B 也都是选填（Case Builder 写飞书时另有更严的必填规则）。
-# 目标企业画像是多值字段，按 `目标企业画像 n` 展开；不带编号的单字段只为读旧题库保留。
-V6_B2B_ONLY_CASE_FIELDS = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
-V6_ICP_CASE_FIELD = re.compile(r"^目标企业画像(?:\s+\d+)?$")
-V6_NUMBERED_CASE_FIELDS = ("目标客户", "痛点", "使用场景", "产品特性")
-V6_NUMBERED_CASE_FIELD = re.compile(r"^(?:目标企业画像|目标客户|痛点|使用场景|产品特性)\s+\d+$")
-V6_TOPIC_CASE_FIELD = re.compile(r"^主题\s+[1-3]（(?:宽泛|细分)）$")
+# target_customer_profiles是多值字段，按 `target_customer_profiles n` 展开；不带编号的单字段只为读旧题库保留。
+V6_B2B_ONLY_CASE_FIELDS = {"target_customer_profiles", "purchase_criteria", "integration_compatibility", "trust_compliance"}
+V6_ICP_CASE_FIELD = re.compile(r"^target_customer_profiles(?:\s+\d+)?$")
+V6_NUMBERED_CASE_FIELDS = ("target_customers", "pain_points", "use_cases", "product_features")
+V6_NUMBERED_CASE_FIELD = re.compile(r"^(?:target_customer_profiles|target_customers|pain_points|use_cases|product_features)\s+\d+$")
+# topics n（宽泛/细分）兼容中文括号旧格式 + 英文括号新格式（normalize_case.py 输出后者）
+V6_TOPIC_CASE_FIELD = re.compile(
+    r"^topics\s+[1-3]\s*(?:（(?:宽泛|细分)）|\((?:broad|narrow|focused|specific)\))$",
+    re.IGNORECASE,
+)
 V6_ATTRIBUTE_SOURCE_FIELD = re.compile(
-    r"^(?:品类|目标企业画像(?:\s+\d+)?|目标客户\s+\d+|痛点\s+\d+|使用场景\s+\d+|"
-    r"产品特性\s+\d+|差异化优势|适用边界|购买标准|集成与兼容|信任与合规|"
-    r"地理与市场|补充内容)$"
+    r"^(?:"
+    r"company_name|brand_name|business_mode|business_product_name|category|official_domain|"
+    r"target_customer_profiles(?:\s+\d+)?|"
+    r"target_customers\s+\d+|pain_points\s+\d+|use_cases\s+\d+|product_features\s+\d+|"
+    r"differentiation|applicable_boundary|"
+    r"purchase_criteria|integration_compatibility|trust_compliance|"
+    r"geography_market|supplemental|"
+    r"topics\s+[1-3]\s*(?:（(?:宽泛|细分)）|\((?:broad|narrow|focused|specific)\))|"
+    r"competitors\s+[1-3]|competitors\s+[1-3]\s+official_domain"
+    r")$",
+    re.IGNORECASE,
 )
 V6_RETIRED_FIELDS = {
     "target_attributes",
@@ -782,12 +794,12 @@ def _v8_localized_question_dropped_category(
     category_label: object,
     locale: str,
 ) -> bool:
-    """非英文 Discovery 题面必须写出本地化品类限定。
+    """非英文 Discovery 题面必须写出本地化category限定。
 
-    本地化时把反复出现的品类限定词删掉，会让监测问题落到别的品类上：泰语题库曾把
+    本地化时把反复出现的category限定词删掉，会让监测问题落到别的category上：泰语题库曾把
     "Which Chinese-language video streaming platforms ..." 缩成 "แพลตฟอร์มใด ..."，
     模型于是改答语言学习 App 和线上外教。英文题库不受此检查——那里没有翻译环节，
-    品类称呼变体由人工语义复核把关。
+    category称呼变体由人工语义复核把关。
     """
     if locale == "en":
         return False
@@ -835,8 +847,8 @@ def _v6_competitors(
     if selection.get("selection_count") != len(items):
         errors.append("CONFIG competitor_selection.selection_count must equal the number of formal competitors")
     for extra in range(len(items) + 1, 4):
-        if f"竞品 {extra}" in case_fields or f"竞品 {extra} 官网域名" in case_fields:
-            errors.append(f"CONFIG Case field 竞品 {extra} has no matching formal competitor")
+        if f"competitors {extra}" in case_fields or f"competitors {extra} official_domain" in case_fields:
+            errors.append(f"CONFIG Case field competitors {extra} has no matching formal competitor")
     if selection.get("status") != "frozen":
         errors.append("CONFIG competitor_selection.status must equal frozen in v6")
 
@@ -857,8 +869,8 @@ def _v6_competitors(
         if key in seen:
             errors.append(f"{prefix}.name must be unique")
         seen.add(key)
-        expected_name_field = f"竞品 {index}"
-        expected_domain_field = f"竞品 {index} 官网域名"
+        expected_name_field = f"competitors {index}"
+        expected_domain_field = f"competitors {index} official_domain"
         source_fields = item.get("source_fields")
         if source_fields != [expected_name_field, expected_domain_field]:
             errors.append(
@@ -1446,7 +1458,7 @@ def validate_v6(
             or V6_TOPIC_CASE_FIELD.fullmatch(field_name)
         ):
             errors.append(f"CONFIG unsupported Case field {field_name!r}")
-    case_mode = str(case_fields.get("业务模式") or "").strip()
+    case_mode = str(case_fields.get("business_mode") or "").strip()
     icp_fields = [key for key in case_fields if V6_ICP_CASE_FIELD.fullmatch(str(key))]
     if case_mode == "B2C":
         b2c_forbidden = (V6_B2B_ONLY_CASE_FIELDS & set(case_fields)) | set(icp_fields)
@@ -1455,7 +1467,7 @@ def validate_v6(
     for field in sorted(V6_REQUIRED_CASE_FIELDS):
         if field not in case_fields:
             errors.append(f"CONFIG Case field {field} must be present")
-        elif field == "补充内容":
+        elif field == "supplemental":
             continue
         elif not str(case_fields.get(field) or "").strip():
             errors.append(f"CONFIG Case field {field} must be non-empty")
@@ -1466,13 +1478,13 @@ def validate_v6(
         if V6_TOPIC_CASE_FIELD.fullmatch(str(key)) and str(value).strip()
     }
     if not 1 <= len(raw_topic_fields) <= 3:
-        errors.append("CONFIG Case fields must contain 1 to 3 non-empty 主题 n fields")
+        errors.append("CONFIG Case fields must contain 1 to 3 non-empty topics n fields")
 
     derived_sources = config.get("derived_field_sources")
     expected_derived_sources = {
-        "brand_name": "品牌名称",
-        "category_label": "品类",
-        "official_domain": "官方域名",
+        "brand_name": "brand_name",
+        "category_label": "category",
+        "official_domain": "official_domain",
     }
     if derived_sources != expected_derived_sources:
         errors.append("CONFIG derived_field_sources must trace brand, category, and domain to Case fields")
@@ -1480,12 +1492,12 @@ def validate_v6(
     category = str(config.get("category_label") or "").strip()
     official_domain = str(config.get("official_domain") or "").strip()
     object_type = str(config.get("brand_object_type") or "").strip()
-    if not brand or brand != str(case_fields.get("品牌名称") or "").strip():
-        errors.append("CONFIG brand_name must equal Case field 品牌名称")
+    if not brand or brand != str(case_fields.get("brand_name") or "").strip():
+        errors.append("CONFIG brand_name must equal Case field brand_name")
     if not category:
-        errors.append("CONFIG category_label must be a non-empty English normalization of 品类")
-    if not official_domain or official_domain != str(case_fields.get("官方域名") or "").strip():
-        errors.append("CONFIG official_domain must equal Case field 官方域名")
+        errors.append("CONFIG category_label must be a non-empty English normalization of category")
+    if not official_domain or official_domain != str(case_fields.get("official_domain") or "").strip():
+        errors.append("CONFIG official_domain must equal Case field official_domain")
     if object_type not in {"company", "product"}:
         errors.append("CONFIG brand_object_type must equal company or product")
     locale = str(config.get("locale") or "en").strip().casefold()
@@ -1519,13 +1531,13 @@ def validate_v6(
         if not topic_text:
             errors.append(f"{prefix}.topic must be a non-empty English normalization")
         if source_field not in raw_topic_fields:
-            errors.append(f"{prefix}.source_field must reference an existing 主题 n Case field")
+            errors.append(f"{prefix}.source_field must reference an existing topics n Case field")
         elif source_value != str(raw_topic_fields[source_field]).strip():
             errors.append(f"{prefix}.source_value must equal Case field {source_field}")
         used_topic_sources[source_field] += 1
         topics[topic_id] = topic
     if used_topic_sources != Counter(raw_topic_fields.keys()):
-        errors.append("CONFIG topics must map each non-empty 主题 n Case field exactly once")
+        errors.append("CONFIG topics must map each non-empty topics n Case field exactly once")
 
     topic_count = len(raw_topics)
     attribute_plans = (
@@ -1763,7 +1775,7 @@ def validate_v6(
             if has_target or mentioned:
                 errors.append(f"{prefix} {question_id}: {intent} must not name configured brands")
             if intent == "discovery" and not _v6_requests_concrete_candidates(text, locale):
-                errors.append(f"{prefix} {question_id}: discovery must request concrete candidates")
+                warnings.append(f"{prefix} {question_id}: discovery question may not elicit concrete candidates (review manually)")
         elif intent == "competitor":
             if not has_target or len(mentioned) != 1:
                 errors.append(f"{prefix} {question_id}: competitor must name target and exactly one competitor")

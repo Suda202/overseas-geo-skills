@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEO Orchestrator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>GEO Orchestrator</h1>
+  <p class="sub">输入 presales case，生成题库 JSON</p>
+  <a class="health" id="health" href="#" title="检查 Dify 连通性">检查 Dify</a>
+</header>
+
+<main>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="form" role="tab">表单输入</button>
+    <button class="tab" data-tab="paste" role="tab">粘贴 JSON</button>
+    <button class="tab" data-tab="history" role="tab">生成记录</button>
+  </div>
+
+  <!-- ---------- form ---------- -->
+  <section id="panel-form" class="panel">
+    <form id="case-form" autocomplete="off">
+      <div class="grid">
+        <label>brand_name <span class="req">*</span>
+          <input name="brand_name" required placeholder="KeepBalance">
+        </label>
+        <label>company_name <span class="req">*</span>
+          <input name="company_name" required placeholder="KeepBalance">
+        </label>
+        <label>business_mode <span class="req">*</span>
+          <input name="business_mode" required placeholder="B2C">
+        </label>
+        <label>category <span class="req">*</span>
+          <input name="category" required placeholder="family dietary supplements">
+        </label>
+        <label>official_domain <span class="req">*</span>
+          <input name="official_domain" required placeholder="https://keepbalance.life">
+        </label>
+        <label>topics <span class="req">*</span>
+          <input name="topics" required placeholder="family dietary supplements">
+        </label>
+        <label>regions <span class="req">*</span>
+          <input name="regions" required placeholder="US">
+        </label>
+        <label class="wide">supplemental
+          <textarea name="supplemental" rows="2" placeholder="Target market US; customer-facing B2C diagnostic case."></textarea>
+        </label>
+      </div>
+
+      <fieldset class="competitors">
+        <legend>competitors <span class="req">*</span> <small>最多 6 个</small></legend>
+        <div id="comp-rows"></div>
+        <button type="button" class="ghost" id="add-comp">+ 添加竞品</button>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="run-btn">运行</button>
+        <button type="button" class="ghost" id="load-sample">填入示例</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ---------- paste ---------- -->
+  <section id="panel-paste" class="panel hidden">
+    <p class="hint">直接粘贴 case JSON。支持 markdown 代码块、{"case": {...}} 包装、以及 Dify 运行历史里复制的扁平对象。</p>
+    <textarea id="paste-box" rows="18" spellcheck="false" placeholder='{
+  "brand_name": "KeepBalance",
+  "company_name": "KeepBalance",
+  "business_mode": "B2C",
+  "category": "family dietary supplements",
+  "official_domain": "https://keepbalance.life",
+  "topics": "family dietary supplements",
+  "competitors": [{"name":"By-Health","official_domain":"https://by-health.com"}],
+  "regions": "US",
+  "supplemental": ""
+}'></textarea>
+    <div class="actions">
+      <button class="primary" id="paste-run">运行</button>
+      <button class="ghost" id="paste-to-form">填入表单</button>
+      <span id="paste-hint" class="hint"></span>
+    </div>
+  </section>
+
+  <!-- ---------- history ---------- -->
+  <section id="panel-history" class="panel hidden">
+    <div class="history-head">
+      <h2 class="section-title">生成记录</h2>
+      <button class="ghost" id="history-refresh" title="刷新">⟳ 刷新</button>
+    </div>
+    <table class="runs">
+      <thead>
+        <tr><th>时间</th><th>品牌</th><th>品类</th><th>市场</th><th>题数</th><th>状态</th><th></th></tr>
+      </thead>
+      <tbody id="runs-tbody"></tbody>
+    </table>
+    <p class="hint" id="runs-empty">还没有生成记录。运行一次后这里会列出结果。</p>
+    <div class="pager" id="pager">
+      <button class="ghost" id="prev-page">‹ 上一页</button>
+      <span id="page-info" class="hint"></span>
+      <button class="ghost" id="next-page">下一页 ›</button>
+    </div>
+  </section>
+
+  <!-- ---------- result ---------- -->
+  <section id="panel-result" class="panel hidden">
+    <div id="status" class="status"></div>
+    <div id="result-actions" class="actions hidden">
+      <a id="dl" class="primary" download="question-bank.json">下载 JSON</a>
+      <button class="ghost" id="copy">复制</button>
+      <button class="ghost" id="toggle-raw">查看原始</button>
+      <span id="meta" class="hint"></span>
+    </div>
+    <pre id="output" class="hidden"></pre>
+    <div id="questions"></div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -85,7 +85,7 @@ import de_cite_crawl as de_cite  # noqa: E402
 # 二级后缀（如 .com.my）。缺了会把所有马来西亚站点并成一个 "com.my" 桶。这里把
 # 后端自己声明为近似的这张表补全；官方域名匹配走注意 domain_matches，不依赖此表，
 # 因此本扩充只影响展示层的域名聚合，**不改变任何指标**。
-core_util.COMMON_MULTI_LABEL_SUFFIXES |= {
+EXTRA_MULTI_LABEL_SUFFIXES = {
     "com.my", "net.my", "org.my", "gov.my", "edu.my", "com.sg", "net.sg", "org.sg",
     "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
 }
@@ -847,7 +847,7 @@ def _citation_entries(platform: str, task_result: dict, answer_text: str = "") -
             continue
         canonical = None
         if url:
-            normalized = normalize_url(url)
+            normalized = normalize_url(url, extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES)
             canonical = (normalized or {}).get("canonical_url") or url
         occ_canonicals.append((number, canonical))
         candidates.append({
@@ -1022,7 +1022,8 @@ def build_answers_index(collect_dir: Path, config: dict, bank: dict, run_root: P
             issues.extend(sample_issues)
             order_issues.extend(order)
             index[(region, platform)] = prepare_answers(run_root, config, bank,
-                                                        {"samples": samples})
+                                                        {"samples": samples},
+                                                        extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES)
     return index, issues, order_issues
 
 
@@ -2002,7 +2003,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                 seen_urls = set()  # 展示层同一 URL 只列一次（Gemini/AIO 把同一页面拆成多条）
                 for c in cite_entries:
                     raw_url = c.get("raw_url")
-                    normalized = normalize_url(raw_url) if raw_url else None
+                    normalized = normalize_url(raw_url, extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES) if raw_url else None
                     if not normalized:
                         continue
                     canonical = normalized["canonical_url"]
@@ -2032,7 +2033,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                                 continue
                             if not url:
                                 continue
-                            normalized = normalize_url(url)
+                            normalized = normalize_url(url, extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES)
                             if not normalized:
                                 continue
                             canonical = normalized["canonical_url"]

@@ -54,7 +54,7 @@ if str(_AUDIT_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_AUDIT_SCRIPTS))
 import de_cite_crawl as de_cite  # noqa: E402
 
-core_util.COMMON_MULTI_LABEL_SUFFIXES |= {
+EXTRA_MULTI_LABEL_SUFFIXES = {
     "com.my", "net.my", "org.my", "gov.my", "edu.my", "com.sg", "net.sg", "org.sg",
     "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
 }
@@ -262,7 +262,7 @@ class Recomputer:
                         host = normalize_host(url) if url else ""
                         if host and _is_platform_internal(host):
                             continue
-                        normalized = core_normalize_url(url) if url else None
+                        normalized = core_normalize_url(url, extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES) if url else None
                         canonical = (normalized or {}).get("canonical_url") or (url or None)
                         for _ in range(count):
                             rows.append({"url": url or None, "host": host or None,
@@ -298,7 +298,7 @@ class Recomputer:
                     if host and _is_platform_internal(host):
                         continue
                     # 去重键必须与数据层一致：core 的 canonical_url 会去掉 www. 与尾斜杠。
-                    normalized = core_normalize_url(url) if url else None
+                    normalized = core_normalize_url(url, extra_suffixes=EXTRA_MULTI_LABEL_SUFFIXES) if url else None
                     canonical = (normalized or {}).get("canonical_url") or (url or None)
                     occ_canonicals.append((number, canonical))
                     candidates.append({

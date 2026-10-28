@@ -1,0 +1,1791 @@
+app:
+  description: GEO Presales Agent A - All-English workflow
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: GEO Agent A - English
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: package
+  value:
+    plugin_unique_identifier: lpf/zhinao:0.0.8@8cebc97adeef5a9c499bf7e8711186c7d377f7fc72d7f497179ce6997491c8c0
+    version: null
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - description: GEO 业务工具服务端基础 URL
+    id: a1b2c3d4-0001-4000-8000-000000000001
+    name: biz_api_base
+    selector:
+    - env
+    - biz_api_base
+    value: https://addresses-aug-become-posted.trycloudflare.com
+    value_type: string
+  - description: GEO 联网工具服务端基础 URL
+    id: a1b2c3d4-0002-4000-8000-000000000002
+    name: search_api_base
+    selector:
+    - env
+    - search_api_base
+    value: https://distinguished-recent-verification-literary.trycloudflare.com
+    value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: code
+      id: e-start-cfg
+      selected: false
+      source: '1729000000001'
+      sourceHandle: source
+      target: '1729000000015'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-cfg-read_skills
+      selected: false
+      source: '1729000000015'
+      sourceHandle: source
+      target: '1729000000002'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-read_skills-prepare
+      selected: false
+      source: '1729000000002'
+      sourceHandle: source
+      target: '1729000000003'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-prepare-web_search
+      selected: false
+      source: '1729000000003'
+      sourceHandle: source
+      target: '1729000000004'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-web_search-web_fetch
+      selected: false
+      source: '1729000000004'
+      sourceHandle: source
+      target: '1729000000005'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: e-web_fetch-llm_research
+      selected: false
+      source: '1729000000005'
+      sourceHandle: source
+      target: '1729000000006'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: e-llm_research-write_research
+      selected: false
+      source: '1729000000006'
+      sourceHandle: source
+      target: '1729000000007'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-write_research-finalize
+      selected: false
+      source: '1729000000007'
+      sourceHandle: source
+      target: '1729000000008'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-finalize-normalize
+      selected: false
+      source: '1729000000008'
+      sourceHandle: source
+      target: '1729000000009'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: e-normalize-llm_bank
+      selected: false
+      source: '1729000000009'
+      sourceHandle: source
+      target: '1729000000010'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: e-llm_bank-fix
+      selected: false
+      source: '1729000000010'
+      sourceHandle: source
+      target: '1729000000016'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-fix-write_input
+      selected: false
+      source: '1729000000016'
+      sourceHandle: source
+      target: '1729000000011'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-write_input-build
+      selected: false
+      source: '1729000000011'
+      sourceHandle: source
+      target: '1729000000012'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-build-validate
+      selected: false
+      source: '1729000000012'
+      sourceHandle: source
+      target: '1729000000013'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: e-validate-read_bank
+      selected: false
+      source: '1729000000013'
+      sourceHandle: source
+      target: '1729000000017'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: e-read_bank-end
+      selected: false
+      source: '1729000000017'
+      sourceHandle: source
+      target: '1729000000014'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 用户输入
+        type: start
+        variables:
+        - default: ''
+          hint: ''
+          label: brand_name
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: brand_name
+        - default: ''
+          hint: ''
+          label: company_name
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: company_name
+        - default: ''
+          hint: ''
+          label: business_mode
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: business_mode
+        - default: ''
+          hint: ''
+          label: category
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: category
+        - default: ''
+          hint: ''
+          label: official_domain
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: official_domain
+        - default: ''
+          hint: ''
+          label: topics
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: topics
+        - default: ''
+          hint: ''
+          label: competitors
+          options: []
+          placeholder: ''
+          required: true
+          type: paragraph
+          variable: competitors
+        - default: ''
+          hint: ''
+          label: regions
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: regions
+        - default: ''
+          hint: ''
+          label: supplemental
+          options: []
+          placeholder: ''
+          required: false
+          type: paragraph
+          variable: supplemental
+      height: 317
+      id: '1729000000001'
+      position:
+        x: 80
+        y: 280
+      positionAbsolute:
+        x: 80
+        y: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "def main(biz_api_base: str, search_api_base: str):\n    return {\"\
+          biz_api_base\": biz_api_base, \"search_api_base\": search_api_base}"
+        code_language: python3
+        desc: 透传环境变量（biz_api_base / search_api_base）。隧道换域名只需改 Dify 环境变量，不用改代码。
+        outputs:
+          biz_api_base:
+            children: null
+            type: string
+          search_api_base:
+            children: null
+            type: string
+        selected: false
+        title: 0. 读取配置
+        type: code
+        variables:
+        - value_selector:
+          - env
+          - biz_api_base
+          variable: biz_api_base
+        - value_selector:
+          - env
+          - search_api_base
+          variable: search_api_base
+      height: 112
+      id: '1729000000015'
+      position:
+        x: 380
+        y: 60
+      positionAbsolute:
+        x: 380
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(biz_api_base):\n    url =\
+          \ f\"{biz_api_base}/api/v1/tools/read_skills_batch\"\n    payload = {\"\
+          skills\": [\"overseas-geo-competitor-research\", \"geo-presales-prompt-builder\"\
+          ], \"include_shared\": True}\n    last_error = \"\"\n    for attempt in\
+          \ range(3):\n        try:\n            resp = requests.post(url, json=payload,\
+          \ timeout=30)\n            result = resp.json()\n            if not result.get(\"\
+          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
+          error\", \"unknown\"), \"skills_count\": 0, \"skills_list\": []}\n     \
+          \       skills = result[\"data\"][\"skills\"]\n            return {\"ok\"\
+          : True, \"skills_count\": len(skills), \"skills_list\": list(skills.keys()),\
+          \ \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
+          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
+          : f\"{type(e).__name__}: {e}\", \"skills_count\": 0, \"skills_list\": []}\n\
+          \    return {\"ok\": False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"\
+          skills_count\": 0, \"skills_list\": []}"
+        code_language: python3
+        desc: 拉取两个 skill 的 SKILL.md + references（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          skills_count:
+            children: null
+            type: number
+          skills_list:
+            children: null
+            type: array[string]
+        selected: false
+        title: 1. 读技能契约
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000002'
+      position:
+        x: 680
+        y: 60
+      positionAbsolute:
+        x: 680
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport json\nimport time\n\ndef main(brand_name, official_domain,\
+          \ topics, regions, competitors, biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_prepare\"\
+          \n    competitors_list = []\n    try:\n        parsed = json.loads(competitors)\
+          \ if isinstance(competitors, str) else competitors\n        if isinstance(parsed,\
+          \ list):\n            for c in parsed:\n                if isinstance(c,\
+          \ dict):\n                    name = c.get(\"name\") or c.get(\"名称\", \"\
+          \")\n                    domain = c.get(\"official_domain\") or c.get(\"\
+          官网域名\") or c.get(\"domain\", \"\")\n                    domain = domain.replace(\"\
+          https://\", \"\").replace(\"http://\", \"\").strip(\"/\")\n            \
+          \        competitors_list.append({\"name\": name, \"official_domain\": domain})\n\
+          \    except Exception:\n        for name in str(competitors).split(\",\"\
+          ):\n            name = name.strip()\n            if name:\n            \
+          \    competitors_list.append({\"name\": name, \"official_domain\": \"\"\
+          })\n    clean_domain = official_domain.replace(\"https://\", \"\").replace(\"\
+          http://\", \"\").strip(\"/\")\n    payload = {\n        \"input\": {\"target\"\
+          : {\"name\": brand_name, \"official_domain\": clean_domain}, \"topic\":\
+          \ topics, \"market\": regions, \"known_competitors\": competitors_list[:3]},\n\
+          \        \"run_dir\": f\"/tmp/geo-{brand_name}/competitor-research\",\n\
+          \        \"overwrite\": True\n    }\n    last_error = \"\"\n    for attempt\
+          \ in range(3):\n        try:\n            resp = requests.post(url, json=payload,\
+          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
+          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
+          error\", \"unknown\"), \"run_dir\": \"\", \"competitors_parsed\": []}\n\
+          \            data = result[\"data\"]\n            stdout_str = data.get(\"\
+          stdout\", \"{}\")\n            try:\n                stdout_data = json.loads(stdout_str)\n\
+          \                run_dir = stdout_data.get(\"run_dir\", \"\")\n        \
+          \    except json.JSONDecodeError:\n                run_dir = \"\"\n    \
+          \        if not run_dir:\n                return {\"ok\": False, \"error\"\
+          : \"服务端返回的 stdout 里没有 run_dir\", \"run_dir\": \"\", \"competitors_parsed\"\
+          : []}\n            return {\"ok\": True, \"run_dir\": run_dir, \"competitors_parsed\"\
+          : competitors_list[:3], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"run_dir\": \"\", \"competitors_parsed\": []}\n    return {\"\
+          ok\": False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"run_dir\": \"\"\
+          , \"competitors_parsed\": []}"
+        code_language: python3
+        desc: 冻结竞品研究输入，从 stdout 解析 run_dir
+        outputs:
+          competitors_parsed:
+            children: null
+            type: array[object]
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          run_dir:
+            children: null
+            type: string
+        selected: false
+        title: 2. 竞品研究准备
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000001'
+          - official_domain
+          variable: official_domain
+        - value_selector:
+          - '1729000000001'
+          - topics
+          variable: topics
+        - value_selector:
+          - '1729000000001'
+          - regions
+          variable: regions
+        - value_selector:
+          - '1729000000001'
+          - competitors
+          variable: competitors
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000003'
+      position:
+        x: 980
+        y: 60
+      positionAbsolute:
+        x: 980
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(brand_name, topics, regions,\
+          \ competitors_parsed, search_api_base):\n    url = f\"{search_api_base}/api/v1/web_search_batch\"\
+          \n    comp_names = [c[\"name\"] for c in competitors_parsed if c.get(\"\
+          name\")]\n    comp_names_str = \" \".join(f'\"{n}\"' for n in comp_names[:3])\n\
+          \    queries = [\n        f\"{brand_name} {comp_names_str} comparison alternatives\"\
+          .strip(),\n        f\"best {topics} brands {regions} 2026\",\n        f\"\
+          {topics} market report {regions} competitive landscape\",\n        f\"top\
+          \ {topics} brands review {regions} 2026\"\n    ]\n    payload = {\"queries\"\
+          : \"\\n\".join(queries), \"max_results_per_query\": 5}\n    last_error =\
+          \ \"\"\n    for attempt in range(5):\n        try:\n            resp = requests.post(url,\
+          \ json=payload, timeout=90)\n            result = resp.json()\n        \
+          \    if not result.get(\"ok\"):\n                last_error = result.get(\"\
+          error\", \"unknown\")\n                err_str = str(last_error)\n     \
+          \           if \"400\" in err_str or \"401\" in err_str or \"403\" in err_str:\n\
+          \                    return {\"ok\": False, \"error\": last_error, \"search_results\"\
+          : []}\n                if attempt < 4:\n                    time.sleep(min(2\
+          \ ** attempt, 10))\n                    continue\n                return\
+          \ {\"ok\": False, \"error\": last_error, \"search_results\": []}\n     \
+          \       return {\"ok\": True, \"search_results\": result[\"data\"].get(\"\
+          results\", []), \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/5: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 4:\n                time.sleep(min(2 ** attempt, 10))\n        except\
+          \ Exception as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"search_results\": []}\n    return {\"ok\": False, \"error\":\
+          \ f\"retry 5 times still failed: {last_error}\", \"search_results\": []}"
+        code_language: python3
+        desc: web_search_batch 4 条合并查询（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          search_results:
+            children: null
+            type: array[object]
+        selected: false
+        title: 3. 联网搜索
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000001'
+          - topics
+          variable: topics
+        - value_selector:
+          - '1729000000001'
+          - regions
+          variable: regions
+        - value_selector:
+          - '1729000000003'
+          - competitors_parsed
+          variable: competitors_parsed
+        - value_selector:
+          - '1729000000015'
+          - search_api_base
+          variable: search_api_base
+      height: 96
+      id: '1729000000004'
+      position:
+        x: 1280
+        y: 60
+      positionAbsolute:
+        x: 1280
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "def main(official_domain, competitors_parsed, search_api_base):\n \
+          \   \"\"\"Single batch fetch with strict <55s budget to fit Dify sandbox\
+          \ timeout.\n    Failed URLs are left empty — downstream LLM falls back to\
+          \ search_results.\"\"\"\n    import requests\n\n    endpoint = f\"{search_api_base}/api/v1/web_fetch_batch\"\
+          \n    urls = []\n    target = official_domain if official_domain.startswith(\"\
+          http\") else f\"https://{official_domain}\"\n    urls.append(target)\n \
+          \   for c in competitors_parsed[:3]:\n        d = c.get(\"official_domain\"\
+          , \"\")\n        if d:\n            urls.append(d if d.startswith(\"http\"\
+          ) else f\"https://{d}\")\n    urls = urls[:4]\n\n    slots = [{\"url\":\
+          \ u, \"content\": \"\", \"error\": \"pending\"} for u in urls]\n\n    try:\n\
+          \        resp = requests.post(\n            endpoint,\n            json={\"\
+          urls\": \"\\n\".join(urls), \"max_chars_per_url\": 3000},\n            timeout=50\
+          \  # must fit under sandbox 60s limit\n        )\n        result = resp.json()\n\
+          \        if result.get(\"ok\"):\n            for i, r in enumerate(result.get(\"\
+          data\", {}).get(\"results\", [])):\n                if i >= len(slots):\n\
+          \                    break\n                content = r.get(\"content\"\
+          , \"\") or r.get(\"markdown\", \"\") or \"\"\n                if content:\n\
+          \                    slots[i] = {\"url\": slots[i][\"url\"], \"content\"\
+          : content, \"error\": \"\"}\n                else:\n                   \
+          \ slots[i][\"error\"] = r.get(\"error\", \"empty\")[:150]\n        else:\n\
+          \            for s in slots:\n                s[\"error\"] = result.get(\"\
+          error\", \"batch failed\")[:150]\n    except Exception as e:\n        for\
+          \ s in slots:\n            s[\"error\"] = f\"{type(e).__name__}: {str(e)[:100]}\"\
+          \n\n    succeeded = sum(1 for s in slots if s[\"content\"])\n    failed_urls\
+          \ = [s[\"url\"] for s in slots if not s[\"content\"]]\n    error_summary\
+          \ = \"\"\n    if failed_urls:\n        error_summary = f\"Partial fetch:\
+          \ {len(failed_urls)}/{len(urls)} failed; downstream uses search_results\
+          \ fallback\"\n\n    return {\n        \"ok\": succeeded > 0,\n        \"\
+          fetch_results\": slots,\n        \"succeeded_count\": succeeded,\n     \
+          \   \"failed_urls\": failed_urls,\n        \"error\": error_summary\n  \
+          \  }"
+        code_language: python3
+        desc: web_fetch_batch 抓目标官网 + 竞品官网。per-URL 多轮重试（最多 6 轮），失败 URL 不阻塞成功 URL。
+        outputs:
+          error:
+            children: null
+            type: string
+          failed_urls:
+            children: null
+            type: array[string]
+          fetch_results:
+            children: null
+            type: array[object]
+          ok:
+            children: null
+            type: boolean
+          succeeded_count:
+            children: null
+            type: number
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        title: 4. 官网抓取
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - official_domain
+          variable: official_domain
+        - value_selector:
+          - '1729000000003'
+          - competitors_parsed
+          variable: competitors_parsed
+        - value_selector:
+          - '1729000000015'
+          - search_api_base
+          variable: search_api_base
+      height: 142
+      id: '1729000000005'
+      position:
+        x: 1955
+        y: 33.5
+      positionAbsolute:
+        x: 1955
+        y: 33.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 根据搜索和抓取结果，按 research-contract 组装 research 对象
+        model:
+          completion_params:
+            max_tokens: 4000
+            temperature: 0.3
+          mode: chat
+          name: codegeex-4
+          provider: lpf/zhinao/zhinao
+        prompt_template:
+        - id: sys1
+          role: system
+          text: "你是竞品研究员。根据搜索结果和官网抓取内容，组装一份符合 research-contract 的 research 对象，供 competitor_research_finalize\
+            \ 校验。\n\n## 顶层结构\n{\n  \"input_hash\": \"sha256:<32-64 hex>\",\n  \"researched_at\"\
+            : \"YYYY-MM-DD\",\n  \"evidence\": [...],\n  \"candidates\": [...]\n}\n\
+            \n## evidence[i] 必填\n{\n  \"evidence_id\": \"EV-<候选简称>-<序号>\"     例如 EV-BH-001\
+            \ / EV-WL-002,\n  \"url\": \"...\",\n  \"title\": \"...\",\n  \"source_type\"\
+            : \"official\" | \"independent_review\" | \"market_report\" | \"news\"\
+            \ | \"directory\",\n  \"published_at\": \"YYYY-MM-DD\" 或 null,\n  \"accessed_at\"\
+            : \"YYYY-MM-DD\"（今天）,\n  \"claims\": [\"...\"]\n}\n\n## candidates[i]\
+            \ 必填（顺序 = 竞品输入顺序）\n{\n  \"canonical_name\": \"...\",\n  \"official_domain\"\
+            : \"<裸域名>\",\n  \"aliases\": [...],\n  \"source\": \"user_provided\",\n\
+            \  \"activity_status\": \"active\",\n  \"direct_substitute\": true,\n\
+            \  \"same_purchase_set\": true,\n  \"market_position\": \"leader\" | \"\
+            peer\" | \"challenger\",\n  \"dimensions\": {\n    \"sub_track\": 0-5,\n\
+            \    \"core_job\": 0-5,\n    \"product_form\": 0-5,\n    \"target_users\"\
+            : 0-5,\n    \"buying_motion\": 0-5,\n    \"status_similarity\": 0-5,\n\
+            \    \"specialty_fit\": 0-5\n  },\n  \"evidence_bindings\": {\n    \"\
+            activity_status\":   [<本候选 evidence_ids>],\n    \"direct_substitute\"\
+            : [<本候选 evidence_ids>],\n    \"same_purchase_set\": [<本候选 evidence_ids>],\n\
+            \    \"market_position\":   [<本候选 evidence_ids>],\n    \"sub_track\":\
+            \         [<本候选 evidence_ids>],\n    \"core_job\":          [<本候选 evidence_ids>],\n\
+            \    \"product_form\":      [<本候选 evidence_ids>],\n    \"target_users\"\
+            :      [<本候选 evidence_ids>],\n    \"buying_motion\":     [<本候选 evidence_ids>],\n\
+            \    \"status_similarity\": [<本候选 evidence_ids>],\n    \"specialty_fit\"\
+            :     [<本候选 evidence_ids>]\n  },\n  \"evidence_ids\": [<本候选全部 evidence_id>]\n\
+            }\n\n## 关键规则（finalize 会硬校验，违反直接 ContractError）\n1. **每个候选必须至少有 2 条自己的\
+            \ evidence**：一条 `official`（url host 必须等于本候选 official_domain，accessed_at\
+            \ 近 30 天）+ 一条 `independent_review` 或 `market_report`。\n2. **evidence_bindings\
+            \ 的 11 个键一个不能少**，每个都指向本候选 evidence_ids 数组里的 ID，不能借用其他候选的 ID。\n3. **direct_substitute\
+            \ 必须绑本候选自己的证据**（官网 + 独立评论），证明它与目标是同一购买决策。\n4. **same_purchase_set 至少绑一条独立来源**（independent_review\
+            \ / market_report / news / directory）。\n5. **dimensions 7 项全部必填、0-5 整数**：sub_track/core_job\
+            \ ≥ 4，product_form/target_users ≥ 3，buying_motion/status_similarity/specialty_fit\
+            \ ≥ 2 才过门槛。\n6. **market_position 需有近期独立来源**（18 个月内 published_at，source_type\
+            \ ≠ official）。\n7. **evidence_ids 去重**，只列本候选实际用到的 ID。\n8. 如果某候选官网没抓到内容，也要写一条\
+            \ official evidence，用 search 结果里 domain 匹配的 snippet 充数，`claims` 写 \"official\
+            \ site reachable via search snippet\"。\n\n只输出 JSON 对象，不要任何其他文字。"
+        - id: usr1
+          role: user
+          text: '品牌: {{#1729000000001.brand_name#}}
+
+            官网: {{#1729000000001.official_domain#}}
+
+            主题: {{#1729000000001.topics#}}
+
+            市场: {{#1729000000001.regions#}}
+
+            竞品候选: {{#1729000000003.competitors_parsed#}}
+
+
+            搜索结果:
+
+            {{#1729000000004.search_results#}}
+
+
+            官网抓取:
+
+            {{#1729000000005.fetch_results#}}
+
+
+            请组装 research 对象，candidates 数组按竞品候选顺序输出。'
+        selected: false
+        structured_output:
+          schema:
+            properties:
+              candidates:
+                items:
+                  properties:
+                    activity_status:
+                      type: string
+                    aliases:
+                      items:
+                        type: string
+                      type: array
+                    canonical_name:
+                      type: string
+                    dimensions:
+                      properties:
+                        buying_motion:
+                          type: integer
+                        core_job:
+                          type: integer
+                        product_form:
+                          type: integer
+                        specialty_fit:
+                          type: integer
+                        status_similarity:
+                          type: integer
+                        sub_track:
+                          type: integer
+                        target_users:
+                          type: integer
+                      required:
+                      - sub_track
+                      - core_job
+                      - product_form
+                      - target_users
+                      - buying_motion
+                      - status_similarity
+                      - specialty_fit
+                      type: object
+                    direct_substitute:
+                      type: boolean
+                    evidence_bindings:
+                      type: object
+                    evidence_ids:
+                      items:
+                        type: string
+                      type: array
+                    market_position:
+                      type: string
+                    official_domain:
+                      type: string
+                    same_purchase_set:
+                      type: boolean
+                    source:
+                      type: string
+                  required:
+                  - canonical_name
+                  - official_domain
+                  - source
+                  - activity_status
+                  - direct_substitute
+                  - same_purchase_set
+                  - market_position
+                  - dimensions
+                  - evidence_bindings
+                  - evidence_ids
+                  type: object
+                type: array
+              evidence:
+                items:
+                  properties:
+                    accessed_at:
+                      type: string
+                    claims:
+                      items:
+                        type: string
+                      type: array
+                    evidence_id:
+                      type: string
+                    published_at:
+                      type: string
+                    source_type:
+                      type: string
+                    title:
+                      type: string
+                    url:
+                      type: string
+                  required:
+                  - evidence_id
+                  - url
+                  - title
+                  - source_type
+                  - accessed_at
+                  - claims
+                  type: object
+                type: array
+              input_hash:
+                type: string
+              researched_at:
+                type: string
+            required:
+            - input_hash
+            - researched_at
+            - evidence
+            - candidates
+            type: object
+        structured_output_enabled: true
+        title: 5. LLM 组装 research
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 132
+      id: '1729000000006'
+      position:
+        x: 2203.5
+        y: 60
+      positionAbsolute:
+        x: 2203.5
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(brand_name, research_data,\
+          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/write_file\"\n\
+          \    path = f\"/tmp/geo-{brand_name}/research.json\"\n    payload = {\"\
+          path\": path, \"content\": research_data}\n    last_error = \"\"\n    for\
+          \ attempt in range(3):\n        try:\n            resp = requests.post(url,\
+          \ json=payload, timeout=30)\n            result = resp.json()\n        \
+          \    if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"research_path\": \"\"\
+          }\n            return {\"ok\": True, \"research_path\": result[\"data\"\
+          ][\"path\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"research_path\": \"\"}\n    return {\"ok\": False, \"error\"\
+          : f\"重试 3 次仍失败: {last_error}\", \"research_path\": \"\"}"
+        code_language: python3
+        desc: 把 LLM 组装的 research 对象落盘（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          research_path:
+            children: null
+            type: string
+        selected: false
+        title: 6. 写 research.json
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000006'
+          - structured_output
+          variable: research_data
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000007'
+      position:
+        x: 2260
+        y: 60
+      positionAbsolute:
+        x: 2260
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport json\nimport time\n\ndef main(run_dir, research_path,\
+          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_finalize\"\
+          \n    payload = {\"run_dir\": run_dir, \"research_path\": research_path}\n\
+          \    last_error = \"\"\n    for attempt in range(3):\n        try:\n   \
+          \         resp = requests.post(url, json=payload, timeout=60)\n        \
+          \    result = resp.json()\n            if not result.get(\"ok\"):\n    \
+          \            return {\"ok\": False, \"error\": result.get(\"error\", \"\
+          unknown\"), \"selection\": {}, \"status\": \"\"}\n            data = result[\"\
+          data\"]\n            stdout_str = data.get(\"stdout\", \"{}\")\n       \
+          \     try:\n                stdout_data = json.loads(stdout_str)\n     \
+          \           status = stdout_data.get(\"status\", \"\")\n            except\
+          \ json.JSONDecodeError:\n                status = \"\"\n            selection\
+          \ = data.get(\"selection\", {})\n            return {\"ok\": True, \"selection\"\
+          : selection, \"status\": status, \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"selection\": {}, \"status\": \"\"}\n    return {\"ok\": False,\
+          \ \"error\": f\"重试 3 次仍失败: {last_error}\", \"selection\": {}, \"status\"\
+          : \"\"}"
+        code_language: python3
+        desc: competitor_research_finalize 核验候选，从 stdout 解析 status（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          selection:
+            children: null
+            type: object
+          status:
+            children: null
+            type: string
+        selected: false
+        title: 7. 竞品研究冻结
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000003'
+          - run_dir
+          variable: run_dir
+        - value_selector:
+          - '1729000000007'
+          - research_path
+          variable: research_path
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000008'
+      position:
+        x: 2560
+        y: 60
+      positionAbsolute:
+        x: 2560
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(brand_name, company_name,\
+          \ business_mode, category, official_domain, topics, supplemental, competitors_parsed,\
+          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/normalize_case\"\
+          \n    competitors_en = []\n    for c in competitors_parsed[:3]:\n      \
+          \  domain = c.get(\"official_domain\", \"\")\n        if domain and not\
+          \ domain.startswith(\"http\"):\n            domain = f\"https://{domain}\"\
+          \n        competitors_en.append({\"name\": c.get(\"name\", \"\"), \"official_domain\"\
+          : domain})\n    payload = {\n        \"payload\": {\n            \"input_version\"\
+          : \"presales-case-input/v1\",\n            \"case\": {\n               \
+          \ \"company_name\": company_name,\n                \"brand_name\": brand_name,\n\
+          \                \"business_mode\": business_mode,\n                \"category\"\
+          : category,\n                \"official_domain\": official_domain,\n   \
+          \             \"business_product_name\": category,\n                \"topics\"\
+          : topics,\n                \"competitors\": competitors_en,\n          \
+          \      \"supplemental\": supplemental or \"\",\n                \"target_customers\"\
+          : [],\n                \"pain_points\": [],\n                \"use_cases\"\
+          : [],\n                \"product_features\": [],\n                \"differentiation\"\
+          : \"\",\n                \"applicable_boundary\": \"\"\n            },\n\
+          \            \"options\": {\"locale\": \"en\", \"generation_stage\": \"\
+          discovery\"}\n        }\n    }\n    last_error = \"\"\n    for attempt in\
+          \ range(3):\n        try:\n            resp = requests.post(url, json=payload,\
+          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
+          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
+          error\", \"unknown\"), \"normalized\": {}}\n            data = result.get(\"\
+          data\", {})\n            if not data.get(\"ok\"):\n                errors\
+          \ = data.get(\"errors\", [])\n                error_msg = \"; \".join([e.get(\"\
+          message\", str(e)) for e in errors])\n                return {\"ok\": False,\
+          \ \"error\": f\"normalize_case validation failed: {error_msg}\", \"normalized\"\
+          : {}}\n            return {\"ok\": True, \"normalized\": data.get(\"normalized\"\
+          , {}), \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
+          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
+          : f\"{type(e).__name__}: {e}\", \"normalized\": {}}\n    return {\"ok\"\
+          : False, \"error\": f\"retry 3 times failed: {last_error}\", \"normalized\"\
+          : {}}"
+        code_language: python3
+        desc: normalize_case 展开 case_fields，竞品域名加协议头，检查内层 ok（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          normalized:
+            children: null
+            type: object
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 8. Case 归一化
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000001'
+          - company_name
+          variable: company_name
+        - value_selector:
+          - '1729000000001'
+          - business_mode
+          variable: business_mode
+        - value_selector:
+          - '1729000000001'
+          - category
+          variable: category
+        - value_selector:
+          - '1729000000001'
+          - official_domain
+          variable: official_domain
+        - value_selector:
+          - '1729000000001'
+          - topics
+          variable: topics
+        - value_selector:
+          - '1729000000001'
+          - supplemental
+          variable: supplemental
+        - value_selector:
+          - '1729000000003'
+          - competitors_parsed
+          variable: competitors_parsed
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 112
+      id: '1729000000009'
+      position:
+        x: 3178.5
+        y: 64.5
+      positionAbsolute:
+        x: 3178.5
+        y: 64.5
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 生成题库输入对象（attribute_plan + questions + config_meta）
+        model:
+          completion_params:
+            max_tokens: 8000
+            temperature: 0.5
+          mode: chat
+          name: codegeex-4
+          provider: lpf/zhinao/zhinao
+        prompt_template:
+        - id: sys1
+          role: system
+          text: "你是 GEO 题库生成专家。生成符合 overseas-geo-question-bank/v8 合同的题库输入对象。\n\n##\
+            \ 铁律\n1. topic 必须是英文（如 \"family dietary supplements\"，不是中文）\n2. attribute\
+            \ 命名必须是英文短语（如 \"family suitability and multi-member fit\"）\n3. source_field\
+            \ 必须从下方白名单选，且必须在 normalized.case_fields 里真实存在\n4. source_value 必须逐字复制\
+            \ case_fields 里的值（不要改写、不要翻译）\n5. intent_key 必填、唯一、英文蛇形命名（如 family_supplement_brand_discovery）\n\
+            6. 每道 user_question 必须以 Which/What 开头，且必须含 brands/options/platforms/providers/solutions/vendors/tools\
+            \ 等具体候选词。通过：Which family dietary supplement brands are best for...；拒绝：What\
+            \ factors should I consider... / How can supplements enhance...（抽象或 How\
+            \ 开头会被 validate 拒）\n7. Discovery 的 Attribute 标签必须覆盖 attribute_plan 所有\
+            \ P1\n8. tags 恰好 3 个默认标签（Intent: Discovery + Brand Scope: Non-Branded\
+            \ + Prompt Task: Discovery）+ 0 或多个 Attribute: X 标签\n9. quotas.intent_tags\
+            \ 必须包含全部 6 个 Intent，discovery 阶段只有 Intent: Discovery 大于 0，其他全为 0\n10.\
+            \ 共 6 题，topic_id 都是 \"topic_1\"\n11. quality_checks 恰好 8 个字段全 true（见下方结构示例）\n\
+            12. 每题必填 question_id / topic_id / tags / analysis_type / formal_visibility_eligible\
+            \ / intent_key / user_question / zh_translation / monitoring_prompt /\
+            \ quality_checks\n13. Brand Scope 判断：题面无品牌名用 Non-Branded（Discovery 应该全部\
+            \ Non-Branded）\n14. expected_total 必须等于 quotas.intent_tags 数字之和\n15. user_question\
+            \ 不能含品牌名或竞品名，让 AI 从候选里发现\n16. monitoring_prompt 必须**逐字等于** user_question（不要改写）\n\
+            17. analysis_type 必须是 \"visibility,sentiment\"（Discovery 固定值）\n18. formal_visibility_eligible\
+            \ 必须是 true（Discovery 固定值）\n\n## source_field 白名单（只允许这些，其他会被 validate 拒）\n\
+            - 标量：`company_name` / `brand_name` / `business_mode` / `business_product_name`\
+            \ / `category` / `official_domain` / `differentiation` / `applicable_boundary`\
+            \ / `geography_market` / `supplemental`\n- B2B 列表：`purchase_criteria`\
+            \ / `integration_compatibility` / `trust_compliance`\n- 编号列表（注意有空格）：`target_customers\
+            \ N` / `pain_points N` / `use_cases N` / `product_features N`（N=1..5）\n\
+            - ICP（B2B 专用）：`target_customer_profiles` 或 `target_customer_profiles N`\n\
+            - Topics（注意有空格和括号）：`topics 1 (broad)` / `topics 2 (narrow)` / `topics\
+            \ 3 (narrow)`\n- 竞品（注意有空格）：`competitors 1` / `competitors 1 official_domain`\
+            \ / `competitors 2` / `competitors 2 official_domain` / `competitors 3`\
+            \ / `competitors 3 official_domain`\n\n**禁止**：不要把 `topics`（不带编号）或 `competitors`（不带编号）当\
+            \ source_field——必须是编号展开后的键。\n\n## 输出结构（严格按此 JSON 形状，P1/P2/P3 条目必须是对象，不能是字符串列表）\n\
+            \n```json\n{\n  \"attribute_plan\": [\n    {\n      \"topic_id\": \"topic_1\"\
+            ,\n      \"priorities\": {\n        \"P1\": [\n          {\n         \
+            \   \"attribute\": \"family suitability and multi-member fit\",\n    \
+            \        \"source_field\": \"category\",\n            \"source_value\"\
+            : \"family dietary supplements\",\n            \"decision_reason\": \"\
+            Category is family-targeted, so multi-member fit is a top purchase driver.\"\
+            ,\n            \"verification_statement\": \"The brand offers supplement\
+            \ products suitable for multiple family members.\"\n          },\n   \
+            \       {\n            \"attribute\": \"safety and quality trust signals\"\
+            ,\n            \"source_field\": \"supplemental\",\n            \"source_value\"\
+            : \"Target market US; customer-facing B2C diagnostic case.\",\n      \
+            \      \"decision_reason\": \"US B2C buyers prioritize safety certifications.\"\
+            ,\n            \"verification_statement\": \"The brand provides clear\
+            \ safety certifications for its supplement products.\"\n          }\n\
+            \        ],\n        \"P2\": [\n  {\n    \"attribute\": \"daily routine\
+            \ and usage fit\",\n    \"source_field\": \"category\",\n    \"source_value\"\
+            : \"family dietary supplements\",\n    \"decision_reason\": \"Daily supplements\
+            \ need to fit family routines.\"\n  }\n],\n        \"P3\": []\n      },\n\
+            \      \"excluded\": []\n    }\n  ],\n  \"questions\": [\n    {\n    \
+            \  \"question_id\": \"kb-t1-q1\",\n      \"topic_id\": \"topic_1\",\n\
+            \      \"tags\": [\"Intent: Discovery\", \"Brand Scope: Non-Branded\"\
+            , \"Prompt Task: Discovery\", \"Attribute: family suitability and multi-member\
+            \ fit\"],\n      \"analysis_type\": \"visibility,sentiment\",\n      \"\
+            formal_visibility_eligible\": true,\n      \"intent_key\": \"family_supplement_brand_discovery\"\
+            ,\n      \"user_question\": \"Which family dietary supplement brands are\
+            \ best for multi-member households in the US?\",\n      \"zh_translation\"\
+            : \"哪些家庭营养补充剂品牌最适合美国多成员家庭？\",\n      \"monitoring_prompt\": \"Which family\
+            \ dietary supplement brands are best for multi-member households in the\
+            \ US?\",\n      \"quality_checks\": {\n        \"case_grounded\": true,\n\
+            \        \"buyer_realistic\": true,\n        \"independent_decision\"\
+            : true,\n        \"single_primary_task\": true,\n        \"category_clear\"\
+            : true,\n        \"neutral\": true,\n        \"no_brand_leakage\": true,\n\
+            \        \"translation_equivalent\": true\n      }\n    }\n  ],\n  \"\
+            config_meta\": {\n    \"expected_total\": 6,\n    \"quotas\": {\n    \
+            \  \"intent_tags\": {\"Intent: Discovery\": 6, \"Intent: Competitor\"\
+            : 0, \"Intent: Verification\": 0, \"Intent: Accuracy\": 0, \"Intent: Evaluation\"\
+            : 0, \"Intent: Category Awareness\": 0},\n      \"per_topic\":     {\"\
+            Intent: Discovery\": 6, \"Intent: Competitor\": 0, \"Intent: Verification\"\
+            : 0, \"Intent: Accuracy\": 0, \"Intent: Evaluation\": 0, \"Intent: Category\
+            \ Awareness\": 0},\n      \"topic_overrides\": {}\n    },\n    \"generation_stage\"\
+            : \"discovery\",\n    \"locale\": \"en\"\n  }\n}\n```\n\n## 关键结构约束（违反会被\
+            \ validate 拒）\n- **P1 数组里每项必须是对象**：`{\"attribute\": \"...\", \"source_field\"\
+            : \"...\", \"source_value\": \"...\", \"decision_reason\": \"...\", \"\
+            verification_statement\": \"...\"}`——不能是字符串\n- **P2 / P3 数组里每项同样是对象**（verification_statement\
+            \ 可以是 null）\n- **quality_checks 恰好 8 个键**：`case_grounded / buyer_realistic\
+            \ / independent_decision / single_primary_task / category_clear / neutral\
+            \ / no_brand_leakage / translation_equivalent`，全部 true\n- **intent_key\
+            \ 6 题必须互不重复**\n- **question_id 6 题必须互不重复**（建议 `kb-t1-q1` ~ `kb-t1-q6`）\n\
+            - **monitoring_prompt 必须逐字等于 user_question**\n- **P2 / P3 条目只能有 4 个键**：attribute\
+            \ / source_field / source_value / decision_reason（不要 verification_statement，那是\
+            \ P1 专属）\n- **tags 里的 `Attribute: X` 必须逐字等于 attribute_plan 中某个 attribute\
+            \ 的完整字符串**\n  例如 attribute_plan 写的是 \"selection guidance for family dietary\
+            \ supplements\"，\n  题目标签就必须写 `Attribute: selection guidance for family\
+            \ dietary supplements`，\n  **不能简写成 `Attribute: selection guidance`**。validate\
+            \ 做的是精确匹配。\n\n只输出 JSON 对象，不要任何其他文字。"
+        - id: usr1
+          role: user
+          text: '归一化 Case:
+
+            {{#1729000000009.normalized#}}
+
+
+            竞品集合:
+
+            {{#1729000000008.selection#}}
+
+
+            品牌: {{#1729000000001.brand_name#}}
+
+            主题: {{#1729000000001.topics#}}
+
+            市场: {{#1729000000001.regions#}}
+
+
+            生成题库输入对象：6 题全 Discovery，题面不含品牌名且必须含 brands/options 等候选词，intent_key 用 family_supplement_brand_discovery
+            / family_supplement_multi_member_fit / family_supplement_quality_safety
+            / family_supplement_selection_guidance / family_supplement_daily_routine_value
+            / family_supplement_broad_options。'
+        selected: false
+        structured_output:
+          schema:
+            properties:
+              attribute_plan:
+                items:
+                  type: object
+                type: array
+              config_meta:
+                type: object
+              questions:
+                items:
+                  type: object
+                type: array
+            required:
+            - attribute_plan
+            - questions
+            - config_meta
+            type: object
+        structured_output_enabled: true
+        title: 9. LLM 生成题库
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 132
+      id: '1729000000010'
+      position:
+        x: 3491
+        y: 60
+      positionAbsolute:
+        x: 3491
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "def main(bank_input, normalized):\n    import re\n    fixes = []\n\
+          \    if isinstance(bank_input, str):\n        import json as _json\n   \
+          \     try:\n            bank_input = _json.loads(bank_input)\n        except\
+          \ Exception:\n            return {\"ok\": False, \"bank_input\": {}, \"\
+          fixes_applied\": [], \"error\": \"bank_input is a non-JSON string\"}\n \
+          \   if not isinstance(bank_input, dict):\n        return {\"ok\": False,\
+          \ \"bank_input\": {}, \"fixes_applied\": [], \"error\": f\"bank_input is\
+          \ {type(bank_input).__name__}, expected dict\"}\n    if not isinstance(normalized,\
+          \ dict):\n        normalized = {}\n    case_fields = normalized.get(\"case_fields\"\
+          ) or {}\n    if not isinstance(case_fields, dict):\n        case_fields\
+          \ = {}\n\n    def norm_key(s):\n        return re.sub(r\"[\\W_]+\", \" \"\
+          , str(s or \"\").casefold(), flags=re.UNICODE).strip()\n\n    def normalize_str(s):\n\
+          \        if not isinstance(s, str):\n            return s\n        return\
+          \ \" \".join(s.split())\n\n    attribute_plan = bank_input.get(\"attribute_plan\"\
+          ) or []\n    if not isinstance(attribute_plan, list):\n        attribute_plan\
+          \ = []\n\n    for plan in attribute_plan:\n        if not isinstance(plan,\
+          \ dict):\n            continue\n        priorities = plan.get(\"priorities\"\
+          ) or {}\n        if not isinstance(priorities, dict):\n            priorities\
+          \ = {}\n            plan[\"priorities\"] = priorities\n\n        # Dedup\
+          \ attributes across P1/P2/P3: keep first occurrence (P1 wins).\n       \
+          \ seen_attr_keys = set()\n        for priority_level in [\"P1\", \"P2\"\
+          , \"P3\"]:\n            items = priorities.get(priority_level) or []\n \
+          \           if not isinstance(items, list):\n                priorities[priority_level]\
+          \ = []\n                continue\n            kept = []\n            for\
+          \ item in items:\n                if not isinstance(item, dict):\n     \
+          \               continue\n                if priority_level in (\"P2\",\
+          \ \"P3\") and \"verification_statement\" in item:\n                    del\
+          \ item[\"verification_statement\"]\n                    fixes.append(f\"\
+          strip verification_statement from {priority_level}\")\n                attr\
+          \ = (item.get(\"attribute\") or \"\").strip()\n                key = norm_key(attr)\n\
+          \                if key and key in seen_attr_keys:\n                   \
+          \ fixes.append(f\"drop duplicate attribute in {priority_level}: {attr}\"\
+          )\n                    continue\n                if key:\n             \
+          \       seen_attr_keys.add(key)\n                sf = item.get(\"source_field\"\
+          ) or \"\"\n                sv = item.get(\"source_value\") or \"\"\n   \
+          \             if sf and sf in case_fields:\n                    actual =\
+          \ case_fields[sf]\n                    if normalize_str(sv) != normalize_str(actual):\n\
+          \                        fixes.append(f\"fix source_value: {sf}\")\n   \
+          \                     item[\"source_value\"] = actual\n                kept.append(item)\n\
+          \            priorities[priority_level] = kept\n\n    questions = bank_input.get(\"\
+          questions\") or []\n    if not isinstance(questions, list):\n        questions\
+          \ = []\n    q_count = len(questions)\n    config_meta = bank_input.get(\"\
+          config_meta\") or {}\n    if not isinstance(config_meta, dict):\n      \
+          \  config_meta = {}\n    if config_meta.get(\"expected_total\") != q_count:\n\
+          \        fixes.append(f\"expected_total: {config_meta.get('expected_total')}\
+          \ -> {q_count}\")\n        config_meta[\"expected_total\"] = q_count\n\n\
+          \    quotas = config_meta.get(\"quotas\") or {}\n    if not isinstance(quotas,\
+          \ dict):\n        quotas = {}\n    intent_counts = {}\n    for q in questions:\n\
+          \        if not isinstance(q, dict):\n            continue\n        tags\
+          \ = q.get(\"tags\") or []\n        if not isinstance(tags, list):\n    \
+          \        continue\n        for tag in tags:\n            if isinstance(tag,\
+          \ str) and tag.startswith(\"Intent: \"):\n                intent_counts[tag]\
+          \ = intent_counts.get(tag, 0) + 1\n    all_intents = [\"Intent: Discovery\"\
+          , \"Intent: Competitor\", \"Intent: Verification\", \"Intent: Accuracy\"\
+          , \"Intent: Evaluation\", \"Intent: Category Awareness\"]\n    new_intent_tags\
+          \ = {i: intent_counts.get(i, 0) for i in all_intents}\n    quotas[\"intent_tags\"\
+          ] = new_intent_tags\n    quotas[\"per_topic\"] = new_intent_tags.copy()\n\
+          \    quotas[\"topic_overrides\"] = {}\n    config_meta[\"quotas\"] = quotas\n\
+          \    config_meta.setdefault(\"generation_stage\", \"discovery\")\n    config_meta.setdefault(\"\
+          locale\", \"en\")\n\n    # Align \"Attribute: X\" tags to attribute_plan\
+          \ canonical strings\n    canonical_attrs = []\n    for plan in attribute_plan:\n\
+          \        if not isinstance(plan, dict):\n            continue\n        pri\
+          \ = plan.get(\"priorities\") or {}\n        for lvl in [\"P1\", \"P2\",\
+          \ \"P3\"]:\n            for entry in (pri.get(lvl) or []):\n           \
+          \     if isinstance(entry, dict):\n                    a = (entry.get(\"\
+          attribute\") or \"\").strip()\n                    if a:\n             \
+          \           canonical_attrs.append(a)\n\n    norm_to_canonical = {}\n  \
+          \  for a in canonical_attrs:\n        norm_to_canonical[norm_key(a)] = a\n\
+          \n    for q in questions:\n        if not isinstance(q, dict):\n       \
+          \     continue\n        tags = q.get(\"tags\")\n        if not isinstance(tags,\
+          \ list):\n            continue\n        new_tags = []\n        for tag in\
+          \ tags:\n            if isinstance(tag, str) and tag.startswith(\"Attribute:\
+          \ \"):\n                label = tag[len(\"Attribute: \"):].strip()\n   \
+          \             if label in canonical_attrs:\n                    new_tags.append(tag)\n\
+          \                    continue\n                nk = norm_key(label)\n  \
+          \              if nk in norm_to_canonical:\n                    canonical\
+          \ = norm_to_canonical[nk]\n                    new_tags.append(f\"Attribute:\
+          \ {canonical}\")\n                    fixes.append(f\"align tag: '{label}'\
+          \ -> '{canonical}'\")\n                    continue\n                cands\
+          \ = [a for a in canonical_attrs if nk and nk in norm_key(a)]\n         \
+          \       if not cands:\n                    cands = [a for a in canonical_attrs\
+          \ if nk and norm_key(a) in nk]\n                if len(cands) == 1:\n  \
+          \                  new_tags.append(f\"Attribute: {cands[0]}\")\n       \
+          \             fixes.append(f\"align tag (fuzzy): '{label}' -> '{cands[0]}'\"\
+          )\n                else:\n                    fixes.append(f\"drop unknown\
+          \ attribute tag: '{label}'\")\n            else:\n                new_tags.append(tag)\n\
+          \        q[\"tags\"] = new_tags\n\n    bank_input[\"config_meta\"] = config_meta\n\
+          \    bank_input[\"attribute_plan\"] = attribute_plan\n    bank_input[\"\
+          questions\"] = questions\n    return {\"ok\": True, \"bank_input\": bank_input,\
+          \ \"fixes_applied\": fixes, \"error\": \"\"}"
+        code_language: python3
+        desc: 修正 source_value / expected_total / quotas，检查候选词
+        outputs:
+          bank_input:
+            children: null
+            type: object
+          error:
+            children: null
+            type: string
+          fixes_applied:
+            children: null
+            type: array[string]
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 9.5 修正题库输入
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000010'
+          - structured_output
+          value_type: object
+          variable: bank_input
+        - value_selector:
+          - '1729000000009'
+          - normalized
+          value_type: object
+          variable: normalized
+      height: 96
+      id: '1729000000016'
+      position:
+        x: 3542
+        y: 60
+      positionAbsolute:
+        x: 3542
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(brand_name, bank_input, biz_api_base):\n\
+          \    url = f\"{biz_api_base}/api/v1/tools/write_file\"\n    path = f\"/tmp/geo-{brand_name}/question-bank-input.json\"\
+          \n    payload = {\"path\": path, \"content\": bank_input}\n    last_error\
+          \ = \"\"\n    for attempt in range(3):\n        try:\n            resp =\
+          \ requests.post(url, json=payload, timeout=30)\n            result = resp.json()\n\
+          \            if not result.get(\"ok\"):\n                return {\"ok\"\
+          : False, \"error\": result.get(\"error\", \"unknown\"), \"input_path\":\
+          \ \"\"}\n            return {\"ok\": True, \"input_path\": result[\"data\"\
+          ][\"path\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"input_path\": \"\"}\n    return {\"ok\": False, \"error\": f\"\
+          重试 3 次仍失败: {last_error}\", \"input_path\": \"\"}"
+        code_language: python3
+        desc: 把修正后的题库输入对象落盘（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          input_path:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 10. 写题库输入
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000016'
+          - bank_input
+          variable: bank_input
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 80
+      id: '1729000000011'
+      position:
+        x: 3839.5
+        y: 60
+      positionAbsolute:
+        x: 3839.5
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport time\n\ndef main(brand_name, normalized, input_path,\
+          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/build_question_bank\"\
+          \n    out_path = f\"/tmp/geo-{brand_name}/question-bank.json\"\n    if not\
+          \ normalized.get(\"category_label\"):\n        case_fields = normalized.get(\"\
+          case_fields\", {})\n        category = case_fields.get(\"category\", \"\"\
+          )\n        normalized[\"category_label\"] = category if category else f\"\
+          {brand_name} brand\"\n    if not normalized.get(\"brand_object_type\"):\n\
+          \        normalized[\"brand_object_type\"] = \"company\"\n    payload =\
+          \ {\"case_data\": normalized, \"input_path\": input_path, \"out\": out_path}\n\
+          \    last_error = \"\"\n    for attempt in range(3):\n        try:\n   \
+          \         resp = requests.post(url, json=payload, timeout=30)\n        \
+          \    result = resp.json()\n            if not result.get(\"ok\"):\n    \
+          \            return {\"ok\": False, \"error\": result.get(\"error\", \"\
+          unknown\"), \"bank_path\": \"\", \"question_count\": 0, \"topic_count\"\
+          : 0}\n            return {\"ok\": True, \"bank_path\": result[\"data\"][\"\
+          path\"], \"question_count\": result[\"data\"][\"question_count\"], \"topic_count\"\
+          : result[\"data\"][\"topic_count\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"bank_path\": \"\", \"question_count\": 0, \"topic_count\": 0}\n\
+          \    return {\"ok\": False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"\
+          bank_path\": \"\", \"question_count\": 0, \"topic_count\": 0}"
+        code_language: python3
+        desc: build_question_bank 服务端 merge，自动补 category_label / brand_object_type（带重试）
+        outputs:
+          bank_path:
+            children: null
+            type: string
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          question_count:
+            children: null
+            type: number
+          topic_count:
+            children: null
+            type: number
+        selected: false
+        title: 11. 题库拼装
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000001'
+          - brand_name
+          variable: brand_name
+        - value_selector:
+          - '1729000000009'
+          - normalized
+          variable: normalized
+        - value_selector:
+          - '1729000000011'
+          - input_path
+          variable: input_path
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 112
+      id: '1729000000012'
+      position:
+        x: 4141.5
+        y: 60
+      positionAbsolute:
+        x: 4141.5
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport json\nimport time\n\ndef main(bank_path, biz_api_base):\n\
+          \    if not bank_path:\n        return {\"ok\": False, \"error\": \"bank_path\
+          \ 为空\", \"valid\": False, \"errors_json\": \"[]\", \"warnings_json\": \"\
+          []\", \"error_count\": 0, \"warning_count\": 0, \"first_errors\": \"\"}\n\
+          \    url = f\"{biz_api_base}/api/v1/tools/validate_question_bank\"\n   \
+          \ payload = {\"bank_path\": bank_path}\n    last_error = \"\"\n    for attempt\
+          \ in range(3):\n        try:\n            resp = requests.post(url, json=payload,\
+          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
+          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
+          error\", \"unknown\"), \"valid\": False, \"errors_json\": \"[]\", \"warnings_json\"\
+          : \"[]\", \"error_count\": 0, \"warning_count\": 0, \"first_errors\": \"\
+          \"}\n            data = result[\"data\"]\n            errors = data.get(\"\
+          errors\", [])\n            warnings = data.get(\"warnings\", [])\n     \
+          \       first = \"\\n\".join([f\"{i+1}. {e}\" for i, e in enumerate(errors[:5])])\n\
+          \            if len(errors) > 5:\n                first += f\"\\n... 还有\
+          \ {len(errors)-5} 个错误\"\n            return {\"ok\": True, \"valid\": data.get(\"\
+          valid\", False), \"errors_json\": json.dumps(errors, ensure_ascii=False),\
+          \ \"warnings_json\": json.dumps(warnings, ensure_ascii=False), \"error_count\"\
+          : len(errors), \"warning_count\": len(warnings), \"first_errors\": first,\
+          \ \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
+          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
+          : f\"{type(e).__name__}: {e}\", \"valid\": False, \"errors_json\": \"[]\"\
+          , \"warnings_json\": \"[]\", \"error_count\": 0, \"warning_count\": 0, \"\
+          first_errors\": \"\"}\n    return {\"ok\": False, \"error\": f\"重试 3 次仍失败:\
+          \ {last_error}\", \"valid\": False, \"errors_json\": \"[]\", \"warnings_json\"\
+          : \"[]\", \"error_count\": 0, \"warning_count\": 0, \"first_errors\": \"\
+          \"}"
+        code_language: python3
+        desc: validate_question_bank 校验题库，输出改 String 绕过 30 元素限制（带重试）
+        outputs:
+          error:
+            children: null
+            type: string
+          error_count:
+            children: null
+            type: number
+          errors_json:
+            children: null
+            type: string
+          first_errors:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          valid:
+            children: null
+            type: boolean
+          warning_count:
+            children: null
+            type: number
+          warnings_json:
+            children: null
+            type: string
+        selected: false
+        title: 12. 题库校验
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000012'
+          - bank_path
+          variable: bank_path
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000013'
+      position:
+        x: 4439.5
+        y: 60
+      positionAbsolute:
+        x: 4439.5
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import requests\nimport json\n\ndef main(bank_path, biz_api_base):\n\
+          \    empty = {\n        \"ok\": False, \"error\": \"\", \"bank_path\": bank_path\
+          \ or \"\",\n        \"questions\": [], \"question_count\": 0,\n        \"\
+          schema_version\": \"\", \"config_json\": \"{}\"\n    }\n    if not bank_path:\n\
+          \        empty[\"error\"] = \"bank_path is empty\"\n        return empty\n\
+          \    try:\n        resp = requests.post(\n            f\"{biz_api_base}/api/v1/tools/read_file\"\
+          ,\n            json={\"path\": bank_path},\n            timeout=30\n   \
+          \     )\n        result = resp.json()\n        if not result.get(\"ok\"\
+          ):\n            empty[\"error\"] = result.get(\"error\", \"unknown\")\n\
+          \            return empty\n        content_str = result[\"data\"].get(\"\
+          content\", \"{}\")\n        try:\n            bank = json.loads(content_str)\n\
+          \        except json.JSONDecodeError as e:\n            empty[\"error\"\
+          ] = f\"bank file is not valid JSON: {e}\"\n            return empty\n  \
+          \      questions = bank.get(\"questions\", [])\n        config = bank.get(\"\
+          config\", {})\n        return {\n            \"ok\": True,\n           \
+          \ \"error\": \"\",\n            \"bank_path\": bank_path,\n            \"\
+          questions\": questions,            # array<object> - depth 2, OK\n     \
+          \       \"question_count\": len(questions),\n            \"schema_version\"\
+          : bank.get(\"schema_version\", \"\"),\n            \"config_json\": json.dumps(config,\
+          \ ensure_ascii=False)  # stringify to avoid depth\n        }\n    except\
+          \ Exception as e:\n        empty[\"error\"] = f\"{type(e).__name__}: {e}\"\
+          \n        return empty"
+        code_language: python3
+        desc: 从 bank_path 读取 question-bank.json 完整内容
+        outputs:
+          bank_path:
+            children: null
+            type: string
+          config_json:
+            children: null
+            type: string
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+          question_count:
+            children: null
+            type: number
+          questions:
+            children: null
+            type: array[object]
+          schema_version:
+            children: null
+            type: string
+        selected: false
+        title: 13. 读取最终题库
+        type: code
+        variables:
+        - value_selector:
+          - '1729000000012'
+          - bank_path
+          variable: bank_path
+        - value_selector:
+          - '1729000000015'
+          - biz_api_base
+          variable: biz_api_base
+      height: 96
+      id: '1729000000017'
+      position:
+        x: 4740.5
+        y: 60
+      positionAbsolute:
+        x: 4740.5
+        y: 60
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        outputs:
+        - value_selector:
+          - '1729000000012'
+          - bank_path
+          variable: bank_path
+        - value_selector:
+          - '1729000000013'
+          - valid
+          variable: validate_valid
+        - value_selector:
+          - '1729000000013'
+          - error_count
+          variable: validate_error_count
+        - value_selector:
+          - '1729000000013'
+          - first_errors
+          variable: validate_first_errors
+        - value_selector:
+          - '1729000000017'
+          - questions
+          variable: questions
+        - value_selector:
+          - '1729000000017'
+          - question_count
+          variable: question_count
+        - value_selector:
+          - '1729000000017'
+          - config_json
+          value_type: string
+          variable: bank_config
+        - value_selector:
+          - '1729000000017'
+          - schema_version
+          variable: schema_version
+        selected: true
+        title: 输出
+        type: end
+      height: 270
+      id: '1729000000014'
+      position:
+        x: 5021
+        y: 21
+      positionAbsolute:
+        x: 5021
+        y: 21
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    viewport:
+      x: -9632
+      y: 139
+      zoom: 2
+  rag_pipeline_variables: []

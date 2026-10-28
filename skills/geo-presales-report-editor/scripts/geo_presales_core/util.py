@@ -190,18 +190,19 @@ def domain_matches(host: str, official_domain: str) -> bool:
     return bool(host and domain and (host == domain or host.endswith("." + domain)))
 
 
-def registrable_domain(host: str) -> str:
+def registrable_domain(host: str, extra_suffixes: set[str] | None = None) -> str:
     host = normalize_host(host)
     parts = host.split(".")
     if len(parts) <= 2:
         return host
     suffix2 = ".".join(parts[-2:])
-    if suffix2 in COMMON_MULTI_LABEL_SUFFIXES and len(parts) >= 3:
+    suffixes = COMMON_MULTI_LABEL_SUFFIXES | (extra_suffixes or set())
+    if suffix2 in suffixes and len(parts) >= 3:
         return ".".join(parts[-3:])
     return suffix2
 
 
-def normalize_url(raw_url: str) -> dict | None:
+def normalize_url(raw_url: str, extra_suffixes: set[str] | None = None) -> dict | None:
     raw = str(raw_url or "").strip().replace("\\/", "/")
     if not raw:
         return None
@@ -232,7 +233,7 @@ def normalize_url(raw_url: str) -> dict | None:
         return {
             "canonical_url": canonical,
             "host": host,
-            "registrable_domain": registrable_domain(host),
+            "registrable_domain": registrable_domain(host, extra_suffixes=extra_suffixes),
             "removed_query_params": sorted(removed),
         }
     except (ValueError, UnicodeError):

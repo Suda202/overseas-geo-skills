@@ -30,33 +30,33 @@ LOCALE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "references" / "loc
 
 BUSINESS_MODES = ("B2B", "B2C", "B2B / B2C")
 # 与线上表单对齐：只有这几项必填，业务描述字段全部选填。
-SCALAR_REQUIRED = ("公司名", "品牌名称", "业务模式", "品类", "官方域名")
-SCALAR_OPTIONAL = ("业务 / 产品名称", "适用边界")
-# 多值字段，按 `目标企业画像 n` 展开；B2B 选填，纯 B2C 必须省略。
-B2B_LIST = "目标企业画像"
+SCALAR_REQUIRED = ("company_name", "brand_name", "business_mode", "category", "official_domain")
+SCALAR_OPTIONAL = ("business_product_name", "applicable_boundary")
+# 多值字段，按 `target_customer_profiles n` 展开；B2B 选填，纯 B2C 必须省略。
+B2B_LIST = "target_customer_profiles"
 # B2B 选填：查不到就省略，不填「待人工确认」。
-B2B_JOINABLE = ("购买标准", "集成与兼容", "信任与合规")
-OPTIONAL_JOINABLE = ("差异化优势", "地理与市场")
-NUMBERED_LISTS = ("目标客户", "痛点", "使用场景", "产品特性")
+B2B_JOINABLE = ("purchase_criteria", "integration_compatibility", "trust_compliance")
+OPTIONAL_JOINABLE = ("differentiation", "geography_market")
+NUMBERED_LISTS = ("target_customers", "pain_points", "use_cases", "product_features")
 # Case Builder 合同的建议数量；超出只告警，不阻断。
-SUGGESTED_COUNTS = {"目标企业画像": (1, 5), "目标客户": (1, 5), "痛点": (2, 5), "使用场景": (2, 5), "产品特性": (2, 5)}
-TOPIC_KEY = "主题"
-COMPETITOR_KEY = "竞品"
-NOTE_KEY = "补充内容"
+SUGGESTED_COUNTS = {"target_customer_profiles": (1, 5), "target_customers": (1, 5), "pain_points": (2, 5), "use_cases": (2, 5), "product_features": (2, 5)}
+TOPIC_KEY = "topics"
+COMPETITOR_KEY = "competitors"
+NOTE_KEY = "supplemental"
 CASE_KEYS = set(
     SCALAR_REQUIRED + SCALAR_OPTIONAL + (B2B_LIST,) + B2B_JOINABLE + OPTIONAL_JOINABLE
     + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY)
 )
-COMPETITOR_KEYS = {"名称", "官网域名", "适用主题"}
+COMPETITOR_KEYS = {"name", "official_domain", "applicable_topics"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
 GENERATION_STAGES = ("discovery", "diagnostic")
 JOIN_SEPARATOR = "，"
 
 # Base 里不承载业务含义的管理列，适配时直接丢弃。
 BASE_ADMIN_COLUMNS = {"record_id", "Case序号"}
-BASE_RENAMED_COLUMNS = {"垂直行业": "目标企业画像"}
+BASE_RENAMED_COLUMNS = {"垂直行业": "target_customer_profiles"}
 # 接口字段别名：线上表单叫「垂直行业」，直接映射，不要求调用方改名。
-CASE_KEY_ALIASES = {"垂直行业": "目标企业画像"}
+CASE_KEY_ALIASES = {"垂直行业": "target_customer_profiles"}
 MARKDOWN_LINK = re.compile(r"^\[(?P<text>[^\]]*)\]\((?P<url>[^)\s]+)\)$")
 BASE_COMPETITOR_NAME = re.compile(r"^竞品\s*(\d+)$")
 BASE_COMPETITOR_DOMAIN = re.compile(r"^竞品\s*(\d+)\s*官网域名$")
@@ -167,25 +167,25 @@ def _competitors(case: dict, topic_count: int, report: Report) -> list[dict]:
         unknown = sorted(set(item) - COMPETITOR_KEYS)
         if unknown:
             report.error("unknown_field", field, f"{field} 含未定义字段 {unknown}")
-        name = _scalar(item, "名称", report, required=True)
+        name = _scalar(item, "name", report, required=True)
         if name is None:
-            report.errors[-1]["field"] = f"{field}.名称"
-        domain = _scalar(item, "官网域名", report, required=True)
+            report.errors[-1]["field"] = f"{field}.name"
+        domain = _scalar(item, "official_domain", report, required=True)
         if domain is None:
-            report.errors[-1]["field"] = f"{field}.官网域名"
+            report.errors[-1]["field"] = f"{field}.official_domain"
         if domain:
-            _check_url(domain, f"{field}.官网域名", report)
+            _check_url(domain, f"{field}.official_domain", report)
         if name:
             key = name.casefold()
             if key in seen:
-                report.error("duplicate_item", f"{field}.名称", f"竞品名称重复：{name}")
+                report.error("duplicate_item", f"{field}.name", f"竞品名称重复：{name}")
             seen.add(key)
         entry = {
             "name": name or "",
             "official_domain": domain or "",
-            "source_fields": [f"竞品 {index}", f"竞品 {index} 官网域名"],
+            "source_fields": [f"competitors {index}", f"competitors {index} official_domain"],
         }
-        scope = item.get("适用主题")
+        scope = item.get("applicable_topics")
         if scope is not None and topic_count == 0:
             pass  # 主题缺失已报 missing_field，不重复报越界
         elif scope is not None:
@@ -194,13 +194,13 @@ def _competitors(case: dict, topic_count: int, report: Report) -> list[dict]:
                 and all(isinstance(n, int) and not isinstance(n, bool) for n in scope)
             )
             if not valid:
-                report.error("invalid_type", f"{field}.适用主题", "适用主题必须是非空的主题序号数组，例如 [1, 2]")
+                report.error("invalid_type", f"{field}.applicable_topics", "applicable_topics 必须是非空的主题序号数组，例如 [1, 2]")
             elif len(set(scope)) != len(scope):
-                report.error("duplicate_item", f"{field}.适用主题", "适用主题序号重复")
+                report.error("duplicate_item", f"{field}.applicable_topics", "applicable_topics 序号重复")
             elif any(n < 1 or n > topic_count for n in scope):
                 report.error(
-                    "invalid_reference", f"{field}.适用主题",
-                    f"适用主题序号必须在 1–{topic_count} 之间，收到 {scope}",
+                    "invalid_reference", f"{field}.applicable_topics",
+                    f"applicable_topics 序号必须在 1–{topic_count} 之间，收到 {scope}",
                 )
             else:
                 entry["topic_ids"] = [f"topic_{n}" for n in sorted(scope)]
@@ -277,11 +277,11 @@ def normalize(payload: dict) -> dict:
         value = _scalar(case, field, report, required=True)
         if value is not None:
             fields[field] = value
-    mode = fields.get("业务模式")
+    mode = fields.get("business_mode")
     if mode is not None and mode not in BUSINESS_MODES:
-        report.error("invalid_enum", "业务模式", f"业务模式只接受 {list(BUSINESS_MODES)}，收到 {mode!r}")
-    if "官方域名" in fields:
-        _check_url(fields["官方域名"], "官方域名", report)
+        report.error("invalid_enum", "business_mode", f"business_mode 只接受 {list(BUSINESS_MODES)}，收到 {mode!r}")
+    if "official_domain" in fields:
+        _check_url(fields["official_domain"], "official_domain", report)
     for field in SCALAR_OPTIONAL:
         value = _scalar(case, field, report, required=False)
         if value is not None:
@@ -331,14 +331,19 @@ def normalize(payload: dict) -> dict:
     topic_entries = []
     for index, topic in enumerate(topics, start=1):
         # 第一个主题是核心品类 Coverage Topic，其余为同产品线的 Depth Topic（Case Builder 合同）。
-        source_field = f"主题 {index}（{'宽泛' if index == 1 else '细分'}）"
+        source_field = f"topics {index} ({'broad' if index == 1 else 'narrow'})"
         fields[source_field] = topic
-        topic_entries.append({"topic_id": f"topic_{index}", "source_field": source_field, "source_value": topic})
+        topic_entries.append({
+            "topic_id": f"topic_{index}",
+            "topic": topic,
+            "source_field": source_field,
+            "source_value": topic,
+        })
 
     competitors = _competitors(case, len(topics), report)
     for index, competitor in enumerate(competitors, start=1):
-        fields[f"竞品 {index}"] = competitor["name"]
-        fields[f"竞品 {index} 官网域名"] = competitor["official_domain"]
+        fields[f"competitors {index}"] = competitor["name"]
+        fields[f"competitors {index} official_domain"] = competitor["official_domain"]
     if topics and any("topic_ids" in c for c in competitors):
         for entry in topic_entries:
             applicable = [
@@ -377,9 +382,9 @@ def normalize(payload: dict) -> dict:
     handoff = _handoff(payload, report)
     normalized = {
         "case_fields": fields,
-        "brand_name": fields.get("品牌名称", ""),
-        "official_domain": fields.get("官方域名", ""),
-        "derived_field_sources": {"brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名"},
+        "brand_name": fields.get("brand_name", ""),
+        "official_domain": fields.get("official_domain", ""),
+        "derived_field_sources": {"brand_name": "brand_name", "category_label": "category", "official_domain": "official_domain"},
         "topics": topic_entries,
         "competitor_selection": {"status": "frozen", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
@@ -434,9 +439,9 @@ def from_base_record(record: dict) -> tuple[dict, list[dict]]:
                 })
             continue
         if m := BASE_COMPETITOR_DOMAIN.fullmatch(key):
-            competitors.setdefault(int(m.group(1)), {})["官网域名"] = value
+            competitors.setdefault(int(m.group(1)), {})["official_domain"] = value
         elif m := BASE_COMPETITOR_NAME.fullmatch(key):
-            competitors.setdefault(int(m.group(1)), {})["名称"] = value
+            competitors.setdefault(int(m.group(1)), {})["name"] = value
         elif m := BASE_NUMBERED.fullmatch(key):
             numbered.setdefault(m.group(1), {})[int(m.group(2))] = value
         elif key in NUMBERED_LISTS or key in (TOPIC_KEY, B2B_LIST):

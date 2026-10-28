@@ -37,6 +37,8 @@ metadata:
 1. **确认输入**：题库（v8 JSON 或 upload CSV）、采集目录（`scraper.*/<区域>/NNNN.json`）、品牌来源。品牌来源二选一：
    - 单品牌：`--aliases 'YOUKU,优酷,ยูคุ,ยูคู'`（须含当地文字转写，漏转写会系统性漏提；可加 `--brand` 指定写入 `brand` 字段的名称）。
    - 多品牌：`--lexicon <品牌词表.json>`，每条单元带 `brand` 与 `brand_type`，用于竞品情感矩阵。词表两种格式均可：`brands[].name/aliases/type` 数组（report-builder 落点，首选），或「标准名 → 别名 list」dict（report-audit / shared 落点，`_` 开头的键视为元数据，标准名自身自动算一个别名，`type` 缺省为空）。两种模式共用同一别名匹配（大小写、词边界处理一致）。
+
+   **经 HTTP 服务（`server.py`）调 `sentiment_extract` 工具时**：参数名是 `aliases`（**逗号分隔字符串**，如 `"KeepBalance,By-Health,WonderLab,Swisse"`）或 `lexicon`（词表路径），**不是 `brand_names`**——handler 只认这两个，传 `brand_names` 会被静默忽略、脚本报「必须提供 --aliases（单品牌）或 --lexicon（多品牌词表）」。多品牌又没有现成词表时，把全部品牌名按逗号分隔塞进 `aliases` 即可。
 2. **确定性抽取**：
 
    ```bash

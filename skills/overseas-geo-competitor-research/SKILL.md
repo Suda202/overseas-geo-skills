@@ -12,6 +12,35 @@ metadata:
 
 使用联网研究建立候选池，再由确定性脚本完成来源识别、购买集合核验、评分、组合选择和冻结。输入允许提供零至三个候选；没有提供时从零发现，已经提供的候选也必须通过“同一次购买决策”硬门槛，不符合时记录淘汰原因并自动替换。
 
+## 输入字段映射（重要）
+
+`competitor_research_prepare` 需要 `target.name` 和 `target.official_domain`。这两个字段**不在 normalize_case 的输出里**，需要从以下来源获取：
+
+| 字段 | 来源 | 说明 |
+|---|---|---|
+| `target.name` | 用户输入 / Case 的品牌名 | 目标品牌名（如 "KeepBalance"） |
+| `target.official_domain` | 用户输入 / Case 的官网域名 | 目标官网域名（如 "keepbalance.life"） |
+| `topic` | 用户输入 / Case 的主题 | 研究主题（如 "家庭营养补充剂"） |
+| `market` | 用户输入 | 目标市场（如 "US"） |
+| `known_competitors` | 用户输入 / normalize_case 的 competitor_selection | 候选竞品（最多 3 个） |
+
+**从 normalize_case 映射**（如果之前跑过 normalize_case）：
+
+```python
+normalized = normalize_case_result["normalized"]
+research_input = {
+    "target": {
+        "name": normalized["brand_name"],           # 映射：brand_name → target.name
+        "official_domain": normalized["official_domain"]  # 映射：official_domain → target.official_domain
+    },
+    "topic": "<从 topics[0] 或用户输入获取>",
+    "market": "US",
+    "known_competitors": normalized["competitor_selection"]["formal_competitors"]
+}
+```
+
+**注意**：`normalize_case` 输出里的字段名是 `brand_name` 和 `official_domain`，不是 `target.name` 和 `target.official_domain`。平台 agent 必须做字段映射，不能直接把 normalize_case 的输出传给 competitor_research_prepare。
+
 ## 工作流程
 
 1. 准备输入并生成检索计划。
@@ -20,9 +49,17 @@ metadata:
    python3 scripts/competitor_research.py prepare --input /绝对路径/input.json --run-dir /绝对路径/runs/<id>
    ```
 
+   - 默认要求 `run-dir` 为空目录，防止 finalize 错配旧证据。
+   - 平台场景下需要原地重跑时，显式加 `--overwrite` 清空旧产物：
+     ```bash
+     python3 scripts/competitor_research.py prepare --input /绝对路径/input.json --run-dir /绝对路径/runs/<id> --overwrite
+     ```
+   - 通过 HTTP API 调用时，在 `params` 里传 `"overwrite": true` 即可，由 server.py 透传。
+
 2. 读取 `research-plan.json`，按其中查询词执行联网搜索。
 
-   - 优先调用 `network-search` Skill；当前环境没有该能力时，使用可用的搜索与网页读取工具。
+   - **联网搜索由调用方（平台 agent）自己完成，不是本仓库提供的 tool。** 不要向 `/api/v1/invoke` 发送 `network_search` / `web_search` / `search` 等名字的请求——服务端没有这些工具，会返回 `UNKNOWN_TOOL`。
+   - 平台 agent 应使用自己运行环境内置的联网能力（例如 Claude 的 `WebSearch` / `WebFetch`，或平台自有的搜索 API）。如果运行环境完全没有联网能力，本 skill 无法工作，应在 Case 构建前向调用方报告。
    - 先搜索候选池，再读取候选官网、产品/定价页、独立评测、市场报告或近期新闻。
    - 优先为每个候选保存一条官网证据和一条独立来源证据；必须保存候选与目标品牌进入同一次购买决策的证据。
    - 头部、同层级或挑战者地位使用近 18 个月独立证据；当前活跃状态使用近 30 天实际访问的官网证据；记录检索日期。

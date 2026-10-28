@@ -45,7 +45,7 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 ## `attribute_plan` 合同
 
 - 每个 Topic 恰好一项，只包含 `topic_id / priorities / excluded`。
-- `priorities` 恰好包含 `P1 / P2 / P3`，新分阶段产物按实际需要填写且均可为空，不设数量配额。未声明阶段的历史合同保留 P1 3–5、P2 建议 5–10、P3 0–10。
+- `priorities` 恰好包含 `P1 / P2 / P3` 三个键、各为数组（空写 `[]`），`excluded` 不在 `priorities` 内；新分阶段产物按实际需要填写且均可为空，不设数量配额。未声明阶段的历史合同保留 P1 3–5、P2 建议 5–10、P3 0–10。
 - P1 / P2 / P3 表示 Attribute 在当前 Topic 下的优先级，不是 Attribute 类型或 Prompt 优先级；这些分档属于本项目的生成合同，不是 Profound 原始分类。
 - 各项含 `attribute / source_field / source_value / decision_reason`；P1 的 `verification_statement` 在新阶段可省略，继承时若保留须非空；历史合同必须有该字段。P2/P3 不包含它。
 - `excluded` 可为空；每项包含 `candidate / source_field / source_value / reason / route`，`route` 只允许 `exclude` 或 `accuracy_only`。

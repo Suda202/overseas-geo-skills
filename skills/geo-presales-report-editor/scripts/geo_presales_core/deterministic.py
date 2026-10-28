@@ -127,7 +127,8 @@ def choose_representative_samples(samples: list[dict], questions: list[dict]) ->
     return selected, issues
 
 
-def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: dict) -> dict:
+def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: dict,
+                    extra_suffixes: set[str] | None = None) -> dict:
     question_by_id = {item["question_id"]: item for item in question_bank["questions"]}
     selected, issues = choose_representative_samples(crawl["samples"], question_bank["questions"])
     answers: list[dict] = []
@@ -191,7 +192,7 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
 
         citations = []
         for raw in sample.get("citations") or []:
-            normalized = normalize_url(raw.get("raw_url")) if raw.get("raw_url") else None
+            normalized = normalize_url(raw.get("raw_url"), extra_suffixes=extra_suffixes) if raw.get("raw_url") else None
             row = dict(raw)
             row.update({
                 "canonical_url": normalized.get("canonical_url") if normalized else None,
