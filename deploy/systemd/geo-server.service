@@ -12,7 +12,7 @@ EnvironmentFile=/etc/geo-presales/env
 Environment=HOST=127.0.0.1
 Environment=PORT=8090
 Environment=GEO_PRESALES_SKILLS_ROOT=/opt/geo-presales-skills/skills
-ExecStart=/usr/bin/python3 /opt/geo-presales-skills/server.py
+ExecStart=/opt/geo-presales-venv/bin/python /opt/geo-presales-skills/server.py
 Restart=always
 RestartSec=5
 TimeoutStopSec=30
