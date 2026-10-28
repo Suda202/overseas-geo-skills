@@ -19,6 +19,9 @@ command -v dnf >/dev/null || command -v apt-get >/dev/null || { echo "未识别�
 log "1/7 安装系统依赖"
 if command -v dnf >/dev/null; then
   dnf -y install python3 python3-pip nginx httpd-tools >/dev/null
+  # Python <3.8 的老系统尝试装 python3.11 系列（AliLinux3/CentOS8 有包；装不上不报错）
+  python3 -c 'import sys; exit(0 if sys.version_info>=(3,8) else 1)' 2>/dev/null || \
+    dnf -y install python3.11 python3.11-pip python3.11-devel >/dev/null 2>&1 || true
 else
   apt-get update -qq
   apt-get install -y -qq python3 python3-pip python3-venv nginx apache2-utils rsync >/dev/null
@@ -54,7 +57,10 @@ log "4/7 建立 Python 虚拟环境（platforms/geo-orchestrator 依赖）"
 if command -v python3 >/dev/null && ! python3 -c "import ensurepip" >/dev/null 2>&1 && command -v apt-get >/dev/null; then
   apt-get install -y -qq python3-venv >/dev/null 2>&1 || true
 fi
-[ -x "$VENV/bin/python" ] || python3 -m venv "$VENV"
+# 优先 python3.11（版本够 fastapi>=0.110），回退 python3
+PY_EXE="$(command -v python3.11 || true)"
+[ -n "$PY_EXE" ] || PY_EXE="$(command -v python3)"
+[ -x "$VENV/bin/python" ] || "$PY_EXE" -m venv "$VENV"
 "$VENV/bin/pip" install --quiet --upgrade pip
 "$VENV/bin/pip" install --quiet -r "$APP_DIR/platforms/geo-orchestrator/requirements.txt"
 "$VENV/bin/pip" install --quiet requests
