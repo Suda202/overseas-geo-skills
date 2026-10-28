@@ -92,7 +92,7 @@ def healthz():
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -103,9 +103,9 @@ def run_detail(request: Request, run_id: str):
     if inp is None and art is None and err is None:
         raise HTTPException(status_code=404, detail=f"run not found: {run_id}")
     return templates.TemplateResponse(
+        request,
         "run.html",
         {
-            "request": request,
             "run_id": run_id,
             "case": (inp or {}).get("case") or {},
             "artifact": art,
