@@ -93,5 +93,6 @@ Order: tier (提示词库 优先级, which already carries the 可改变性 低 
 
 ## Known gaps
 
-- Hbrand 2026-10-21: ChatGPT `search_model_queries` was empty in all 380 answers and Gemini returned related questions in 11 of 380, so Query Fan-outs is mostly empty. Confirm the collector returns ChatGPT search queries before the next baseline.
+- Hbrand 2026-10-21: ChatGPT `search_model_queries` was empty in all 380 answers and Gemini returned related questions in 11 of 380, so Query Fan-outs is mostly empty. **Resolved 2026-10-29**: the collector was not broken — 10-28 and 10-29 batches returned the field in 100% of answers. That batch predates the fix; the files' mtimes were later refreshed by a downstream script, so judge emptiness by `task_result.model` and field content, never by file time.
+- ChatGPT fan-out shape changed with `gpt-6` (2026-10-29): one wide keyword-stuffed query instead of 2–3 decomposed ones, no `site:` operators. See [gap-cause-action-table.md](gap-cause-action-table.md) → *ChatGPT 两代形态不同*. Readings across the two model generations are not comparable.
 - Not in the report: 推荐率, 决胜率 (ad-hoc for comparison Prompts), 事实准确率 (retest table), Shopping GEO.

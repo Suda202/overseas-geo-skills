@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — public and client research, attribute grading, candidate Topics, the client confirmation Base, Discovery-first Prompt sets, reading trial results to rank candidates and lock the formal set, and later adding, merging or retiring Prompts. Use for the presales word-selection tool and for ongoing monitoring-set expansion, refinement, deduplication, and retirement; do not use for the early presales diagnosis bank (geo-presales-prompt-builder), running baselines, collection or baseline reports (geo-monitoring), defining metric calibers, written report conclusions, or automatic competitor discovery.
 metadata:
   author: Overseas GEO Project
-  version: "1.82.0"
+  version: "1.82.1"
 ---
 
 # GEO Prompt Selection Builder（选词）

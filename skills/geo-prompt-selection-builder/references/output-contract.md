@@ -308,8 +308,13 @@ Baseline analysis also reads the query fan-out from the same runs: ChatGPT
 `task_result.search_model_queries.queries` and Gemini
 `task_result.related_queries`; other platforms return none. Keep the raw
 results whole so these fields survive, report the two platforms separately, and
-treat an empty field as "no fan-out returned", not a failed run. How to read it
-is in [gap-cause-action-table.md](../../geo-monitoring/references/gap-cause-action-table.md) → *Query fan-out*.
+treat an empty field as "no fan-out returned", not a failed run — judge
+emptiness by `task_result.model` and the field's content, never by file mtime,
+which downstream scripts can refresh. ChatGPT changed shape at `gpt-6`
+(2026-10-29): one keyword-stuffed query per answer instead of 2–3 decomposed
+ones, with `site:` gone, so retrieval-layer domain rankings must come from
+`search_result`; readings across the two model generations are not comparable.
+How to read it is in [gap-cause-action-table.md](../../geo-monitoring/references/gap-cause-action-table.md) → *Query fan-out*.
 
 ## Cadence
 
