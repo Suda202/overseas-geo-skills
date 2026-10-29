@@ -41,6 +41,11 @@ REF_MARKER_BARE = re.compile(r"\[[^\]\n]{1,80}\]\[\d+\]")
 IMAGE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
 MD_LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 HTML_TAG = re.compile(r"<[^>]{1,300}>")
+# markdown 反斜杠转义：Gemini 把正文里的标点全转义（「rival-h2\.example」「OrangeTee \& Tie」），
+# ChatGPT 也有「Hbrand.com\.」「\$」。不还原就按字面匹配不到带点的品牌名——Hbrand 基线
+# Gemini 漏了 74 条 rival-h2.example 提及（2026-10-29）。`|` 不还原：表格里的 `\|` 是单元格内容，
+# 还原后会被 blank_merchant_columns 当成分列符。
+MD_ESCAPE = re.compile(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{}~])")
 
 # 失败页判定统一走 geo_presales_core 的唯一实现，不在下游复刻一份签名表。
 # 该目录归 geo-presales-report-editor 所有，签名与长度阈值由它定义。
@@ -84,7 +89,8 @@ def strip_citations(text: str) -> str:
     text = IMAGE.sub("", text)
     text = MD_LINK.sub(r"\1", text)
     text = HTML_TAG.sub("", text)
-    text = text.replace("\\$", "$")
+    # 引用标记剥完再还原转义，免得 `\[` `\]` 还原后拼出假引用标记
+    text = MD_ESCAPE.sub(r"\1", text)
     text = re.sub(r"[ \t]+\n", "\n", text)
     return re.sub(r"\n{4,}", "\n\n\n", text).strip()
 

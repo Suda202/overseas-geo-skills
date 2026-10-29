@@ -182,7 +182,7 @@ def check_fatal(status: int, raw) -> None:
     if status in (401, 402, 403) or any(p in message for p in (
             "insufficient balance", "insufficient credit", "balance is insufficient")):
         STOP.set()
-        raise Fatal(f"HTTP {status}：鉴权、权限或余额错误，整批停止")
+        raise Fatal(f"HTTP {status}：鉴权、权限或余额错误，整批停止；服务端原文 {sanitize(json.dumps(raw, ensure_ascii=False))[:300]}")
 
 
 def task_id_from(value) -> str:

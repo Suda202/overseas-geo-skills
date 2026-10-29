@@ -1767,7 +1767,8 @@ def _highlight_text_only(html_chunk: str, names: list[str]) -> str:
     """
     if not names:
         return html_chunk
-    heads = [re.escape(name.split()[0]) for name in names if name]
+    # 渲染时 markdown 转义还没还原（Gemini 写「rival-h2\.example」），点号前允许一个反斜杠，否则带点品牌不高亮
+    heads = [re.escape(name.split()[0]).replace(r"\.", r"\\?\.") for name in names if name]
     if not heads:
         return html_chunk
     pattern = re.compile(r"(?<![\w>])(" + "|".join(heads) + r")(?![\w<])", re.IGNORECASE)
