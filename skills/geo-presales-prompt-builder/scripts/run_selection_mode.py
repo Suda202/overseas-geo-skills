@@ -61,15 +61,16 @@ SKILLS = SKILL.parent
 # 选词模式会用到的 skill；geo-monitoring 要带上，选词 skill 里有指向它的软链。
 SKILL_DIRS = ("geo-presales-prompt-builder", "geo-prompt-selection-builder", "shared",
               "geo-presales-report-builder", "geo-monitoring")
+# legacy = 已归档的默认模式规则，不给 agent 看，免得混用两套口径
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
-                                "*.local.json", "build")
+                                "*.local.json", "build", "legacy")
 DEFAULT_TIMEOUT = 120 * 60
 # 与 geo-presales-report-builder/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
 KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa"}
 
 TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续，把假设写进 `out/notes.md`。
 
-任务：给这个品牌生成售前诊断题。按 `.agents/skills/geo-presales-prompt-builder/references/selection-mode.md`（售前选词模式）逐步做；它引用的选词规则在 `.agents/skills/geo-prompt-selection-builder/`。
+任务：给这个品牌生成售前诊断题。按 `.agents/skills/geo-presales-prompt-builder/references/selection-mode.md`（售前生词步骤）逐步做；它引用的选词规则在 `.agents/skills/geo-prompt-selection-builder/`。
 
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品已冻结，不增删、不替换。`topic_source` 为 `to_derive` 时主题由你从矩阵行聚出。

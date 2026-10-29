@@ -69,7 +69,7 @@ P1、P2、P3 是本项目为生成和覆盖监测问题增加的属性优先级�
    - 派生出的 Depth 主题，如果买家会比较的候选品牌和已冻结竞品明显不同（例如进口商比较的是出口型制造商，而正式竞品是面向终端渠道的品牌），回到 [Case 主题命名规则](../geo-presales-eval-case-builder/references/topic-generation-reference.md) 的五维拆分判断：拆成独立 Case，或给该主题配局部竞品。
    - 之后每个主题内的属性规划沿用这里的 Case 级排序，只决定该主题覆盖哪些属性。
 
-**售前做完售后调研里公开的那一半，成交后售后接着用，不重做**（Suda 2026-10-16）。售前范围：[用户原话去哪收](../geo-prompt-selection-builder/references/signal-sources.md) 里不需要客户数据的三节（所有行业都做、按行业收评价和社区、按目标市场换成当地平台）；属性分级，相对竞品要打开竞品和品牌自己的规格页判；品牌事实核查（[对客件规则](../geo-prompt-selection-builder/references/client-facing-attribute-pool.md) →「品牌事实核查」）。「客户提供什么」一节要客户数据，留给售后。分级口径与售后采集前那一轮相同，和售后只差三点：不经客户逐条确认；每个主题下一条属性判一次，按受众切片拆分留给售后；当前差距待测。调研产物按 [售前公开调研](../geo-presales-prompt-builder/references/public-research.md) 的格式存成文件，用 export_to_confirm_base.py 预填进售后多维表格模板的一份内部副本；这份副本不发给客户，成交后售后在同一份副本上补客户数据和切片。
+**售前做完售后调研里公开的那一半，成交后售后接着用，不重做**（Suda 2026-10-16）。售前范围：[用户原话去哪收](../geo-prompt-selection-builder/references/signal-sources.md) 里不需要客户数据的三节（所有行业都做、按行业收评价和社区、按目标市场换成当地平台）；属性分级，相对竞品要打开竞品和品牌自己的规格页判；品牌事实核查（[对客件规则](../geo-prompt-selection-builder/references/client-facing-attribute-pool.md) →「品牌事实核查」）。「客户提供什么」一节要客户数据，留给售后。分级口径与售后采集前那一轮相同，和售后只差三点：不经客户逐条确认；每个主题下一条属性判一次，按受众切片拆分留给售后；当前差距待测。调研产物按 [售前公开调研](../geo-presales-prompt-builder/references/legacy/public-research.md) 的格式存成文件，用 export_to_confirm_base.py 预填进售后多维表格模板的一份内部副本；这份副本不发给客户，成交后售后在同一份副本上补客户数据和切片。
 
 ## 阶段交接
 

@@ -1,6 +1,6 @@
 # 售前公开调研
 
-售前做完售后调研里公开的那一半，成交后售后在同一份多维表格副本上接着做（规则见 [共用原则](../../shared/prompt-generation-principles.md) →「主题的两种来源」末段）。本文件只定义调研产物的格式和它在流程里的位置；收哪些来源、怎么判可信度、搜索词怎么改写成题面，都以售后的 [signal-sources.md](../../geo-prompt-selection-builder/references/signal-sources.md) 为准，品牌事实核查的取舍以 [对客件规则](../../geo-prompt-selection-builder/references/client-facing-attribute-pool.md) →「品牌事实核查」为准。
+售前做完售后调研里公开的那一半，成交后售后在同一份多维表格副本上接着做（规则见 [共用原则](../../../shared/prompt-generation-principles.md) →「主题的两种来源」末段）。本文件只定义调研产物的格式和它在流程里的位置；收哪些来源、怎么判可信度、搜索词怎么改写成题面，都以售后的 [signal-sources.md](../../../geo-prompt-selection-builder/references/signal-sources.md) 为准，品牌事实核查的取舍以 [对客件规则](../../../geo-prompt-selection-builder/references/client-facing-attribute-pool.md) →「品牌事实核查」为准。
 
 ## 在流程里的位置
 
@@ -86,7 +86,7 @@
 - 每个候选写清：支撑它的原话编号、为什么不在现有主题内、能形成几条彼此独立的发现型购买意图。
 - 够 5 条的写「纳入本 Case」，不够的写明缺什么证据（写「证据缺口」而不是「不采纳」）；市场根本不需要的写「不采纳」并给理由。
 - 如果某条原话**反驳**了 Case 里已有的主题假设（例如买家根本不按我们以为的维度选），单独标出来，别只当候选处理。
-- 主题是 Case 必填项，改主题要走 Case 更新（见 [Case 主题生成规则](../../geo-presales-eval-case-builder/references/topic-generation-reference.md)），这一遍只出候选，不直接改主题、不动题库。
+- 主题是 Case 必填项，改主题要走 Case 更新（见 [Case 主题生成规则](../../../geo-presales-eval-case-builder/references/topic-generation-reference.md)），这一遍只出候选，不直接改主题、不动题库。
 
 ### 品牌定位校验：品牌自述与市场实际说法对不对得上
 

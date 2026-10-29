@@ -8,7 +8,7 @@ v8 直接接受系统接口提交的评测 Case 中文业务字段，不要求 `
 |---|---|---|---|
 | `公司名`、`业务 / 产品名称`、`品牌名称`、`业务模式`、`品类` | `目标企业画像 1…n`（仅 B2B）、`目标客户 1…n`、`痛点 1…n`、`使用场景 1…n`、`产品特性 1…n` | `主题 1…n（宽泛/细分）`（1–3 个）、`官方域名`、1–3 组 `竞品 n` 与 `竞品 n 官网域名` | `差异化优势`、`适用边界`、`购买标准`、`集成与兼容`、`信任与合规`、`地理与市场`、`补充内容` |
 
-**输入格式**：调用方的输入结构以 [Case 输入合同](input-contract.md) 为准：列表字段用 JSON 数组，竞品用对象数组（名称、官网域名）。飞书 Record 的合并字段（多值用 `，` 分隔、竞品平铺）由 `scripts/normalize_case.py --from-base-record` 适配成同一结构。两种来源都由该脚本展开为上表的编号格式写入 `config.case_fields`，`source_field/source_value` 回指展开后的值。validator 校验的是归一化后的题库，不直接接受原始 payload 或 Base Record。
+**输入格式**：调用方的输入结构以 [Case 输入合同](../input-contract.md) 为准：列表字段用 JSON 数组，竞品用对象数组（名称、官网域名）。飞书 Record 的合并字段（多值用 `，` 分隔、竞品平铺）由 `scripts/normalize_case.py --from-base-record` 适配成同一结构。两种来源都由该脚本展开为上表的编号格式写入 `config.case_fields`，`source_field/source_value` 回指展开后的值。validator 校验的是归一化后的题库，不直接接受原始 payload 或 Base Record。
 
 括号中的“宽泛/细分”只帮助理解 Topic，不输出 `topic_type`。上游通常产出 1 个 Coverage + 2 个 Depth，证据不足时保留 1 + 1；单 Topic 输入仍受支持。公司名、品牌、业务模式、品类、至少一个 Topic、官方域名以及 1–3 组竞品名称和官网域名为硬必填，其余业务字段与线上表单一致为选填；`目标企业画像`、`购买标准`、`集成与兼容`、`信任与合规` 只服务 B2B，纯 `B2C` 必须整行省略；B2B 只有 `目标企业画像` 必填，按 `目标企业画像 1…n` 展开，旧题库不带编号的单字段仍可读；其余三项有依据才填。`补充内容`必须保留但允许为空；为空时三组正式竞品适用于全部 Topic。业务字段与研究证据应支持每 Topic 至少 5 个独立发现型意图，不要求凑 3–5 个属性或完整客户旅程。
 
@@ -38,7 +38,7 @@ v8 的 `config` 是闭合合同，只允许 `case_fields / brand_name / brand_ob
 
 显式 `diagnostic` 是对原题库的补充，验证时必须通过 `--baseline` 提供原始 Discovery 或未声明阶段的历史 v8。Python 调用使用 `validate(data, baseline)`。原 Case、Topic、语言与所有原 Discovery 的 ID、题面、翻译、Tags、意图键和分析路由必须保留；缺失或改写均失败。若需要实质校正，走新版本 Discovery/售后维护流程，而不是伪装成纯补题。
 
-`locale` 可选，默认 `en`，取值必须是 [语言注册表](locale-templates.json) 中已登记的键。它只决定**题面语言**：`user_question / monitoring_prompt` 使用该语言的文字，Evaluation 与 Category Awareness 由注册表里该语言的固定模板生成；因为 `category_label` 与 Topic 文本会嵌入这两类题面，非 `en` 题库应把这两个显示名改写成该语言。Case 字段、Tags 与翻译保持原有写法。非 `en` 题库应在每题保留 `en_translation`，便于与英文基线对照。
+`locale` 可选，默认 `en`，取值必须是 [语言注册表](../locale-templates.json) 中已登记的键。它只决定**题面语言**：`user_question / monitoring_prompt` 使用该语言的文字，Evaluation 与 Category Awareness 由注册表里该语言的固定模板生成；因为 `category_label` 与 Topic 文本会嵌入这两类题面，非 `en` 题库应把这两个显示名改写成该语言。Case 字段、Tags 与翻译保持原有写法。非 `en` 题库应在每题保留 `en_translation`，便于与英文基线对照。
 
 新增一门语言只需在 `locale-templates.json` 增加一个条目（四个模板、company/product 标签、候选名词与疑问词），不改 validator 代码；未登记的语言会被 validator 拒绝，构建期回落英文模板。
 

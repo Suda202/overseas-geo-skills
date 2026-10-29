@@ -57,7 +57,7 @@ Discovery 数量不要求各 Topic 对称。若某 Topic 无法形成 5 个独�
 
 全部要求具体品牌、制造商、供应商、平台或产品候选，且不得出现目标品牌或正式竞品名称。题面必须明确要候选：用候选触发名词（provider、manufacturer、supplier、tool、platform、solution、brand 等品类对应词），或用 best/top 加品类复数名词（`Best dash cams for rideshare drivers`）；缺少这类要求的问句会得到操作建议而不是品牌清单，属于格式错误而非语义偏好。
 
-**开头句式要混用，不要全写成 `Which …`**：`Which …`、`What are the best …`、`Best … for …`、`… recommend` 并列，规则与实测数据见选词 skill [Discovery Quality](../../geo-prompt-selection-builder/references/after-sales-rules.md)。
+**开头句式要混用，不要全写成 `Which …`**：`Which …`、`What are the best …`、`Best … for …`、`… recommend` 并列，规则与实测数据见选词 skill [Discovery Quality](../../../geo-prompt-selection-builder/references/after-sales-rules.md)。
 
 Discovery 的规划顺序：
 
@@ -69,7 +69,7 @@ Discovery 的规划顺序：
 4. 为能形成不同候选集合、比较边界或决策结果的 P2 增题；目标客户、场景和痛点只有在会改变答案时才单独成题。
 5. 适用边界、交付限制或采购约束能改变候选结果时，可各形成一题；供应稳定性、交期、认证文件、备件和售后等采购关注点不因“不是产品参数”而排除。
 6. 只有 P1/P2 已充分覆盖且仍有明确增量价值时才使用 P3。某个 Topic 已覆盖所有重要决策关注点后立即停止，即使其他 Topic 题量更多或更少。
-7. **服务类品类每 Topic 至多 1 道现状替代题**，现状写进条件、问句要服务商：`Which [品类] providers can a company use instead of [现有做法]?`。适用范围、反例与实测见选词 skill [Discovery Quality](../../geo-prompt-selection-builder/references/after-sales-rules.md)。
+7. **服务类品类每 Topic 至多 1 道现状替代题**，现状写进条件、问句要服务商：`Which [品类] providers can a company use instead of [现有做法]?`。适用范围、反例与实测见选词 skill [Discovery Quality](../../../geo-prompt-selection-builder/references/after-sales-rules.md)。
 8. 比较全量题库做语义去重。**去重的单位是购买决策，不是措辞**：两题若指向同一购买决策（同一候选集合、同一比较维度、同一改变答案的条件），只保留一题；只有买家、地区、场景或决策阶段变化才算新题。仅措辞或品类同义词变化，不增加购买意图时合并；需求不同的问题不能因一次回答相似就合并。若用户另要措辞实验，单独标记实验目的，不把变体算进独立意图覆盖。
 
 宽泛 Topic 保留品类供应商发现视角；细分 Topic 锚定购买场景。问题可长可短，不强制 SEO 短词风格，不以假定的长短句比例凑题。不要只问定义、方法或标准清单。
@@ -80,7 +80,7 @@ Discovery 的规划顺序：
 
 选择有实际比较需求的当前 Topic 适用竞品，用中性一对一模板，包含具体场景、两个具名品牌和选择任务。同组两题以上时，除竞品名称外，题面及 Attribute Tags 同构，不预设胜者。没有“每个竞品必须一题”的配额，也不跨 Topic 借竞品补数。
 
-**具名 alternatives 是第二种 Competitor 形态**：只点名一个适用竞品、不出现目标品牌，每 Topic 至多 1 道，不占一对一配额、不进覆盖计数、不参与同构校验。写法见选词 skill [Prompt Priorities](../../geo-prompt-selection-builder/references/after-sales-rules.md) 的 Named-competitor alternatives。
+**具名 alternatives 是第二种 Competitor 形态**：只点名一个适用竞品、不出现目标品牌，每 Topic 至多 1 道，不占一对一配额、不进覆盖计数、不参与同构校验。写法见选词 skill [Prompt Priorities](../../../geo-prompt-selection-builder/references/after-sales-rules.md) 的 Named-competitor alternatives。
 
 ### Verification × 0
 
@@ -96,9 +96,9 @@ Discovery 的规划顺序：
 
 `Evaluate the {category_label} {company|product} {brand_name} on {evaluation_scope}`
 
-`company|product` 由 `brand_object_type` 决定。品类与 Topic 归一后相同时省略范围从句。实际句式来自 [语言注册表](locale-templates.json)；`evaluation_scope` 转为具体业务范围。每题只出现一个目标品牌或适用竞品；比较评价时保持同问法，不要求逐个补齐。英文题面不得出现元词 `topic`。
+`company|product` 由 `brand_object_type` 决定。品类与 Topic 归一后相同时省略范围从句。实际句式来自 [语言注册表](../locale-templates.json)；`evaluation_scope` 转为具体业务范围。每题只出现一个目标品牌或适用竞品；比较评价时保持同问法，不要求逐个补齐。英文题面不得出现元词 `topic`。
 
-**评价题有两种问法**：命令式 `Evaluate the …` 与 review 问法 `Is {brand} a good {category} {object} for {scope}?`（注册表 `evaluation_review`），同一决策只取一种，默认用命令式（Suda 2026-10-22）。取舍依据以选词 skill [Prompt Priorities](../../geo-prompt-selection-builder/references/after-sales-rules.md) 的 Evaluation wording 为准。locale 未注册 review 模板时回退命令式。
+**评价题有两种问法**：命令式 `Evaluate the …` 与 review 问法 `Is {brand} a good {category} {object} for {scope}?`（注册表 `evaluation_review`），同一决策只取一种，默认用命令式（Suda 2026-10-22）。取舍依据以选词 skill [Prompt Priorities](../../../geo-prompt-selection-builder/references/after-sales-rules.md) 的 Evaluation wording 为准。locale 未注册 review 模板时回退命令式。
 
 ### 按需补充 Category Awareness
 

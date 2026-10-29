@@ -1,4 +1,4 @@
-# 售前选词模式（精简版）
+# 售前生词步骤
 
 售前诊断的流程很短：生词 → 爬一次 → 出 HTML 报告。没有客户确认，也没有试跑。本文件只写售前要做的步骤，以及每一步的判断记在题库 JSON 的哪个字段。题面怎么写、怎么去重、过哪些门禁，只在选词 skill 里定义一份，本文按章节引用，不另抄。
 
@@ -14,7 +14,7 @@
 |---|---|
 | `query` | `user_question` |
 | `question_zh` | `zh_translation` |
-| `topic` | 题目的 `topic`；没有就按 `topic_id` 去 `config.topics` 查。写报告上要显示的主题名，需要换名时导出加 `--topic-label "题库主题=显示名"`。线上目前从表单「监测主题」取报告主题。已提给研发两项改动（2026-10-29）：线上生词改为运行本 skill、表单去掉监测主题、报告主题从题里取。研发改好之前，`topic` 必须和表单上填的监测主题逐字一致 |
+| `topic` | 题目的 `topic`；没有就按 `topic_id` 去 `config.topics` 查。写报告上要显示的主题名，需要换名时导出加 `--topic-label "题库主题=显示名"`。线上目前从表单「监测主题」取报告主题。已提给研发三项改动（2026-10-29）：线上生词改为运行本 skill、表单去掉监测主题、报告主题从题里取。研发改好之前，`topic` 必须和表单上填的监测主题逐字一致 |
 | `diagnosis_intent` | 由 `prompt_type` 换成后端枚举：发现 `discovery`、对比 `competitor`、评价 `evaluation` |
 | `tags` | 第一个是提示词类型的中文名，后面接题目自带的 `tags`，总长不到 200 字 |
 | `question_types` | 由 `diagnosis_intent` 定：发现 `visibility,sentiment`，对比和评价 `sentiment` |

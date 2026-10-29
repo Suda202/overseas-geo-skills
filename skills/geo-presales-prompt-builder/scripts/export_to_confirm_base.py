@@ -11,7 +11,7 @@
                  优先级依据注明「待按业务重点 × 买家证据重判」——售前没有业务重点信息，本脚本不替售后判
   提示词库     ← questions；新模板另挂「属性」，优先级按所在行预填
   提示词库     ← questions；「证据」按调研文件的 prompt_evidence 挂买家原话
-基线三表只删【示例】行，不写；需要品牌方提供的数据保持模板原样。调研文件格式见 references/public-research.md。
+基线三表只删【示例】行，不写；需要品牌方提供的数据保持模板原样。调研文件格式见 references/legacy/public-research.md（默认模式已归档，本脚本只用于旧流程）。
 
 用法：
   python3 export_to_confirm_base.py <bank.json> [--research r.json] --spec-out spec.json   # 只生成本地规格

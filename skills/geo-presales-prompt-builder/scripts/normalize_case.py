@@ -304,14 +304,9 @@ def normalize(payload: dict) -> dict:
         for index, item in enumerate(items, start=1):
             fields[f"{field} {index}"] = item
 
-    # 主题选填（Suda 2026-10-29）：线上表单去掉了监测主题，选词模式在生词时从矩阵行聚出主题。
-    # 传了主题时按默认模式的规则收（1–3 个，第一个宽泛）。
+    # 主题选填（Suda 2026-10-29）：线上表单去掉了监测主题，生词时从矩阵行聚出主题。
+    # 旧 Case 带着主题也收（1–3 个，第一个宽泛），结果里 topic_source 区分两种情况。
     topics = _string_list(case, TOPIC_KEY, report)
-    if not topics:
-        report.warn(
-            "topic_to_derive", TOPIC_KEY,
-            "未传主题：选词模式会在生词时从矩阵行聚出主题；默认模式生词需要先填主题",
-        )
     if topics and not 1 <= len(topics) <= 3:
         report.error("count_out_of_range", TOPIC_KEY, f"主题必须 1–3 个，收到 {len(topics)} 个")
         topics = topics[:3]
@@ -322,8 +317,7 @@ def normalize(payload: dict) -> dict:
         fields[source_field] = topic
         topic_entries.append({"topic_id": f"topic_{index}", "source_field": source_field, "source_value": topic})
 
-    # 竞品不带主题边界（2026-10-29 删去「适用主题」：线上表单没有这一项）。默认模式需要局部边界时，
-    # 写在补充内容里，由 skill 读出后写 topic_ids。
+    # 竞品不带主题边界（2026-10-29 删去「适用主题」：线上表单没有这一项）。
     competitors = _competitors(case, report)
     for index, competitor in enumerate(competitors, start=1):
         fields[f"竞品 {index}"] = competitor["name"]
@@ -359,7 +353,7 @@ def normalize(payload: dict) -> dict:
         "official_domain": fields.get("官方域名", ""),
         "derived_field_sources": {"brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名"},
         "topics": topic_entries,
-        # case = 调用方填了主题；to_derive = 没填，由选词模式从矩阵行聚出
+        # case = 调用方填了主题；to_derive = 没填，生词时从矩阵行聚出
         "topic_source": "case" if topic_entries else "to_derive",
         "competitor_selection": {"status": "frozen", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
