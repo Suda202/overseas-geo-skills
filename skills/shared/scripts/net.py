@@ -13,20 +13,27 @@
                                                         Reddit 走 RSS 直连（免费）：版块/帖子 URL 取帖子与评论，否则当搜索词；
                                                         未登录约每分钟 1 次，按 x-ratelimit-reset 自动等待（.json/无头/Scrapeless 都被拦，2026-10-27 实测）
 
-缓存目录 /tmp/hb_net_cache。Scrapeless key 读 macOS 钥匙串 SCRAPELESS_API_KEY。
+缓存目录 /tmp/hb_net_cache。Scrapeless key 先读环境变量 SCRAPELESS_API_KEY（服务器上用），没有再读 macOS 钥匙串同名项。
+render 用的 Chrome 默认是 macOS 路径，服务器上用环境变量 CHROME_PATH 指定。
 """
-import hashlib, html, json, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
+import hashlib, html, json, os, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 CACHE = Path("/tmp/hb_net_cache"); CACHE.mkdir(exist_ok=True)
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
 API = "https://api.scrapeless.com"
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+CHROME = os.environ.get("CHROME_PATH") or "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 
 def key():
-    return subprocess.run(["security", "find-generic-password", "-s", "SCRAPELESS_API_KEY", "-w"],
-                          capture_output=True, text=True).stdout.strip()
+    value = os.environ.get("SCRAPELESS_API_KEY", "").strip()
+    if value:
+        return value
+    try:
+        return subprocess.run(["security", "find-generic-password", "-s", "SCRAPELESS_API_KEY", "-w"],
+                              capture_output=True, text=True).stdout.strip()
+    except FileNotFoundError:  # 非 macOS 没有 security 命令
+        return ""
 
 
 def http(url, data=None, headers=None, timeout=60):

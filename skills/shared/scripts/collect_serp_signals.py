@@ -13,11 +13,16 @@ PAA 模块不一定渲染。本地浏览器只用于需登录或强反爬的社�
 
 PAA 每次调用返回的 4 条不稳定（2026-10-20 实测：同一词连调 3 次，两两 Jaccard 0–0.6，
 没有一条每次都出现），这是 Google 侧的现象，不是采集 bug；条数可用于回归对比，内容需要
-多次采集求并集才完整。逐层展开用 `next_page_token` 另调一次（每次独立付费），见
-`80-代码/脚本/scrapeless_paa_deep_probe.py`。
+多次采集求并集才完整。
+
+`--paa-depth 2` 把第 1 层每条 PAA 用它的 next_page_token 再展开一次（每条独立付费 1 次，
+1 个种子词约多 4 次），拿到点开那条问题后 Google 追加的问题，等于在浏览器里逐条点开。
+最多 2 层：2026-10-20 实测往下钻到第 4 层以后问题会跑偏到单一品牌的负面话题，和原始买家意图脱节。
+展开偶发 400（code 20500，missing Google async HTML frame，约 10–15%），每条最多重试 2 次。
 
     python3 -I collect_serp_signals.py --seeds-file seeds.txt --gl us --hl en --out <目录>
     python3 -I collect_serp_signals.py "portable oxygen concentrator" --gl us --hl en --out <目录>
+    python3 -I collect_serp_signals.py --seeds-file seeds.txt --gl us --hl en --paa-depth 2 --out <目录>
 
 Key 依次读环境变量 SCRAPELESS_API_KEY、macOS 钥匙串（服务名 SCRAPELESS_API_KEY）。
 <out>/raw/ 里已有某种子词的原始返回时直接复用，不重复付费；--refresh 强制重采，
@@ -25,6 +30,7 @@ Key 依次读环境变量 SCRAPELESS_API_KEY、macOS 钥匙串（服务名 SCRAP
 
 产物（<out>/）：
   raw/<种子词>.json           原始返回，作证据留存；.html 只在 JSON 缺 related_questions 时另存
+  raw/<种子词>.L2-<n>.json    --paa-depth 2 时第 1 层第 n 条 PAA 的展开返回
   signals.csv                列与对客 Base「买家原话」表一致；中文意思、受众、旅程阶段、涉及品牌、月搜索量留空待人工判
                              （PAA、相关搜索、自动补全都不带搜索量；月搜索量只对 Ahrefs 等关键词工具的词填）
   summary.json               每个种子词各类信号条数与失败原因；PAA 为 0 的种子词单独列出
@@ -56,6 +62,7 @@ DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
 FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "月搜索量", "原话", "中文意思", "受众", "旅程阶段",
           "约束", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
 KINDS = {"paa": ("Google People Also Ask", "中"),
+         "paa2": ("Google People Also Ask 第 2 层", "中"),
          "related": ("Google 相关搜索", "中"),
          "autocomplete": ("Google 自动补全", "低")}
 
@@ -68,8 +75,11 @@ def api_key() -> str:
     key = os.environ.get("SCRAPELESS_API_KEY", "").strip()
     if key:
         return key
-    r = subprocess.run(["security", "find-generic-password", "-s", "SCRAPELESS_API_KEY", "-w"],
-                       capture_output=True, text=True)
+    try:
+        r = subprocess.run(["security", "find-generic-password", "-s", "SCRAPELESS_API_KEY", "-w"],
+                           capture_output=True, text=True)
+    except FileNotFoundError:  # 非 macOS 没有 security 命令，只认环境变量
+        return ""
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
@@ -154,6 +164,39 @@ def parse_paa(data, page) -> list[str]:
     return list(dict.fromkeys(q for q in out if q))
 
 
+def expand_paa(token, key, timeout, retries=2):
+    """用第 1 层某条 PAA 的 next_page_token 取第 2 层；返回 (响应, 错误)。偶发 20500 时重试。"""
+    hdr = {"x-api-token": key, "Content-Type": "application/json"}
+    err = ""
+    for attempt in range(retries + 1):
+        status, raw = http("POST", BASE_URL + CREATE_PATH,
+                           {"actor": "scraper.google.search", "input": {"next_page_token": token}}, hdr)
+        data = as_json(raw)
+        check_auth(status, data)
+        tid, deadline = task_id(data), time.monotonic() + timeout
+        while status in (200, 201, 202) and not is_result(data) and tid and time.monotonic() < deadline:
+            time.sleep(3)
+            status, raw = http("GET", BASE_URL + RESULT_PATH + urllib.parse.quote(tid, safe=""), None, hdr)
+            data = as_json(raw)
+            check_auth(status, data)
+        if is_result(data):
+            return data, ""
+        err = f"HTTP {status}：{json.dumps(data, ensure_ascii=False)[:200]}"
+        if "20500" not in err:
+            break
+        time.sleep(2 * (attempt + 1))
+    return None, err
+
+
+def paa_tokens(data) -> list[tuple[str, str]]:
+    items = (data or {}).get("related_questions") or []
+    out = []
+    for q in items:
+        if isinstance(q, dict) and str(q.get("question") or "").strip() and isinstance(q.get("next_page_token"), str):
+            out.append((str(q["question"]).strip(), q["next_page_token"]))
+    return out
+
+
 def parse_related(data) -> list[str]:
     items = (data or {}).get("related_searches") or []
     return list(dict.fromkeys(str(r.get("query")).strip() for r in items if isinstance(r, dict) and r.get("query")))
@@ -204,6 +247,8 @@ def main() -> int:
     ap.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")
     ap.add_argument("--cache-only", action="store_true", help="只用 raw/ 缓存，不发付费调用")
     ap.add_argument("--no-autocomplete", action="store_true")
+    ap.add_argument("--paa-depth", type=int, choices=(1, 2), default=1,
+                    help="2 = 第 1 层每条 PAA 再展开一层（每条另付费 1 次）")
     args = ap.parse_args()
 
     seeds = load_seeds(args)
@@ -245,7 +290,32 @@ def main() -> int:
             rec["error"] = "前序鉴权或余额错误，未采集"
 
         found = {"paa": parse_paa(data, page) if data is not None else [],
-                 "related": parse_related(data)}
+                 "related": parse_related(data), "paa2": []}
+        parents: dict[str, str] = {}
+        if args.paa_depth == 2 and data is not None:
+            for n, (parent, token) in enumerate(paa_tokens(data), 1):
+                ef = raw_dir / f"{stem}.L2-{n}.json"
+                sub = None
+                if ef.exists() and not args.refresh:
+                    sub = json.loads(ef.read_text(encoding="utf-8")).get("response")
+                elif args.cache_only or fatal:
+                    continue
+                else:
+                    try:
+                        paid_calls += 1
+                        sub, err = expand_paa(token, key, args.timeout)
+                    except Fatal as e:
+                        fatal = err = str(e)
+                    if sub is None:
+                        rec["error"] = (rec["error"] + "；" if rec["error"] else "") + f"PAA 第 2 层「{parent}」：{err}"
+                        continue
+                    ef.write_text(json.dumps({"request": {"next_page_token": token, "parent": parent},
+                                              "collected": today, "response": sub}, ensure_ascii=False, indent=2),
+                                  encoding="utf-8")
+                for text in parse_paa(sub, None):
+                    if text.lower() not in {x.lower() for x in found["paa"]} and text not in parents:
+                        parents[text] = parent
+                        found["paa2"].append(text)
         ac = None if args.no_autocomplete else autocomplete(seed, args.gl, args.hl)
         found["autocomplete"] = ac or []
         if ac is None and not args.no_autocomplete:
@@ -259,14 +329,16 @@ def main() -> int:
                     seen[k]["来源说明"] += f"；另见种子词：{seed}"
                     continue
                 row = dict.fromkeys(FIELDS, "")
+                via = f"｜展开自：{parents[text]}" if kind == "paa2" else ""
                 row.update({"产品线": args.product_line, "来源类型": "搜索数据", "原话": text,
-                            "来源说明": f"{label}｜种子词：{seed}｜gl={args.gl} hl={args.hl}",
+                            "来源说明": f"{label}｜种子词：{seed}{via}｜gl={args.gl} hl={args.hl}",
                             "来源链接": search_link(seed, args.gl, args.hl), "收集日期": today,
                             "证据可信度": grade})
                 seen[k] = row
                 rows.append(row)
         per_seed.append(rec)
-        print(f"{seed}: PAA {rec['paa']} / 相关搜索 {rec['related']} / 自动补全 {rec['autocomplete']}"
+        print(f"{seed}: PAA {rec['paa']}" + (f"（第 2 层 {rec['paa2']}）" if args.paa_depth == 2 else "")
+              + f" / 相关搜索 {rec['related']} / 自动补全 {rec['autocomplete']}"
               f"{'（缓存）' if rec['cached'] else ''}{'  ⚠ ' + rec['error'] if rec['error'] else ''}")
 
     for i, row in enumerate(rows, 1):
@@ -277,7 +349,7 @@ def main() -> int:
         w.writerows(rows)
     summary = {
         "market": {"gl": args.gl, "hl": args.hl}, "collected": today, "paid_calls": paid_calls,
-        "totals": {k: sum(1 for r in rows if r["来源说明"].startswith(KINDS[k][0])) for k in KINDS},
+        "totals": {k: sum(1 for r in rows if r["来源说明"].split("｜")[0] == KINDS[k][0]) for k in KINDS},
         "zero_paa_seeds": [r["seed"] for r in per_seed if not r["error"] and r["paa"] == 0],
         "failed_seeds": [{"seed": r["seed"], "error": r["error"]} for r in per_seed if r["error"]],
         "per_seed": per_seed,

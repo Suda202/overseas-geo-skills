@@ -83,7 +83,10 @@ def credential(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if value:
         return value
-    r = subprocess.run(["security", "find-generic-password", "-s", name, "-w"], capture_output=True, text=True)
+    try:
+        r = subprocess.run(["security", "find-generic-password", "-s", name, "-w"], capture_output=True, text=True)
+    except FileNotFoundError:  # 非 macOS 没有 security 命令，只认环境变量
+        return ""
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
