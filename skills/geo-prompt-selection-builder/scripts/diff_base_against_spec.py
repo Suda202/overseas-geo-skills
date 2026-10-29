@@ -20,7 +20,14 @@ import tempfile
 from pathlib import Path
 
 DEFAULT_KEYS = {"提示词矩阵": "切片编号", "提示词库": "编号", "买家原话": "输入编号", "业务范围": "项目",
-                "属性池": "属性", "需要品牌方提供的数据": "数据", "品牌事实核查": "事实项"}
+                "属性池": "属性", "需要品牌方提供的数据": "数据", "品牌事实核查": "事实项",
+                "主题": "主题+市场"}  # 「+」连起几个字段当一个主键（主题表一行 = 主题 × 市场）
+
+
+def keyval(r, k):
+    if "+" not in k:
+        return norm(r.get(k))
+    return "|".join(str(norm(r.get(x))) for x in k.split("+"))
 DEFAULT_ALIAS = {"监测主题": "主题"}
 
 
@@ -112,7 +119,7 @@ def main():
         live[t] = rows
         k = keys.get(t)
         for r in rows:
-            rid2key[r["record_id"]] = f"{t}:{norm(r.get(k))}" if k else r["record_id"]
+            rid2key[r["record_id"]] = f"{t}:{keyval(r, k)}" if k else r["record_id"]
 
     report, total = {}, 0
     for t in want:
@@ -128,11 +135,11 @@ def main():
         lrows = {}
         dup = []
         for r in live[t]:
-            kv = norm(r.get(k))
+            kv = keyval(r, k)
             if kv in lrows:
                 dup.append(kv)
             lrows[kv] = r
-        srows = {norm(r.get(k)): r for r in spec[t]}
+        srows = {keyval(r, k): r for r in spec[t]}
         miss = sorted(str(x) for x in set(srows) - set(lrows))
         extra = sorted(str(x) for x in set(lrows) - set(srows))
         diffs = []

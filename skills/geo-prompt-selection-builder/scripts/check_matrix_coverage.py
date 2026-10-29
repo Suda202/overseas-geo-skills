@@ -13,6 +13,10 @@ it) or a staged bank JSON (reads each question's audience / journey_stage /
 product line). The audience and product-line universes default to the values
 observed in the matrix; pass --audience / --line to add expected values the
 matrix never reached (e.g. 业务范围 lists an audience with no slice at all).
+
+It also lists the journey stages where no matrix row lists any attribute
+(Suda 2026-10-28): an attribute buyers weigh at that stage — transaction and
+post-purchase are the usual holes — may be missing from 属性池.
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ def rows_from_spec(spec: dict) -> list[dict]:
             "audiences": as_list(row.get("受众")),
             "stages": as_list(row.get("旅程阶段")),
             "lines": as_list(row.get("产品线")) or [NO_LINE],
+            "attrs": as_list(row.get("_attr")) or as_list(row.get("属性关联")),
         })
     return rows
 
@@ -56,6 +61,7 @@ def rows_from_bank(bank: dict) -> list[dict]:
             "audiences": as_list(row.get("audience") or row.get("persona") or row.get("buyer")),
             "stages": [stage] if stage else [],
             "lines": as_list(row.get("product_line")) or [NO_LINE],
+            "attrs": as_list(row.get("attribute_ref") or row.get("attribute")),
         })
     return rows
 
@@ -103,6 +109,11 @@ def main() -> int:
     if unknown_stage:
         print(f"WARNING: {len(unknown_stage)} 行的旅程阶段不在八段里（{', '.join(unknown_stage[:6])}"
               f"{' …' if len(unknown_stage) > 6 else ''}），这些行未计入格子")
+    attr_stages = {st for row in rows if row.get("attrs") for st in row["stages"]}
+    bare = [st for st in STAGES if st not in attr_stages]
+    if bare:
+        print(f"没有任何矩阵行挂属性的旅程阶段：{'、'.join(bare)} —— 核对属性池是否漏了买家在这些阶段看重的属性，"
+              "没漏就在内部交接件写原因（无买家证据 / 本期不做）")
     if not empty:
         print("无空格子。")
         return 0

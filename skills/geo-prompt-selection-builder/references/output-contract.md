@@ -11,7 +11,7 @@ When the task includes client review of scope, attributes, Topics, or candidate 
 - `核对时从哪里判断` guidance adapted to B2B or B2C;
 - a separate `品牌事实【请核对】` table (the Base's 业务范围);
 - a `品牌事实核查` table (the Base's 品牌事实核查; document format: `事实项 | 官方值 | 来源页面 | 冲突说法 | 冲突来源 | 品牌方要做什么`) holding facts that are contradictory on the official site or asserted without external support, one row each, with full source URLs; 品牌方要做什么 is 改官网 or 提供材料 (see [client-facing-attribute-pool.md](client-facing-attribute-pool.md) → *品牌事实核查*);
-- the attribute judgements — `重要性`, `相对竞品`, `可改变性`, `优先级`, evidence-gap fields, 约束 and 目标题数 — split between 属性池 (one row per attribute: `重要性`, `相对竞品`, `可改变性`, the formula `优先级` = 重要性 × 可改变性, evidence and 还缺什么) and 提示词矩阵 rows (one row = coverage slice × attribute, primary field 切片编号, linked to 属性池 through 属性关联, carrying 约束 and 目标题数, **no priority column** — Suda 2026-10-26; the per-Prompt selection priority, with the 信源壁垒 drop applied and no audience cap, is 提示词库 建议优先级, and the post-baseline order is 提示词库 优化顺序); the per-slice `购买影响` column was removed 2026-10-22 — a situation that genuinely changes importance splits the pool row instead;
+- the judgements, each made in one place (Suda 2026-10-28): 属性池 (one row per attribute: `相对竞品` with its basis, 还缺什么 — no tier, 重要性 or 可改变性); 提示词矩阵 (one row per Topic × product line × audience × market × stage, listing the attributes that matter there, carrying the row's `优先级` with `优先级依据` and `目标题数` — the only place priority is judged); 主题 (clustered from the rows, with demand evidence and 推荐顺序); 提示词库 (each Prompt's `优先级` prefilled from its row, one tier lower when its `可改变性` is 低, and the post-baseline 优化顺序);
 - optional candidate Prompts in 提示词库, each linked to one 提示词矩阵 row;
 - optional competitor confirmation table;
 - `需要品牌方提供的数据` while the attribute pool is still being built (client-only data, see [signal-sources.md](signal-sources.md));
@@ -39,6 +39,7 @@ Recommended root fields:
       "prompt_set_status": "pending"
     },
     "topics": [],
+    "slices": [],
     "attribute_plan": [],
     "expected_total": 0,
     "competitor_selection": {},
@@ -57,18 +58,21 @@ after-sales extension do not change the closed presales v8 schema. When a v8
 uploader cannot accept them, emit them in sidecar schedule/evidence files
 through an explicit adapter; never claim silent v8 compatibility.
 
-Staged `config.topics` entries record the clustering that opened each Topic,
-written **before** Prompts are drafted (Suda 2026-10-22): `{topic_id, topic,
-covered_attributes, planned_prompts}` — `covered_attributes` names the
-`attribute_plan` rows whose landing opened the Topic, `planned_prompts` is the
-pre-writing count. The validator warns while a staged Topic lacks the two
-fields, and fails when a `covered_attributes` name is absent from
-`attribute_plan`, or a P1 attribute is homed in no Topic's
-`covered_attributes` and carries no `no_carrier_reason` / `demoted_reason`.
-`config.leader_default: {"reason": …}` records the leader-is-default decision
-(after-sales-rules.md → *When the leader is the default*); it exempts the bank
-from the per-Topic low-condition-anchor warning, and the flag without a reason
-fails. `config.category_aliases` (a flat list of the category's naming
+**Matrix rows and Topics** (Suda 2026-10-28). `config.slices` holds the matrix
+rows: `{slice_id, topic_id, product_line, audience, market, journey_stage,
+attributes, priority, priority_basis, target_count}` — `priority` is P1 / P2 /
+P3, the one priority judgement, and `priority_basis` states the business-focus
+and buyer-evidence reading behind it. Staged `config.topics` entries record the
+clustering, written **before** Prompts are drafted: `{topic_id, topic,
+source_slices, planned_prompts}` (legacy banks: `covered_attributes`). The
+validator warns while a staged Topic lacks those fields; with `config.slices`
+present it fails a row with no `priority_basis`, a P1 row homed in no Topic, a
+Prompt on a P3 row, a Prompt whose `topic_id` differs from its row's, and an
+unknown `slice_ref`; it warns on a Topic with no P1 row and on a Prompt whose
+`priority` is neither its row's tier nor one lower for `changeability: 低`
+without a `priority_change_reason`. Legacy banks (no `config.slices`) keep the
+`covered_attributes` gate. `config.leader_default` is no longer read
+(2026-10-28); no Topic needs a broad anchor (2026-10-29). `config.category_aliases` (a flat list of the category's naming
 variants, e.g. `["GEO tools", "AI visibility tools"]`) registers deliberate
 category-name variants: the validator exempts a Prompt pair whose only wording
 difference is tokens from this list from the near-duplicate warnings (gate 8);
@@ -99,8 +103,16 @@ question, the five fields the client Base 提示词库 and 提示词矩阵 read:
 | `journey_stage` | eight-stage label: 发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持 | 旅程阶段 |
 | `audience` | one or more real buyer groups (a string or a list; the Base 受众 is multi-select since Suda 2026-10-20), or 「通用」 as the internal placeholder for no group condition (rendered as the category's base audience, e.g. 「养猫家庭」, in the Base); never a journey state such as 「已在比较具体品牌」 | 受众 |
 | `group_role` | `core` / `experimental` / `monitoring` | 库分层 (核心 / 实验 / 监测) |
-| `attribute_ref` | the 提示词矩阵 attribute name; empty string on a category-baseline Prompt | 属性 (via 所属切片) |
+| `attribute_ref` | the one 属性池 attribute the Prompt tests, chosen from its row; empty string on a no-condition category Prompt | 属性 |
 | `evidence_refs` | list of 买家原话 输入编号 (or source notes) behind the Prompt | 证据 |
+
+Banks that carry `config.slices` also give every Prompt: `slice_ref` (the row's
+`slice_id`, 所属切片), `priority` (提示词库 优先级), `changeability` (高 / 中 / 低 /
+待试跑, 可改变性 — renamed from 信源壁垒 2026-10-28), `changeability_basis` (the
+top 20 cited domains by tier and the brand-site / competitor-site / community
+shares; `source_barrier_basis` is read as an alias), `priority_change_reason`
+when the priority was changed by hand, and `ai_cognitive_gap` with a `试跑初判`
+flag until the formal baseline.
 
 The validator warns while any of them is missing and fails once
 `lifecycle_status` is `locked`, `formal_baseline` or `active`. Older banks
@@ -239,6 +251,8 @@ The project-compatible baseline is:
 
 `query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`
 
+This is the presales-diagnosis upload template (《海外售前诊断关键词模板》). Export it with `python3 -I scripts/export_upload_csv.py <bank.json> --out <dir> [--topic-label "<bank topic>=<中文主题>"]` (Suda 2026-10-29): one file per `region`, since the market is chosen on the upload page; `diagnosis_intent` takes the backend enum and the Chinese prompt-type name goes first in `tags`, because the two vocabularies differ — Alternatives is uploaded as `competitor` (no backend enum yet) and told apart by its 替代 tag — the backend is to add its own enum computing visibility and sentiment (Suda 2026-10-29), and the script's mapping switches once it ships — Information has no backend enum and is left out with its IDs printed; `question_types` follows `diagnosis_intent` (shared/canonical-intent-mapping.md); `purchase_intent`, `persona_name` and `scene_name` stay blank. The script reads `intent` where an older bank's `prompt_type` holds a sub-category, takes the Topic name from `config.topics` by `topic_id` when a Prompt has no `topic`, leaves out Prompts whose `status` is `retired` / 停测 or whose `review_status` is 需修改 (IDs printed), and checks every file with the presales validator's upload-CSV check before it exits 0.
+
 For a new after-sales consumer, prefer an explicit adapter with:
 
 `query,question_zh,topic,region,prompt_type` — required (`intent` before 2026-10-22; the validator reads the old header as an alias but new deliveries write `prompt_type`).
@@ -308,18 +322,18 @@ manual review steps. The validator also enforces, without their own gate
 number: the prompt-type × journey-stage pairing (a type on a stage it cannot
 sit on fails), Competitor and Alternatives never `core`, Information always
 `experimental`, `formal_visibility_eligible: false` on every non-visibility
-type, and a per-Topic warning when `constraint_type` is recorded and no
-low-condition Discovery Prompt exists (exempt via `config.leader_default`).
+type, and a warning on every Discovery Prompt whose `constraint_type` is a
+no-condition value — written only when the brand party asks for the head term (2026-10-29).
 
 Before delivery:
 
-1. **[manual]** The chosen scope and stage are explicit. The recommended first-stage shape is one category observation Topic plus two same-product buying-scenario Topics; two Topics can be justified.
+1. **[manual]** The chosen scope and stage are explicit. Topics were clustered from the prioritised matrix rows; there is no fixed first-stage shape and no Topic type.
 2. **[validator: Topic 字段与唯一性]** Topic names are short and each Prompt maps to exactly one Topic.
 3. **[validator: 五题 floor（locked/customer_confirmed 起）]** Every candidate (customer-confirmed), locked, or formal Topic has at least five Prompts; candidate Topic count is not limited. A shorter hypothesis Topic is marked for merge, Tag treatment, or evidence completion rather than padded with rewrites. Topic counts may differ; no equalization is required.
 4. **[validator: 必填字段与市场语言]** Every Prompt has Topic, Region, and prompt type, a query in the market's selected language, and a Chinese translation.
 5. **[manual]** Tags, when used, do not repeat Topic, prompt type, or Region, and carry a dimension those fields do not.
 6. **[manual]** Competitor Prompts are one-to-one, use only frozen applicable competitors, and do not enter the natural Discovery count.
-7. **[manual]** Category Awareness is low-frequency and not duplicated across every Topic without a reason; it is not the category observation Topic.
+7. **[validator, banks with `config.slices`]** No Category Awareness Prompt in the bank: it is the research pre-run before the attribute pool (Suda 2026-10-29). Legacy banks keep theirs. It is not the broad anchor Prompt.
 8. **[validator]** Prompt text is unique after normalization and semantically reviewed for duplicates. The validator fails on exact duplicates and warns on near-duplicates (word overlap of 60% or more once words shared by most of the bank are removed) and on Prompts with the same Topic, intent and `attribute_ref` whose wording overlaps; each warning is resolved by keeping one or by recording what decision the second one adds. A pair whose only wording difference is tokens from `config.category_aliases` is exempt — a category-name variant is deliberate, not a rewrite. Wording overlap misses a decision re-asked in other scenery; gate 37 keys on the decision instead.
 9. **[manual]** New Prompts have evidence or are clearly marked as hypotheses requiring confirmation. Each new Prompt also records why a recognizable buyer would ask it and what independent decision, risk, candidate set, or applicability judgment it adds.
 10. **[manual]** No cross-topic competitor, product-line, or category leakage.
@@ -331,17 +345,20 @@ Before delivery:
     not concatenated.
 15. **[manual]** Each Topic records a parent Search-Demand anchor or an explicit reason why no reliable Search-Demand signal is available.
 16. **[manual]** A `discovery` generation stage contains Discovery Prompts, plus
-    demand-backed Information Prompts where their gates pass (the validator
-    allows these two types at this stage). Other intents are added later under
+    Information Prompts only where the brand party's 业务目标 or 核心可见度问题
+    names the need and their gates pass (the validator allows these two types
+    at this stage; whether the brand party named it is checked by hand). Other intents are added later under
     their own evidence-backed purpose, not a fixed quota.
 17. **[manual]** Attribute and Tag review covers scenarios, pains, procurement constraints,
     supply/service risks, and applicability boundaries when they affect buyer
     decisions; it is not limited to product features or technical parameters.
-18. **[manual]** Attributes were derived in the rule document's four steps — twelve-category
+18. **[manual]** Attributes were derived in the four steps — twelve-category
     gap sweep, category-specific attributes from the three sources, one B2B/B2C
-    line or an explicit split — and graded P1 / P2 / P3 by importance ×
-    changeability before Topics were named. The delivery states the resulting
-    grades.
+    line or an explicit split, the journey-stage sweep — and judged on
+    `相对竞品` only. Matrix rows were opened top-down, prioritised on business
+    focus × buyer-evidence strength with the stage and 待确认 caps, and Topics
+    clustered from them before Prompts were written. The delivery states the
+    row priorities.
 19. **[manual]** The internal market coverage pass was completed before Prompt lock. Each
     retained market delta has evidence, each omitted slice has a reason, and
     reuse of an `intent_key` is justified by equivalent buyer decisions and
@@ -349,11 +366,9 @@ Before delivery:
     never Prompt variants.
 20. **[manual]** Any prompt-count claim cites the source of demand. No Prompt is described as
     high-frequency without frequency evidence.
-21. **[manual]** The intent pass and the Prompt set reconcile **in both directions**: every
-    P1/P2 intent is carried by at least one Prompt, and every Prompt's intent
-    exists as a row in the client's intent table. The master table's intent
-    column quotes the intent table verbatim. Run this as an explicit step — the
-    two are drafted from different inputs and drift silently.
+21. **[manual]** The matrix and the Prompt set reconcile **in both directions**: every
+    P1/P2 row's planned needs are carried by Prompts, and every Prompt sits on
+    a row (`slice_ref`). Run this as an explicit step.
 22. **[manual]** The evidence layer was checked for existence before being read as a finding.
     Two common cases both leave it unusable: a rough presales pass ran visibility
     only and produced no sentiment layer at all, and a run that marked only the
@@ -371,10 +386,10 @@ Before delivery:
     re-checked: Prompts filed under the wrong Topic were moved to where their
     actual purchase decision belongs and the counts recomputed. A shortfall
     resolved this way is a correction, not padding.
-25. **[manual]** Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: brand facts are separate from ranked attributes; the attribute pool includes `重要性` (购买影响 in documents before 2026-10-22), `相对竞品`, `优先级`, evidence gaps, and `客户确认` in document format; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; in document format every table uses the write-what-to-change `客户确认` convention (the Base has none — the brand party edits cells); question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
+25. **[manual]** Customer-facing confirmation documents follow `client-facing-attribute-pool.md`: 提示词库 stands on its own (主题, 优先级 and 出题原因 explain each Prompt); brand facts are separate from the attribute pool; the attribute pool carries `相对竞品`, evidence and 还缺什么 (no tier), and `客户确认` in document format; candidate monitoring questions, when included, carry buyer problem / scenario next to the query; in document format every table uses the write-what-to-change `客户确认` convention (the Base has none — the brand party edits cells); question numbering, internal methodology, unstable mappings, and `贵司` wording stay out of the document.
 26. **[validator: 确认状态与 10 题上限]** The attribute pool and business scope were confirmed before the trial
     (3 runs per Prompt on each monitored platform); the formal set (at most 10 per
-    purchased Topic) was selected by attribute priority, confirmed and
+    purchased Topic) was selected by tier, confirmed and
     version-locked; reworded Prompts were rerun before reuse.
 27. **[manual]** The customer-facing document contains the resulting brand facts, attribute
     pool and necessary market-specific Prompts, not the full internal coverage
@@ -387,7 +402,7 @@ Before delivery:
 30. **[manual]** Each group has a diagnostic business question, possible action and
     `core`/`experimental`/`monitoring` role; refresh decisions record a
     business or evidence trigger rather than an automatic expiry.
-31. **[validator]** **Every plan Attribute is either carried by a Prompt or says why not.** The validator fails on an Attribute with no carrying Prompt and no `no_carrier_reason` (it also accepts a legacy `demoted_reason`), and it fails when such an Attribute is ranked P1 — P1 means "optimise this first", which is impossible for a dimension nothing measures. Record the reason on the row itself: `no_carrier_reason` is a short string a reader can act on ("its Topic was dropped as unmovable; the Attribute is product-selection shaped and has no home Topic"), never a placeholder. Dropping a Topic deletes its Prompts but leaves its Attributes in the plan, so run this check **after every Topic change**, not only before delivery.
+31. **[validator]** **Every plan Attribute is either carried by a Prompt or says why not.** The validator fails on an Attribute with no carrying Prompt and no `no_carrier_reason` (it also accepts a legacy `demoted_reason`, and a `relative_competitor: 劣势` row needs no reason — 劣势 is never listed, Suda 2026-10-28), and, on legacy banks whose plan rows still carry `priority`, it fails when such an Attribute is ranked P1 — P1 means "optimise this first", which is impossible for a dimension nothing measures. Record the reason on the row itself: `no_carrier_reason` is a short string a reader can act on ("its Topic was dropped as unmovable; the Attribute is product-selection shaped and has no home Topic"), never a placeholder. Dropping a Topic deletes its Prompts but leaves its Attributes in the plan, so run this check **after every Topic change**, not only before delivery.
 32. **[validator]** **Wording matches the market.** The validator fails when fewer than half of a query's letters are in the script of `collection_config.language` (a Thai bank may still carry acronyms such as IELTS). It warns, without failing, on: a Latin-script query that reads as another Latin language; queries of four words or fewer, or short all-lowercase phrases without a question mark (keyword shape); more than one question mark; more than 40 words; a currency outside the market's. Warnings are reviewed one by one. Do not reword a Prompt only to silence one; a deliberate exception (for example a low-condition baseline kept next to its one-condition variant) is recorded in the internal diff.
 33. **[validator]** **Metadata is complete and balanced.** Every Prompt in a staged bank carries the five fields in the table above, under their canonical names. The validator also warns when one journey stage holds more than 45% of a non-Discovery-stage set (a Discovery-stage set is mostly 发现 by construction, so it is not checked), and when fewer than half of the Discovery Prompts are `core` (the natural-visibility trend is read from the core set).
 34. **[validator]** **Evidence comes from more than one kind of source.** From `customer_confirmed` on, the validator classifies every `evidence_refs` entry on 已批准 Prompts into a source family — 答案层, 搜索数据, 评价, 社区, 一手记录 (sales, CRM, support, interviews), 客户确认, 官网与竞品页 — by keywords in the ref text, and warns when the set spans fewer than three families. Refs that match no family (bare 输入编号 such as `input-3`) are 未分类; when they are more than half the refs the check is skipped, because diversity cannot be judged from IDs alone. A single-family set usually means the signal pass skipped sources (see SKILL.md → *Customer and Market Signals*); answer it by collecting the missing family or recording in the internal diff why that family has nothing for this category.
@@ -413,7 +428,7 @@ python3 evals/verify_workflow.py --report reports/workflow-e2e.json
 The final delivery should state:
 
 - active Topic count and Prompt count per Topic;
-- the derived Attribute list and its ranking order;
+- the attribute list with `相对竞品`, the matrix rows with their priority, and the Topics clustered from them;
 - Prompt role counts, split so that Discovery (natural visibility) is
   distinguishable from named-brand Evaluation, Competitor, and Accuracy;
 - additions, revisions, merges, and retirements;

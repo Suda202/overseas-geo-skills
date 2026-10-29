@@ -275,32 +275,25 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data["questions"][0]["audience"] = []
         self.assertIn("missing audience", validate(data).stdout)
 
-    def test_low_condition_anchor_warns_unless_leader_default(self) -> None:
+    def test_bare_category_prompt_warns(self) -> None:
+        # 2026-10-29 起不写宽泛品类题：全条件化不告警，无限定条件的发现题逐条告警
         data = staged_bank(2, "hypothesis")
         for row in data["questions"]:
             row["constraint_type"] = "约束"
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("all carry conditions", result.stdout)
-        # 任一题低条件即消警
+        self.assertNotIn("no-condition Discovery Prompts", result.stdout)
         data["questions"][0]["constraint_type"] = "无限定"
-        self.assertNotIn("all carry conditions", validate(data).stdout)
-        # 领导者即默认：带原因豁免，缺原因报错
-        data["questions"][0]["constraint_type"] = "约束"
-        data["config"]["leader_default"] = {"reason": "领头平台占九成，买家不问哪个平台好"}
-        self.assertNotIn("all carry conditions", validate(data).stdout)
-        data["config"]["leader_default"] = {}
         result = validate(data)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("leader_default must state the reason", result.stdout)
-        # 不记录 constraint_type 的旧库不触发
-        data = staged_bank(2, "hypothesis")
-        self.assertNotIn("all carry conditions", validate(data).stdout)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("no-condition Discovery Prompts (1)", result.stdout)
+        data["config"]["leader_default"] = {"reason": "领头平台占九成"}
+        self.assertIn("leader_default is no longer read", validate(data).stdout)
 
     def test_topic_clustering_trace_gates(self) -> None:
         data = staged_bank(2, "hypothesis")
         result = validate(data)
-        self.assertIn("missing covered_attributes/planned_prompts", result.stdout)
+        self.assertIn("missing source_slices/planned_prompts", result.stdout)
         data["config"]["topics"][0].update(
             {"covered_attributes": ["气味控制"], "planned_prompts": 2}
         )
@@ -313,7 +306,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(data)
         self.assertEqual(result.returncode, 1)
         self.assertIn("homed in no Topic's covered_attributes", result.stdout)
-        self.assertNotIn("missing covered_attributes/planned_prompts", result.stdout)
+        self.assertNotIn("missing source_slices/planned_prompts", result.stdout)
         # P1 一律要安家；降级并写原因后放行（与「无题不许挂 P1」同一语义）
         data["config"]["attribute_plan"][1]["priority"] = "P2"
         data["config"]["attribute_plan"][1]["no_carrier_reason"] = "共识锁定，首期不开主题"
@@ -322,6 +315,48 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(data)
         self.assertEqual(result.returncode, 1)
         self.assertIn("absent from attribute_plan", result.stdout)
+
+    def test_matrix_rows_carry_the_priority(self) -> None:
+        data = staged_bank(5, "hypothesis")
+        data["config"]["topics"][0].update({"source_slices": ["M-001"], "planned_prompts": 5})
+        data["config"]["slices"] = [
+            {"slice_id": "M-001", "topic_id": "topic_1", "priority": "P1",
+             "priority_basis": "业务重点：优先受众；证据强：社区与搜索", "target_count": 5},
+            {"slice_id": "M-002", "topic_id": None, "priority": "P3",
+             "priority_basis": "非重点；证据弱", "target_count": None},
+        ]
+        for row in data["questions"]:
+            row["slice_ref"] = "M-001"
+            row["priority"] = "P1"
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("missing source_slices/planned_prompts", result.stdout)
+        # 可改变性低：降一档为预期，不告警
+        data["questions"][0]["changeability"] = "低"
+        data["questions"][0]["priority"] = "P2"
+        self.assertNotIn("differs from the expected", validate(data).stdout)
+        # 手改档位没写原因：告警
+        data["questions"][1]["priority"] = "P3"
+        self.assertIn("differs from the expected P1", validate(data).stdout)
+        data["questions"][1]["priority_change_reason"] = "品牌方：本期不主推"
+        self.assertNotIn("differs from the expected P1", validate(data).stdout)
+        # P3 行出题、无主题的 P1 行、主题对不上、行优先级没写依据：都报错
+        data["questions"][2]["slice_ref"] = "M-002"
+        result = validate(data)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("P3 rows get no Prompts", result.stdout)
+        data["questions"][2]["slice_ref"] = "M-001"
+        data["config"]["slices"][1].update({"priority": "P1"})
+        self.assertIn("P1 matrix rows homed in no Topic", validate(data).stdout)
+        data["config"]["slices"][1].update({"priority": "P3", "priority_basis": ""})
+        self.assertIn("priority_basis is empty", validate(data).stdout)
+        data["config"]["slices"][1]["priority_basis"] = "非重点；证据弱"
+        data["questions"][3]["topic_id"] = "topic_x"
+        self.assertIn("differs from its row", validate(data).stdout)
+        data["questions"][3]["topic_id"] = "topic_1"
+        # 品类认知只在属性池前预跑，不进新结构题库（Suda 2026-10-29）
+        data["questions"][4]["prompt_type"] = "Category Awareness"
+        self.assertIn("Category Awareness Prompts in the bank", validate(data).stdout)
 
     def test_alternatives_type_contract(self) -> None:
         data = staged_bank(2, "hypothesis")

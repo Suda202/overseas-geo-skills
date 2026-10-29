@@ -208,7 +208,7 @@ just to cover a shape.
 | Check one capability or fact | Verification or Accuracy | AI does not know the brand has it → Verification; AI states it wrongly → Accuracy |
 | Price, availability, purchase | Discovery when it asks for candidates | "Which … are on sale / in stock" lists brands; kept in the `experimental` layer because answers move with prices and stock |
 | Return, warranty, subscription terms | Accuracy | Troubleshooting is not written as a Prompt |
-| Understand a category and how to choose | Category Awareness | `formal_visibility_eligible: false` |
+| Understand a category and how to choose | Category Awareness | Research pre-run before the attribute pool only; never in the bank |
 | Problem-solving or goal-reaching advice | Information (after-sales only) | Only when the answer leads to a next step the brand serves |
 | Which sources or reviews shape the answer | Separate research task | Studies the source ecosystem, not brand visibility |
 
@@ -271,7 +271,7 @@ is purchased:
   yet proven — price, availability, delivery and returns; a new market,
   product line, audience, constraint or competitor; emerging intents such as
   fan-out directions; and every after-sales Information Prompt (Suda
-  2026-10-20). Their visibility (mention, citation) is still measured, but
+  2026-10-20; written only where the brand party names the need, or after the formal baseline for planned content, Suda 2026-10-29). Their visibility (mention, citation) is still measured, but
   reported apart from the trend and never in the KPI denominator.
 - `monitoring`: named-brand Prompts — description accuracy, evaluation,
   one-to-one competitor comparison, reputation, risk and compliance. Read for
@@ -285,12 +285,7 @@ without it there is no comparable trend. Whatever else is bought, the
 mention-rate KPI counts only the core Discovery Prompts in the formal set
 (Suda 2026-10-20).
 
-**Competitor and Category Awareness Prompts go through the same trial as every
-other candidate Prompt, not a separate collection round** (Suda 2026-10-15 /
-2026-10-27). The one write-back pass after the trial uses their answers:
-competitor answers re-check `相对竞品`, and AI's buying criteria show whether
-our P1 attributes are on the list. Category Awareness takes no formal-set
-slot. Verification and Accuracy are not trialled: they are diagnostics written
+**Competitor Prompts go through the same trial as every other candidate Prompt, not a separate collection round** (Suda 2026-10-15 / 2026-10-27). They are written for their win/loss reading, not to re-check `相对竞品` — the research pre-run does that (Suda 2026-10-29). Category Awareness is not in the bank: it is the research pre-run before the attribute pool (Suda 2026-10-29), one run per monitored platform, and takes no slot. Verification and Accuracy are not trialled: they are diagnostics written
 after the formal baseline or once the brand party confirms a fact, and take no
 formal-set slot either. Competitor Prompts are
 `monitoring` (or `experimental`) and the brand party may buy them into the

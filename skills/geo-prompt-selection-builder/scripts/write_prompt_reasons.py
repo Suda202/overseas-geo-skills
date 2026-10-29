@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""写提示词库的「建议优先级」「出题原因」（对客确认 Base，任意客户通用）。
+"""写提示词库的「优先级」「出题原因」（对客确认 Base，任意客户通用）。
 
-规则见 references/client-facing-attribute-pool.md → *提示词库*：
-  - 建议优先级 = 所挂属性的档位（重要性 × 可改变性查表，须与属性池「优先级」一致），
-    发现 / 替代题的信源壁垒为「来源追不上」时再降一档；不按受众压档。
-  - 出题原因一段话三部分：这道题测哪类买家在什么处境下的需求 → 依据的买家原话
-    （按来源类型计数、社区和评价列出站点、一条代表原话）→ 属性为什么是这个档位。
-    第三部分直接取属性池「判据与证据」（或「判据」）里带标签的
-    「可改变性（中）：…」「相对竞品（持平）：…」两行；判断只写在属性池，这里不留第二份。
-  - 「优先级」空着时按建议优先级预填；手改得和建议不一致时，原因结尾写「按规则是 Px。」，
-    并保留人写的「改档：理由，定为 Py。」，没写的列出来（check_client_base.py 也会拦）。
-脚本算的档位和属性池「优先级」对不上就报错、不写入。
+两种结构自动识别：
+  新结构（2026-10-28 起，提示词矩阵有「优先级依据」字段）——规则见
+  references/client-facing-attribute-pool.md → *提示词矩阵* / *提示词库*：
+  - 默认档位 = 所属切片（矩阵行）的「优先级」；这道题「可改变性」为「低」时降一档。
+  - 「优先级」是可编辑单选：空着时按默认档位预填；人改过、和默认不一致的，
+    出题原因结尾保留「改档：理由，定为 Px。」，没写的列出来（check_client_base.py 也会拦）。
+  - 出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的买家原话
+    （按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么是这个档位
+    （切片「优先级依据」原文，加可改变性降档说明）。判断只写在矩阵行，这里不留第二份。
+  旧结构（2026-10-27 及以前发出的 Base，旧客户不迁移）——档位取属性池
+  「重要性 × 可改变性」查表，写「建议优先级」，按原来的规则运行。
 
 用法（在客户目录下跑，lark-cli 只能写当前目录）：
     python3 -I write_prompt_reasons.py --base <token> --brand Nina [--alias Nbrand] [--noun 工具] [--write]
@@ -189,8 +190,71 @@ def load_dump(d, table):
         sys.exit(2)
     return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
 
+def new_structure(matrix) -> bool:
+    return any("优先级依据" in r for r in matrix.values())  # 2026-10-26 前的旧矩阵也有「优先级」
+
+
+def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
+    """新结构：档位取矩阵行，可改变性低降一档。返回 (更新, [], 缺改档理由, 算不出)。"""
+    out, need, skipped = {}, [], []
+    for r in lib:
+        code, typ = text(r.get("编号")), text(r.get("提示词类型"))
+        sl_ids = ids(r.get("所属切片"))
+        if not sl_ids or sl_ids[0] not in matrix:
+            skipped.append((code, "没有所属切片"))
+            continue
+        sl = matrix[sl_ids[0]]
+        row_tier = text(sl.get("优先级"))
+        if row_tier not in ("P1", "P2", "P3"):
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判优先级"))
+            continue
+        why = NOISE.sub("", text(sl.get("优先级依据")).split("\n", 1)[0]).strip().rstrip("。；;")
+        if not why:
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写优先级依据"))
+            continue
+        aud = text(sl.get("受众"))
+        who = "买家" if (not aud or aud in base_audiences) else aud
+        named = next((a for a in aliases if a and a in text(r.get("提示词"))), brand)
+        att_ids = ids(r.get("属性"))
+        att = pool.get(att_ids[0]) if att_ids else None
+        need_text = text(sl.get("备注")).strip()
+        cond = (text(att.get("属性")) if att else "") or need_text[:30] or "这一类需求"
+        p1 = situation(typ, who, cond, named if typ in ("验证", "准确性") else brand, noun, att is None)
+        if p1 is None:
+            skipped.append((code, f"提示词类型「{typ}」没有句式"))
+            continue
+        p2 = evidence_part([quotes[i] for i in ids(r.get("证据")) if i in quotes])
+        tier = row_tier
+        p3 = f"这个处境：{why}。"
+        if att is None:
+            p3 = f"测品类整体格局；{p3}"
+        if text(r.get("可改变性")) == "低" and tier != "P3":
+            tier = DROP[tier]
+            p3 += "试跑时 AI 引用的来源以品牌难影响的第三方为主，再降一档。"
+        fields = {}
+        manual = text(r.get("优先级"))
+        if not manual:
+            manual = tier
+            fields["优先级"] = [tier]
+        if manual == tier:
+            tail = f"所以是 {tier}。"
+        else:
+            tail = f"按规则是 {tier}。"
+            m = re.search(r"改档[：:].*$", text(r.get("出题原因")), re.S)
+            if m and f"定为 {manual}" in m.group(0):
+                tail += m.group(0)
+            else:
+                need.append((code, tier, manual))
+        reason = f"{p1}{p2}{p3}{tail}"
+        if reason != text(r.get("出题原因")):
+            fields["出题原因"] = reason
+        if fields:
+            out[r["record_id"]] = (code, fields)
+    return out, [], need, skipped
+
+
 def build(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
-    """逐题算字段。返回 (更新, 档位冲突, 缺改档理由, 算不出)。"""
+    """旧结构：逐题算字段。返回 (更新, 档位冲突, 缺改档理由, 算不出)。"""
     out, bad, need, skipped = {}, [], [], []
     for r in lib:
         code, typ = text(r.get("编号")), text(r.get("提示词类型"))
@@ -278,10 +342,12 @@ def main():
     base_aud = set(a.base_audience) or {
         collections.Counter(text(r.get("受众")) for r in matrix.values() if text(r.get("受众"))).most_common(1)[0][0]}
 
-    out, bad, need, skipped = build(pool, matrix, quotes, lib, a.brand, [a.brand, *a.alias], a.noun, base_aud)
+    builder = build_v2 if new_structure(matrix) else build
+    out, bad, need, skipped = builder(pool, matrix, quotes, lib, a.brand, [a.brand, *a.alias], a.noun, base_aud)
     if a.preview:
         Path(a.preview).write_text(json.dumps({c: f for c, f in out.values()}, ensure_ascii=False, indent=1))
-    print(f"提示词 {len(lib)} 道；要更新 {len(out)} 道；基础人群按「{'、'.join(sorted(base_aud))}」写成「买家」")
+    print(f"{'新结构（档位取矩阵行）' if builder is build_v2 else '旧结构（档位取属性池）'}；"
+          f"提示词 {len(lib)} 道；要更新 {len(out)} 道；基础人群按「{'、'.join(sorted(base_aud))}」写成「买家」")
     for c, why in skipped:
         print(f"算不出：{c}：{why}")
     if need:

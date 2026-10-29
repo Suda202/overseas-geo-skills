@@ -505,11 +505,8 @@ FIELD_ALIASES = {
     "constraint_type": ("condition_slot",),
 }
 REQUIRED_STAGED_FIELDS = ("journey_stage", "audience", "group_role", "attribute_ref", "evidence_refs")
-# A low-condition Discovery Prompt anchors the Topic's category visibility
-# (Aleyda step 6: deliberately mix unconstrained and constrained Prompts).
-# Judged from constraint_type / condition_slot; exempt only via
-# config.leader_default with a reason (after-sales-rules.md → When the leader
-# is the default).
+# No-condition Discovery Prompts are not written by default (Suda 2026-10-29): a bare category
+# question is owned by category leaders. Judged from constraint_type / condition_slot.
 LOW_CONDITION_VALUES = {"无限定", "无限定条件", "低条件", "none", "unconstrained", "no_condition"}
 FORMAL_LIFECYCLES = {"locked", "formal_baseline", "active"}
 REVIEW_STATUSES = ("待审核", "已批准", "需修改")
@@ -636,30 +633,18 @@ def field_contract_checks(
             warnings.append(f"only {core} of {len(discovery)} Discovery Prompts are core; "
                             "keep most in core so the trend stays comparable")
 
-    # Per-Topic low-condition anchor (SKILL step 10). Judged only when the bank
-    # records constraint_type at all, so legacy banks without the field stay
-    # quiet. config.leader_default (with a reason) is the explicit exemption
-    # for categories where the leader is the default and bare category
-    # questions were deliberately dropped (Hbrand, Suda 2026-10-19).
-    leader = config.get("leader_default")
-    leader_reason = str((leader or {}).get("reason", "") if isinstance(leader, dict) else leader or "").strip()
-    if leader is not None and not leader_reason:
-        errors.append("config.leader_default must state the reason bare category questions were dropped")
+    # Bare category questions are written only when the brand party asks for the head term
+    # (Suda 2026-10-29; the per-Topic low-condition anchor of 2026-10-22 is retired).
+    if config.get("leader_default") is not None:
+        warnings.append("config.leader_default is no longer read (2026-10-28)")
     constraint_of = lambda r: str(fields[id(r)].get("constraint_type") or "").strip().casefold()
-    if not leader_reason and any(constraint_of(r) for r in questions):
-        by_topic: dict[str, list[dict]] = {}
-        for r in questions:
-            if intents.get(id(r)) == "Discovery" and r.get("formal_visibility_eligible") is not False:
-                by_topic.setdefault(str(r.get("topic_id")), []).append(r)
-        missing = sorted(tid for tid, rows in by_topic.items()
-                         if not any(constraint_of(r) in LOW_CONDITION_VALUES for r in rows))
-        if missing:
-            warnings.append(
-                f"Topics whose Discovery Prompts all carry conditions ({len(missing)}): {', '.join(missing)}; "
-                "keep at least one natural low-condition Prompt per Topic as the category-visibility anchor, "
-                "or record the deliberate exception as config.leader_default with a reason "
-                "(after-sales-rules.md → When the leader is the default)"
-            )
+    bare = [str(r.get("question_id")) for r in questions
+            if intents.get(id(r)) == "Discovery" and constraint_of(r) in LOW_CONDITION_VALUES]
+    if bare:
+        warnings.append(
+            f"no-condition Discovery Prompts ({len(bare)}): {', '.join(bare)}; a bare category question is "
+            "written only when the brand party asks for that head term — say so in its reason (SKILL.md Workflow step 10)"
+        )
 
 
 def monitored_set(data: dict) -> str:
@@ -697,6 +682,90 @@ def monitored_set(data: dict) -> str:
     )
 
 
+PRIORITIES = ("P1", "P2", "P3")
+CHANGEABILITY = ("高", "中", "低", "待试跑")
+
+
+def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: list[str], warnings: list[str]) -> None:
+    """Matrix rows (config.slices) carry the one priority judgement (Suda 2026-10-28).
+
+    Each slice: {slice_id, topic_id, priority, priority_basis, target_count, ...}. Checks that every
+    P1 row is homed in a Topic, every Topic holds a P1 row (warning), P3 rows carry no Prompts, and
+    every Prompt sits on a row whose Topic it shares. A Prompt's own priority may equal its row's,
+    sit one tier lower when its 可改变性 is 低, or differ with a recorded priority_change_reason.
+    Banks without config.slices skip these checks (legacy shape).
+    """
+    slices = config.get("slices")
+    if slices is None:
+        return
+    if not isinstance(slices, list) or not all(isinstance(x, dict) for x in slices):
+        fail("config.slices must be a list of matrix-row objects", errors)
+        return
+    by_id: dict[str, dict] = {}
+    for row in slices:
+        sid = str(row.get("slice_id") or "").strip()
+        if not sid:
+            fail("config.slices: every row needs slice_id", errors)
+            continue
+        if sid in by_id:
+            fail(f"config.slices: duplicate slice_id {sid}", errors)
+        by_id[sid] = row
+        tier = str(row.get("priority") or "").strip()
+        if tier not in PRIORITIES:
+            fail(f"slice {sid}: priority must be one of P1/P2/P3", errors)
+        elif is_blank(row.get("priority_basis")):
+            fail(f"slice {sid}: priority_basis is empty — a priority with no written basis is not made", errors)
+        tid = row.get("topic_id")
+        if not is_blank(tid) and tid not in topic_ids:
+            fail(f"slice {sid}: topic_id {tid!r} is not in config.topics", errors)
+    unhomed = sorted(sid for sid, row in by_id.items()
+                     if str(row.get("priority")).strip() == "P1" and is_blank(row.get("topic_id")))
+    if unhomed:
+        fail(f"P1 matrix rows homed in no Topic ({len(unhomed)}): {', '.join(unhomed)}; "
+             "file each under a Topic, or open one for it", errors)
+    p1_topics = {row.get("topic_id") for row in by_id.values() if str(row.get("priority")).strip() == "P1"}
+    lonely = sorted(str(t) for t in topic_ids if t not in p1_topics)
+    if lonely:
+        warnings.append(f"Topics holding no P1 matrix row ({len(lonely)}): {', '.join(lonely)}; "
+                        "keep one only when a 业务目标 or 核心可见度问题 names it, and say so")
+    # Category Awareness is the research pre-run before the attribute pool, never a bank Prompt (Suda 2026-10-29).
+    ca = [str(q.get("question_id")) for q in questions
+          if str(q.get("prompt_type") or q.get("intent") or "").strip() == "Category Awareness"]
+    if ca:
+        fail(f"Category Awareness Prompts in the bank ({len(ca)}): {', '.join(ca)}; it runs once per platform "
+             "before the attribute pool as research and is not written into the bank", errors)
+    unfiled: list[str] = []
+    for q in questions:
+        qid = str(q.get("question_id"))
+        ref = str(q.get("slice_ref") or "").strip()
+        if not ref:
+            unfiled.append(qid)
+            continue
+        row = by_id.get(ref)
+        if row is None:
+            fail(f"{qid}: slice_ref {ref!r} is not in config.slices", errors)
+            continue
+        tier = str(row.get("priority") or "").strip()
+        if tier == "P3":
+            fail(f"{qid}: sits on P3 row {ref}; P3 rows get no Prompts this period", errors)
+        if not is_blank(row.get("topic_id")) and q.get("topic_id") != row.get("topic_id"):
+            fail(f"{qid}: topic_id {q.get('topic_id')!r} differs from its row {ref}'s {row.get('topic_id')!r}", errors)
+        change = str(q.get("changeability") or "").strip()
+        if change and change not in CHANGEABILITY:
+            fail(f"{qid}: changeability must be one of {'/'.join(CHANGEABILITY)}", errors)
+        own = str(q.get("priority") or "").strip()
+        if own and tier in PRIORITIES:
+            expected = tier
+            if change == "低" and tier != "P3":
+                expected = PRIORITIES[PRIORITIES.index(tier) + 1]
+            if own != expected and is_blank(q.get("priority_change_reason")):
+                warnings.append(f"{qid}: priority {own} differs from the expected {expected} "
+                                f"(row {ref} {tier}, 可改变性 {change or '待试跑'}) with no priority_change_reason")
+    if unfiled:
+        warnings.append(f"Prompts with no slice_ref ({len(unfiled)}): "
+                        f"{', '.join(unfiled[:6])}{' …' if len(unfiled) > 6 else ''}; every Prompt sits on a matrix row")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bank", type=Path)
@@ -731,11 +800,11 @@ def main() -> int:
     if legacy_full_bank and any(len(str(topic.get("topic") or "")) > 48 for topic in topics):
         fail("Topic names are too long", errors)
 
-    # Topics are clustered from where the P1 Attributes land BEFORE Prompts are
-    # written (SKILL step 5); each staged Topic records that clustering —
-    # covered_attributes and planned_prompts — so "Topic first" is checkable
-    # afterwards instead of the Topic shape being read back off whatever
-    # Prompts happened to get written.
+    # Topics are clustered from the prioritised matrix rows BEFORE Prompts are
+    # written (SKILL step 5, Suda 2026-10-28); each staged Topic records that
+    # clustering — source_slices (legacy banks: covered_attributes) and
+    # planned_prompts — so "Topic first" is checkable afterwards instead of the
+    # Topic shape being read back off whatever Prompts happened to get written.
     if not legacy_full_bank:
         for topic in topics:
             planned = topic.get("planned_prompts") if isinstance(topic, dict) else None
@@ -744,14 +813,15 @@ def main() -> int:
         undeclared = sorted(
             str(topic.get("topic_id"))
             for topic in topics
-            if "covered_attributes" not in topic or "planned_prompts" not in topic
+            if not ("source_slices" in topic or "covered_attributes" in topic) or "planned_prompts" not in topic
         )
         if undeclared:
             warnings.append(
-                f"config.topics entries missing covered_attributes/planned_prompts ({len(undeclared)}): "
+                f"config.topics entries missing source_slices/planned_prompts ({len(undeclared)}): "
                 + ", ".join(undeclared)
-                + "; record the P1 clustering that opened each Topic before Prompts are written"
+                + "; record which matrix rows were clustered into each Topic before Prompts are written"
             )
+        slice_checks(config, questions, topic_ids, errors, warnings)
 
     role_counts: Counter[str] = Counter()
     row_intents: dict[int, str] = {}
@@ -888,6 +958,9 @@ def main() -> int:
                 or entry.get("demoted_reason")
                 or ""
             ).strip()
+            # 劣势 attributes are never listed on matrix rows (Suda 2026-10-28); the verdict is the reason.
+            if not reason and str(entry.get("relative_competitor") or entry.get("相对竞品") or "").strip() == "劣势":
+                continue
             if not reason:
                 uncarried.append(name)
             elif str(entry.get("priority") or "").strip() == "P1":
@@ -912,7 +985,8 @@ def main() -> int:
     # a Topic that no P1 opened, or a P1 that no Topic measures, is the
     # clustering drifting after the fact.
     declared_topics = [t for t in topics if isinstance(t, dict) and t.get("covered_attributes")]
-    if plan and declared_topics:
+    # Legacy banks only: since 2026-10-28 Topics are clustered from matrix rows (config.slices).
+    if plan and declared_topics and config.get("slices") is None:
         plan_rows = {str(entry.get("attribute") or "").strip(): entry for entry in plan}
         homed: set[str] = set()
         for topic in declared_topics:
