@@ -1,0 +1,29 @@
+{
+  "id": "property-portal",
+  "category": "房产门户（C 端买房、租房的人找平台；Hbrand、rival-h2.example 这类）",
+  "version": "2026-10-29.1",
+  "note": "只用于 C 端选词。做中介端或广告主端时不要挂这份画像：服务方后台那条会把他们的真实需求标成排除。",
+  "brands": ["RivalH1", "rival-h2.example", "RivalH2", "SRX", "PropNex", "ERA", "Huttons", "OrangeTee", "Savills", "EdgeProp", "Carousell", "Ohmyhome", "Mogul", "SRI", "Hbrand"],
+  "rules": [
+    {"tag": "排除", "pattern": "\\b(listing fees?|subscription fees?|credits? cost|account price|commissions?)\\b", "reason": "中介或广告主后台需求，C 端买家不问"},
+    {"tag": "排除", "pattern": "\\b(marriott|hotels?|resorts?)\\b", "reason": "同名异义：property 指酒店物业"},
+    {"tag": "排除", "pattern": "\\b(tax portal|my property portal|iras)\\b", "reason": "政府税务或产权办事入口"},
+    {"tag": "候选名单", "stage": "after_brand", "pattern": "\\b(for sale|for rent|to rent|rooms?|condos?|apartments?|flats?|landed|new launch\\w*|launch(es)?|valuation|valuers?|value)\\b", "unless": "^(how|why|can|should|is|are|do|does|what)\\b|\\b(how to|process|procedure|steps?|eligib\\w*|criteria|rules?|application|calculator|price|prices|cost|costs|how much)\\b", "reason": "房源或估价查询：门户类目里就是找平台的需求"}
+  ],
+  "regression_cases": [
+    {"text": "How much salary to buy condo in Singapore", "not": "排除", "why": "Hbrand 留用：买房负担能力"},
+    {"text": "room for rent singapore no agent fee", "not": "排除", "why": "Hbrand 留用：租客在意中介费"},
+    {"text": "Malaysia property", "not": "排除", "why": "Hbrand 留用：跨境买房"},
+    {"text": "RivalH1 alternative singapore", "expect": "候选名单", "why": "替代查询优先于品牌"},
+    {"text": "SRX property valuation", "expect": "品牌", "why": "品牌词查询只作评价、验证证据"},
+    {"text": "room for rent singapore carousell", "expect": "品牌", "why": "房源词不能盖过品牌"},
+    {"text": "rivalh1 listing fee", "expect": "排除", "why": "中介刊登费"},
+    {"text": "new launch condos singapore commissions", "expect": "排除", "why": "中介佣金"},
+    {"text": "best marriott property in singapore", "expect": "排除", "why": "酒店"},
+    {"text": "property tax portal singapore", "expect": "排除", "why": "政府税务入口"},
+    {"text": "hdb resale flat process", "expect": "问题解决", "why": "流程问题不算找平台"},
+    {"text": "hdb resale flat price", "expect": "交易", "why": "价格问题不算找平台"},
+    {"text": "Can a Singapore PR buy an HDB flat?", "expect": "问题解决", "why": "资格问题"},
+    {"text": "room for rent singapore couple", "expect": "候选名单", "why": "租房查询即找平台"}
+  ]
+}

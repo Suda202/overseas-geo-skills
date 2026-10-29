@@ -42,6 +42,17 @@ def _superlative_product(lowered: str) -> bool:
 # "What are the alternatives to managing X manually": AI answers with approaches,
 # not providers (2026-10-22 test). The provider form "Which X providers can ...
 # instead of ..." passes through the candidate-noun rule instead.
+# "Can you recommend a dash cam for rideshare drivers?": recommend / suggest followed
+# by an article asks for a product even when no generic noun ("brands", "tools")
+# follows (Suda 2026-10-29: any natural opening works). A method or criteria ask
+# ("recommend some ways to ...", "suggest a good setting") still returns advice.
+_RECOMMEND_ASK = re.compile(
+    r"\b(?:recommend|suggest)\s+(?:me\s+|us\s+)?(?:a|an|some|any|good|the\s+best)\s+"
+)
+_NOT_A_PRODUCT = re.compile(
+    rf"^(?:[\w-]+\s+){{0,2}}?(?:{_ABSTRACT_NOUN.pattern}|ways?|tips?|steps?|methods?|"
+    r"strateg(?:y|ies)|approach(?:es)?|settings?|temperatures?|practices?)"
+)
 _STATUS_QUO_APPROACH = re.compile(
     r"^what\s+(?:are|is)\s+(?:the\s+)?(?:alternatives?|options?)\s+(?:to|besides|other than)\s+"
     r"(?:\w+ing)\b"
@@ -98,6 +109,9 @@ def _clause_requests_candidates(lowered: str) -> bool:
         ):
             return False
         return len(prefix) <= 100
+    recommend = _RECOMMEND_ASK.search(lowered)
+    if recommend and not _NOT_A_PRODUCT.match(lowered[recommend.end():]):
+        return True
     # A bare search keyword ("business travel provider", "dash cam brands") with no
     # verb or question returns a provider list on AI Overviews and AI Mode.
     if len(lowered.split()) <= 6 and not re.search(r"[?]|\b(?:how|why|is|are|do|does|can|should)\b", lowered) \
@@ -146,4 +160,9 @@ REGRESSION_CASES = (
     ("How can I avoid fake rental listings in Singapore, and which places are safest to find a room or flat?", True),
     ("business travel provider", True),
     ("how to choose a business travel provider", False),
+    ("Can you recommend a dash cam for rideshare drivers?", True),
+    ("Could you suggest a good robot vacuum for pet hair?", True),
+    ("Can you recommend some ways to reduce litter box smell?", False),
+    ("Can you suggest a good setting for night recording?", False),
+    ("Can you recommend some features to look for in a dash cam?", False),
 )
