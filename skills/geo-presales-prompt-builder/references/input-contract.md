@@ -52,7 +52,7 @@
 | `产品特性` | 产品特性 | string 或 string[] | 否 | |
 | `差异化优势` | 差异化优势 | string 或 string[] | 否 | 数组会按「，」合并成一个字符串 |
 | `适用边界` | 适用边界 | string | 否 | |
-| `主题` | 监测主题 | string 或 string[] | 是 | 1–3 个；第一个是核心品类主题，其余是同一产品线下的细分场景。每道题都要归属一个主题。可以手动填写，也可以先按属性优先级梳理再填（规则见 skill 共用原则「主题的两种来源」），但传给 skill 时必须有值 |
+| `主题` | 无（2026-10-29 起线上表单去掉监测主题） | string 或 string[] | 否 | 线上生词走选词模式，主题在生词时从矩阵行聚出，不传本字段，归一化结果里 `topic_source` 为 `to_derive`。本地默认模式生词仍要传：1–3 个，第一个是核心品类主题，其余是同一产品线下的细分场景（规则见 skill 共用原则「主题的两种来源」） |
 | `官方域名` | 官方域名 | string | 是 | 以 `http://` 或 `https://` 开头的完整网址 |
 | `竞品` | 竞品（添加竞品） | object[] | 是 | 1–3 个，见下表 |
 | `补充内容` | 补充内容 | string | 否 | 省略时按空字符串处理 |
@@ -71,9 +71,8 @@
 |---|---|---|---|
 | `名称` | string | 是 | 英文规范名称；竞品之间不能重名 |
 | `官网域名` | string | 是 | 完整网址 |
-| `适用主题` | int[] | 否 | 该竞品只用于哪些主题，填主题在 `主题` 数组里的序号（从 1 开始）。省略表示适用于全部主题。填写后，每个主题至少要有 1 个适用竞品 |
 
-`适用主题` 是「竞品 1 仅用于主题 1」这类边界的结构化写法。接口能拿到这个信息时就填这个字段，不要只写在 `补充内容` 里。
+竞品只收这两项，传别的字段报 `unknown_field`。竞品不带主题边界：本地默认模式需要「竞品 1 仅用于主题 1」这类边界时，写在 `补充内容` 里。
 
 ## 4. `options`
 
@@ -115,6 +114,7 @@
     "official_domain": "...",
     "derived_field_sources": { "brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名" },
     "topics": [{ "topic_id": "topic_1", "source_field": "主题 1（宽泛）", "source_value": "..." }],
+    "topic_source": "case",
     "competitor_selection": { "status": "frozen", "selection_count": 3, "formal_competitors": [ "..." ] },
     "locale": "en",
     "generation_stage": "discovery",
@@ -142,11 +142,11 @@
 | `missing_field` | 必填字段缺失或为空 |
 | `invalid_type` | 类型不对，例如竞品不是对象数组 |
 | `invalid_item` | 数组里有空值或非字符串 |
-| `duplicate_item` | 列表项重复、竞品重名、适用主题序号重复 |
+| `duplicate_item` | 列表项重复、竞品重名 |
 | `invalid_enum` | 枚举值不在允许范围（业务模式、locale、generation_stage、input_version、确认状态） |
 | `invalid_url` | 网址不是完整的 http(s) 地址 |
-| `count_out_of_range` | 主题或竞品不是 1–3 个 |
-| `invalid_reference` | 适用主题序号越界、某主题没有适用竞品、confirmed_fields 引用了不存在的字段 |
+| `count_out_of_range` | 传了主题但不是 1–3 个，或竞品不是 1–3 个 |
+| `invalid_reference` | confirmed_fields 引用了不存在的字段 |
 | `forbidden_for_b2c` | 纯 B2C Case 填了 B2B 专属字段 |
 | `unknown_field` | 出现未定义字段 |
 
@@ -154,6 +154,7 @@
 
 | code | 含义 |
 |---|---|
+| `topic_to_derive` | 没传主题：`topics` 为空、`topic_source` 为 `to_derive`，主题由选词模式生词时聚出；默认模式生词前要先补主题 |
 | `pending_value` | B2B 字段是「待人工确认」；三个选填字段会被当作未填写丢弃 |
 | `count_suggestion` | 列表项数量超出建议范围 |
 | `comma_in_item` | 列表项里含中文逗号；接口按一项接收没问题，但写回飞书合并列后再读会被拆错 |
@@ -174,7 +175,7 @@
 python3 scripts/normalize_case.py readback.ndjson --from-base-record
 ```
 
-适配规则：合并列（`目标企业画像`、`目标客户`、`痛点`、`使用场景`、`产品特性`、`主题`）按「，」拆成数组；`竞品 n` / `竞品 n 官网域名` 平铺列合成 `竞品` 数组；`[url](url)` 形式的网址去掉 markdown 包裹；旧列 `垂直行业` 按 `目标企业画像` 读取；`record_id`、`Case序号` 忽略。飞书没有结构化的「适用主题」，主题局部竞品边界仍写在 `补充内容`，由 skill 解析。
+适配规则：合并列（`目标企业画像`、`目标客户`、`痛点`、`使用场景`、`产品特性`、`主题`）按「，」拆成数组；`竞品 n` / `竞品 n 官网域名` 平铺列合成 `竞品` 数组；`[url](url)` 形式的网址去掉 markdown 包裹；旧列 `垂直行业` 按 `目标企业画像` 读取；`record_id`、`Case序号` 忽略。主题局部竞品边界写在 `补充内容`，由 skill 解析。
 
 已知限制：飞书合并列里某个值本身含「，」时会被多拆一项。接口用数组传值没有这个问题。
 

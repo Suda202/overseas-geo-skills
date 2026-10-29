@@ -47,7 +47,7 @@ CASE_KEYS = set(
     SCALAR_REQUIRED + SCALAR_OPTIONAL + (B2B_LIST,) + B2B_JOINABLE + OPTIONAL_JOINABLE
     + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY)
 )
-COMPETITOR_KEYS = {"名称", "官网域名", "适用主题"}
+COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
 GENERATION_STAGES = ("discovery", "diagnostic")
 JOIN_SEPARATOR = "，"
@@ -150,7 +150,7 @@ def _string_list(case: dict, field: str, report: Report, required: bool = False)
     return items
 
 
-def _competitors(case: dict, topic_count: int, report: Report) -> list[dict]:
+def _competitors(case: dict, report: Report) -> list[dict]:
     value = case.get(COMPETITOR_KEY)
     if not isinstance(value, list):
         report.error("missing_field", COMPETITOR_KEY, "竞品必须是 1–3 项的数组")
@@ -185,25 +185,6 @@ def _competitors(case: dict, topic_count: int, report: Report) -> list[dict]:
             "official_domain": domain or "",
             "source_fields": [f"竞品 {index}", f"竞品 {index} 官网域名"],
         }
-        scope = item.get("适用主题")
-        if scope is not None and topic_count == 0:
-            pass  # 主题缺失已报 missing_field，不重复报越界
-        elif scope is not None:
-            valid = (
-                isinstance(scope, list) and scope
-                and all(isinstance(n, int) and not isinstance(n, bool) for n in scope)
-            )
-            if not valid:
-                report.error("invalid_type", f"{field}.适用主题", "适用主题必须是非空的主题序号数组，例如 [1, 2]")
-            elif len(set(scope)) != len(scope):
-                report.error("duplicate_item", f"{field}.适用主题", "适用主题序号重复")
-            elif any(n < 1 or n > topic_count for n in scope):
-                report.error(
-                    "invalid_reference", f"{field}.适用主题",
-                    f"适用主题序号必须在 1–{topic_count} 之间，收到 {scope}",
-                )
-            else:
-                entry["topic_ids"] = [f"topic_{n}" for n in sorted(scope)]
         result.append(entry)
     return result
 
@@ -323,8 +304,14 @@ def normalize(payload: dict) -> dict:
         for index, item in enumerate(items, start=1):
             fields[f"{field} {index}"] = item
 
-    # 主题必填：每道题都要归属一个主题。主题怎么填（手动或按属性梳理）在调用方之前完成。
-    topics = _string_list(case, TOPIC_KEY, report, required=True)
+    # 主题选填（Suda 2026-10-29）：线上表单去掉了监测主题，选词模式在生词时从矩阵行聚出主题。
+    # 传了主题时按默认模式的规则收（1–3 个，第一个宽泛）。
+    topics = _string_list(case, TOPIC_KEY, report)
+    if not topics:
+        report.warn(
+            "topic_to_derive", TOPIC_KEY,
+            "未传主题：选词模式会在生词时从矩阵行聚出主题；默认模式生词需要先填主题",
+        )
     if topics and not 1 <= len(topics) <= 3:
         report.error("count_out_of_range", TOPIC_KEY, f"主题必须 1–3 个，收到 {len(topics)} 个")
         topics = topics[:3]
@@ -335,21 +322,12 @@ def normalize(payload: dict) -> dict:
         fields[source_field] = topic
         topic_entries.append({"topic_id": f"topic_{index}", "source_field": source_field, "source_value": topic})
 
-    competitors = _competitors(case, len(topics), report)
+    # 竞品不带主题边界（2026-10-29 删去「适用主题」：线上表单没有这一项）。默认模式需要局部边界时，
+    # 写在补充内容里，由 skill 读出后写 topic_ids。
+    competitors = _competitors(case, report)
     for index, competitor in enumerate(competitors, start=1):
         fields[f"竞品 {index}"] = competitor["name"]
         fields[f"竞品 {index} 官网域名"] = competitor["official_domain"]
-    if topics and any("topic_ids" in c for c in competitors):
-        for entry in topic_entries:
-            applicable = [
-                c["name"] for c in competitors
-                if entry["topic_id"] in c.get("topic_ids", [t["topic_id"] for t in topic_entries])
-            ]
-            if not applicable:
-                report.error(
-                    "invalid_reference", "竞品.适用主题",
-                    f"{entry['source_value']} 没有任何适用竞品；每个主题至少要有 1 个",
-                )
 
     note = case.get(NOTE_KEY)
     if note is not None and not isinstance(note, str):
@@ -381,6 +359,8 @@ def normalize(payload: dict) -> dict:
         "official_domain": fields.get("官方域名", ""),
         "derived_field_sources": {"brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名"},
         "topics": topic_entries,
+        # case = 调用方填了主题；to_derive = 没填，由选词模式从矩阵行聚出
+        "topic_source": "case" if topic_entries else "to_derive",
         "competitor_selection": {"status": "frozen", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
         "generation_stage": stage,

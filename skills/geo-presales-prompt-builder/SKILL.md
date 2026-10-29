@@ -3,7 +3,7 @@ name: geo-presales-prompt-builder
 description: Generate or validate Discovery-first GEO Prompts from an evaluation Case, and supplement competitor or evaluation questions when requested. Use evidence-backed buyer intent, Topic-scoped Attribute planning, and free Tags. In selection mode (online upload only takes the old Case fields), write the bank with the geo-prompt-selection-builder method, cluster Topics from its matrix and export the nine-column upload CSV with its export script. Otherwise do not create Topics; never research competitors, collect answers, or calculate metrics.
 metadata:
   author: Overseas GEO Project
-  version: "4.26.0"
+  version: "4.28.0"
 ---
 
 # GEO Presales Prompt Builder
@@ -34,28 +34,7 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 
 ## 选词模式：用选词逻辑出售前诊断题（2026-10-29）
 
-线上「配置海外诊断参数」表单只收 Case 那几个旧字段，但题可以按选词的方法由 AI 调研后写；对线上来说，只要最终的上传 CSV 能传上去就行。用户要求「按选词逻辑出售前题」时走这一节，出题规则以选词 SKILL 的 *Workflow* 为准。下文「执行流程」「输出与验证」只管默认模式。
-
-- **输入**：照常运行 `scripts/normalize_case.py`，用归一化后的 Case 字段。线上表单的旧字段不改。
-- **要做的步骤**（按选词 Workflow 的顺序）：
-  1. 研究预跑：每个产品线 × 市场语言各跑 1 次品类认知，目标品牌和每个竞品各跑 1 次评估式。
-  2. 公开信号：搜索、评价、社区。
-  3. 属性池：只判相对竞品。
-  4. 矩阵行与行优先级：线上没有「业务目标」字段，业务重点从 Case 的差异化优势和补充内容里取，并在优先级依据里写明出处。
-  5. 从矩阵的 P1/P2 行聚主题。
-  6. 写题、去重。
-- **跳过的步骤**：售前拿不到这些，不做——客户数据（GSC、CRM 等）、对客确认 Base、试跑排序、锁定正式题。
-- **主题**：主题从矩阵聚出来，不用 Case 里填的主题。上传时关键词来源选「手动上传」，表单上的监测主题按聚出的主题回填。主题名要和 CSV 的 `topic` 逐字一致，主题名不一致时导出加 `--topic-label`。主题个数不限 3 个（Suda 让研发放开，放开前最多 3 个）。每个主题至少 5 条；每份上传 CSV（一个市场）不超过 60 条。超了要在写题阶段删减，导出脚本不会自动截断。
-- **题型**：按选词的规则。默认不出问题解决；品类认知只用于研究预跑，不进题库。替代题在售前诊断里算可见度和情感（Suda 2026-10-29），需要研发在后端加一个 `diagnosis_intent` 枚举值（建议叫 `alternatives`，对应 `question_types` 为 `visibility,sentiment`）。研发上线之前不出替代题，因为现在只能挂在 `competitor` 下，只算情感。上线后要同步改三处：导出脚本的 `INTENT` / `QUESTION_TYPES`、本 skill validator 的 `V8_CSV_QUESTION_TYPES`、`shared/canonical-intent-mapping.md`。
-- **门禁与导出**：
-  - 题库用选词的 `validate_after_sales_set.py` 检查，不跑本 skill 的 `validate_question_bank.py`——它要求 `Prompt Type:` Tag 和 `quotas` 结构，对选词题库会报一堆不相干的错（brand-o 肯尼亚题库报了 185 条）。
-  - 「未批准不计覆盖」这类依赖品牌方确认的告警在售前属于正常，写进交接文件即可。
-  - 导出用选词的 `scripts/export_upload_csv.py <bank.json> --out <目录>`：每个市场出一份 9 列 CSV，脚本退出码 0 才算可以上传。
-- **本 skill 里以下旧规则在选词模式下不适用**，以选词为准：
-  - `attribute_plan` 的重要性和可改变性判断：属性池只判相对竞品，优先级在矩阵行上判。
-  - 评价题默认用命令式：题库里写买家问法，`Evaluate …` 句式只用于研究预跑。
-  - Coverage / Depth 主题。
-  - 品类认知可以补进题库。
+线上只收 Case 那几个旧字段，但题可以按选词的方法由 AI 调研后写。线上最终只要 9 个字段（`query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`），研发走上传 CSV 或接口传入都可以，字段相同。用户要求「按选词逻辑出售前题」时，只读 [选词模式](references/selection-mode.md)：那里列了售前要做的步骤、每步判断记在题库 JSON 的哪里、怎么校验和导出。线上无人值守运行用 `scripts/run_selection_mode.py run --case <payload.json> --market <市场> --platforms <AI 平台> --out <新工作目录> --agent sdk`（或 `--agent-cmd` 接宿主 harness），退出码和产物见脚本开头说明。本文件后面的「执行流程」「输出与验证」只管默认模式，选词模式不读。
 
 ## 开始前读取
 
@@ -71,14 +50,14 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 
 ## 唯一输入合同
 
-输入的结构、必填规则和错误码以 [Case 输入合同](references/input-contract.md) 为准。线上接口和本地飞书 Record 都先运行 `scripts/normalize_case.py`（飞书加 `--from-base-record`）；返回 `ok=false` 时把 `errors` 原样交回调用方，不替上游补字段。`normalized` 里的 `case_fields`、Topic 来源映射、`competitor_selection`、`locale` 与 `generation_stage` 直接写入 `config`；竞品带 `topic_ids` 时以它为局部边界，不再从补充内容推断。
+输入的结构、必填规则和错误码以 [Case 输入合同](references/input-contract.md) 为准。线上接口和本地飞书 Record 都先运行 `scripts/normalize_case.py`（飞书加 `--from-base-record`）；返回 `ok=false` 时把 `errors` 原样交回调用方，不替上游补字段。`normalized` 里的 `case_fields`、Topic 来源映射、`competitor_selection`、`locale` 与 `generation_stage` 直接写入 `config`；竞品的主题局部边界只从补充内容读取。
 
 归一化后的 `case_fields` 包含以下中文业务字段：
 
 - `公司名`、`业务 / 产品名称`、`品牌名称`、`业务模式`、`品类`
 - `目标企业画像 1…n`（仅 B2B）、`目标客户 1…n`、`痛点 1…n`、`使用场景 1…n`、`产品特性 1…n`
 - `差异化优势`、`适用边界`
-- `主题 1…n（宽泛/细分）`：1–3 个 Case 候选 Topic，第一个为 Coverage Topic，其余为 Depth Topic。括号标签是输入提示，但 v8 不输出 `topic_type`。主题必填，由调用方在生词前填好：手动输入，或由 Case Builder 按共用原则 [主题的两种来源](../shared/prompt-generation-principles.md#主题的两种来源) 梳理；交接文件写明来源时一并沿用
+- `主题 1…n（宽泛/细分）`：1–3 个 Case 候选 Topic，第一个为 Coverage Topic，其余为 Depth Topic。括号标签是输入提示，但 v8 不输出 `topic_type`。默认模式主题必填（选词模式不传，生词时从矩阵行聚出，见 [选词模式](references/selection-mode.md)），由调用方在生词前填好：手动输入，或由 Case Builder 按共用原则 [主题的两种来源](../shared/prompt-generation-principles.md#主题的两种来源) 梳理；交接文件写明来源时一并沿用
 - `官方域名`
 - 1–3 组 `竞品 n` 与 `竞品 n 官网域名`（线上表单是动态列表）
 - `补充内容`，字段必须保留但允许为空；非空时可包括 Topic 局部竞品边界，例如“竞品 1 仅用于主题 1，竞品 2–3 仅用于主题 2”
@@ -95,7 +74,7 @@ Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评
 
 ## 执行流程
 
-1. 归一化中英文名称、品类、业务边界、1–3 个 Topic 和 1–3 组正式竞品；只把输入中的“宽泛/细分”当作理解提示，不保存为字段。读取补充内容中的 Topic 局部竞品边界，为每个正式竞品写入适用的 `topic_ids`；归一化结果已带 `topic_ids` 时直接沿用；未提供局部边界时，全部正式竞品默认适用于全部 Topic。不得把 Case 中可跨 Topic 的能力重新升级为 Topic。
+1. 归一化中英文名称、品类、业务边界、1–3 个 Topic 和 1–3 组正式竞品；只把输入中的“宽泛/细分”当作理解提示，不保存为字段。读取补充内容中的 Topic 局部竞品边界，为每个正式竞品写入适用的 `topic_ids`；未提供局部边界时，全部正式竞品默认适用于全部 Topic。不得把 Case 中可跨 Topic 的能力重新升级为 Topic。
 2. 从证据支持的买家决策关注点完成轻量 `attribute_plan`；交接文件带有属性梳理得出的 Case 级排序时，各主题内的优先级沿用它，不重新排；P1/P2/P3 与 `excluded` 均按实际内容填写，不凑数量；P1 必须被 Discovery 覆盖。生成前按重要性 × 可改变性分级（见共用原则第 11 条），不虚构尚未采集的当前差距。纯目录事实进入 `exclude`，需要真值的精确数值进入 `accuracy_only`。**进入 `excluded` 的候选项不得再作为任何题目的 `Attribute:` 标签**——被排除意味着它不改变购买决策，以它命名的题同样不改变决策。研究中已识别的属性直接复用，勿要求客户重复填写。优先级判断覆盖产品能力、场景、痛点、采购约束和边界，不把“属性数量”当作完整度。
 3. 先选择阶段再记录实际配额。`discovery`：其他五类为 0，每 Topic 至少 5 条独立 Discovery；题量按该 Topic 的重要决策覆盖情况决定，允许明显不对称，不为凑齐或平均分配新增问题。`diagnostic`：在已有发现型集合上按需补竞品、评价或品类认知题，不要求每个竞品都出题或各 Topic 对称。先计算 Discovery 与计划中的后补题合计是否不超过 60；若后补后超限，先由用户决定范围，不静默删除已锁定的发现型问题。保存 `quotas` 的真实数量，不用配额驱动虚构需求。
 4. 按生成方法编写自然英文根问题及等义中文。每题确定一个提示词类型（`Prompt Type`）。Discovery 和 Category Awareness 不出现具体品牌；Competitor、Evaluation 遵守各自品牌边界。按题面实际品牌提及写入唯一品牌范围 Tag。逐题检查任务匹配、不引导、消除缩写/跨品类歧义、买家语境有来源。Case 中多个既有品类称呼可帮助校准语言，但单纯更换称呼不计为新增独立意图。

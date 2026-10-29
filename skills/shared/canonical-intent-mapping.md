@@ -19,6 +19,8 @@
 | `Prompt Type: Category Awareness` | `market_perception` | 品类认知（品类认知类问题） | —（空） | `true` | M08 购买框架（品类认知 / Market Perception） |
 | `Prompt Type: Information` | `information`（后端尚未支持，接入前需后端加枚举） | 问题解决 | `citation` | `false` | **仅售后**（Suda 2026-10-19; client label renamed from 信息 and scope narrowed to problem-solving on 2026-10-26）：买家的问题解决型问题，AI 给建议不列候选，只统计品牌官网是否被引用；售前不使用 |
 
+**上传值和后端内部值是两层，别混用（2026-10-29）。** 上表「后端 diagnostic_intent」列是后端统计包里存的值；我们上传 CSV 或走接口传入时，`diagnosis_intent` 填的是上传值，由后端自己换成内部值（报告侧的对照在 `geo-presales-report-builder/scripts/build_report_data.py` 的 `CSV_INTENT_MAP`）。两层不同的只有三个：评价传 `evaluation`（内部存 `sentiment`），验证传 `verification`（内部存 `validation`），品类认知传 `category_awareness`（内部存 `market_perception`）；发现、对比、准确性两层同名。上传值的全集以售前 validator 的 `V8_CSV_QUESTION_TYPES` 为准。评价题的 `analysis_type` / `question_types` 是 `sentiment`，和内部值同名，但它是另一个字段。
+
 **验证与准确性是两种独立的提示词类型（2026-10-16 起，售前售后一致）。** 分界按 AI 错在哪：AI 不知道品牌有这个能力 → 验证；AI 能说出这个事实但说错了 → 准确性。两者都不进可见度指标，都只作诊断输入。Prompt Builder 不做别名转换，题库里写哪个就是哪个。
 
 **报告模块按事实来源划分，不按提示词类型划分，两者不是一一对应。** 一个模块可以消费多种提示词类型的样本（M02 同时用 Discovery 的竞争位置与 Competitor 的决胜结果），一种意图也可能不进任何模块（验证与准确性只作为诊断输入）。下表的模块归属只说明「该意图的样本最终进入哪些模块」，不要把它读成「该意图等于某个模块」。
