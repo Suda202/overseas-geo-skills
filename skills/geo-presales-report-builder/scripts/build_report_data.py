@@ -2219,9 +2219,16 @@ def main(argv=None) -> int:
                 r["topic"] = topic_labels[t]
         print(f"主题映射已应用：{len(topic_labels)} 条 → {sorted(set(topic_labels.values()))}")
 
-    topics = [t.strip() for t in str(case["topics_raw"]).replace("，", ",").split(",") if t.strip()]
-    if not topics:
-        topics = list(dict.fromkeys(str(r.get("topic") or "").strip() for r in rows))
+    # 2026-10-29 起主题在生词时从矩阵行聚出，题库的 topic 为准。题库主题都在 Case 主题里（旧题库）时
+    # 保留 Case 的顺序；题库里有 Case 没写的主题时改用题库主题，Case 主题只当没写 topic 时的兜底。
+    case_topics = [t.strip() for t in str(case["topics_raw"]).replace("，", ",").split(",") if t.strip()]
+    bank_topics = list(dict.fromkeys(t for t in (str(r.get("topic") or "").strip() for r in rows) if t))
+    if case_topics and set(bank_topics) <= set(case_topics):
+        topics = case_topics
+    else:
+        topics = bank_topics or case_topics
+        if case_topics:
+            print(f"题库主题与 Case 主题不同，按题库主题出报告：{topics}（Case 写的是 {case_topics}）")
 
     config = build_config(case, topics, lexicon_entries, load_domain_cache(args.domain_cache))
     bank = build_question_bank(rows, config, topics)

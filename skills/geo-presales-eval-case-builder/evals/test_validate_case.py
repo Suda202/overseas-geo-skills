@@ -52,13 +52,18 @@ class TopicValidationTest(unittest.TestCase):
             self.errors_for("彩色宝石首饰，日常佩戴宝石首饰，礼赠宝石首饰"),
         )
 
-    def test_rejects_a_single_topic(self) -> None:
-        errors = self.errors_for("彩色宝石首饰")
-        self.assertTrue(any("主题数量必须为 2–3" in error for error in errors))
+    def test_accepts_a_single_topic(self) -> None:
+        self.assertEqual([], self.errors_for("彩色宝石首饰"))
 
-    def test_rejects_more_than_two_depth_topics(self) -> None:
+    def test_accepts_omitted_topic_row(self) -> None:
+        # 2026-10-29 起主题选填：主题在生词时从矩阵行聚出
+        body = BASE_BODY.format(topics="彩色宝石首饰")
+        body = "\n".join(line for line in body.splitlines() if not line.startswith("| 主题 |"))
+        self.assertEqual([], MODULE.validate_case(1, body))
+
+    def test_rejects_more_than_three_topics(self) -> None:
         errors = self.errors_for("彩色宝石首饰，日常佩戴宝石首饰，礼赠宝石首饰，婚礼宝石首饰")
-        self.assertTrue(any("主题数量必须为 2–3" in error for error in errors))
+        self.assertTrue(any("主题数量必须为 1–3" in error for error in errors))
 
     def test_rejects_english_prompt_as_topic(self) -> None:
         errors = self.errors_for(

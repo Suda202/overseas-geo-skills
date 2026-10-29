@@ -13,8 +13,7 @@
       },
       "expected_actions": [
         "Research public buyer demand before applying brand USP.",
-        "Propose one Coverage Topic and two distinct same-product buying-scenario Depth Topics, or use one Depth Topic only when evidence is insufficient.",
-        "Reject any Topic that cannot support at least five distinct Discovery buyer intents without synonym padding.",
+        "Leave 主题 empty when no Topic was supplied; Topics are clustered from matrix rows at Prompt generation (2026-10-29).",
         "Create or update the Base Record after schema and existing-record lookup.",
         "Create the prefilled customer confirmation document only at the final document step, then read back its body and return its actual URL/token."
       ],

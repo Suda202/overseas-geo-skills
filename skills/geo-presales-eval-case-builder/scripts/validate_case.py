@@ -51,7 +51,7 @@ MULTI_VALUE_RANGES = {
     "使用场景": (1, 5),
     "产品特性": (1, 5),
     "差异化优势": (1, 5),
-    "主题": (2, 3),
+    "主题": (1, 3),
     "购买标准": (1, 5),
     "集成与兼容": (1, 3),
     "信任与合规": (1, 5),
@@ -60,7 +60,8 @@ MULTI_VALUE_RANGES = {
 # B2B 专属字段：B2B 与 B2B / B2C 选填，纯 B2C 必须省略整行。
 B2B_OPTIONAL_MULTI = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
 # 选填多值字段：有依据才写，查不到就省略整行；写了就做格式检查。
-OPTIONAL_MULTI = {"目标客户", "痛点", "使用场景", "产品特性", "差异化优势", "地理与市场"}
+# 主题 2026-10-29 起选填：线上表单去掉了「监测主题」，主题在生词时从矩阵行聚出；填了仍查名称写法。
+OPTIONAL_MULTI = {"目标客户", "痛点", "使用场景", "产品特性", "差异化优势", "地理与市场", "主题"}
 PLACEHOLDERS = {"", "待人工确认"}
 ENGLISH_FIELDS = {"公司名", "业务 / 产品名称", "品牌名称"}
 MODES = {"B2B", "B2C", "B2B / B2C"}
@@ -149,9 +150,7 @@ def validate_case(index: int, body: str) -> list[str]:
         ):
             errors.append(f"{key}必须合并到不带序号的同名字段，并用‘，’分隔")
 
-    if keys.count("主题") != 1 or not values.get("主题"):
-        errors.append("缺少或重复多值字段：主题；应合并为一行并用‘，’分隔")
-    else:
+    if keys.count("主题") == 1 and values.get("主题") not in PLACEHOLDERS:
         if re.search(r"（(?:宽泛|细分)）", values["主题"]):
             errors.append("主题只写名称，不得标注（宽泛）或（细分）")
         topics = [item.strip() for item in re.split(r"[，、]", values["主题"])]

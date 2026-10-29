@@ -11,7 +11,7 @@
 | `schema_version` | string | 是 | 固定 `overseas-geo-backend-report-input/v2`。 |
 | `brand_name / corp_name` | string | 是 | 目标品牌与客户主体。 |
 | `product_name` | string/null | 否 | 产品或业务名称。 |
-| `topics` | array | 是 | 恰好 3 项；每项含内部字段 `topic_id / topic_type / topic`，客户文案统一称“主题”。 |
+| `topics` | array | 是 | 至少 1 项，个数不限（2026-10-29 起，此前恰好 3 项）；每项含内部字段 `topic_id / topic_type / topic`，客户文案统一称“主题”。 |
 | `tags` | array | 推荐 | 正在新增的 Tag 字段；每项含 `tag_id / tag / topic_ids`，用于在主题下承载更细的分析分组。缺失时继续只用主题。 |
 | `target_attributes` | array | 是 | 来自评测集同一 Case；每项至少含 `attribute_id / attribute`，并通过 `topic_ids`、`tag_ids` 或两者关联。只是采集前目标，不是客户可见一等字段。 |
 

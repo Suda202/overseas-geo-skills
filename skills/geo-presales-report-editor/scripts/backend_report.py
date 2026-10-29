@@ -709,8 +709,9 @@ def rate_tokens(rate):
 
 def normalize_v2_context(raw):
     topics = parse_json_field(raw.get("topics"), "topics", list)
-    if len(topics) != 3:
-        raise ContractError("topics 必须恰好包含三个主题对象")
+    # 2026-10-29 起主题个数不限 3 个（主题在生词时从矩阵行聚出），只要求至少一个
+    if not topics:
+        raise ContractError("topics 至少要包含一个主题对象")
     topic_ids = set()
     for item in topics:
         if not isinstance(item, dict):
