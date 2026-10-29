@@ -22,7 +22,7 @@ workflow:
     selector:
     - env
     - biz_api_base
-    value: https://addresses-aug-become-posted.trycloudflare.com
+    value: http://123.57.162.4
     value_type: string
   - description: GEO 联网工具服务端基础 URL
     id: a1b2c3d4-0002-4000-8000-000000000002
@@ -30,7 +30,15 @@ workflow:
     selector:
     - env
     - search_api_base
-    value: https://distinguished-recent-verification-literary.trycloudflare.com
+    value: http://123.57.162.4
+    value_type: string
+  - description: GEO API Bearer Token（请在 Dify 环境变量中填写真实值）
+    id: a1b2c3d4-0003-4000-8000-000000000003
+    name: geo_api_token
+    selector:
+    - env
+    - geo_api_token
+    value: CHANGE_ME_GEO_ACCESS_TOKEN
     value_type: string
   features:
     file_upload:
@@ -381,8 +389,9 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "def main(biz_api_base: str, search_api_base: str):\n    return {\"\
-          biz_api_base\": biz_api_base, \"search_api_base\": search_api_base}"
+        code: "def main(biz_api_base: str, search_api_base: str, geo_api_token: str):\n\
+          \    return {\n        \"biz_api_base\": biz_api_base,\n        \"search_api_base\"\
+          : search_api_base,\n        \"geo_api_token\": geo_api_token,\n    }"
         code_language: python3
         desc: 透传环境变量（biz_api_base / search_api_base）。隧道换域名只需改 Dify 环境变量，不用改代码。
         outputs:
@@ -390,6 +399,9 @@ workflow:
             children: null
             type: string
           search_api_base:
+            children: null
+            type: string
+          geo_api_token:
             children: null
             type: string
         selected: false
@@ -404,6 +416,10 @@ workflow:
           - env
           - search_api_base
           variable: search_api_base
+        - value_selector:
+          - env
+          - geo_api_token
+          variable: geo_api_token
       height: 112
       id: '1729000000015'
       position:
@@ -418,23 +434,25 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "import requests\nimport time\n\ndef main(biz_api_base):\n    url =\
-          \ f\"{biz_api_base}/api/v1/tools/read_skills_batch\"\n    payload = {\"\
+        code: "import requests\nimport time\n\ndef main(biz_api_base, geo_api_token):\n\
+          \    headers = {\"Authorization\": f\"Bearer {geo_api_token}\"}\n    url\
+          \ = f\"{biz_api_base}/api/v1/tools/read_skills_batch\"\n    payload = {\"\
           skills\": [\"overseas-geo-competitor-research\", \"geo-presales-prompt-builder\"\
           ], \"include_shared\": True}\n    last_error = \"\"\n    for attempt in\
           \ range(3):\n        try:\n            resp = requests.post(url, json=payload,\
-          \ timeout=30)\n            result = resp.json()\n            if not result.get(\"\
-          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
-          error\", \"unknown\"), \"skills_count\": 0, \"skills_list\": []}\n     \
-          \       skills = result[\"data\"][\"skills\"]\n            return {\"ok\"\
-          : True, \"skills_count\": len(skills), \"skills_list\": list(skills.keys()),\
-          \ \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
-          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
-          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
-          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
-          : f\"{type(e).__name__}: {e}\", \"skills_count\": 0, \"skills_list\": []}\n\
-          \    return {\"ok\": False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"\
-          skills_count\": 0, \"skills_list\": []}"
+          \ headers=headers, timeout=30)\n            result = resp.json()\n     \
+          \       if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"skills_count\": 0, \"\
+          skills_list\": []}\n            skills = result[\"data\"][\"skills\"]\n\
+          \            return {\"ok\": True, \"skills_count\": len(skills), \"skills_list\"\
+          : list(skills.keys()), \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
+          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
+          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
+          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
+          \ {e}\", \"skills_count\": 0, \"skills_list\": []}\n    return {\"ok\":\
+          \ False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"skills_count\": 0, \"\
+          skills_list\": []}"
         code_language: python3
         desc: 拉取两个 skill 的 SKILL.md + references（带重试）
         outputs:
@@ -458,6 +476,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000002'
       position:
@@ -473,7 +495,8 @@ workflow:
       width: 242
     - data:
         code: "import requests\nimport json\nimport time\n\ndef main(brand_name, official_domain,\
-          \ topics, regions, competitors, biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_prepare\"\
+          \ topics, regions, competitors, biz_api_base, geo_api_token):\n    headers\
+          \ = {\"Authorization\": f\"Bearer {geo_api_token}\"}\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_prepare\"\
           \n    competitors_list = []\n    try:\n        parsed = json.loads(competitors)\
           \ if isinstance(competitors, str) else competitors\n        if isinstance(parsed,\
           \ list):\n            for c in parsed:\n                if isinstance(c,\
@@ -492,10 +515,10 @@ workflow:
           \        \"run_dir\": f\"/tmp/geo-{brand_name}/competitor-research\",\n\
           \        \"overwrite\": True\n    }\n    last_error = \"\"\n    for attempt\
           \ in range(3):\n        try:\n            resp = requests.post(url, json=payload,\
-          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
-          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
-          error\", \"unknown\"), \"run_dir\": \"\", \"competitors_parsed\": []}\n\
-          \            data = result[\"data\"]\n            stdout_str = data.get(\"\
+          \ headers=headers, timeout=60)\n            result = resp.json()\n     \
+          \       if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"run_dir\": \"\", \"competitors_parsed\"\
+          : []}\n            data = result[\"data\"]\n            stdout_str = data.get(\"\
           stdout\", \"{}\")\n            try:\n                stdout_data = json.loads(stdout_str)\n\
           \                run_dir = stdout_data.get(\"run_dir\", \"\")\n        \
           \    except json.JSONDecodeError:\n                run_dir = \"\"\n    \
@@ -553,6 +576,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000003'
       position:
@@ -568,7 +595,8 @@ workflow:
       width: 242
     - data:
         code: "import requests\nimport time\n\ndef main(brand_name, topics, regions,\
-          \ competitors_parsed, search_api_base):\n    url = f\"{search_api_base}/api/v1/web_search_batch\"\
+          \ competitors_parsed, search_api_base, geo_api_token):\n    headers = {\"\
+          Authorization\": f\"Bearer {geo_api_token}\"}\n    url = f\"{search_api_base}/api/v1/web_search_batch\"\
           \n    comp_names = [c[\"name\"] for c in competitors_parsed if c.get(\"\
           name\")]\n    comp_names_str = \" \".join(f'\"{n}\"' for n in comp_names[:3])\n\
           \    queries = [\n        f\"{brand_name} {comp_names_str} comparison alternatives\"\
@@ -577,8 +605,8 @@ workflow:
           \ {topics} brands review {regions} 2026\"\n    ]\n    payload = {\"queries\"\
           : \"\\n\".join(queries), \"max_results_per_query\": 5}\n    last_error =\
           \ \"\"\n    for attempt in range(5):\n        try:\n            resp = requests.post(url,\
-          \ json=payload, timeout=90)\n            result = resp.json()\n        \
-          \    if not result.get(\"ok\"):\n                last_error = result.get(\"\
+          \ json=payload, headers=headers, timeout=90)\n            result = resp.json()\n\
+          \            if not result.get(\"ok\"):\n                last_error = result.get(\"\
           error\", \"unknown\")\n                err_str = str(last_error)\n     \
           \           if \"400\" in err_str or \"401\" in err_str or \"403\" in err_str:\n\
           \                    return {\"ok\": False, \"error\": last_error, \"search_results\"\
@@ -629,6 +657,10 @@ workflow:
           - '1729000000015'
           - search_api_base
           variable: search_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000004'
       position:
@@ -643,10 +675,11 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "def main(official_domain, competitors_parsed, search_api_base):\n \
-          \   \"\"\"Single batch fetch with strict <55s budget to fit Dify sandbox\
+        code: "def main(official_domain, competitors_parsed, search_api_base, geo_api_token):\n\
+          \    \"\"\"Single batch fetch with strict <55s budget to fit Dify sandbox\
           \ timeout.\n    Failed URLs are left empty — downstream LLM falls back to\
-          \ search_results.\"\"\"\n    import requests\n\n    endpoint = f\"{search_api_base}/api/v1/web_fetch_batch\"\
+          \ search_results.\"\"\"\n    headers = {\"Authorization\": f\"Bearer {geo_api_token}\"\
+          }\n    import requests\n\n    endpoint = f\"{search_api_base}/api/v1/web_fetch_batch\"\
           \n    urls = []\n    target = official_domain if official_domain.startswith(\"\
           http\") else f\"https://{official_domain}\"\n    urls.append(target)\n \
           \   for c in competitors_parsed[:3]:\n        d = c.get(\"official_domain\"\
@@ -654,26 +687,26 @@ workflow:
           ) else f\"https://{d}\")\n    urls = urls[:4]\n\n    slots = [{\"url\":\
           \ u, \"content\": \"\", \"error\": \"pending\"} for u in urls]\n\n    try:\n\
           \        resp = requests.post(\n            endpoint,\n            json={\"\
-          urls\": \"\\n\".join(urls), \"max_chars_per_url\": 3000},\n            timeout=50\
-          \  # must fit under sandbox 60s limit\n        )\n        result = resp.json()\n\
-          \        if result.get(\"ok\"):\n            for i, r in enumerate(result.get(\"\
-          data\", {}).get(\"results\", [])):\n                if i >= len(slots):\n\
-          \                    break\n                content = r.get(\"content\"\
-          , \"\") or r.get(\"markdown\", \"\") or \"\"\n                if content:\n\
-          \                    slots[i] = {\"url\": slots[i][\"url\"], \"content\"\
-          : content, \"error\": \"\"}\n                else:\n                   \
-          \ slots[i][\"error\"] = r.get(\"error\", \"empty\")[:150]\n        else:\n\
-          \            for s in slots:\n                s[\"error\"] = result.get(\"\
-          error\", \"batch failed\")[:150]\n    except Exception as e:\n        for\
-          \ s in slots:\n            s[\"error\"] = f\"{type(e).__name__}: {str(e)[:100]}\"\
-          \n\n    succeeded = sum(1 for s in slots if s[\"content\"])\n    failed_urls\
-          \ = [s[\"url\"] for s in slots if not s[\"content\"]]\n    error_summary\
-          \ = \"\"\n    if failed_urls:\n        error_summary = f\"Partial fetch:\
-          \ {len(failed_urls)}/{len(urls)} failed; downstream uses search_results\
-          \ fallback\"\n\n    return {\n        \"ok\": succeeded > 0,\n        \"\
-          fetch_results\": slots,\n        \"succeeded_count\": succeeded,\n     \
-          \   \"failed_urls\": failed_urls,\n        \"error\": error_summary\n  \
-          \  }"
+          urls\": \"\\n\".join(urls), \"max_chars_per_url\": 3000},\n            headers=headers,\n\
+          \            timeout=50  # must fit under sandbox 60s limit\n        )\n\
+          \        result = resp.json()\n        if result.get(\"ok\"):\n        \
+          \    for i, r in enumerate(result.get(\"data\", {}).get(\"results\", [])):\n\
+          \                if i >= len(slots):\n                    break\n      \
+          \          content = r.get(\"content\", \"\") or r.get(\"markdown\", \"\"\
+          ) or \"\"\n                if content:\n                    slots[i] = {\"\
+          url\": slots[i][\"url\"], \"content\": content, \"error\": \"\"}\n     \
+          \           else:\n                    slots[i][\"error\"] = r.get(\"error\"\
+          , \"empty\")[:150]\n        else:\n            for s in slots:\n       \
+          \         s[\"error\"] = result.get(\"error\", \"batch failed\")[:150]\n\
+          \    except Exception as e:\n        for s in slots:\n            s[\"error\"\
+          ] = f\"{type(e).__name__}: {str(e)[:100]}\"\n\n    succeeded = sum(1 for\
+          \ s in slots if s[\"content\"])\n    failed_urls = [s[\"url\"] for s in\
+          \ slots if not s[\"content\"]]\n    error_summary = \"\"\n    if failed_urls:\n\
+          \        error_summary = f\"Partial fetch: {len(failed_urls)}/{len(urls)}\
+          \ failed; downstream uses search_results fallback\"\n\n    return {\n  \
+          \      \"ok\": succeeded > 0,\n        \"fetch_results\": slots,\n     \
+          \   \"succeeded_count\": succeeded,\n        \"failed_urls\": failed_urls,\n\
+          \        \"error\": error_summary\n    }"
         code_language: python3
         desc: web_fetch_batch 抓目标官网 + 竞品官网。per-URL 多轮重试（最多 6 轮），失败 URL 不阻塞成功 URL。
         outputs:
@@ -712,6 +745,10 @@ workflow:
           - '1729000000015'
           - search_api_base
           variable: search_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 142
       id: '1729000000005'
       position:
@@ -927,15 +964,16 @@ workflow:
       width: 242
     - data:
         code: "import requests\nimport time\n\ndef main(brand_name, research_data,\
-          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/write_file\"\n\
-          \    path = f\"/tmp/geo-{brand_name}/research.json\"\n    payload = {\"\
+          \ biz_api_base, geo_api_token):\n    headers = {\"Authorization\": f\"Bearer\
+          \ {geo_api_token}\"}\n    url = f\"{biz_api_base}/api/v1/tools/write_file\"\
+          \n    path = f\"/tmp/geo-{brand_name}/research.json\"\n    payload = {\"\
           path\": path, \"content\": research_data}\n    last_error = \"\"\n    for\
           \ attempt in range(3):\n        try:\n            resp = requests.post(url,\
-          \ json=payload, timeout=30)\n            result = resp.json()\n        \
-          \    if not result.get(\"ok\"):\n                return {\"ok\": False,\
-          \ \"error\": result.get(\"error\", \"unknown\"), \"research_path\": \"\"\
-          }\n            return {\"ok\": True, \"research_path\": result[\"data\"\
-          ][\"path\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
+          \ json=payload, headers=headers, timeout=30)\n            result = resp.json()\n\
+          \            if not result.get(\"ok\"):\n                return {\"ok\"\
+          : False, \"error\": result.get(\"error\", \"unknown\"), \"research_path\"\
+          : \"\"}\n            return {\"ok\": True, \"research_path\": result[\"\
+          data\"][\"path\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
           \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
           attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
           \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
@@ -970,6 +1008,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000007'
       position:
@@ -985,26 +1027,27 @@ workflow:
       width: 242
     - data:
         code: "import requests\nimport json\nimport time\n\ndef main(run_dir, research_path,\
-          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_finalize\"\
+          \ biz_api_base, geo_api_token):\n    headers = {\"Authorization\": f\"Bearer\
+          \ {geo_api_token}\"}\n    url = f\"{biz_api_base}/api/v1/tools/competitor_research_finalize\"\
           \n    payload = {\"run_dir\": run_dir, \"research_path\": research_path}\n\
           \    last_error = \"\"\n    for attempt in range(3):\n        try:\n   \
-          \         resp = requests.post(url, json=payload, timeout=60)\n        \
-          \    result = resp.json()\n            if not result.get(\"ok\"):\n    \
-          \            return {\"ok\": False, \"error\": result.get(\"error\", \"\
-          unknown\"), \"selection\": {}, \"status\": \"\"}\n            data = result[\"\
-          data\"]\n            stdout_str = data.get(\"stdout\", \"{}\")\n       \
-          \     try:\n                stdout_data = json.loads(stdout_str)\n     \
-          \           status = stdout_data.get(\"status\", \"\")\n            except\
-          \ json.JSONDecodeError:\n                status = \"\"\n            selection\
-          \ = data.get(\"selection\", {})\n            return {\"ok\": True, \"selection\"\
-          : selection, \"status\": status, \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
-          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
-          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
-          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
-          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
-          \ {e}\", \"selection\": {}, \"status\": \"\"}\n    return {\"ok\": False,\
-          \ \"error\": f\"重试 3 次仍失败: {last_error}\", \"selection\": {}, \"status\"\
-          : \"\"}"
+          \         resp = requests.post(url, json=payload, headers=headers, timeout=60)\n\
+          \            result = resp.json()\n            if not result.get(\"ok\"\
+          ):\n                return {\"ok\": False, \"error\": result.get(\"error\"\
+          , \"unknown\"), \"selection\": {}, \"status\": \"\"}\n            data =\
+          \ result[\"data\"]\n            stdout_str = data.get(\"stdout\", \"{}\"\
+          )\n            try:\n                stdout_data = json.loads(stdout_str)\n\
+          \                status = stdout_data.get(\"status\", \"\")\n          \
+          \  except json.JSONDecodeError:\n                status = \"\"\n       \
+          \     selection = data.get(\"selection\", {})\n            return {\"ok\"\
+          : True, \"selection\": selection, \"status\": status, \"error\": \"\"}\n\
+          \        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
+          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
+          : f\"{type(e).__name__}: {e}\", \"selection\": {}, \"status\": \"\"}\n \
+          \   return {\"ok\": False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"selection\"\
+          : {}, \"status\": \"\"}"
         code_language: python3
         desc: competitor_research_finalize 核验候选，从 stdout 解析 status（带重试）
         outputs:
@@ -1036,6 +1079,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000008'
       position:
@@ -1052,7 +1099,8 @@ workflow:
     - data:
         code: "import requests\nimport time\n\ndef main(brand_name, company_name,\
           \ business_mode, category, official_domain, topics, supplemental, competitors_parsed,\
-          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/normalize_case\"\
+          \ biz_api_base, geo_api_token):\n    headers = {\"Authorization\": f\"Bearer\
+          \ {geo_api_token}\"}\n    url = f\"{biz_api_base}/api/v1/tools/normalize_case\"\
           \n    competitors_en = []\n    for c in competitors_parsed[:3]:\n      \
           \  domain = c.get(\"official_domain\", \"\")\n        if domain and not\
           \ domain.startswith(\"http\"):\n            domain = f\"https://{domain}\"\
@@ -1071,15 +1119,16 @@ workflow:
           \            \"options\": {\"locale\": \"en\", \"generation_stage\": \"\
           discovery\"}\n        }\n    }\n    last_error = \"\"\n    for attempt in\
           \ range(3):\n        try:\n            resp = requests.post(url, json=payload,\
-          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
-          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
-          error\", \"unknown\"), \"normalized\": {}}\n            data = result.get(\"\
-          data\", {})\n            if not data.get(\"ok\"):\n                errors\
-          \ = data.get(\"errors\", [])\n                error_msg = \"; \".join([e.get(\"\
-          message\", str(e)) for e in errors])\n                return {\"ok\": False,\
-          \ \"error\": f\"normalize_case validation failed: {error_msg}\", \"normalized\"\
-          : {}}\n            return {\"ok\": True, \"normalized\": data.get(\"normalized\"\
-          , {}), \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ headers=headers, timeout=60)\n            result = resp.json()\n     \
+          \       if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"normalized\": {}}\n \
+          \           data = result.get(\"data\", {})\n            if not data.get(\"\
+          ok\"):\n                errors = data.get(\"errors\", [])\n            \
+          \    error_msg = \"; \".join([e.get(\"message\", str(e)) for e in errors])\n\
+          \                return {\"ok\": False, \"error\": f\"normalize_case validation\
+          \ failed: {error_msg}\", \"normalized\": {}}\n            return {\"ok\"\
+          : True, \"normalized\": data.get(\"normalized\", {}), \"error\": \"\"}\n\
+          \        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
           \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
           \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
           \        except Exception as e:\n            return {\"ok\": False, \"error\"\
@@ -1138,6 +1187,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 112
       id: '1729000000009'
       position:
@@ -1447,21 +1500,22 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "import requests\nimport time\n\ndef main(brand_name, bank_input, biz_api_base):\n\
-          \    url = f\"{biz_api_base}/api/v1/tools/write_file\"\n    path = f\"/tmp/geo-{brand_name}/question-bank-input.json\"\
-          \n    payload = {\"path\": path, \"content\": bank_input}\n    last_error\
-          \ = \"\"\n    for attempt in range(3):\n        try:\n            resp =\
-          \ requests.post(url, json=payload, timeout=30)\n            result = resp.json()\n\
-          \            if not result.get(\"ok\"):\n                return {\"ok\"\
-          : False, \"error\": result.get(\"error\", \"unknown\"), \"input_path\":\
-          \ \"\"}\n            return {\"ok\": True, \"input_path\": result[\"data\"\
-          ][\"path\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
-          \ requests.exceptions.ConnectionError) as e:\n            last_error = f\"\
-          attempt {attempt+1}/3: {type(e).__name__}: {e}\"\n            if attempt\
-          \ < 2:\n                time.sleep(2 ** attempt)\n        except Exception\
-          \ as e:\n            return {\"ok\": False, \"error\": f\"{type(e).__name__}:\
-          \ {e}\", \"input_path\": \"\"}\n    return {\"ok\": False, \"error\": f\"\
-          重试 3 次仍失败: {last_error}\", \"input_path\": \"\"}"
+        code: "import requests\nimport time\n\ndef main(brand_name, bank_input, biz_api_base,\
+          \ geo_api_token):\n    headers = {\"Authorization\": f\"Bearer {geo_api_token}\"\
+          }\n    url = f\"{biz_api_base}/api/v1/tools/write_file\"\n    path = f\"\
+          /tmp/geo-{brand_name}/question-bank-input.json\"\n    payload = {\"path\"\
+          : path, \"content\": bank_input}\n    last_error = \"\"\n    for attempt\
+          \ in range(3):\n        try:\n            resp = requests.post(url, json=payload,\
+          \ headers=headers, timeout=30)\n            result = resp.json()\n     \
+          \       if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"input_path\": \"\"}\n\
+          \            return {\"ok\": True, \"input_path\": result[\"data\"][\"path\"\
+          ], \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
+          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
+          \        except Exception as e:\n            return {\"ok\": False, \"error\"\
+          : f\"{type(e).__name__}: {e}\", \"input_path\": \"\"}\n    return {\"ok\"\
+          : False, \"error\": f\"重试 3 次仍失败: {last_error}\", \"input_path\": \"\"}"
         code_language: python3
         desc: 把修正后的题库输入对象落盘（带重试）
         outputs:
@@ -1490,6 +1544,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 80
       id: '1729000000011'
       position:
@@ -1505,7 +1563,8 @@ workflow:
       width: 242
     - data:
         code: "import requests\nimport time\n\ndef main(brand_name, normalized, input_path,\
-          \ biz_api_base):\n    url = f\"{biz_api_base}/api/v1/tools/build_question_bank\"\
+          \ biz_api_base, geo_api_token):\n    headers = {\"Authorization\": f\"Bearer\
+          \ {geo_api_token}\"}\n    url = f\"{biz_api_base}/api/v1/tools/build_question_bank\"\
           \n    out_path = f\"/tmp/geo-{brand_name}/question-bank.json\"\n    if not\
           \ normalized.get(\"category_label\"):\n        case_fields = normalized.get(\"\
           case_fields\", {})\n        category = case_fields.get(\"category\", \"\"\
@@ -1514,10 +1573,10 @@ workflow:
           \        normalized[\"brand_object_type\"] = \"company\"\n    payload =\
           \ {\"case_data\": normalized, \"input_path\": input_path, \"out\": out_path}\n\
           \    last_error = \"\"\n    for attempt in range(3):\n        try:\n   \
-          \         resp = requests.post(url, json=payload, timeout=30)\n        \
-          \    result = resp.json()\n            if not result.get(\"ok\"):\n    \
-          \            return {\"ok\": False, \"error\": result.get(\"error\", \"\
-          unknown\"), \"bank_path\": \"\", \"question_count\": 0, \"topic_count\"\
+          \         resp = requests.post(url, json=payload, headers=headers, timeout=30)\n\
+          \            result = resp.json()\n            if not result.get(\"ok\"\
+          ):\n                return {\"ok\": False, \"error\": result.get(\"error\"\
+          , \"unknown\"), \"bank_path\": \"\", \"question_count\": 0, \"topic_count\"\
           : 0}\n            return {\"ok\": True, \"bank_path\": result[\"data\"][\"\
           path\"], \"question_count\": result[\"data\"][\"question_count\"], \"topic_count\"\
           : result[\"data\"][\"topic_count\"], \"error\": \"\"}\n        except (requests.exceptions.Timeout,\
@@ -1566,6 +1625,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 112
       id: '1729000000012'
       position:
@@ -1580,27 +1643,29 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "import requests\nimport json\nimport time\n\ndef main(bank_path, biz_api_base):\n\
-          \    if not bank_path:\n        return {\"ok\": False, \"error\": \"bank_path\
+        code: "import requests\nimport json\nimport time\n\ndef main(bank_path, biz_api_base,\
+          \ geo_api_token):\n    headers = {\"Authorization\": f\"Bearer {geo_api_token}\"\
+          }\n    if not bank_path:\n        return {\"ok\": False, \"error\": \"bank_path\
           \ 为空\", \"valid\": False, \"errors_json\": \"[]\", \"warnings_json\": \"\
           []\", \"error_count\": 0, \"warning_count\": 0, \"first_errors\": \"\"}\n\
           \    url = f\"{biz_api_base}/api/v1/tools/validate_question_bank\"\n   \
           \ payload = {\"bank_path\": bank_path}\n    last_error = \"\"\n    for attempt\
           \ in range(3):\n        try:\n            resp = requests.post(url, json=payload,\
-          \ timeout=60)\n            result = resp.json()\n            if not result.get(\"\
-          ok\"):\n                return {\"ok\": False, \"error\": result.get(\"\
-          error\", \"unknown\"), \"valid\": False, \"errors_json\": \"[]\", \"warnings_json\"\
-          : \"[]\", \"error_count\": 0, \"warning_count\": 0, \"first_errors\": \"\
-          \"}\n            data = result[\"data\"]\n            errors = data.get(\"\
-          errors\", [])\n            warnings = data.get(\"warnings\", [])\n     \
-          \       first = \"\\n\".join([f\"{i+1}. {e}\" for i, e in enumerate(errors[:5])])\n\
-          \            if len(errors) > 5:\n                first += f\"\\n... 还有\
-          \ {len(errors)-5} 个错误\"\n            return {\"ok\": True, \"valid\": data.get(\"\
-          valid\", False), \"errors_json\": json.dumps(errors, ensure_ascii=False),\
-          \ \"warnings_json\": json.dumps(warnings, ensure_ascii=False), \"error_count\"\
-          : len(errors), \"warning_count\": len(warnings), \"first_errors\": first,\
-          \ \"error\": \"\"}\n        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError)\
-          \ as e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
+          \ headers=headers, timeout=60)\n            result = resp.json()\n     \
+          \       if not result.get(\"ok\"):\n                return {\"ok\": False,\
+          \ \"error\": result.get(\"error\", \"unknown\"), \"valid\": False, \"errors_json\"\
+          : \"[]\", \"warnings_json\": \"[]\", \"error_count\": 0, \"warning_count\"\
+          : 0, \"first_errors\": \"\"}\n            data = result[\"data\"]\n    \
+          \        errors = data.get(\"errors\", [])\n            warnings = data.get(\"\
+          warnings\", [])\n            first = \"\\n\".join([f\"{i+1}. {e}\" for i,\
+          \ e in enumerate(errors[:5])])\n            if len(errors) > 5:\n      \
+          \          first += f\"\\n... 还有 {len(errors)-5} 个错误\"\n            return\
+          \ {\"ok\": True, \"valid\": data.get(\"valid\", False), \"errors_json\"\
+          : json.dumps(errors, ensure_ascii=False), \"warnings_json\": json.dumps(warnings,\
+          \ ensure_ascii=False), \"error_count\": len(errors), \"warning_count\":\
+          \ len(warnings), \"first_errors\": first, \"error\": \"\"}\n        except\
+          \ (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as\
+          \ e:\n            last_error = f\"attempt {attempt+1}/3: {type(e).__name__}:\
           \ {e}\"\n            if attempt < 2:\n                time.sleep(2 ** attempt)\n\
           \        except Exception as e:\n            return {\"ok\": False, \"error\"\
           : f\"{type(e).__name__}: {e}\", \"valid\": False, \"errors_json\": \"[]\"\
@@ -1648,6 +1713,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000013'
       position:
@@ -1662,17 +1731,18 @@ workflow:
       type: custom
       width: 242
     - data:
-        code: "import requests\nimport json\n\ndef main(bank_path, biz_api_base):\n\
-          \    empty = {\n        \"ok\": False, \"error\": \"\", \"bank_path\": bank_path\
+        code: "import requests\nimport json\n\ndef main(bank_path, biz_api_base, geo_api_token):\n\
+          \    headers = {\"Authorization\": f\"Bearer {geo_api_token}\"}\n    empty\
+          \ = {\n        \"ok\": False, \"error\": \"\", \"bank_path\": bank_path\
           \ or \"\",\n        \"questions\": [], \"question_count\": 0,\n        \"\
           schema_version\": \"\", \"config_json\": \"{}\"\n    }\n    if not bank_path:\n\
           \        empty[\"error\"] = \"bank_path is empty\"\n        return empty\n\
           \    try:\n        resp = requests.post(\n            f\"{biz_api_base}/api/v1/tools/read_file\"\
-          ,\n            json={\"path\": bank_path},\n            timeout=30\n   \
-          \     )\n        result = resp.json()\n        if not result.get(\"ok\"\
-          ):\n            empty[\"error\"] = result.get(\"error\", \"unknown\")\n\
-          \            return empty\n        content_str = result[\"data\"].get(\"\
-          content\", \"{}\")\n        try:\n            bank = json.loads(content_str)\n\
+          ,\n            json={\"path\": bank_path},\n            headers=headers,\n\
+          \            timeout=30\n        )\n        result = resp.json()\n     \
+          \   if not result.get(\"ok\"):\n            empty[\"error\"] = result.get(\"\
+          error\", \"unknown\")\n            return empty\n        content_str = result[\"\
+          data\"].get(\"content\", \"{}\")\n        try:\n            bank = json.loads(content_str)\n\
           \        except json.JSONDecodeError as e:\n            empty[\"error\"\
           ] = f\"bank file is not valid JSON: {e}\"\n            return empty\n  \
           \      questions = bank.get(\"questions\", [])\n        config = bank.get(\"\
@@ -1720,6 +1790,10 @@ workflow:
           - '1729000000015'
           - biz_api_base
           variable: biz_api_base
+        - value_selector:
+          - '1729000000015'
+          - geo_api_token
+          variable: geo_api_token
       height: 96
       id: '1729000000017'
       position:

@@ -3,6 +3,15 @@
 
 import yaml
 import json
+import ast
+import copy
+import re
+from pathlib import Path
+
+DIFY_PUBLIC_ORIGIN = "http://123.57.162.4"
+GEO_TOKEN_PLACEHOLDER = "CHANGE_ME_GEO_ACCESS_TOKEN"
+CONFIG_NODE_ID = "1729000000015"
+DSL_PATH = Path(__file__).with_name("workflow.dsl.yaml")
 
 # Node IDs (timestamp-style strings)
 NODES = {
@@ -50,13 +59,14 @@ CODE_RETRY_TEMPLATE = '''
 import requests
 import time
 
-def main({inputs}):
+def main({inputs}, geo_api_token):
+    headers = {"Authorization": f"Bearer {geo_api_token}"}
     url = f"{{{base_var}}}/api/v1/tools/{tool_name}"
     {payload_setup}
     last_error = ""
     for attempt in range(3):
         try:
-            resp = requests.post(url, json=payload, timeout={timeout})
+            resp = requests.post(url, json=payload, headers=headers, timeout={timeout})
             result = resp.json()
             if not result.get("ok"):
                 return {{"ok": False, "error": result.get("error", "unknown"), {error_defaults}}}
@@ -191,8 +201,180 @@ Generate the question bank input object. Requirements:
 
 Output only JSON object, no other text."""
 
+# Deployment constants and DSL transformation helpers
+DIFY_PUBLIC_ORIGIN = "http://123.57.162.4"
+GEO_TOKEN_PLACEHOLDER = "CHANGE_ME_GEO_ACCESS_TOKEN"
+CONFIG_NODE_ID = "1729000000015"
+DSL_PATH = Path(__file__).with_name("workflow.dsl.yaml")
+
+
+def _is_request_post_call(node) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "requests"
+        and node.func.attr == "post"
+    )
+
+
+def _request_post_calls(code: str):
+    return [
+        node for node in ast.walk(ast.parse(code))
+        if _is_request_post_call(node)
+    ]
+
+
+def _validate_request_headers(code: str, title: str) -> None:
+    calls = _request_post_calls(code)
+    if not calls:
+        raise ValueError(f"{title}: no requests.post call found")
+    for call in calls:
+        if not any(keyword.arg == "headers" for keyword in call.keywords):
+            raise ValueError(f"{title}: requests.post is missing headers")
+
+
+def _add_token_argument(code: str) -> str:
+    if re.search(r"(?m)^def main\(.*\bgeo_api_token\b.*\):", code):
+        return code
+    return re.sub(
+        r"(?m)^def main\(([^)]*)\):$",
+        lambda match: (
+            "def main(geo_api_token):"
+            if not match.group(1).strip()
+            else "def main({}, geo_api_token):".format(match.group(1))
+        ),
+        code,
+        count=1,
+    )
+
+
+def _ensure_headers_variable(code: str) -> str:
+    def move_header_after_docstring(match):
+        return match.group(1) + match.group(3) + match.group(2)
+
+    code = re.sub(
+        r"(?s)^(def main\([^\n]*\):\n)(    headers = \{\"Authorization\": f\"Bearer \{geo_api_token\}\"\}\n)((?:[ \t]*(?:\"\"\"|''')(?:.|\n)*?(?:\"\"\"|''')[ \t]*\n)?)",
+        move_header_after_docstring,
+        code,
+        count=1,
+    )
+    if 'headers = {"Authorization": f"Bearer {geo_api_token}"}' in code:
+        return code
+    return re.sub(
+        r"(?s)^(def main\([^\n]*\):\n)((?:[ \t]*(?:\"\"\"|''')(?:.|\n)*?(?:\"\"\"|''')[ \t]*\n)?)",
+        lambda match: (
+            match.group(1)
+            + match.group(2)
+            + '    headers = {"Authorization": f"Bearer {geo_api_token}"}\n'
+        ),
+        code,
+        count=1,
+    )
+
+
+def _add_headers_to_requests_post(code: str) -> str:
+    calls = _request_post_calls(code)
+    if calls and all(
+        any(keyword.arg == "headers" for keyword in call.keywords)
+        for call in calls
+    ):
+        return code
+    code = re.sub(
+        r"(requests\.post\([^)]*?json=payload,\s*)timeout=",
+        r"\1headers=headers, timeout=",
+        code,
+    )
+    def add_multiline_header(match):
+        indentation = match.group(1).lstrip("\r\n")
+        return f",\n{indentation}headers=headers,\n{indentation}timeout="
+
+    code = re.sub(r",(\s*\n\s*)timeout=", add_multiline_header, code)
+    return code
+
+
+def _ensure_code_node_token_input(node: dict) -> None:
+    data = node["data"]
+    variables = data.setdefault("variables", [])
+    if not any(variable.get("variable") == "geo_api_token" for variable in variables):
+        variables.append({
+            "value_selector": [CONFIG_NODE_ID, "geo_api_token"],
+            "variable": "geo_api_token",
+        })
+
+
+def apply_deployment_updates(dsl: dict) -> dict:
+    result = copy.deepcopy(dsl)
+    workflow = result["workflow"]
+    env_variables = workflow.setdefault("environment_variables", [])
+    env_by_name = {item["name"]: item for item in env_variables}
+
+    for name, value, description in (
+        ("biz_api_base", DIFY_PUBLIC_ORIGIN, "GEO 业务工具服务端基础 URL"),
+        ("search_api_base", DIFY_PUBLIC_ORIGIN, "GEO 联网工具服务端基础 URL"),
+    ):
+        if name in env_by_name:
+            env_by_name[name]["value"] = value
+            env_by_name[name]["description"] = description
+
+    if "geo_api_token" not in env_by_name:
+        env_variables.append({
+            "description": "GEO API Bearer Token（请在 Dify 环境变量中填写真实值）",
+            "id": "a1b2c3d4-0003-4000-8000-000000000003",
+            "name": "geo_api_token",
+            "selector": ["env", "geo_api_token"],
+            "value": GEO_TOKEN_PLACEHOLDER,
+            "value_type": "string",
+        })
+    else:
+        token = env_by_name["geo_api_token"]
+        token["description"] = "GEO API Bearer Token（请在 Dify 环境变量中填写真实值）"
+        token["selector"] = ["env", "geo_api_token"]
+        token["value_type"] = "string"
+        token.setdefault("id", "a1b2c3d4-0003-4000-8000-000000000003")
+        token.setdefault("value", GEO_TOKEN_PLACEHOLDER)
+
+    nodes = workflow["graph"]["nodes"]
+    config = next(node for node in nodes if node["id"] == CONFIG_NODE_ID)
+    config_data = config["data"]
+    config_data["code"] = (
+        "def main(biz_api_base: str, search_api_base: str, geo_api_token: str):\n"
+        "    return {\n"
+        '        "biz_api_base": biz_api_base,\n'
+        '        "search_api_base": search_api_base,\n'
+        '        "geo_api_token": geo_api_token,\n'
+        "    }"
+    )
+    config_data["outputs"]["geo_api_token"] = {"children": None, "type": "string"}
+    config_data["variables"] = [
+        {"value_selector": ["env", name], "variable": name}
+        for name in ("biz_api_base", "search_api_base", "geo_api_token")
+    ]
+
+    for node in nodes:
+        data = node.get("data") or {}
+        code = data.get("code", "")
+        if "requests.post" not in code:
+            continue
+        title = data.get("title", node["id"])
+        code = _add_token_argument(code)
+        code = _ensure_headers_variable(code)
+        code = _add_headers_to_requests_post(code)
+        compile(code, f"<{title}>", "exec")
+        _validate_request_headers(code, title)
+        data["code"] = code
+        _ensure_code_node_token_input(node)
+
+    return result
+
+
+def build_dsl() -> dict:
+    """Apply the canonical deployment contract to the maintained workflow template."""
+    return apply_deployment_updates(yaml.safe_load(DSL_PATH.read_text(encoding="utf-8")))
+
+
 # Build complete DSL
-def build_dsl():
+def _build_legacy_skeleton_dsl():
     dsl = {
         "app": {
             "description": "GEO Presales Agent A - Case building, competitor research, question bank generation (all-English)",
@@ -264,5 +446,8 @@ def build_dsl():
 
 if __name__ == "__main__":
     dsl = build_dsl()
-    # Output will be completed in next iteration
-    print("DSL structure ready, generating nodes...")
+    DSL_PATH.write_text(
+        yaml.safe_dump(dsl, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    print(f"Updated {DSL_PATH}")

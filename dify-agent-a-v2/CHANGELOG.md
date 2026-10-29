@@ -1,5 +1,12 @@
 # GEO Agent A v2 - All-English Refactoring
 
+## 2026-10-29：统一 Bearer 鉴权与公网服务地址
+
+- 所有 11 个 `requests.post` 调用节点统一携带 `Authorization: Bearer <geo_api_token>`。
+- `geo_api_token` 通过 Dify 环境变量注入，并经节点 0 传递给各代码节点；仓库仅保留占位符，不保存真实密钥。
+- `biz_api_base` 与 `search_api_base` 默认更新为 `http://123.57.162.4`。
+- 新增 DSL 回归测试，校验鉴权参数、请求头、环境变量透传、代码语法和转换幂等性。
+
 ## 核心改动
 
 ### 1. 全链路英文字段
