@@ -24,7 +24,7 @@
 
 ## 售前诊断
 
-售前诊断报告是促成交用的，拆成四个环节，每个环节各有负责的 Skill，互不越界：
+售前诊断报告是促成交用的，拆成四个环节，每个环节各有负责的 Skill，互不越界。线上给销售用时，只有 ② 生词换成本仓库的 Skill，③ 采集与出报告继续走线上 Dify 流程，销售只填表单、拿报告，中间没有修改生成词的入口；下面写的 ③ ④ 是本地跑法。
 
 ```text
 ① 准备品牌信息（Case） -> ② 生词 -> ③ 采集与出报告 -> ④ 修改已交付报告
@@ -34,7 +34,7 @@
 | --- | --- | --- | --- |
 | ① 准备品牌信息 | 品牌资料 | Case：品牌、官网、品类、业务描述、1–3 个竞品 | `geo-presales-eval-case-builder`（线上由销售填表单） |
 | ② 生词 | Case | 每个市场一批诊断题，9 个字段 | `geo-presales-prompt-builder` |
-| ③ 采集与出报告 | 诊断题 + Case | 单文件 HTML 诊断报告 | `geo-presales-pipeline` |
+| ③ 采集与出报告 | 诊断题 + Case | 单文件 HTML 诊断报告 | 线上：现有 Dify 流程；本地：`geo-presales-pipeline` |
 | ④ 修改已交付报告 | 已交付报告 | 修正后的品牌识别、客户结论、上传 CSV | `geo-presales-report-audit`、`geo-presales-report-editor` |
 
 ### ② 生词（`geo-presales-prompt-builder`）
