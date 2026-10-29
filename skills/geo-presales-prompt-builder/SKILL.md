@@ -15,7 +15,7 @@ metadata:
 | 售前诊断的环节 | 由谁做 |
 |---|---|
 | 生词 | 本 skill |
-| 采集 AI 回答、出 HTML 报告 | 线上：现有的 Dify 流程；本地：`geo-presales-pipeline` 编排，`geo-presales-report-builder` 等执行 |
+| 采集 AI 回答、出 HTML 报告 | 线上：沿用线上原有流程；本地：`geo-presales-pipeline` 编排，`geo-presales-report-builder` 等执行 |
 
 生词用的是选词方法：先做公开调研，判断属性相对竞品的位置，画买家处境矩阵，从矩阵里聚主题，再写题。写题规则只有一份，在 `geo-prompt-selection-builder`，本 skill 按章节引用、不复制；那个 skill 里的对客确认表、试跑、锁定正式题，售前都不做。
 
@@ -23,7 +23,7 @@ metadata:
 
 `query, question_zh, topic, diagnosis_intent, tags, question_types, purchase_intent, persona_name, scene_name`
 
-研发可以走上传 CSV，也可以走接口传入，字段相同。线上给销售用时，只有生词这一步换成本 skill，生成的题直接进 Dify 采集与报告流程，不给销售修改生成词的入口。
+研发可以走上传 CSV，也可以走接口传入，字段相同。线上给销售用时，只有生词这一步换成本 skill；生成的题交给线上原有的采集与报告流程，人工改词沿用原来的逻辑。
 
 ## 怎么做
 
