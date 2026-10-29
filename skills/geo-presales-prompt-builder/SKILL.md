@@ -1,9 +1,9 @@
 ---
 name: geo-presales-prompt-builder
-description: Generate or validate Discovery-first GEO Prompts from an evaluation Case, and supplement competitor or evaluation questions when requested. Use evidence-backed buyer intent, Topic-scoped Attribute planning, and free Tags; do not create Topics, research competitors, collect answers, or calculate metrics.
+description: Generate or validate Discovery-first GEO Prompts from an evaluation Case, and supplement competitor or evaluation questions when requested. Use evidence-backed buyer intent, Topic-scoped Attribute planning, and free Tags. In selection mode (online upload only takes the old Case fields), write the bank with the geo-prompt-selection-builder method, cluster Topics from its matrix and export the nine-column upload CSV with its export script. Otherwise do not create Topics; never research competitors, collect answers, or calculate metrics.
 metadata:
   author: Overseas GEO Project
-  version: "4.25.0"
+  version: "4.26.0"
 ---
 
 # GEO Presales Prompt Builder
@@ -31,6 +31,31 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 | 题型 | 默认只出发现型；按需补竞品、评价、品类认知；不出信息型 | 七类，含信息型 |
 
 两处出现冲突时以选词 skill 为准，并回来把本 skill 改掉。
+
+## 选词模式：用选词逻辑出售前诊断题（2026-10-29）
+
+线上「配置海外诊断参数」表单只收 Case 那几个旧字段，但题可以按选词的方法由 AI 调研后写；对线上来说，只要最终的上传 CSV 能传上去就行。用户要求「按选词逻辑出售前题」时走这一节，出题规则以选词 SKILL 的 *Workflow* 为准。下文「执行流程」「输出与验证」只管默认模式。
+
+- **输入**：照常运行 `scripts/normalize_case.py`，用归一化后的 Case 字段。线上表单的旧字段不改。
+- **要做的步骤**（按选词 Workflow 的顺序）：
+  1. 研究预跑：每个产品线 × 市场语言各跑 1 次品类认知，目标品牌和每个竞品各跑 1 次评估式。
+  2. 公开信号：搜索、评价、社区。
+  3. 属性池：只判相对竞品。
+  4. 矩阵行与行优先级：线上没有「业务目标」字段，业务重点从 Case 的差异化优势和补充内容里取，并在优先级依据里写明出处。
+  5. 从矩阵的 P1/P2 行聚主题。
+  6. 写题、去重。
+- **跳过的步骤**：售前拿不到这些，不做——客户数据（GSC、CRM 等）、对客确认 Base、试跑排序、锁定正式题。
+- **主题**：主题从矩阵聚出来，不用 Case 里填的主题。上传时关键词来源选「手动上传」，表单上的监测主题按聚出的主题回填。主题名要和 CSV 的 `topic` 逐字一致，主题名不一致时导出加 `--topic-label`。主题个数不限 3 个（Suda 让研发放开，放开前最多 3 个）。每个主题至少 5 条；每份上传 CSV（一个市场）不超过 60 条。超了要在写题阶段删减，导出脚本不会自动截断。
+- **题型**：按选词的规则。默认不出问题解决；品类认知只用于研究预跑，不进题库。替代题在售前诊断里算可见度和情感（Suda 2026-10-29），需要研发在后端加一个 `diagnosis_intent` 枚举值（建议叫 `alternatives`，对应 `question_types` 为 `visibility,sentiment`）。研发上线之前不出替代题，因为现在只能挂在 `competitor` 下，只算情感。上线后要同步改三处：导出脚本的 `INTENT` / `QUESTION_TYPES`、本 skill validator 的 `V8_CSV_QUESTION_TYPES`、`shared/canonical-intent-mapping.md`。
+- **门禁与导出**：
+  - 题库用选词的 `validate_after_sales_set.py` 检查，不跑本 skill 的 `validate_question_bank.py`——它要求 `Prompt Type:` Tag 和 `quotas` 结构，对选词题库会报一堆不相干的错（brand-o 肯尼亚题库报了 185 条）。
+  - 「未批准不计覆盖」这类依赖品牌方确认的告警在售前属于正常，写进交接文件即可。
+  - 导出用选词的 `scripts/export_upload_csv.py <bank.json> --out <目录>`：每个市场出一份 9 列 CSV，脚本退出码 0 才算可以上传。
+- **本 skill 里以下旧规则在选词模式下不适用**，以选词为准：
+  - `attribute_plan` 的重要性和可改变性判断：属性池只判相对竞品，优先级在矩阵行上判。
+  - 评价题默认用命令式：题库里写买家问法，`Evaluate …` 句式只用于研究预跑。
+  - Coverage / Depth 主题。
+  - 品类认知可以补进题库。
 
 ## 开始前读取
 

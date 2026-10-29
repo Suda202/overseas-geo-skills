@@ -4,8 +4,12 @@
   业务范围     ← case_fields、冻结竞品、采集配置（市场、平台）、调研文件的 scope_facts
   买家原话     ← 调研文件的 buyer_quotes
   品牌事实核查 ← 调研文件的 fact_checks
-  属性池       ← attribute_plan：每个属性一行，写重要性 / 可改变性 / 相对竞品（模板 2026-10-22 起重要性判在属性池）
-  提示词矩阵   ← attribute_plan：每个 Topic × 属性一行，用「属性关联」挂属性池；没有属性的品类基线题挂在空属性行
+  属性池       ← attribute_plan：每个属性一行，写相对竞品（旧模板副本另写重要性 / 可改变性）
+  主题         ← config.topics：每个主题一行（2026-10-27 起）
+  提示词矩阵   ← attribute_plan：每个 Topic × 属性一行，用「属性关联」挂属性池；没有属性的品类题挂在空属性行。
+                 新模板（2026-10-28 起，矩阵有「优先级依据」）另写「主题」关联和「优先级」：售前档位只作草稿，
+                 优先级依据注明「待按业务重点 × 买家证据重判」——售前没有业务重点信息，本脚本不替售后判
+  提示词库     ← questions；新模板另挂「属性」，优先级按所在行预填
   提示词库     ← questions；「证据」按调研文件的 prompt_evidence 挂买家原话
 基线三表只删【示例】行，不写；需要品牌方提供的数据保持模板原样。调研文件格式见 references/public-research.md。
 
@@ -43,16 +47,16 @@ WIKI_URL_PREFIX = _target("wiki_url_prefix")
 DEFAULT_PLATFORMS = "ChatGPT、Gemini、Google AI Mode、Google AI Overviews"
 
 INTENT_ZH = {"Discovery": "发现", "Competitor": "对比", "Alternatives": "替代", "Evaluation": "评价",
-             "Verification": "验证", "Accuracy": "准确性", "Category Awareness": "品类认知", "Information": "信息"}
+             "Verification": "验证", "Accuracy": "准确性", "Category Awareness": "品类认知", "Information": "问题解决"}
 STAGE_BY_INTENT = {"发现": "发现", "品类认知": "发现", "对比": "对比", "替代": "替代方案", "评价": "验证",
-                   "验证": "验证", "准确性": "验证", "信息": "解决问题"}
+                   "验证": "验证", "准确性": "验证", "问题解决": "解决问题"}
 CORE_INTENTS = {"发现", "品类认知"}
 AUDIENCE_FIELD = re.compile(r"^(目标客户|目标企业画像) ?\d+$")
 # 模板里的选项值；调研文件用别的值会被拦下（受众、涉及品牌、产品线按本 Case 重建，不在此列）
 OPTIONS = {"来源类型": {"搜索数据", "PAA 与相关搜索", "评价", "社区", "销售记录", "客服记录", "GSC", "站内搜索", "AI 回答"},
            "旅程阶段": {"发现", "解决问题", "评估", "对比", "替代方案", "验证", "交易", "购后支持"},
            "证据可信度": {"高", "中", "低"}, "品牌方要做什么": {"改官网", "提供材料"}}
-WRITE_TABLES = ("业务范围", "买家原话", "品牌事实核查", "属性池", "提示词矩阵", "提示词库")
+WRITE_TABLES = ("业务范围", "买家原话", "品牌事实核查", "属性池", "主题", "提示词矩阵", "提示词库")  # 主题表 2026-10-27 加回
 
 
 def tag_value(q, prefix):
@@ -162,8 +166,10 @@ def build_spec(bank, market, platforms, research=None):
         pool[name] = row
         return row
 
-    def add_row(topic_id, attribute, **cols):
-        row = {"_key": f"{topic_id}|{attribute}", "切片编号": f"M-{len(matrix) + 1:03d}", "产品线": [line],
+    def add_row(topic_id, attribute, tier="P2", basis="", **cols):
+        row = {"_key": f"{topic_id}|{attribute}", "_topic": topic_zh[topic_id], "切片编号": f"M-{len(matrix) + 1:03d}",
+               "产品线": [line], "优先级": [tier],
+               "优先级依据": basis or f"售前档位 {tier}，待按业务重点 × 买家证据重判（草稿）",
                "受众": [cols.pop("受众", base_audience)], **({"_attr": attribute} if attribute else {}), **cols}
         matrix.append(row)
         slot[(topic_id, attribute)] = row
@@ -172,7 +178,7 @@ def build_spec(bank, market, platforms, research=None):
     for plan in cfg.get("attribute_plan", []):
         tid = plan["topic_id"]
         if any(q["topic_id"] == tid and not tag_value(q, "Attribute") for q in questions):
-            add_row(tid, "", 备注=f"品类基线（{topic_zh[tid]}）：不带属性条件，测 AI 无条件列出哪些品牌")
+            add_row(tid, "", 备注=f"不带条件的品类题（{topic_zh[tid]}）：测 AI 无条件列出哪些品牌")
         for tier in ("P1", "P2", "P3"):
             for e in plan["priorities"][tier]:
                 cols = {"备注": f"售前档位 {tier}。（来源字段：{e['source_field']}）"}
@@ -182,10 +188,11 @@ def build_spec(bank, market, platforms, research=None):
                     ungraded.append(f"{topic_zh[tid]} / {e['attribute']}")
                     cols["备注"] = "售前未记重要性与可改变性，本行优先级公式不可信。" + cols["备注"]
                 add_attr(e["attribute"], e, e.get("decision_reason", ""))
-                add_row(tid, e["attribute"], **cols)
+                add_row(tid, e["attribute"], tier=tier, **cols)
         for e in plan.get("excluded", []):
             add_attr(e["candidate"], None, f"售前排除：{e['reason']}")
-            add_row(tid, e["candidate"], 备注=f"售前排除，首期不配提示词：{e['reason']}（来源字段：{e['source_field']}）")
+            add_row(tid, e["candidate"], tier="P3", basis=f"售前排除：{e['reason']}",
+                    备注=f"售前排除，首期不配提示词：{e['reason']}（来源字段：{e['source_field']}）")
 
     for q in questions:
         intent = INTENT_ZH.get(tag_value(q, "Intent") or "", "发现")
@@ -196,8 +203,9 @@ def build_spec(bank, market, platforms, research=None):
         row.setdefault("_intents", []).append(intent)
         prompts.append({"编号": q["question_id"], "提示词": q["monitoring_prompt"], "中文含义": q.get("zh_translation", ""),
                         "主题": [topic_zh[q["topic_id"]]], "产品线": [line], "提示词类型": [intent], "状态": ["待审核"],
-                        "AI 认知差距": ["待基线"],
+                        "AI 认知差距": ["待基线"], "可改变性": ["待试跑"],
                         "库分层": ["核心" if intent in CORE_INTENTS else "监测"], "所属切片": ["@" + row["_key"]],
+                        "优先级": row["优先级"], **({"_attr": attribute} if attribute else {}),
                         **({"证据": ["@" + x for x in evidence[q["question_id"]]]} if evidence.get(q["question_id"]) else {})})
     for row in matrix:
         intents = row.pop("_intents", [])
@@ -207,6 +215,9 @@ def build_spec(bank, market, platforms, research=None):
         elif "售前排除" not in row["备注"]:
             row["备注"] = "首期不配提示词：售前题量内未覆盖。" + row["备注"]
     no_evidence = [p["编号"] for p in prompts if "证据" not in p] if research else []
+    # 主题表（2026-10-27 起）：一个主题一行；新模板的计划题数是公式，写入时按字段过滤掉
+    topics = [{"主题": topic_zh[t["topic_id"]], "产品线": [line], "状态": ["候选"],
+               "计划题数": sum(1 for q in questions if q["topic_id"] == t["topic_id"])} for t in cfg["topics"]]
     # 2026-10-23：非基础受众各占属性池一行「买家角色」，属性名与矩阵受众一字不差，重要性给该受众的切片封顶；
     # 售前不判业务分量，三列留空待售后补。业务目标、营销活动只有品牌方能给，留空行待补。
     for row in matrix:
@@ -221,11 +232,11 @@ def build_spec(bank, market, platforms, research=None):
     scope += [{"项目": "业务目标（1）", "内容": ""}, {"项目": "营销活动（1）", "内容": ""}]
     if market:  # 模板 2026-10-19 起每张表有「市场」字段，一份表可放多个市场
         mname = market.split("/")[0].strip()
-        for rows in (scope, quotes, facts, matrix, prompts):  # 属性池没有「市场」字段：属性跨市场判一次
+        for rows in (scope, quotes, facts, topics, matrix, prompts):  # 属性池没有「市场」字段：属性跨市场判一次
             for r in rows:
                 r["市场"] = [mname]
     return {"业务范围": scope, "买家原话": quotes, "品牌事实核查": facts, "属性池": list(pool.values()),
-            "提示词矩阵": matrix, "提示词库": prompts,
+            "主题": topics, "提示词矩阵": matrix, "提示词库": prompts,
             "_ungraded": ungraded, "_conflicts": conflicts, "_no_evidence": no_evidence,
             "_title": f"{cf['品牌名称']} 售前分级参考（内部，{market or '市场未填'}）"}
 
@@ -329,14 +340,31 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     # 2) 单选选项换成本 Case 的值
     def want(table, col):
         return sorted({x for r in spec[table] for x in (r.get(col) or [])})
+    meta = {t: {f["name"]: f.get("type") for f in lk.fields(tables[t])} for t in WRITE_TABLES if t in tables}
+    v2 = "优先级依据" in meta.get("提示词矩阵", {})  # 2026-10-28 起的新模板
+
+    dropped: dict[str, set] = {}
+
+    def writable(table, row):
+        kinds = meta.get(table, {})
+        miss = {k for k in row if not k.startswith("_") and k not in kinds}
+        if miss:
+            dropped.setdefault(table, set()).update(miss)
+        return {k: v for k, v in row.items()
+                if not k.startswith("_") and k in kinds and kinds[k] not in ("formula", "lookup")}
+    if v2:  # 新模板属性池没有受众行；AI 认知差距默认值改为「待试跑」
+        spec["属性池"] = [r for r in spec["属性池"] if r.get("类别") != ["买家角色"]]
+        for r in spec["提示词库"]:
+            r["AI 认知差距"] = ["待试跑"]
     for table, col in (("业务范围", "市场"), ("买家原话", "市场"), ("品牌事实核查", "市场"), ("提示词矩阵", "市场"), ("提示词库", "市场"),
                        ("提示词矩阵", "产品线"), ("提示词矩阵", "受众"), ("提示词库", "产品线"), ("提示词库", "主题"),
+                       ("主题", "市场"), ("主题", "产品线"),
                        ("买家原话", "产品线"), ("买家原话", "受众"), ("买家原话", "涉及品牌"), ("品牌事实核查", "产品线"),
                        ("属性池", "产品线")):
-        if not spec[table]:
+        if not spec[table] or table not in tables:
             continue
         f = next((f for f in lk.fields(tables[table]) if f["name"] == col), None)
-        if f is None:  # 2026-10-19 前复制的副本没有「市场」字段
+        if f is None or f.get("type") != "select":  # 2026-10-19 前的副本没有「市场」；新模板提示词库「主题」是引用
             continue
         lk.run("+field-update", "--table-id", tables[table], "--field-id", f["id"], extra=("--yes",),
                payload={"name": col, "type": "select", "multiple": bool(f.get("multiple")),
@@ -349,32 +377,45 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
         if key in why and key not in seen:
             r["为什么重要"] = why[key]
         seen.add(key)
-    lk.create(tables["业务范围"], spec["业务范围"])
+    lk.create(tables["业务范围"], [writable("业务范围", r) for r in spec["业务范围"]])
     if spec["品牌事实核查"]:
-        lk.create(tables["品牌事实核查"], spec["品牌事实核查"])
+        lk.create(tables["品牌事实核查"], [writable("品牌事实核查", r) for r in spec["品牌事实核查"]])
     qid = dict(zip((q["输入编号"] for q in spec["买家原话"]),
-                   lk.create(tables["买家原话"], spec["买家原话"]) if spec["买家原话"] else []))
+                   lk.create(tables["买家原话"], [writable("买家原话", r) for r in spec["买家原话"]])
+                   if spec["买家原话"] else []))
     if "属性池" not in tables:  # 2026-10-20 前复制的副本没有属性池，矩阵也没有「属性关联」
         raise SystemExit("这份副本没有「属性池」表，是 2026-10-20 前的旧结构；请从当前模板重新复制")
     aid = dict(zip((r["属性"] for r in spec["属性池"]),
-                   lk.create(tables["属性池"], spec["属性池"]) if spec["属性池"] else []))
+                   lk.create(tables["属性池"], [writable("属性池", r) for r in spec["属性池"]]) if spec["属性池"] else []))
+    tid = {}
+    if "主题" in tables:  # 2026-10-27 前复制的副本没有主题表
+        tid = dict(zip((r["主题"] for r in spec["主题"]),
+                       lk.create(tables["主题"], [writable("主题", r) for r in spec["主题"]])))
+    else:
+        print("这份副本没有「主题」表（2026-10-27 前的结构），主题只写进提示词库「主题」", file=sys.stderr)
     mrows = []
     for r in spec["提示词矩阵"]:
-        row = {k: v for k, v in r.items() if not k.startswith("_")}
+        row = writable("提示词矩阵", r)
         if r.get("_attr"):
             row["属性关联"] = [{"id": aid[r["_attr"]]}]
+        if v2 and r["_topic"] in tid:
+            row["主题"] = [{"id": tid[r["_topic"]]}]
         mrows.append(row)
     mid = dict(zip((r["_key"] for r in spec["提示词矩阵"]), lk.create(tables["提示词矩阵"], mrows)))
     prows = []
     for p in spec["提示词库"]:
-        row = {**p, "所属切片": [{"id": mid[x[1:]]} for x in p["所属切片"]]}
+        row = {**writable("提示词库", p), "所属切片": [{"id": mid[x[1:]]} for x in p["所属切片"]]}
         if "证据" in p:
             row["证据"] = [{"id": qid[x[1:]]} for x in p["证据"]]
+        if v2 and p.get("_attr") in aid and "属性" in meta.get("提示词库", {}):
+            row["属性"] = [{"id": aid[p["_attr"]]}]
         prows.append(row)
     lk.create(tables["提示词库"], prows)
 
+    for table, names in dropped.items():  # 模板里没有的字段不写，列出来以免悄悄丢数据
+        print(f"{table} 模板里没有这些字段，未写入：{'、'.join(sorted(names))}", file=sys.stderr)
     # 4) 回读核对
-    back = {n: len(lk.records(tables[n])) for n in WRITE_TABLES}
+    back = {n: len(lk.records(tables[n])) for n in WRITE_TABLES if n in tables}
     expect = {n: len(spec[n]) for n in back}
     prompts_back = lk.records(tables["提示词库"])
     linked = sum(1 for r in prompts_back if r.get("所属切片"))
