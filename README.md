@@ -50,7 +50,7 @@
 5. 画买家处境矩阵，给每一行定优先级。
 6. 从矩阵的 P1、P2 行聚出主题。
 7. 写题、去重。
-8. 过选词校验器，导出 9 字段题。
+8. 过两道检查再导出 9 字段题：选词校验器（`validate_after_sales_set.py`）查写题的通用规则；售前专属检查（`scripts/check_presales_bank.py`）查只出发现、对比、评价三类，发现型至少一半，每个主题至少 5 道，对比题必须点名 Case 里的竞品。
 
 步骤细节和每一步判断记在题库 JSON 哪里，见 `references/selection-mode.md`。
 

@@ -684,6 +684,7 @@ def monitored_set(data: dict) -> str:
 
 PRIORITIES = ("P1", "P2", "P3")
 CHANGEABILITY = ("高", "中", "低", "待试跑")
+RELATIVE_VERDICTS = ("优势", "持平", "劣势", "待确认")
 
 
 def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: list[str], warnings: list[str]) -> None:
@@ -764,6 +765,34 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
     if unfiled:
         warnings.append(f"Prompts with no slice_ref ({len(unfiled)}): "
                         f"{', '.join(unfiled[:6])}{' …' if len(unfiled) > 6 else ''}; every Prompt sits on a matrix row")
+    # Attribute pool <-> matrix rows (Suda 2026-10-28): the pool only judges 相对竞品, each verdict with a
+    # written basis; a row lists pool attributes only, and never a 劣势 one.
+    plan = config.get("attribute_plan")
+    if not plan or not isinstance(plan, list) or not all(isinstance(e, dict) for e in plan):
+        return
+    verdicts: dict[str, str] = {}
+    for entry in plan:
+        name = str(entry.get("attribute") or "").strip()
+        if not name:
+            continue
+        verdict = str(entry.get("relative_competitor") or entry.get("相对竞品") or "").strip()
+        verdicts[name] = verdict
+        if verdict not in RELATIVE_VERDICTS:
+            fail(f"attribute_plan {name!r}: relative_competitor must be one of {'/'.join(RELATIVE_VERDICTS)}, "
+                 f"got {verdict!r}", errors)
+        elif is_blank(entry.get("relative_competitor_basis") or entry.get("相对竞品依据")):
+            fail(f"attribute_plan {name!r}: relative_competitor_basis is empty — a verdict with no written basis "
+                 "is not made", errors)
+    for sid, row in by_id.items():
+        listed = row.get("attributes") or []
+        listed = [listed] if isinstance(listed, str) else listed
+        listed = [str(a).strip() for a in listed if str(a).strip()]
+        absent = [a for a in listed if a not in verdicts]
+        weak = [a for a in listed if verdicts.get(a) == "劣势"]
+        if absent:
+            fail(f"slice {sid}: attributes absent from attribute_plan: {', '.join(absent)}", errors)
+        if weak:
+            fail(f"slice {sid}: lists 劣势 attributes ({', '.join(weak)}); 劣势 stays in the pool, off every row", errors)
 
 
 def main() -> int:

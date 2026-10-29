@@ -6,7 +6,7 @@
 
     prepare   归一化 Case，建独立工作目录（skill 拷贝、inputs/、TASK.md）
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
-    finalize  跑选词 validator 和导出脚本，写 out/result.json
+    finalize  跑选词 validator、售前专属检查和导出脚本，写 out/result.json
 
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt,gemini --out <工作目录> --agent sdk
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt --out <工作目录> --agent-cmd "<命令>"
@@ -28,7 +28,7 @@ agent 两种接法：
   out/bank.json        题库 JSON（内部底稿）
   out/upload/*.csv     交给线上的 9 字段题（每个市场一份）
   out/result.json      {status, market, locale, upload_files, prompt_count, topics, errors…}
-  logs/                agent 记录、validator 与导出的原始输出
+  logs/                agent 记录、两个检查与导出的原始输出
 
 退出码：0 生词成功；1 生词失败（agent 出错、超时或检查没过，原因见 result.json）；
 2 输入或环境有错（Case 归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
@@ -36,7 +36,8 @@ agent 两种接法：
 可能出错的地方（本脚本针对的就是这些）：
   1. Case 缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
   2. agent 没写出 bank.json、超时或异常退出 → 失败，不拿半成品导出
-  3. 题库没过 validator 或导出检查（超 60 条、字段缺、类型不对） → 失败，报错原文进 result.json
+  3. 题库没过选词 validator、售前专属检查（check_presales_bank.py：题型、发现型过半、每主题≥5、对比题点名冻结竞品）
+     或导出检查（超 60 条、字段缺、类型不对） → 失败，报错原文进 result.json
   4. 题库的市场和传入的 --market 不一致 → 失败，避免把别的市场的题交上去
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
   5. 工作目录已存在 → 拒绝覆盖，避免两个 Case 共用一个目录
@@ -73,7 +74,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 任务：给这个品牌生成售前诊断题。按 `.agents/skills/geo-presales-prompt-builder/references/selection-mode.md`（售前生词步骤）逐步做；它引用的选词规则在 `.agents/skills/geo-prompt-selection-builder/`。
 
 输入：
-- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品已冻结，不增删、不替换。`topic_source` 为 `to_derive` 时主题由你从矩阵行聚出。
+- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品已冻结，不增删、不替换。主题一律由你从矩阵行聚出；Case 填了主题（`topic_source` 为 `case`）时，它只当业务重点线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
@@ -84,12 +85,13 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 交付（只写这两个路径）：
 1. `out/bank.json`：题库 JSON，字段按 selection-mode.md。
-2. `out/notes.md`：简短记录：受众、属性与相对竞品、每个主题为什么成立、你做的假设、validator 留下的告警。
+2. `out/notes.md`：简短记录，分这几节：「预跑答案」（研究预跑的答案目录和每个平台是否采到）、「受众」、「属性与相对竞品」、「没开的格子」（矩阵里没开的格子和原因）、「主题」（每个主题为什么成立）、「假设」、「未覆盖来源」、「validator 告警」。
 
-结束前依次运行，两条都要退出码 0；有错就改题库再跑：
+结束前依次运行，三条都要退出码 0；有错就改题库再跑：
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
+`python3 .agents/skills/geo-presales-prompt-builder/scripts/check_presales_bank.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
-最后只回复一行：`DONE <validator 的 READINESS 那一行>`。
+最后只回复一行：`DONE <validator 输出里的 readiness>`。
 """
 
 
@@ -215,6 +217,19 @@ def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int) 
     return record
 
 
+def validator_readiness(stdout: str) -> str:
+    """有错时 validator 打印 `READINESS: …` 一行；通过时只打印一段 JSON，readiness 在里面。"""
+    for line in stdout.splitlines():
+        if line.startswith("READINESS:"):
+            return line.split(":", 1)[1].strip()
+    for line in reversed(stdout.strip().splitlines()):
+        try:
+            return str(json.loads(line).get("readiness") or "")
+        except (json.JSONDecodeError, AttributeError):
+            continue
+    return ""
+
+
 def _tail(text: str, lines: int = 60) -> str:
     return "\n".join(text.strip().splitlines()[-lines:])
 
@@ -232,11 +247,13 @@ def finalize(ws: Path, agent_record: dict | None = None) -> int:
         write_json(ws / "out/result.json", result)
         return 1
     tools = ws / ".agents/skills/geo-prompt-selection-builder/scripts"
+    presales_tools = ws / ".agents/skills/geo-presales-prompt-builder/scripts"
     upload = ws / "out/upload"
     if upload.exists():
         shutil.rmtree(upload)  # 只认这一次导出的文件
     checks = {
         "validator": [sys.executable, "-I", str(tools / "validate_after_sales_set.py"), str(bank)],
+        "presales_check": [sys.executable, "-I", str(presales_tools / "check_presales_bank.py"), str(bank)],
         "export": [sys.executable, "-I", str(tools / "export_upload_csv.py"), str(bank), "--out", str(upload)],
     }
     exits = {}
@@ -246,8 +263,7 @@ def finalize(ws: Path, agent_record: dict | None = None) -> int:
         (ws / f"logs/{name}.txt").write_text(output, encoding="utf-8")
         exits[name] = proc.returncode
         if name == "validator":
-            result["validator_readiness"] = next(
-                (line.split(":", 1)[1].strip() for line in output.splitlines() if line.startswith("READINESS:")), "")
+            result["validator_readiness"] = validator_readiness(proc.stdout)
         if proc.returncode != 0:
             result["errors"].append({"stage": name, "exit_code": proc.returncode, "output": _tail(output)})
     files = sorted(upload.glob("*.upload.csv")) if upload.exists() else []

@@ -1,0 +1,347 @@
+{
+ "schema_version": "overseas-geo-question-bank/v8",
+ "config": {
+  "brand_name": "BrandX",
+  "official_domain": "https://brandx.example",
+  "generation_stage": "diagnostic",
+  "lifecycle_status": "hypothesis",
+  "evidence_status": "hypothesis",
+  "collection_config": {
+   "market": "US",
+   "language": "en"
+  },
+  "competitor_selection": {
+   "status": "frozen",
+   "selection_count": 1,
+   "formal_competitors": [
+    {
+     "name": "RivalA",
+     "official_domain": "https://rivala.example",
+     "source_fields": [
+      "竞品 1",
+      "竞品 1 官网域名"
+     ]
+    }
+   ]
+  },
+  "buyer_quotes": [
+   {
+    "输入编号": "Q1",
+    "原话": "need a robot vacuum that actually picks up dog hair from carpet",
+    "约束": "地毯"
+   },
+   {
+    "输入编号": "Q2",
+    "原话": "small apartment, two cats, which robot vacuum",
+    "约束": "小公寓、两只猫"
+   },
+   {
+    "输入编号": "Q3",
+    "原话": "hate emptying the bin every day",
+    "约束": ""
+   },
+   {
+    "输入编号": "Q4",
+    "原话": "mop combo for tile floors any good?",
+    "约束": "瓷砖"
+   },
+   {
+    "输入编号": "Q5",
+    "原话": "mine keeps eating cords and socks",
+    "约束": "电线、袜子"
+   }
+  ],
+  "base_conditions": [
+   "家庭"
+  ],
+  "audience_terms": {},
+  "category_aliases": [
+   "robot vacuum",
+   "robot vacuum and mop"
+  ],
+  "attribute_plan": [
+   {
+    "attribute": "宠物毛发清理",
+    "relative_competitor": "持平",
+    "relative_competitor_basis": "预跑答案与官网核实"
+   },
+   {
+    "attribute": "自动集尘",
+    "relative_competitor": "持平",
+    "relative_competitor_basis": "预跑答案与官网核实"
+   },
+   {
+    "attribute": "拖地效果",
+    "relative_competitor": "持平",
+    "relative_competitor_basis": "预跑答案与官网核实"
+   },
+   {
+    "attribute": "避障",
+    "relative_competitor": "持平",
+    "relative_competitor_basis": "预跑答案与官网核实"
+   }
+  ],
+  "slices": [
+   {
+    "slice_id": "pet",
+    "topic_id": "t_rv",
+    "product_line": "扫地机器人",
+    "audience": "通用",
+    "market": "US",
+    "journey_stage": "发现",
+    "attributes": [
+     "宠物毛发清理"
+    ],
+    "priority": "P1",
+    "priority_basis": "差异化优势写宠物毛发；Reddit 原话多",
+    "target_count": 2
+   },
+   {
+    "slice_id": "clean",
+    "topic_id": "t_rv",
+    "product_line": "扫地机器人",
+    "audience": "通用",
+    "market": "US",
+    "journey_stage": "发现",
+    "attributes": [
+     "自动集尘",
+     "拖地效果",
+     "避障"
+    ],
+    "priority": "P1",
+    "priority_basis": "产品特性三项；评价原话多",
+    "target_count": 3
+   }
+  ],
+  "topics": [
+   {
+    "topic_id": "t_rv",
+    "topic": "Robot Vacuums",
+    "source_slices": [
+     "pet",
+     "clean"
+    ],
+    "planned_prompts": 7
+   }
+  ],
+  "expected_total": 7
+ },
+ "questions": [
+  {
+   "question_id": "US-001",
+   "intent_key": "rv-001",
+   "topic_id": "t_rv",
+   "slice_ref": "pet",
+   "user_question": "Which robot vacuums are best for pet hair on carpet?",
+   "monitoring_prompt": "Which robot vacuums are best for pet hair on carpet?",
+   "zh_translation": "哪些扫地机器人最适合清理地毯上的宠物毛发？",
+   "prompt_type": "Discovery",
+   "region": "US",
+   "analysis_type": "visibility,sentiment",
+   "formal_visibility_eligible": true,
+   "group_role": "core",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "attribute_ref": "宠物毛发清理",
+   "evidence_refs": [
+    "Q1"
+   ],
+   "constraints": [
+    "地毯"
+   ],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-002",
+   "intent_key": "rv-002",
+   "topic_id": "t_rv",
+   "slice_ref": "pet",
+   "user_question": "Which robot vacuum is best for a small apartment with two cats?",
+   "monitoring_prompt": "Which robot vacuum is best for a small apartment with two cats?",
+   "zh_translation": "两只猫的小公寓该买哪款扫地机器人？",
+   "prompt_type": "Discovery",
+   "region": "US",
+   "analysis_type": "visibility,sentiment",
+   "formal_visibility_eligible": true,
+   "group_role": "core",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "attribute_ref": "宠物毛发清理",
+   "evidence_refs": [
+    "Q2"
+   ],
+   "constraints": [
+    "小公寓",
+    "两只猫"
+   ],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-003",
+   "intent_key": "rv-003",
+   "topic_id": "t_rv",
+   "slice_ref": "clean",
+   "user_question": "Which robot vacuums empty themselves so I don't touch the dust bin?",
+   "monitoring_prompt": "Which robot vacuums empty themselves so I don't touch the dust bin?",
+   "zh_translation": "哪些扫地机器人能自动集尘、不用碰尘盒？",
+   "prompt_type": "Discovery",
+   "region": "US",
+   "analysis_type": "visibility,sentiment",
+   "formal_visibility_eligible": true,
+   "group_role": "core",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "attribute_ref": "自动集尘",
+   "evidence_refs": [
+    "Q3"
+   ],
+   "constraints": [],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-004",
+   "intent_key": "rv-004",
+   "topic_id": "t_rv",
+   "slice_ref": "clean",
+   "user_question": "Which robot vacuum and mop combos work well on tile floors?",
+   "monitoring_prompt": "Which robot vacuum and mop combos work well on tile floors?",
+   "zh_translation": "哪些扫拖一体机器人适合瓷砖地面？",
+   "prompt_type": "Discovery",
+   "region": "US",
+   "analysis_type": "visibility,sentiment",
+   "formal_visibility_eligible": true,
+   "group_role": "core",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "attribute_ref": "拖地效果",
+   "evidence_refs": [
+    "Q4"
+   ],
+   "constraints": [
+    "瓷砖"
+   ],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-005",
+   "intent_key": "rv-005",
+   "topic_id": "t_rv",
+   "slice_ref": "clean",
+   "user_question": "Which robot vacuums avoid cords and socks on the floor?",
+   "monitoring_prompt": "Which robot vacuums avoid cords and socks on the floor?",
+   "zh_translation": "哪些扫地机器人能避开地上的电线和袜子？",
+   "prompt_type": "Discovery",
+   "region": "US",
+   "analysis_type": "visibility,sentiment",
+   "formal_visibility_eligible": true,
+   "group_role": "core",
+   "journey_stage": "发现",
+   "audience": "通用",
+   "attribute_ref": "避障",
+   "evidence_refs": [
+    "Q5"
+   ],
+   "constraints": [
+    "电线",
+    "袜子"
+   ],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-006",
+   "intent_key": "rv-006",
+   "topic_id": "t_rv",
+   "slice_ref": "pet",
+   "user_question": "Is BrandX or RivalA better for pet hair on carpet?",
+   "monitoring_prompt": "Is BrandX or RivalA better for pet hair on carpet?",
+   "zh_translation": "清理地毯宠物毛发，BrandX 和 RivalA 哪个更好？",
+   "prompt_type": "Competitor",
+   "region": "US",
+   "analysis_type": "sentiment",
+   "formal_visibility_eligible": false,
+   "group_role": "monitoring",
+   "journey_stage": "对比",
+   "audience": "通用",
+   "attribute_ref": "宠物毛发清理",
+   "evidence_refs": [
+    "Q1"
+   ],
+   "constraints": [
+    "地毯"
+   ],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  },
+  {
+   "question_id": "US-007",
+   "intent_key": "rv-007",
+   "topic_id": "t_rv",
+   "slice_ref": "pet",
+   "user_question": "Is BrandX worth it for a home with cats?",
+   "monitoring_prompt": "Is BrandX worth it for a home with cats?",
+   "zh_translation": "有猫的家庭买 BrandX 值吗？",
+   "prompt_type": "Evaluation",
+   "region": "US",
+   "analysis_type": "sentiment",
+   "formal_visibility_eligible": false,
+   "group_role": "experimental",
+   "journey_stage": "评估",
+   "audience": "通用",
+   "attribute_ref": "宠物毛发清理",
+   "evidence_refs": [
+    "Q2"
+   ],
+   "constraints": [],
+   "priority": "P1",
+   "changeability": "待试跑",
+   "quality_checks": [
+    "natural_and_answerable",
+    "topic_aligned",
+    "brand_boundary_passed"
+   ],
+   "tags": []
+  }
+ ],
+ "mode": "after-sales-strategic-topics"
+}
