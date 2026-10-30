@@ -285,8 +285,8 @@ without it there is no comparable trend. Whatever else is bought, the
 mention-rate KPI counts only the core Discovery Prompts in the formal set
 (Suda 2026-10-20).
 
-**Competitor Prompts go through the same trial as every other candidate Prompt, not a separate collection round** (Suda 2026-10-15 / 2026-10-27). They are written for their win/loss reading, not to re-check `相对竞品` — the research pre-run does that (Suda 2026-10-29). Category Awareness is not in the bank: it is the research pre-run before the attribute pool (Suda 2026-10-29), one run per monitored platform, and takes no slot. Verification and Accuracy are not trialled: they are diagnostics written
-after the formal baseline or once the brand party confirms a fact, and take no
+**Competitor Prompts go through the same trial as every other candidate Prompt, not a separate collection round** (Suda 2026-10-15 / 2026-10-27). They are written for their win/loss reading, not to re-check `相对竞品` — the research pre-run does that (Suda 2026-10-29). Category Awareness is not in the bank: it is the research pre-run before the attribute pool (Suda 2026-10-29), one run per monitored platform, and takes no slot. Verification and Accuracy are not candidates: they are diagnostics written
+from the trial readings or once the brand party confirms a fact, and take no
 formal-set slot either. Competitor Prompts are
 `monitoring` (or `experimental`) and the brand party may buy them into the
 formal set (Suda 2026-10-20): they are then re-tested monthly (Suda 2026-10-26), feed sentiment, stay
