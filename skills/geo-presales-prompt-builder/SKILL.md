@@ -3,7 +3,7 @@ name: geo-presales-prompt-builder
 description: Generate the overseas GEO presales diagnosis Prompt set (售前生词) from a brand Case using the selection method — normalize the Case, research public signals with no browser login, judge attributes against competitors, draw matrix rows, cluster Topics, write Prompts, validate, and export the nine-field upload rows for the online diagnosis report. Also the one-command online runner. Do not use it for collecting answers, building the report, client confirmation Bases, or after-sales monitoring sets (geo-prompt-selection-builder).
 metadata:
   author: Overseas GEO Project
-  version: "5.1.0"
+  version: "5.1.1"
 ---
 
 # 售前生词

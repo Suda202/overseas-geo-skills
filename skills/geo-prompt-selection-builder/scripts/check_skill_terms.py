@@ -56,6 +56,10 @@ RETIRED = [
     (r"「竞品对比」|竞品对比题|点名品牌的竞品对比|类型[^。]{0,6}竞品对比", "提示词类型标签「对比」"),
     (r"购买影响", "属性池的「重要性」"),
     (r"必须给", "优先提供 / 有就提供"),
+    (r"tag_search_signals|keyword-profiles|打类型提示", "打标脚本已删，搜索词逐条人工判断（2026-10-30）"),
+    (r"adstransparency|广告透明度中心.{0,6}按竞品|竞品搜索广告文案", "广告透明度中心已删（2026-10-30）"),
+    (r"reads low mention across its Discovery|read low in the trial|在试跑里读数低就配|试跑读数低就配", "验证题按单题试跑 0 次提及触发（2026-10-30）"),
+    (r"Written only after the formal baseline|after the formal baseline reads low|正式基线读数低后再写|After the formal baseline, add the diagnostics", "验证题按试跑读数写，P1 属性发现题试跑读数低就配（2026-10-30）"),
 ]
 HISTORY = re.compile(
     r"retired|retiring|退役|取消|superseding|superseded|replac|renamed|改名|简化|formerly|former|"
