@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """对客确认 Base 发出前的检查（Suda 2026-10-23；2026-10-28 改为两种结构）。只读，不改表。
 
-先按表结构认新旧：提示词矩阵有「优先级依据」字段的是新结构（2026-10-28 起），否则是旧结构
-（旧客户 Base 不迁移，照旧规则查）。
+先按表结构认新旧：提示词矩阵有「业务重要性依据」（2026-11-02 前叫「优先级依据」）字段的是新结构
+（2026-10-28 起），否则是旧结构（旧客户 Base 不迁移，照旧规则查）。三个优先级字段 2026-11-02 改名：
+矩阵「业务重要性」、主题「主题优先级」、提示词库「提示词优先级」；旧名照认，--template 要求新名。
 
 新结构查：
   1. 属性池：填了「相对竞品」的行，判据里有「相对竞品（值）：…」一行；
      不该再有「重要性」「可改变性」「优先级」「判断冲突」字段。
-  2. 提示词矩阵：每行有「优先级」（P1/P2/P3）和「优先级依据」；P1 行挂了「主题」；不挂劣势属性；
-     P3 行不配题（目标题数留空、没有挂题）；不该再有「约束」「可改变性」「候选主题」字段。
-  3. 主题表：候选主题题数不少于 5，已采购主题不超过 10，「状态」不空；
-     主题里没有 P1 行的，依据与说明要写明是业务目标或核心可见度问题点名的。
-  4. 提示词库：没有停测行；每道题有出题原因、优先级；默认档位 = 所属切片的优先级，
-     「可改变性」为低再降一档；和默认不一致的，出题原因里有「改档：理由，定为 Px」；
-     不该再有「建议优先级」「信源壁垒」字段；不该有品类认知题（只在属性池前预跑）。
-  5. 使用说明和各表字段名里没有已退役的说法。
+  2. 提示词矩阵：每行有「业务重要性」（高 / 中 / 低；旧 Base 的 P1 / P2 / P3 同序）和依据；
+     挂了题的行有「主题」；低档行不挂题；劣势属性可以挂在行上；用新字段名的 Base，旅程阶段是
+     需求认知 / 方案考虑 / 购买决策三段（2026-11-02）；对客表放完整矩阵，需求认知、购买决策行没挂题的
+     是品牌方没选的目标，业务重要性依据里要写「本期不出：……」（2026-11-02）；业务重要性为低的行同样在
+     依据里写「本期不出：业务重要性低，原因……」，不写在备注（2026-11-02 审核清单 D1）。
+  3. 主题表：已采购主题不超过 10 道题，「状态」不空；有「主题优先级」列时（2026-11-01 起），
+     它是高 / 中 / 低且依据不空。候选主题不设题数底线（2026-10-30）。
+  4. 提示词库：没有停测行；每道题有出题原因、提示词优先级；默认档位 = 所属切片的业务重要性，
+     「可改变性」为低再降一档；和默认不一致的，出题原因里有「改档：理由，定为 X」；
+     不测劣势属性；不该有品类认知题（只在属性池前预跑）。
+  5. 已移除的字段：属性池「重要性」「可改变性」「优先级」「判断冲突」「属性编号」，提示词矩阵「约束」
+     「可改变性」「候选主题」「目标题数」「覆盖情况」，提示词库「建议优先级」「信源壁垒」「库分层」
+     「看什么指标」「AI 认知差距」「优化顺序」，主题「来源属性」「计划题数」「可改变性低占比」。
+  6. 使用说明和各表字段名里没有已退役的说法。
 
 旧结构查（2026-10-27 及以前的规则）：属性池三项判断的依据行、属性池「优先级」不空、
 提示词库停测行 / 出题原因 / 优先级与建议优先级的改档理由、退役说法。
@@ -51,12 +58,24 @@ RETIRED_TERMS_V2 = {
     "来源属性": "主题的属性从矩阵行的「属性关联」看",
 }
 RETIRED_FIELDS_V2 = {
-    "属性池": ("重要性", "可改变性", "优先级", "判断冲突"),
-    "提示词矩阵": ("约束", "可改变性", "候选主题"),
-    "提示词库": ("建议优先级", "信源壁垒"),
-    "主题": ("来源属性",),
+    "属性池": ("重要性", "可改变性", "优先级", "判断冲突", "属性编号"),
+    "提示词矩阵": ("约束", "可改变性", "候选主题", "目标题数", "覆盖情况"),
+    "提示词库": ("建议优先级", "信源壁垒", "库分层", "看什么指标", "AI 认知差距", "优化顺序"),
+    "主题": ("来源属性", "计划题数", "可改变性低占比"),
 }
-DROP = {"P1": "P2", "P2": "P3", "P3": "P3"}
+# 行档位：2026-11-01 起高 / 中 / 低；旧 Base 的 P1 / P2 / P3 同序
+TIER = {"P1": 0, "高": 0, "P2": 1, "中": 1, "P3": 2, "低": 2}
+STAGES = ("需求认知", "方案考虑", "购买决策")
+# --template 要求的新字段名（2026-11-02）
+NEW_NAMES = {"提示词矩阵": ("业务重要性", "业务重要性依据"), "主题": ("主题优先级", "主题优先级依据"),
+             "提示词库": ("提示词优先级",)}
+TIER_NAMES = (("P1", "P2", "P3"), ("高", "中", "低"))
+
+
+def drop(tier):
+    """可改变性低：降一档，用同一套档位名。"""
+    names = next(n for n in TIER_NAMES if tier in n)
+    return names[min(TIER[tier] + 1, 2)]
 LABELS = {
     "重要性": ("重要性", "买家关注度"),
     "可改变性": ("可改变性", "内容能不能改变"),
@@ -172,35 +191,48 @@ def check_pool_v2(rows):
     return problems
 
 
+def first(row, *names):
+    """按新名、旧名顺序取字段（2026-11-02 起矩阵「业务重要性」、主题「主题优先级」、提示词库「提示词优先级」，旧 Base 不改名）。"""
+    for name in names:
+        if name in row:
+            return text(row.get(name))
+    return ""
+
+
 def check_matrix_v2(rows, prompt_rows, pool_rows=()):
     problems = []
-    weak = {r.get("record_id"): text(r.get("属性")) for r in pool_rows if text(r.get("相对竞品")) == "劣势"}
     on_row = {}
     for p in prompt_rows:
         for i in ids(p.get("所属切片")):
             on_row.setdefault(i, []).append(text(p.get("编号")))
     for r in rows:
         sid = text(r.get("切片编号")) or r.get("record_id")
-        tier = text(r.get("优先级"))
-        if tier not in ("P1", "P2", "P3"):
-            problems.append(f"提示词矩阵 {sid}：「优先级」没填（P1/P2/P3）")
+        tier = first(r, "业务重要性", "优先级")
+        if tier not in TIER:
+            problems.append(f"提示词矩阵 {sid}：「业务重要性」没填（高 / 中 / 低）")
             continue
-        if not text(r.get("优先级依据")).strip():
-            problems.append(f"提示词矩阵 {sid}：{tier} 没写「优先级依据」（业务重点、买家证据强弱各怎么判的）")
-        listed_weak = [weak[i] for i in ids(r.get("属性关联")) if i in weak]
-        if listed_weak:
-            problems.append(f"提示词矩阵 {sid}：挂了相对竞品为劣势的属性（{'、'.join(listed_weak)}），劣势不挂")
-        if tier == "P1" and not ids(r.get("主题")):
-            problems.append(f"提示词矩阵 {sid}：P1 行没挂「主题」")
-        if tier == "P3" and (text(r.get("目标题数")) or on_row.get(r.get("record_id"))):
-            problems.append(f"提示词矩阵 {sid}：P3 行本期不配题，目标题数应留空、不挂题"
-                            f"（挂了：{', '.join(on_row.get(r.get('record_id'), [])[:5])}）")
+        if not first(r, "业务重要性依据", "优先级依据").strip():
+            problems.append(f"提示词矩阵 {sid}：{tier} 没写「业务重要性依据」（这类受众在这个场景、阶段对业务多重要）")
+        stage = text(r.get("旅程阶段"))
+        if "业务重要性" in r and stage and stage not in STAGES:
+            problems.append(f"提示词矩阵 {sid}：旅程阶段「{stage}」不是需求认知 / 方案考虑 / 购买决策（2026-11-02 起三段）")
+        carried = on_row.get(r.get("record_id"), [])
+        if carried and not ids(r.get("主题")):
+            problems.append(f"提示词矩阵 {sid}：挂了题但没挂「主题」")
+        if TIER[tier] == 2 and carried:
+            problems.append(f"提示词矩阵 {sid}：低档行本期不出题（挂了：{', '.join(carried[:5])}）")
+        # 低档行的原因也写在业务重要性依据末尾「本期不出：业务重要性低，原因……」，和没选目标的行同一个字段，
+        # 一个筛选就能看到全部本期不出的行（Suda 2026-11-02 审核清单 D1）。只查新字段名的 Base。
+        if "业务重要性" in r and TIER[tier] == 2 and "本期不出" not in first(r, "业务重要性依据"):
+            problems.append(f"提示词矩阵 {sid}：业务重要性为低，依据末尾要写「本期不出：业务重要性低，原因……」")
+        if ("业务重要性" in r and stage in ("需求认知", "购买决策") and TIER[tier] < 2 and not carried
+                and "本期不出" not in first(r, "业务重要性依据")):
+            problems.append(f"提示词矩阵 {sid}：{stage}行本期没出题，业务重要性依据末尾要写「本期不出：……」说明原因")
     return problems
 
 
 def check_topics_v2(trows, matrix_rows, prompt_rows):
     problems = []
-    p1_topics = {i for r in matrix_rows if text(r.get("优先级")) == "P1" for i in ids(r.get("主题"))}
     counts = {}
     for p in prompt_rows:
         t = text(p.get("主题"))
@@ -215,18 +247,20 @@ def check_topics_v2(trows, matrix_rows, prompt_rows):
         n = counts.get(name, 0)
         if not status:
             problems.append(f"{label}没填「状态」")
-        if status == "候选" and n < 5:
-            problems.append(f"{label}是候选主题，提示词库只有 {n} 道题，少于 5 道")
         if status == "已采购" and n > 10:
             problems.append(f"{label}已采购，提示词库有 {n} 道题，超过 10 道")
-        note = text(r.get("依据与说明"))
-        if r.get("record_id") not in p1_topics and not re.search("业务目标|核心可见度问题|营销活动", note):
-            problems.append(f"{label}下没有 P1 行；只有业务目标、核心可见度问题或营销活动点名时才保留，并在依据与说明里写明")
+        if "主题优先级" in r or "优先级" in r:  # 2026-11-01 起主题排优先级，11-02 改名「主题优先级」
+            level = first(r, "主题优先级", "优先级")
+            if level not in ("高", "中", "低"):
+                problems.append(f"{label}「主题优先级」没填（高 / 中 / 低）")
+            elif not first(r, "主题优先级依据", "优先级依据").strip():
+                problems.append(f"{label}主题优先级 {level} 没写「主题优先级依据」")
     return problems
 
 
-def check_prompts_v2(rows, matrix):
+def check_prompts_v2(rows, matrix, pool_rows=()):
     problems = []
+    weak = {r.get("record_id"): text(r.get("属性")) for r in pool_rows if text(r.get("相对竞品")) == "劣势"}
     stopped = [text(r.get("编号")) or text(r.get("提示词"))[:20] for r in rows if text(r.get("状态")) == "停测"]
     if stopped:
         problems.append(f"提示词库还留着 {len(stopped)} 条停测题（应删除，题号和原因记在题库 config.retired）：{', '.join(stopped[:8])}")
@@ -238,25 +272,28 @@ def check_prompts_v2(rows, matrix):
         reason = text(r.get("出题原因"))
         if not reason.strip():
             problems.append(f"提示词库「{code}」没有出题原因")
-        manual = text(r.get("优先级"))
+        tested_weak = [weak[i] for i in ids(r.get("属性")) if i in weak]
+        if tested_weak:
+            problems.append(f"提示词库「{code}」测的是劣势属性（{'、'.join(tested_weak)}），劣势属性写题时剔除")
+        manual = first(r, "提示词优先级", "优先级")
         if not manual:
-            problems.append(f"提示词库「{code}」「优先级」是空的（应按所属切片预填）")
+            problems.append(f"提示词库「{code}」「提示词优先级」是空的（应按所属切片预填）")
             continue
         sl = next((matrix[i] for i in ids(r.get("所属切片")) if i in matrix), None)
         if sl is None:
             problems.append(f"提示词库「{code}」没有所属切片")
             continue
-        tier = text(sl.get("优先级"))
-        if tier == "P3":
-            problems.append(f"提示词库「{code}」挂在 P3 切片 {text(sl.get('切片编号'))} 上，P3 本期不配题")
+        tier = first(sl, "业务重要性", "优先级")
+        if tier not in TIER:
             continue
-        if tier not in ("P1", "P2"):
+        if TIER[tier] == 2:
+            problems.append(f"提示词库「{code}」挂在低档切片 {text(sl.get('切片编号'))} 上，低档本期不出题")
             continue
-        default = DROP[tier] if text(r.get("可改变性")) == "低" else tier
+        default = drop(tier) if text(r.get("可改变性")) == "低" else tier
         if manual != default:
             m = re.search(r"改档[：:](.+)", reason, re.S)
             if not m or f"定为 {manual}" not in m.group(1):
-                problems.append(f"提示词库「{code}」：优先级为 {manual}，按规则是 {default}"
+                problems.append(f"提示词库「{code}」：提示词优先级为 {manual}，按规则是 {default}"
                                 f"（切片 {tier}{'，可改变性低降一档' if default != tier else ''}），出题原因里没有写「改档：理由，定为 {manual}」")
     return problems
 
@@ -274,7 +311,7 @@ def check_fields_v2(fields):
     for table, retired in RETIRED_FIELDS_V2.items():
         for f in fields.get(table, []):
             if f in retired:
-                problems.append(f"{table} 还有字段「{f}」：2026-10-28 起已移除（见 client-facing-attribute-pool.md）")
+                problems.append(f"{table} 还有字段「{f}」：已移除（2026-10-28 / 11-01，见 client-facing-attribute-pool.md）")
     return problems
 
 
@@ -316,16 +353,20 @@ def main():
     a = ap.parse_args()
     tables = table_ids(a.base)
     fields = field_names(a.base, tables)
-    v2 = "优先级依据" in fields.get("提示词矩阵", [])  # 2026-10-26 前的旧矩阵也有「优先级」，按新字段认
+    # 2026-10-26 前的旧矩阵也有「优先级」，按依据字段认；11-02 起叫「业务重要性依据」
+    v2 = bool({"业务重要性依据", "优先级依据"} & set(fields.get("提示词矩阵", [])))
     pool_rows, prompt_rows = records(a.base, "属性池"), records(a.base, "提示词库")
     if v2:
         matrix_rows = records(a.base, "提示词矩阵")
         matrix = {r["record_id"]: r for r in matrix_rows}
         topic_rows = records(a.base, "主题") if "主题" in tables else []
         problems = check_fields_v2(fields) + check_pool_v2(pool_rows)
+        if a.template:
+            problems += [f"{t} 缺字段「{n}」（2026-11-02 起的新名，旧名「{n.replace('业务重要性', '优先级').replace('主题优先级', '优先级').replace('提示词优先级', '优先级')}」要改名）"
+                         for t, names in NEW_NAMES.items() for n in names if n not in fields.get(t, [])]
         if not a.template:
             problems += (check_matrix_v2(matrix_rows, prompt_rows, pool_rows) + check_topics_v2(topic_rows, matrix_rows, prompt_rows)
-                         + check_prompts_v2(prompt_rows, matrix))
+                         + check_prompts_v2(prompt_rows, matrix, pool_rows))
         if "主题" not in tables:
             problems.append("没有「主题」表")
     else:

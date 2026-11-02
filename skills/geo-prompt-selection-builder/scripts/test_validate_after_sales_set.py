@@ -102,10 +102,9 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data["questions"][0]["formal_visibility_eligible"] = False
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
 
-    def test_formal_topic_requires_five_prompts(self) -> None:
+    def test_topic_has_no_prompt_floor(self) -> None:  # Suda 2026-10-30
         result = validate(staged_bank(4, "locked"))
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("at least 5 Prompts per Topic", result.stdout)
+        self.assertNotIn("at least 5 Prompts per Topic", result.stdout)
 
     def test_after_sales_signal_cannot_be_formal_ready(self) -> None:
         data = staged_bank(5, "locked")
@@ -114,12 +113,109 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("cannot be marked formal-ready", result.stdout)
 
-    def test_discovery_stage_rejects_later_intents(self) -> None:
+    def test_generation_stage_no_longer_limits_types(self) -> None:
+        # 2026-11-02 起 discovery / diagnostic 不再区分，新题库写 selection
         data = staged_bank(5, "hypothesis")
-        data["questions"][0]["prompt_type"] = "Evaluation"
+        data["questions"][0].update(prompt_type="Evaluation", journey_stage="评估",
+                                    user_question="Is BrandX worth it for small apartments?")
+        data["questions"][0]["monitoring_prompt"] = data["questions"][0]["user_question"]
+        result = validate(data)
+        self.assertNotIn("discovery stage must contain", result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        data["config"]["generation_stage"] = "selection"
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+
+    def test_three_stage_journey_and_type_pairs(self) -> None:
+        # 三段：需求认知只放问题解决；方案考虑放发现、替代；购买决策放对比、评价（Suda 2026-11-02）
+        data = staged_bank(5, "hypothesis")
+        data["config"]["generation_stage"] = "selection"
+        for row in data["questions"]:
+            row["journey_stage"] = "方案考虑"
+            row.pop("group_role")
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        q = data["questions"][0]
+        q.update(prompt_type="Competitor", user_question="BrandX vs RivalA for a small apartment?", constraints=["小户型"])
+        q["monitoring_prompt"] = q["user_question"]
+        self.assertIn("does not fit journey_stage", validate(data).stdout)
+        q["journey_stage"] = "购买决策"
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        # 发现题只在方案考虑：「在哪买、价格、库存」不进选词题库
+        data["questions"][1]["journey_stage"] = "购买决策"
+        self.assertIn("does not fit journey_stage", validate(data).stdout)
+        data["questions"][1]["journey_stage"] = "方案考虑"
+        # 问题解决只在需求认知
+        r = data["questions"][2]
+        r.update(prompt_type="Information", formal_visibility_eligible=False,
+                 user_question="Why does my apartment still smell like cat litter?")
+        r["monitoring_prompt"] = r["user_question"]
+        self.assertIn("does not fit journey_stage", validate(data).stdout)
+        r["journey_stage"] = "需求认知"
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        # 验证题挂在触发它的发现题所在行，不查组合
+        v = data["questions"][3]
+        v.update(prompt_type="Verification", formal_visibility_eligible=False,
+                 user_question="Does BrandX offer a self-cleaning mode?")
+        v["monitoring_prompt"] = v["user_question"]
+        self.assertNotIn("does not fit journey_stage", validate(data).stdout)
+        # 购后支持不再是阶段：旧题库照认，只告警
+        data["questions"][4]["journey_stage"] = "购后支持"
+        data["questions"][4].update(prompt_type="Information", formal_visibility_eligible=False,
+                                    user_question="Why did my BrandX pump stop working?")
+        data["questions"][4]["monitoring_prompt"] = data["questions"][4]["user_question"]
+        result = validate(data)
+        self.assertIn("post-purchase questions are outside selection", result.stdout)
+
+    def test_topic_needs_discovery_on_a_consideration_row(self) -> None:
+        # 门禁 41：每个主题至少一道放在方案考虑行上的发现题
+        data = staged_bank(2, "hypothesis")
+        data["config"]["generation_stage"] = "selection"
+        data["config"]["slices"] = [
+            {"slice_id": "M-001", "topic_id": "topic_1", "journey_stage": "购买决策", "priority": "高",
+             "priority_basis": "品牌方要对比题"},
+            {"slice_id": "M-002", "topic_id": "topic_1", "journey_stage": "方案考虑", "priority": "高",
+             "priority_basis": "核心可见度问题（1）"},
+        ]
+        for row in data["questions"]:
+            row.pop("journey_stage")
+            row.pop("group_role")
+            row["slice_ref"] = "M-001"
+            row["priority"] = "高"
         result = validate(data)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("discovery stage must contain Discovery or Information Prompts only", result.stdout)
+        self.assertIn("no Discovery Prompt on a 方案考虑 row", result.stdout)
+        data["questions"][0]["slice_ref"] = "M-002"
+        self.assertNotIn("no Discovery Prompt on a 方案考虑 row", validate(data).stdout)
+
+    def test_only_advantage_attributes_need_a_no_carrier_reason(self) -> None:
+        # 门禁 31（Suda 2026-11-02）：矩阵题库里只有优势属性没题时要写原因
+        data = staged_bank(2, "hypothesis")
+        data["config"]["slices"] = [{"slice_id": "M-001", "topic_id": "topic_1", "priority": "高",
+                                     "priority_basis": "核心可见度问题（1）", "attributes": ["除味"]}]
+        data["config"]["attribute_plan"] = [
+            {"attribute": "除味", "relative_competitor": "持平", "relative_competitor_basis": "三家都有"},
+            {"attribute": "外观", "relative_competitor": "持平", "relative_competitor_basis": "差不多"},
+        ]
+        for row in data["questions"]:
+            row.update(slice_ref="M-001", priority="高", attribute_ref="除味")
+        self.assertNotIn("no_carrier_reason", validate(data).stdout)
+        data["config"]["attribute_plan"][1]["relative_competitor"] = "优势"
+        result = validate(data)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no carrying Prompt and no no_carrier_reason", result.stdout)
+        data["config"]["attribute_plan"][1]["no_carrier_reason"] = "所在行业务重要性为低"
+        self.assertNotIn("no carrying Prompt and no no_carrier_reason", validate(data).stdout)
+
+    def test_candidate_count_outside_30_to_60_warns(self) -> None:
+        # 门禁 47：单产品线 × 单市场候选题 30–60 道，超出告警；锁版后不查
+        data = staged_bank(5, "hypothesis")
+        self.assertIn("candidate Prompt count outside 30–60", validate(data).stdout)
+        data = staged_bank(30, "hypothesis")
+        data["questions"] = [{**row, "user_question": f"Which cat litter box works best for setup number {i}?",
+                              "monitoring_prompt": f"Which cat litter box works best for setup number {i}?"}
+                             for i, row in enumerate(data["questions"])]
+        self.assertNotIn("candidate Prompt count outside 30–60", validate(data).stdout)
+        data = staged_bank(5, "locked")
+        self.assertNotIn("candidate Prompt count outside 30–60", validate(data).stdout)
 
     def test_inherited_intent_and_brand_scope_tags_are_normalized(self) -> None:
         data = staged_bank(5, "hypothesis")
@@ -264,7 +360,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         q = data["questions"][0]
         q.update({"prompt_type": "Competitor", "journey_stage": "对比", "user_question": "Hbrand vs RivalH1 for HDB rentals?"})
         q["monitoring_prompt"] = q["user_question"]
-        self.assertIn("Competitor and Alternatives Prompts belong to the monitoring or experimental layer", validate(data).stdout)
+        self.assertIn("Competitor Prompts belong to the monitoring or experimental layer", validate(data).stdout)
         q["group_role"] = "monitoring"
         self.assertNotIn("Prompts belong to the monitoring", validate(data).stdout)
 
@@ -293,7 +389,8 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
     def test_topic_clustering_trace_gates(self) -> None:
         data = staged_bank(2, "hypothesis")
         result = validate(data)
-        self.assertIn("missing source_slices/planned_prompts", result.stdout)
+        # source_slices / planned_prompts are no longer asked for (Suda 2026-11-01: 目标题数 retired)
+        self.assertNotIn("missing source_slices/planned_prompts", result.stdout)
         data["config"]["topics"][0].update(
             {"covered_attributes": ["气味控制"], "planned_prompts": 2}
         )
@@ -318,45 +415,129 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
 
     def test_matrix_rows_carry_the_priority(self) -> None:
         data = staged_bank(5, "hypothesis")
-        data["config"]["topics"][0].update({"source_slices": ["M-001"], "planned_prompts": 5})
         data["config"]["slices"] = [
-            {"slice_id": "M-001", "topic_id": "topic_1", "priority": "P1",
-             "priority_basis": "业务重点：优先受众；证据强：社区与搜索", "target_count": 5},
-            {"slice_id": "M-002", "topic_id": None, "priority": "P3",
-             "priority_basis": "非重点；证据弱", "target_count": None},
+            {"slice_id": "M-001", "topic_id": "topic_1", "priority": "高",
+             "priority_basis": "品牌方点名：核心可见度问题（1）"},
+            {"slice_id": "M-002", "topic_id": None, "priority": "低", "priority_basis": "品牌方未提，本期不出"},
         ]
         for row in data["questions"]:
             row["slice_ref"] = "M-001"
-            row["priority"] = "P1"
+            row["priority"] = "高"
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertNotIn("missing source_slices/planned_prompts", result.stdout)
         # 可改变性低：降一档为预期，不告警
         data["questions"][0]["changeability"] = "低"
-        data["questions"][0]["priority"] = "P2"
+        data["questions"][0]["priority"] = "中"
         self.assertNotIn("differs from the expected", validate(data).stdout)
         # 手改档位没写原因：告警
-        data["questions"][1]["priority"] = "P3"
-        self.assertIn("differs from the expected P1", validate(data).stdout)
+        data["questions"][1]["priority"] = "低"
+        self.assertIn("differs from the expected tier", validate(data).stdout)
         data["questions"][1]["priority_change_reason"] = "品牌方：本期不主推"
-        self.assertNotIn("differs from the expected P1", validate(data).stdout)
-        # P3 行出题、无主题的 P1 行、主题对不上、行优先级没写依据：都报错
+        self.assertNotIn("differs from the expected tier", validate(data).stdout)
+        # 低档行出题、行优先级没写依据、主题对不上：报错
         data["questions"][2]["slice_ref"] = "M-002"
         result = validate(data)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("P3 rows get no Prompts", result.stdout)
+        self.assertIn("低 rows get no Prompts", result.stdout)
         data["questions"][2]["slice_ref"] = "M-001"
-        data["config"]["slices"][1].update({"priority": "P1"})
-        self.assertIn("P1 matrix rows homed in no Topic", validate(data).stdout)
-        data["config"]["slices"][1].update({"priority": "P3", "priority_basis": ""})
+        # 无高档行不再要求归入主题（Suda 2026-10-31：只要每题归一个主题、没有空主题）
+        self.assertNotIn("homed in no Topic", validate(data).stdout)
+        data["config"]["slices"][1]["priority_basis"] = ""
         self.assertIn("priority_basis is empty", validate(data).stdout)
-        data["config"]["slices"][1]["priority_basis"] = "非重点；证据弱"
+        data["config"]["slices"][1]["priority_basis"] = "品牌方未提，本期不出"
         data["questions"][3]["topic_id"] = "topic_x"
         self.assertIn("differs from its row", validate(data).stdout)
         data["questions"][3]["topic_id"] = "topic_1"
+        # 旧档位名 P1/P2/P3 仍认
+        data["config"]["slices"][0]["priority"] = "P1"
+        for row in data["questions"]:
+            row["priority"] = "P1"
+        data["questions"][0]["priority"] = "P2"
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        # 中档行不再只限 1 道（Suda 2026-11-02）：题数按决策差异定
+        data["config"]["slices"][0]["priority"] = "中"
+        for row in data["questions"]:
+            row["priority"] = "中"
+        data["questions"][0]["priority"] = "低"
+        self.assertNotIn("中 rows carrying more than one Prompt", validate(data).stdout)
+        data["config"]["slices"][0]["priority"] = "高"
+        for row in data["questions"]:
+            row["priority"] = "高"
+        data["questions"][0]["priority"] = "中"
         # 品类认知只在属性池前预跑，不进新结构题库（Suda 2026-10-29）
         data["questions"][4]["prompt_type"] = "Category Awareness"
         self.assertIn("Category Awareness Prompts in the bank", validate(data).stdout)
+
+    def test_weak_attribute_on_row_but_never_in_a_prompt(self) -> None:
+        # 劣势属性可以挂在矩阵行上，写题时剔除（Suda 2026-10-31）
+        data = staged_bank(2, "hypothesis")
+        data["config"]["attribute_plan"] = [
+            {"attribute": "除味", "relative_competitor": "持平", "relative_competitor_basis": "三家都有"},
+            {"attribute": "噪音", "relative_competitor": "劣势", "relative_competitor_basis": "实测更吵"},
+            {"attribute": "续航", "relative_competitor": "待确认"},
+        ]
+        data["config"]["slices"] = [{"slice_id": "M-001", "topic_id": "topic_1", "priority": "高",
+                                     "priority_basis": "品牌方点名", "attributes": ["除味", "噪音"]},
+                                    {"slice_id": "M-002", "topic_id": "topic_1", "priority": "中",
+                                     "priority_basis": "有搜索需求", "attributes": ["续航"]}]
+        for row in data["questions"]:
+            row.update({"slice_ref": "M-001", "attribute_ref": "除味"})
+        data["questions"][1]["user_question"] = "Which litter boxes keep odor down with three cats?"
+        data["questions"][1].pop("monitoring_prompt", None)  # monitoring_prompt is optional since 2026-11-01
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        # 待确认不用写依据；中档行上的属性没题不算漏题
+        self.assertNotIn("relative_competitor_basis is empty", result.stdout)
+        self.assertNotIn("no carrying Prompt", result.stdout)
+        data["questions"][1]["attribute_ref"] = "噪音"
+        result = validate(data)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("tests 劣势 attribute", result.stdout)
+
+    def test_topic_needs_prompts_and_a_discovery_prompt(self) -> None:
+        data = staged_bank(2, "hypothesis")
+        data["config"]["generation_stage"] = "diagnostic"
+        data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Brand check"})
+        result = validate(data)
+        self.assertIn("Topics with no Prompt", result.stdout)
+        row = data["questions"][1]
+        row.update({"topic_id": "topic_2", "prompt_type": "Evaluation", "journey_stage": "评估",
+                    "group_role": "monitoring", "formal_visibility_eligible": False,
+                    "user_question": "Is Brand good for odor control with three cats?"})
+        row["monitoring_prompt"] = row["user_question"]
+        result = validate(data)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Topics with no Discovery Prompt", result.stdout)
+        self.assertIn("topic_2", result.stdout)
+
+    def test_topic_priority_has_a_basis(self) -> None:
+        data = staged_bank(2, "hypothesis")
+        data["config"]["slices"] = [{"slice_id": "M-001", "topic_id": "topic_1", "priority": "高",
+                                     "priority_basis": "品牌方点名"}]
+        for row in data["questions"]:
+            row["slice_ref"] = "M-001"
+        topic = data["config"]["topics"][0]
+        topic["priority"] = "高"
+        self.assertIn("priority_basis is empty", validate(data).stdout)
+        topic["priority_basis"] = "核心可见度问题（1）落在本主题"
+        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        topic["priority"] = "中"
+        self.assertIn("a 高 row sits", validate(data).stdout)
+        topic["priority"] = "急"
+        self.assertEqual(validate(data).returncode, 1)
+
+    def test_warning_decisions_and_capped_readiness(self) -> None:
+        data = staged_bank(2, "hypothesis")
+        result = validate(data)
+        self.assertIn("Usable", result.stdout)
+        warnings = [line for line in result.stdout.splitlines() if line.startswith("WARNING")]
+        self.assertTrue(warnings)
+        data["config"]["warning_decisions"] = [{"match": w.split(": ", 1)[1][:40], "decision": "保留：测试"} for w in warnings]
+        result = validate(data)
+        self.assertIn("Ready for the next lifecycle stage", result.stdout)
+        self.assertIn("WARNING (handled)", result.stdout)
+        data["config"]["first_party_data"] = False
+        self.assertIn("public data only", validate(data).stdout)
 
     def test_alternatives_type_contract(self) -> None:
         data = staged_bank(2, "hypothesis")
@@ -370,15 +551,13 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         row["formal_visibility_eligible"] = False
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        # 替代型计不计入提及率考核未定（Suda 2026-10-23）：formal_visibility_eligible 两种值都接受
+        # 替代题计入提及率考核（Suda 2026-11-02）：可以算可见度，也可以进核心层
         row["formal_visibility_eligible"] = True
         self.assertNotIn("must set formal_visibility_eligible: false", validate(data).stdout)
-        row["formal_visibility_eligible"] = False
-        # 不许进核心层
         row["group_role"] = "core"
-        self.assertIn("monitoring or experimental layer", validate(data).stdout)
+        self.assertNotIn("monitoring or experimental layer", validate(data).stdout)
         row["group_role"] = "monitoring"
-        # 替代型只许挂替代方案阶段
+        # 旧八段里替代型只许挂替代方案阶段
         row["journey_stage"] = "对比"
         self.assertIn("does not fit journey_stage", validate(data).stdout)
         # 旧库的替代题标 Competitor 仍合法（不迁移）
@@ -477,6 +656,21 @@ class ScopeGateTests(unittest.TestCase):
         self.assertIn("肇事逃逸", out)
         self.assertIn("街边过夜", out)
 
+    def test_unbacked_condition_is_a_warning_not_an_error(self) -> None:  # Suda 2026-10-30
+        result = validate(scoped_bank([("Which dash cams catch a hit-and-run on the street overnight?", "Parking", ["肇事逃逸"], ["Q01"])]))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("WARNING: [W36] topic_1-0: condition outside the cited evidence", result.stdout)
+
+    def test_written_basis_covers_condition_and_its_number(self) -> None:  # Suda 2026-10-30
+        data = scoped_bank([("Which dash cams under $150 catch a hit-and-run overnight?", "Parking", ["肇事逃逸", "150 美元以内"], ["Q01"])])
+        data["questions"][0]["condition_basis"] = {"肇事逃逸": "预跑答案：AI 选购标准列了肇事取证", "150 美元以内": "搜索词 dash cam under 150"}
+        self.assertEqual(self.outside_data(data), "")
+        data["questions"][0]["condition_basis"] = {"肇事逃逸": ""}
+        self.assertIn("肇事逃逸", self.outside_data(data))
+
+    def outside_data(self, data) -> str:
+        return "\n".join(l for l in validate(data).stdout.splitlines() if "outside the cited evidence" in l)
+
     def test_base_condition_is_not_a_condition(self) -> None:
         self.assertEqual(self.outside([("What are the best dash cams for a private car?", "", ["私家车"], ["Q01"])]), "")
 
@@ -488,12 +682,27 @@ class ScopeGateTests(unittest.TestCase):
         self.assertIn("evidence_refs not in config.buyer_quotes", result.stdout)
         self.assertIn("outside the cited evidence", result.stdout)
 
+    def test_common_constraint_backs_a_condition(self) -> None:
+        # 题不逐条挂原话：条件取自属性池「常见约束」即算有依据（Suda 2026-11-01）
+        data = scoped_bank([("Which dash cams under $300 record at night?", "Night vision", ["300美元以内"], [])])
+        result = validate(data)
+        self.assertIn("condition outside the cited evidence", result.stdout)
+        data["config"]["attribute_plan"] = [{"attribute": "Night vision", "relative_competitor": "待确认",
+                                             "common_constraints": ["300美元以内", "夜间"]}]
+        result = validate(data)
+        self.assertNotIn("condition outside the cited evidence", result.stdout)
+        # 题库不带买家原话表时，有常见约束照样能查
+        data["config"].pop("buyer_quotes")
+        result = validate(data)
+        self.assertNotIn("nor config.buyer_quotes", result.stdout)
+        self.assertNotIn("condition outside the cited evidence", result.stdout)
+
     def test_bank_without_quote_table_skips_with_warning(self) -> None:  # F7
         data = scoped_bank([("Which dash cams support a 512GB card?", "Storage", [], ["Q01"])])
         data["config"].pop("buyer_quotes")
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("config.buyer_quotes missing", result.stdout)
+        self.assertIn("nor config.buyer_quotes", result.stdout)
 
     def test_scenery_variant_of_one_decision_is_a_repeat(self) -> None:  # F13, F15, F12
         result = validate(scoped_bank([
@@ -616,11 +825,11 @@ class ScopeGateRegressionTests(unittest.TestCase):
             data = json.loads(path.read_text(encoding="utf-8"))
             seq = {str(q["question_id"]): i + 1 for i, q in enumerate(data["questions"])}
             stdout = validate(data).stdout
-            fit = {seq[qid] for qid in seq if f"ERROR: {qid}: condition outside" in stdout}
+            fit = {seq[qid] for qid in seq if f"WARNING: [W36] {qid}: condition outside" in stdout}
             dup: set[int] = set()
             for line in stdout.splitlines():
                 if "one purchase decision asked" in line:
-                    ids = line.split(": same Topic", 1)[0].removeprefix("WARNING: ").split(" / ")
+                    ids = line.split(": same Topic", 1)[0].removeprefix("WARNING: ").removeprefix("[W37] ").split(" / ")
                     dup |= {seq[i] for i in ids[1:]}
             bad_fit = set(review[label]["fit"])
             bad_any = bad_fit | set(review[label]["dup"])
@@ -630,6 +839,128 @@ class ScopeGateRegressionTests(unittest.TestCase):
             total_any += len(bad_any)
         self.assertGreaterEqual(caught_fit / total_fit, 0.90, f"outside-evidence {caught_fit}/{total_fit}")
         self.assertGreaterEqual(caught_any / total_any, 0.80, f"either gate {caught_any}/{total_any}")
+
+
+def goal_bank(selected: list[str] | None, information_named: bool = False) -> dict[str, object]:
+    """A selection bank: five 方案考虑 Discovery Prompts, plus business_goals when selected is not None."""
+    data = staged_bank(5, "hypothesis")
+    data["config"]["generation_stage"] = "selection"
+    data["config"].pop("expected_total")
+    for row in data["questions"]:
+        row["journey_stage"] = "方案考虑"
+        row.pop("group_role")
+    if selected is not None:
+        data["config"]["business_goals"] = {"selected": selected, "information_named": information_named}
+    return data
+
+
+def add_typed(data: dict[str, object], prompt_type: str) -> None:
+    text, stage = {
+        "Competitor": ("BrandX vs RivalA for a small apartment with two cats?", "购买决策"),
+        "Evaluation": ("Is BrandX worth it for a small apartment with two cats?", "购买决策"),
+        "Information": ("Why does my apartment still smell like cat litter after scooping?", "需求认知"),
+    }[prompt_type]
+    row = {**question("topic_1", 90 + len(data["questions"])), "prompt_type": prompt_type, "user_question": text,
+           "monitoring_prompt": text, "journey_stage": stage, "audience": "通用", "attribute_ref": "",
+           "constraints": ["小户型"]}
+    if prompt_type == "Information":
+        row["formal_visibility_eligible"] = False
+    data["questions"].append(row)
+
+
+class BusinessGoalGateTests(unittest.TestCase):
+    """Gates 49–52 (Suda 2026-11-02 审核清单 B2): business_goals decides which Prompt types are written."""
+
+    def test_49_missing_business_goals(self) -> None:
+        self.assertIn("config.business_goals missing or malformed", validate(goal_bank(None)).stdout)
+        self.assertNotIn("config.business_goals missing", validate(goal_bank(["发现型可见度"])).stdout)
+        # 旧题库（没有 generation_stage）和售前题库（带 extra_prompt_types）不查
+        legacy = goal_bank(None)
+        legacy["config"].pop("generation_stage")
+        self.assertNotIn("business_goals", validate(legacy).stdout)
+        presales = goal_bank(None)
+        presales["config"]["extra_prompt_types"] = []
+        self.assertNotIn("business_goals", validate(presales).stdout)
+        # 写了但取值不在四个目标里，同样告警
+        self.assertIn("config.business_goals missing or malformed", validate(goal_bank(["品牌曝光"])).stdout)
+
+    def test_50_competitive_positioning_without_competitor_prompt(self) -> None:
+        data = goal_bank(["发现型可见度", "竞争定位"])
+        self.assertIn("selects 竞争定位 but the bank holds no Competitor Prompt", validate(data).stdout)
+        add_typed(data, "Competitor")
+        self.assertNotIn("selects 竞争定位", validate(data).stdout)
+
+    def test_51_reputation_without_evaluation_prompt(self) -> None:
+        data = goal_bank(["声誉与信任"])
+        self.assertIn("selects 声誉与信任 but the bank holds no Evaluation Prompt", validate(data).stdout)
+        add_typed(data, "Evaluation")
+        self.assertNotIn("selects 声誉与信任", validate(data).stdout)
+
+    def test_52_type_written_without_its_goal(self) -> None:
+        for prompt_type, label in (("Competitor", "竞争定位"), ("Evaluation", "声誉与信任"),
+                                   ("Information", "information_named")):
+            with self.subTest(prompt_type=prompt_type):
+                data = goal_bank(["发现型可见度"])
+                add_typed(data, prompt_type)
+                self.assertIn(f"{prompt_type} Prompts written without the goal {label}", validate(data).stdout)
+                ok = goal_bank(["发现型可见度", label] if label != "information_named" else ["发现型可见度"],
+                               information_named=label == "information_named")
+                add_typed(ok, prompt_type)
+                self.assertNotIn("written without the goal", validate(ok).stdout)
+        # 替代题不查：没选竞争定位也可以出
+        data = goal_bank(["发现型可见度"])
+        data["questions"][0].update(prompt_type="Alternatives",
+                                    user_question="What are the best alternatives to RivalA for two cats?")
+        data["questions"][0]["monitoring_prompt"] = data["questions"][0]["user_question"]
+        self.assertNotIn("written without the goal", validate(data).stdout)
+
+
+class WarningCodeTests(unittest.TestCase):
+    """D5 / D3 (Suda 2026-11-02 审核清单): stable warning codes, whole-class decisions, gate 39 without terms."""
+
+    @staticmethod
+    def short_bank() -> dict[str, object]:
+        data = goal_bank(None)
+        data["config"]["collection_config"] = {"market": "United States", "language": "en"}
+        for i, text in ((0, "best litter box"), (1, "best cat litter box")):
+            data["questions"][i]["user_question"] = text  # [W32] too short, twice
+            data["questions"][i].pop("monitoring_prompt")
+        return data
+
+    def test_every_warning_carries_a_code(self) -> None:
+        lines = [l for l in validate(self.short_bank()).stdout.splitlines() if l.startswith("WARNING")]
+        self.assertTrue(lines)
+        for line in lines:
+            self.assertRegex(line, r"^WARNING(?: \(handled\))?: \[W\d+b?\] ")
+
+    def test_gate_decision_covers_the_whole_class(self) -> None:
+        data = self.short_bank()
+        out = validate(data).stdout
+        self.assertEqual(validate(data).returncode, 0, out)
+        self.assertGreaterEqual(len([l for l in out.splitlines() if l.startswith("WARNING: [W32]")]), 2, out)
+        # one {gate} decision handles every [W32] warning; [W49] stays open
+        data["config"]["warning_decisions"] = [{"gate": "W32", "decision": "保留：测试"}]
+        out = validate(data).stdout
+        self.assertNotIn("WARNING: [W32]", out)
+        self.assertGreaterEqual(out.count("WARNING (handled): [W32]"), 2, out)
+        self.assertIn("WARNING: [W49]", out)
+        # gate codes may be written "W49", "[W8b]" or "36"; the old match-substring form still works
+        data["config"]["warning_decisions"] += [
+            {"gate": "W49", "decision": "保留：测试"}, {"gate": "[W8b]", "decision": "保留：测试"},
+            {"gate": "36", "decision": "保留：测试"},
+            {"match": "candidate Prompt count outside 30–60", "decision": "保留：测试"}]
+        out = validate(data).stdout
+        self.assertNotIn("WARNING: [W", out)
+        self.assertNotIn("without a decision", out)
+
+    def test_gate_39_is_a_manual_check_without_audience_terms(self) -> None:
+        data = goal_bank(["发现型可见度"])
+        for row in data["questions"]:
+            row["audience"] = "多猫家庭"
+        self.assertNotIn("[W39]", validate(data).stdout)
+        self.assertNotIn("audience_terms", validate(data).stdout)
+        data["config"]["audience_terms"] = {"多猫家庭": ["multiple cats", "multi-cat"]}
+        self.assertIn("[W39] Prompts filed under a non-base audience", validate(data).stdout)
 
 
 if __name__ == "__main__":

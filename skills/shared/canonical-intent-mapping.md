@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|
 | `Prompt Type: Discovery` | `discovery` | 发现（发现类问题） | `visibility,sentiment` | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
 | `Prompt Type: Competitor` | `competitor` | 对比（原「竞品」→「竞品对比」，2026-10-23 简化为「对比」） | `sentiment` | `false` | M02 竞品表现（决胜与情感） |
-| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持，接入前需后端加枚举；临时上传按 `competitor` 适配） | 替代（替代类问题） | `sentiment` | `false` | **仅售后**（2026-10-22 从 Competitor 拆出）：点名竞品问替代方案（「[领头竞品] 最好的替代方案」），品牌不是对比的一边、答案是名单，读数是**提及率**（替代方案名单里的提及：5 次里几次被列入、列第几；Suda 2026-10-23 起不再另叫列入率）+ 情感，单独成行报；计不计入提及率考核未定（Suda 2026-10-23），formal_visibility_eligible 暂按 false，validator 两种值都接受；列入≠推荐。不点名的替代问法仍是 Discovery。2026-10-22 前的题库维持 Competitor 不迁移 |
+| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持，接入前需后端加枚举；临时上传按 `competitor` 适配） | 替代（替代类问题） | `sentiment` | `false` | **仅售后**（2026-10-22 从 Competitor 拆出）：点名竞品问替代方案（「[领头竞品] 最好的替代方案」），品牌不是对比的一边、答案是名单，读数是**提及率**（替代方案名单里的提及：5 次里几次被列入、列第几；Suda 2026-10-23 起不再另叫列入率）+ 情感，单独成行报；2026-11-02 起计入提及率考核（Suda 定，推翻 10-23「未定」），formal_visibility_eligible 两种值 validator 都接受；后端加 `alternatives` 枚举并计入可见度之前，线上报告看不到替代题的提及率，我们自己的基线报告照算；列入≠推荐。不点名的替代问法仍是 Discovery。2026-10-22 前的题库维持 Competitor 不迁移 |
 | `Prompt Type: Verification` | `validation` | 验证（验证类问题） | —（空） | `false` | 无独立模块；作为属性诊断输入 M04 品牌表达与 M01 数据总览 |
 | `Prompt Type: Accuracy` | `accuracy` | 准确性（准确性类问题） | `accuracy` | `false` | 无独立模块；作为准确性输入 M05 品牌进入 |
 | `Prompt Type: Evaluation` | `sentiment` | 评价（评价类问题） | `sentiment` | `false` | M04 品牌表达 |
@@ -35,22 +35,19 @@
 
 ## 提示词类型 × 旅程阶段：允许组合（售后）
 
-旅程阶段和提示词类型是两条独立的轴，不合并（Suda 2026-10-22，用 Hbrand 76 题交叉验证过：同是「解决问题」阶段，答案是候选名单的为发现、是建议的为问题解决，这条分界决定指标路由；同是「问题解决」类型，又横跨解决问题/交易/验证/购后四个阶段，这条展开决定旅程覆盖读数——两个方向都推不出来）。旅程阶段按**买家处境**判，挂在切片和买家原话上；提示词类型按**答案怎么读**判，挂在提示词库上。
+旅程阶段和提示词类型是两条独立的轴：旅程阶段按**买家处境**判，挂在矩阵行和买家原话上；提示词类型按**答案怎么读**判，挂在提示词库上。2026-11-02 起旅程阶段简化为三段（需求认知 / 方案考虑 / 购买决策），不设购后阶段；一种类型可以出现在不止一个阶段，但每次跨阶段都要有理由。
 
-**同词不同义，注意「验证」「评估」两处重名**：提示词类型的「验证」＝AI 认不认品牌有这个能力、「评价」＝要 AI 对具名品牌下判断；旅程阶段的「验证」＝买家在查可信度与事实、「评估」＝买家在判断某个具名选项合不合适。对客解释在确认表《使用说明》里写一句即可。
+售后 validator 按下表硬校验（源码是 `geo-prompt-selection-builder/scripts/validate_after_sales_set.py` 的 `INTENT_STAGES`；规则正文在选词 skill 的 selection-rules.md → 7. 写题，本表只是镜像，三处同步改）：
 
-售后 validator 按下表硬校验（源码是 `geo-prompt-selection-builder/scripts/validate_after_sales_set.py` 的 `INTENT_STAGES`；本表只是它的文档镜像，两处必须同步改）：
+| 阶段 | 默认出 | 有理由才出 |
+|---|---|---|
+| 需求认知 | 不出 | 问题解决（Information，品牌方要） |
+| 方案考虑 | 发现（Discovery） | 替代（Alternatives，有买家原话证据） |
+| 购买决策 | 不出 | 对比（Competitor）、评价（Evaluation），按品牌方选的目标和证据出（选词 selection-rules.md → 1） |
 
-| 提示词类型 | 允许的旅程阶段 |
-|---|---|
-| Discovery（发现） | 发现 / 解决问题 / 交易 |
-| Category Awareness（品类认知） | 发现 / 解决问题 |
-| Competitor（对比；2026-10-23 前客户标签叫 竞品对比/竞品） | 对比（旧题库的替代方案题仍标 Competitor，validator 兼容 替代方案） |
-| Alternatives（替代，仅售后） | 替代方案 |
-| Evaluation（评价） | 评估 / 验证 |
-| Verification（验证） | 验证 / 购后支持 |
-| Accuracy（准确性） | 验证 / 购后支持 |
-| Information（问题解决） | 解决问题 / 交易 / 验证 / 购后支持 |
+- 验证（Verification）挂在触发它的那道发现题所在行，不查阶段组合。
+- 准确性（Accuracy）、品类认知（Category Awareness）不进选词题库。
+- 旧题库的八段（发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持）照认，validator 按旧的八段组合表查，不迁移。
 
 ## 问题类型（后端枚举）
 

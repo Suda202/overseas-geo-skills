@@ -9,7 +9,8 @@
   问题解决（Information）后端不支持，不导出，打印题号。
 - question_types 按 diagnosis_intent 固定填（发现 visibility,sentiment；对比、评价 sentiment；
   验证、准确性、品类认知 visibility），口径见 shared/canonical-intent-mapping.md。
-- purchase_intent / persona_name / scene_name 留空。
+- purchase_intent / persona_name / scene_name 留空：本地报告脚本（build_report_data.py）读上传 CSV 时不取这三列；
+  线上后端是否读它们未确认，确认前留空（output-contract.md → 上传 CSV）。
 - 上传时市场在上传页另选，所以 CSV 不带市场；题库有几个 region 就出几份，每份一个市场。
 - 题目没写 topic 时按 topic_id 去 config.topics 取主题名（长虹华意题库只有 topic_id）。
 - 不导出 status 为 retired / 停测、review_status 为 需修改 的题，打印题号。
@@ -70,8 +71,9 @@ def main():
     by_region, skipped, held = {}, [], []
     for q in bank["questions"]:
         status, review = str(q.get("status") or "").strip(), str(q.get("review_status") or "").strip()
-        if status in SKIP_STATUS or review in SKIP_REVIEW:
-            held.append(f"{q.get('question_id')}（{status if status in SKIP_STATUS else review}）")
+        # 状态 merges review values since 2026-11-01: status 需修改 is held back like review_status 需修改.
+        if status in SKIP_STATUS or review in SKIP_REVIEW or status in SKIP_REVIEW:
+            held.append(f"{q.get('question_id')}（{status if status in SKIP_STATUS | SKIP_REVIEW else review}）")
             continue
         # 2026-10-22 前的旧题库里 prompt_type 存的是问法小类（「品类」「价格」），类型在 intent 里
         typ = next((str(q.get(k) or "").strip() for k in ("prompt_type", "intent")

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""写提示词库的「优先级」「出题原因」（对客确认 Base，任意客户通用）。
+"""写提示词库的「提示词优先级」「出题原因」（对客确认 Base，任意客户通用）。
 
 两种结构自动识别：
-  新结构（2026-10-28 起，提示词矩阵有「优先级依据」字段）——规则见
+  新结构（2026-10-28 起，提示词矩阵有「业务重要性依据」字段；2026-11-02 前叫「优先级依据」）——规则见
   references/client-facing-attribute-pool.md → *提示词矩阵* / *提示词库*：
-  - 默认档位 = 所属切片（矩阵行）的「优先级」；这道题「可改变性」为「低」时降一档。
-  - 「优先级」是可编辑单选：空着时按默认档位预填；人改过、和默认不一致的，
+  - 默认档位 = 所属切片（矩阵行）的「业务重要性」（高 / 中 / 低；2026-11-02 前叫「优先级」，旧 Base 为 P1 / P2 / P3）；
+    这道题「可改变性」为「低」时降一档。字段名新旧都认，写回 Base 里实际有的那个。
+  - 「提示词优先级」（旧 Base 叫「优先级」）是可编辑单选：空着时按默认档位预填；人改过、和默认不一致的，
     出题原因结尾保留「改档：理由，定为 Px。」，没写的列出来（check_client_base.py 也会拦）。
   - 出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的买家原话
     （按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么是这个档位
@@ -33,6 +34,9 @@ TIER = {("高", "高"): "P1", ("高", "中"): "P2", ("高", "低"): "P2",
         ("中", "高"): "P2", ("中", "中"): "P2", ("中", "低"): "P3",
         ("低", "高"): "P3", ("低", "中"): "P3", ("低", "低"): "P3"}
 DROP = {"P1": "P2", "P2": "P3", "P3": "P3"}
+# 新结构的行档位：2026-11-01 起高 / 中 / 低（旧 Base 的 P1 / P2 / P3 照旧认）
+ROW_TIERS = ("P1", "P2", "P3", "高", "中", "低")
+DROP_V2 = {**DROP, "高": "中", "中": "低", "低": "低"}
 IMP = {"高": "买家挑{noun}时会因为它直接排除一个选项",
        "中": "买家会拿它比较，但不靠它决定",
        "低": "买家不拿它做取舍"}
@@ -191,12 +195,22 @@ def load_dump(d, table):
     return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
 
 def new_structure(matrix) -> bool:
-    return any("优先级依据" in r for r in matrix.values())  # 2026-10-26 前的旧矩阵也有「优先级」
+    # 2026-10-26 前的旧矩阵也有「优先级」，按依据字段认；2026-11-02 起改名「业务重要性依据」
+    return any("业务重要性依据" in r or "优先级依据" in r for r in matrix.values())
+
+
+def first(row, *names):
+    """按新名、旧名顺序取字段（2026-11-02 三个优先级字段改名，旧客户 Base 不改）。"""
+    for name in names:
+        if name in row:
+            return text(row.get(name))
+    return ""
 
 
 def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
     """新结构：档位取矩阵行，可改变性低降一档。返回 (更新, [], 缺改档理由, 算不出)。"""
     out, need, skipped = {}, [], []
+    tier_field = "提示词优先级" if any("提示词优先级" in r for r in lib) else "优先级"
     for r in lib:
         code, typ = text(r.get("编号")), text(r.get("提示词类型"))
         sl_ids = ids(r.get("所属切片"))
@@ -204,13 +218,13 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
             skipped.append((code, "没有所属切片"))
             continue
         sl = matrix[sl_ids[0]]
-        row_tier = text(sl.get("优先级"))
-        if row_tier not in ("P1", "P2", "P3"):
-            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判优先级"))
+        row_tier = first(sl, "业务重要性", "优先级")
+        if row_tier not in ROW_TIERS:
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判业务重要性"))
             continue
-        why = NOISE.sub("", text(sl.get("优先级依据")).split("\n", 1)[0]).strip().rstrip("。；;")
+        why = NOISE.sub("", first(sl, "业务重要性依据", "优先级依据").split("\n", 1)[0]).strip().rstrip("。；;")
         if not why:
-            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写优先级依据"))
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写业务重要性依据"))
             continue
         aud = text(sl.get("受众"))
         who = "买家" if (not aud or aud in base_audiences) else aud
@@ -228,16 +242,16 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
         p3 = f"这个处境：{why}。"
         if att is None:
             p3 = f"测品类整体格局；{p3}"
-        if text(r.get("可改变性")) == "低" and tier != "P3":
-            tier = DROP[tier]
+        if text(r.get("可改变性")) == "低" and tier not in ("P3", "低"):
+            tier = DROP_V2[tier]
             p3 += "试跑时 AI 引用的来源以品牌难影响的第三方为主，再降一档。"
         fields = {}
-        manual = text(r.get("优先级"))
+        manual = text(r.get(tier_field))
         if not manual:
             manual = tier
-            fields["优先级"] = [tier]
+            fields[tier_field] = [tier]
         if manual == tier:
-            tail = f"所以是 {tier}。"
+            tail = f"提示词优先级：{tier}。" if tier_field == "提示词优先级" else f"所以是 {tier}。"
         else:
             tail = f"按规则是 {tier}。"
             m = re.search(r"改档[：:].*$", text(r.get("出题原因")), re.S)
@@ -366,7 +380,7 @@ def main():
         ok = sum(1 for k, (_, f) in out.items() if all(text(back[k].get(x)) == text(v) for x, v in f.items()))
         if ok == len(out):
             break
-    print(f"写入并回读一致 {ok} / {len(out)}；预填优先级 {sum(1 for _, f in out.values() if '优先级' in f)} 条")
+    print(f"写入并回读一致 {ok} / {len(out)}；预填优先级 {sum(1 for _, f in out.values() if '优先级' in f or '提示词优先级' in f)} 条")
     sys.exit(0 if ok == len(out) else 1)
 
 

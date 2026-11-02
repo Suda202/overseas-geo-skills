@@ -29,6 +29,13 @@ and never a condition.
 
 Replay on the six A/B sets (80-代码/选词工具-harness-AB/runs/gates/replay.py):
 the two gates together flag 85% of the Prompts the blind review failed.
+
+Since 2026-10-30 (Suda) a condition no quote backs is a warning, not an error:
+buyer-quote research is never complete, so a condition may also rest on search
+data, the research pre-run, a competitor's filters or plain buyer common sense.
+Such a basis is written per Prompt in `condition_basis` ({condition: basis}, or
+a list of {"condition", "basis"}); a condition with a written basis is not
+reported and counts as decision-changing in gate 2.
 """
 from __future__ import annotations
 
@@ -153,6 +160,19 @@ def _cited(row: dict, index: dict[str, str]) -> tuple[list[str], list[str]]:
     return [h for h in hits if h], [r for r, h in zip(refs, hits) if h is None]
 
 
+def condition_basis(row: dict) -> dict[str, str]:
+    """`condition_basis` -> {folded condition keyword: basis text}; empty bases are ignored."""
+    raw = row.get("condition_basis") or {}
+    pairs = raw.items() if isinstance(raw, dict) else (
+        (e.get("condition"), e.get("basis")) for e in raw if isinstance(e, dict))
+    out: dict[str, str] = {}
+    for cond, basis in pairs:
+        if str(basis or "").strip():
+            for k in constraint_keywords(cond):
+                out[k] = str(basis).strip()
+    return out
+
+
 def unsupported_conditions(row: dict, quote_constraints: dict[str, str],
                            quote_texts: dict[str, str] | None = None,
                            base_conditions: list[str] | None = None) -> dict:
@@ -161,8 +181,9 @@ def unsupported_conditions(row: dict, quote_constraints: dict[str, str],
     Returns {"unknown_refs", "keywords", "numbers"}: cited ids missing from the
     quote table, declared constraints that no cited 约束 cell backs, and numbers
     in the market-language query that neither the cited 约束 cells nor the
-    cited quotes state. The Chinese gloss is not read for numbers — it renders
-    "both sides" or "overnight" as 两侧 / 一整夜.
+    cited quotes state. A condition (or a number inside one) with a written
+    `condition_basis` is not reported. The Chinese gloss is not read for
+    numbers — it renders "both sides" or "overnight" as 两侧 / 一整夜.
     """
     cited, unknown = _cited(row, quote_constraints)
     cells = [quote_constraints[h] for h in cited]
@@ -171,17 +192,20 @@ def unsupported_conditions(row: dict, quote_constraints: dict[str, str],
     evidence_numbers: set[str] = set().union(set(), *(numbers_in(t) for t in cells + texts))
     base = set(constraint_keywords(base_conditions or []))
     declared = [k for k in constraint_keywords(row.get("constraints")) if k not in base]
+    based = list(condition_basis(row))
+    based_numbers: set[str] = set().union(set(), *(numbers_in(k) for k in based))
     return {
         "unknown_refs": unknown,
-        "keywords": [k for k in declared if not keyword_supported(k, evidence_kw)],
-        "numbers": sorted(numbers_in(row.get("user_question")) - evidence_numbers),
+        "keywords": [k for k in declared
+                     if not keyword_supported(k, evidence_kw) and not keyword_supported(k, based)],
+        "numbers": sorted(numbers_in(row.get("user_question")) - evidence_numbers - based_numbers),
     }
 
 
 def supported_keywords(row: dict, quote_constraints: dict[str, str]) -> list[str]:
-    """The declared constraints that a cited quote's 约束 column backs."""
+    """The declared constraints that a cited quote's 约束 column or a written `condition_basis` backs."""
     cited, _ = _cited(row, quote_constraints)
-    evidence_kw = [k for h in cited for k in constraint_keywords(quote_constraints[h])]
+    evidence_kw = [k for h in cited for k in constraint_keywords(quote_constraints[h])] + list(condition_basis(row))
     return [k for k in constraint_keywords(row.get("constraints")) if keyword_supported(k, evidence_kw)]
 
 
