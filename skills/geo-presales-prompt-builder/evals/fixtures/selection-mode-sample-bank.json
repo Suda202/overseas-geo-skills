@@ -4,6 +4,10 @@
   "brand_name": "BrandX",
   "official_domain": "https://brandx.example",
   "generation_stage": "diagnostic",
+  "extra_prompt_types": [
+   "Competitor",
+   "Evaluation"
+  ],
   "lifecycle_status": "hypothesis",
   "evidence_status": "hypothesis",
   "collection_config": {

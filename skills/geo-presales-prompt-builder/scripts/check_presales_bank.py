@@ -7,9 +7,10 @@
     python3 -I check_presales_bank.py <bank.json>
 
 报错（退出码 1）：
-  1. 题型只能是 Discovery / Competitor / Evaluation（替代题等研发加上独立 diagnosis_intent 再出）
-  2. 发现型至少占一半（报告的可见度和引用只算发现题）
-  3. 每个主题至少 5 道题；config.topics 里登记了却没有题的主题按 0 道算
+  1. 默认只出 Discovery；Competitor / Evaluation 要 config.extra_prompt_types 点名才出（来自 Case 的
+     options.extra_prompt_types，Suda 2026-11-02）；替代题等研发加上独立 diagnosis_intent 再出
+  2. config.extra_prompt_types 只能列 Competitor / Evaluation
+  3. config.topics 里登记的主题至少有一道题，题都写了 topic_id（主题不设题数底线，Suda 2026-10-30）
   4. 对比题题面要点名至少一个冻结竞品（config.competitor_selection），报告只算这几个竞品
   5. config.attribute_plan 不能为空：矩阵行的属性要从这里来
 退出码 2：文件读不了或不是题库。
@@ -22,8 +23,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-ALLOWED_TYPES = ("Discovery", "Competitor", "Evaluation")
-MIN_PER_TOPIC = 5
+EXTRA_TYPES = ("Competitor", "Evaluation")
 # 与 geo-prompt-selection-builder/scripts/export_upload_csv.py 一致：这些题不导出，也不计数
 SKIP_STATUS = {"retired", "停测"}
 SKIP_REVIEW = {"需修改", "needs_revision"}
@@ -67,21 +67,26 @@ def check(data: dict) -> list[str]:
     def ptype(q: dict) -> str:
         return str(q.get("prompt_type") or q.get("intent") or "").strip()
 
-    wrong = [f"{q.get('question_id')}({ptype(q) or '空'})" for q in questions if ptype(q) not in ALLOWED_TYPES]
+    declared = config.get("extra_prompt_types") or []
+    if not isinstance(declared, list):
+        declared = []
+    bad = [str(x) for x in declared if x not in EXTRA_TYPES]
+    if bad:
+        errors.append(f"config.extra_prompt_types 只能列 {'/'.join(EXTRA_TYPES)}，收到 {bad}")
+    allowed = ("Discovery", *[x for x in EXTRA_TYPES if x in declared])
+    wrong = [f"{q.get('question_id')}({ptype(q) or '空'})" for q in questions if ptype(q) not in allowed]
     if wrong:
-        errors.append(f"售前只出 {'/'.join(ALLOWED_TYPES)}，这些题型不对（{len(wrong)}）：{', '.join(wrong)}")
-
-    discovery = sum(1 for q in questions if ptype(q) == "Discovery")
-    if discovery * 2 < len(questions):
-        errors.append(f"发现型只有 {discovery}/{len(questions)} 道，不到一半；报告的可见度和引用只算发现题")
+        errors.append(f"售前默认只出发现题，Case 点名才出对比 / 评价（本题库允许 {'/'.join(allowed)}），"
+                      f"这些题型不对（{len(wrong)}）：{', '.join(wrong)}")
 
     counts = Counter(str(q.get("topic_id") or "").strip() for q in questions)
     for topic in config.get("topics") or []:
         if isinstance(topic, dict) and str(topic.get("topic_id") or "").strip():
             counts.setdefault(str(topic["topic_id"]).strip(), 0)
-    short = {t or "（没写 topic_id）": n for t, n in counts.items() if n < MIN_PER_TOPIC}
-    if short:
-        errors.append(f"每个主题至少 {MIN_PER_TOPIC} 道题，这些不够：{short}；合并主题或补题")
+    # 主题不设题数底线（Suda 2026-10-30）；只拦登记了却一道题都没有、或题没写主题的情况
+    empty = {t or "（没写 topic_id）": n for t, n in counts.items() if n == 0 or not t}
+    if empty:
+        errors.append(f"这些主题没有题或题没写主题：{empty}；删掉空主题或把题挂上主题")
 
     rivals = competitor_names(config)
     comp = [q for q in questions if ptype(q) == "Competitor"]

@@ -31,6 +31,8 @@ SINGLE_REQUIRED = {
     "官方域名",
 }
 OPTIONAL_SINGLE = {"业务 / 产品名称", "适用边界", "补充内容"}
+# 需求收集「最希望改善的 AI 搜索表现」（2026-11-02），选项名与选词 selection-rules.md 第 1 步一致
+GOALS = {"发现型可见度", "竞争定位", "品牌呈现", "声誉与信任"}
 MULTI_VALUE_FIELDS = {
     "目标企业画像",
     "目标客户",
@@ -43,6 +45,7 @@ MULTI_VALUE_FIELDS = {
     "集成与兼容",
     "信任与合规",
     "地理与市场",
+    "希望解决的问题",
 }
 MULTI_VALUE_RANGES = {
     "目标企业画像": (1, 5),
@@ -56,12 +59,13 @@ MULTI_VALUE_RANGES = {
     "集成与兼容": (1, 3),
     "信任与合规": (1, 5),
     "地理与市场": (1, 3),
+    "希望解决的问题": (1, 4),
 }
 # B2B 专属字段：B2B 与 B2B / B2C 选填，纯 B2C 必须省略整行。
 B2B_OPTIONAL_MULTI = {"目标企业画像", "购买标准", "集成与兼容", "信任与合规"}
 # 选填多值字段：有依据才写，查不到就省略整行；写了就做格式检查。
 # 主题 2026-10-29 起选填：线上表单去掉了「监测主题」，主题在生词时从矩阵行聚出；填了仍查名称写法。
-OPTIONAL_MULTI = {"目标客户", "痛点", "使用场景", "产品特性", "差异化优势", "地理与市场", "主题"}
+OPTIONAL_MULTI = {"目标客户", "痛点", "使用场景", "产品特性", "差异化优势", "地理与市场", "主题", "希望解决的问题"}
 PLACEHOLDERS = {"", "待人工确认"}
 ENGLISH_FIELDS = {"公司名", "业务 / 产品名称", "品牌名称"}
 MODES = {"B2B", "B2C", "B2B / B2C"}
@@ -163,6 +167,10 @@ def validate_case(index: int, body: str) -> list[str]:
     for key in keys:
         if re.fullmatch(r"主题 [123]（(?:宽泛|细分)）", key):
             errors.append(f"{key}必须合并到不带序号的主题字段，并用‘，’分隔")
+
+    goals = [item.strip() for item in re.split(r"[，、]", values.get("希望解决的问题", "")) if item.strip()]
+    if any(goal not in GOALS for goal in goals):
+        errors.append(f"希望解决的问题只能选：{'，'.join(sorted(GOALS))}")
 
     for i in range(1, 4):
         competitor = f"竞品 {i}"

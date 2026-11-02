@@ -33,14 +33,14 @@ Topic 是主组织单元；Attribute 不是产品参数清单，而是当前 Top
 ## 开始前读取
 
 0. 读取 [Case 输入合同](../input-contract.md)，先运行归一化脚本；再按 [售前公开调研](public-research.md) 做完公开调研（进入选词后在同一份表上接着做，不重做），调研新发现的产品事实先回写 Case 字段。
-1. 读取 [共用的监测问题生成原则](../../../shared/prompt-generation-principles.md)，再读选词 skill 的 [after-sales-rules.md](../../../geo-prompt-selection-builder/references/after-sales-rules.md) → *Prompt Priorities* 与 *Discovery Quality*：写题规则以这两节为准。
+1. 读取 [共用的监测问题生成原则](../../../shared/prompt-generation-principles.md)，再读选词 skill 的 [selection-rules.md](../../../geo-prompt-selection-builder/references/selection-rules.md) → *Prompt Priorities* 与 *Discovery Quality*：写题规则以这两节为准。
 2. 读取 [属性规划](attribute-planning.md)。
 3. 读取 [生成方法](generation-method.md)。
 4. 读取 [v8 产物契约](presales-contract.md)；生成非英文语言题库时读取 [语言注册表](../locale-templates.json)。
 5. 质检时读取 [质量门](quality-gates.md)。
 6. 需要正反例时读取 [Ebrand 示例](examples.md)。
 7. 读取 [跨 skill 规范映射](../../../shared/canonical-intent-mapping.md)；意图 Tag、问题类型与字段名以本文件为准。
-8. 需要多市场或多语言题库时，读取选词 skill 的 [代表性题库适配规则](../../../geo-prompt-selection-builder/references/representative-library.md)；内部做市场覆盖查漏，不把完整矩阵交给客户填写。
+8. 需要多市场或多语言题库时，读取选词 skill 的 [代表性题库适配规则](../../../geo-prompt-selection-builder/references/selection-rules.md)；内部做市场覆盖查漏，不把完整矩阵交给客户填写。
 
 ## 唯一输入合同
 
@@ -75,7 +75,7 @@ Accuracy 默认配额为 0，不读取或要求上游事实包。不得从旧评
 5. Discovery 先覆盖当前 Topic 的所有重要 P1，再按独立购买价值选择 P2/P3；完成覆盖后立即停止，不因为其他 Topic 题更多或更少而平衡数量。每道新增题都要能指出 Case 来源、具体买家/场景和独立决策结果。每题只承担一个主要决策，允许真实场景所需的复合条件，不堆叠仅本品符合的 USP；保留低条件自然问法，长短取决于语境而非固定词数。实际测试的属性写为 `Attribute: …`，无独立属性的品类题可不写。**去重的单位是购买决策，不是措辞**：两题指向同一决策（同一候选集合、同一比较维度）只保留一题，只有买家、地区、场景或决策阶段变化才算新题；不把 best/top、品类同义称呼或同一能力的换说法计为新增覆盖。**宽 Topic 要落到切面**：一个 Topic 下有多个不同买家需求时，逐条标出所属切面，并把配题重心放在差异化优势与买家需求重合的切面上，不平均分配。补充 Competitor 时只选当前 Topic 适用且有比较价值的竞品，同组题面和 Attribute Tags 保持同构。**具名 alternatives 是第二种 Competitor 形态**（`What are the alternatives to [competitor] for [scope]?`），只点名一个竞品、不出现目标品牌，每 Topic 至多 1 道，不占一对一配额、不进覆盖计数、不参与同构校验；它测的是买家的真实候选集，不是两两决胜。**服务类品类（业务模式 B2B，或按项目、订阅、人力交付的服务）每 Topic 可再加至多 1 道现状替代题**（`Which [品类] providers can a company use instead of [现有做法]?`），现状写进条件、问句仍要品类服务商；只问「还有什么做法」的题面 AI 会答成方法清单，不用。实物商品、硬件不适用。
 6. 不生成 Verification 与 Accuracy 问题。保留 Verification 作为意图定义（批量验证 AI 是否正确认知目标品牌与多个关键 Attribute 的关联，适用阶段为售后），P1 的属性级正确性核查并入 Accuracy 合同；只有用户明确要求售后验证或事实核验时，才在独立合同下单独确认产物，不得从 Case 或模型记忆临时补真值，也不在默认售前题库中生成 `validation_items` 或 `fact_value / official_source_url / fact_checked_at`。
 7. 仅在补充诊断时读取生成方法的对应模板，按需要生成 Evaluation 或 Category Awareness，不为补全类型强制生成。Evaluation 每题一个目标品牌或当前 Topic 适用竞品；品牌间评价保持同模板。**Evaluation 默认用命令式模板，也可选用注册表里的 `evaluation_review` 句式**（`Is {brand} a good {category} {object} for {scope}?`），它和命令式模板测同一决策，只换句式不新增题；locale 未注册该模板时回退命令式。两类固定模板在品类与 Topic 相同时省略范围从句，非英文使用语言注册表。英文题面不出现元词 `topic`。品类 Topic 下的 Discovery 不是 Category Awareness，不互相替代。
-8. 写入题型、品牌范围和实际属性 Tags，按真实产物核对配额。二遍语义 review 检查证据、意图覆盖、重复、题面和翻译；保存 JSON/CSV 并运行 validator。将题库版本、证据索引和客户确认状态交给售后。售后由候选基线（每道候选题每平台 5 次）检查题目质量；售前没跑过就如实标记，不以本品是否出现作为合格条件。**阶段边界：售前这一轮只能产出「初步认知问题 / 机会假设」，不能认定为稳定认知缺口**——AI 回答有波动，单轮结果区分不了偶发未提及与长期提及率低；售后正式基线（每题每平台 5 次）只建立初始基准，长期稳定性仍由后续同口径监测验证。售前按重要性 × 可改变性定属性优先级，基线后加入实测的当前差距再排验证与优化，不把基线读数称为稳定缺口或效果承诺。详见 `geo-prompt-selection-builder` → after-sales-rules.md 的 *The Four Stages and What Each Can Conclude*。**能不能推动属于可改变性**（见共用原则第 11 条）：共识锁死的方向可以不为它新配题；**不能因为单次或零提及删题**，那会污染可见度测量。
+8. 写入题型、品牌范围和实际属性 Tags，按真实产物核对配额。二遍语义 review 检查证据、意图覆盖、重复、题面和翻译；保存 JSON/CSV 并运行 validator。将题库版本、证据索引和客户确认状态交给售后。售后由候选基线（每道候选题每平台 5 次）检查题目质量；售前没跑过就如实标记，不以本品是否出现作为合格条件。**阶段边界：售前这一轮只能产出「初步认知问题 / 机会假设」，不能认定为稳定认知缺口**——AI 回答有波动，单轮结果区分不了偶发未提及与长期提及率低；售后正式基线（每题每平台 5 次）只建立初始基准，长期稳定性仍由后续同口径监测验证。售前按重要性 × 可改变性定属性优先级，基线后加入实测的当前差距再排验证与优化，不把基线读数称为稳定缺口或效果承诺。详见 `geo-prompt-selection-builder` → selection-rules.md 的 *The Four Stages and What Each Can Conclude*。**能不能推动属于可改变性**（见共用原则第 11 条）：共识锁死的方向可以不为它新配题；**不能因为单次或零提及删题**，那会污染可见度测量。
 
 ## 分析与指标边界
 

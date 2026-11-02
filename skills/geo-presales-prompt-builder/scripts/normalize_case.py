@@ -43,13 +43,20 @@ SUGGESTED_COUNTS = {"目标企业画像": (1, 5), "目标客户": (1, 5), "痛�
 TOPIC_KEY = "主题"
 COMPETITOR_KEY = "竞品"
 NOTE_KEY = "补充内容"
+# 需求收集「最希望改善的 AI 搜索表现」（Suda 2026-11-02），选项名与选词 selection-rules.md 第 1 步一致。
+GOAL_KEY = "希望解决的问题"
+GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
+# 选了哪项就允许出哪类专项题；发现题不管选没选都默认出；品牌呈现售前没有验证题，只记录
+GOAL_TO_PROMPT_TYPE = {"竞争定位": "Competitor", "声誉与信任": "Evaluation"}
 CASE_KEYS = set(
     SCALAR_REQUIRED + SCALAR_OPTIONAL + (B2B_LIST,) + B2B_JOINABLE + OPTIONAL_JOINABLE
-    + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY)
+    + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY, GOAL_KEY)
 )
 COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
 GENERATION_STAGES = ("discovery", "diagnostic")
+# 售前默认只出发现题；对比、评价要调用方点名才出（Suda 2026-11-02）
+EXTRA_PROMPT_TYPES = ("Competitor", "Evaluation")
 JOIN_SEPARATOR = "，"
 
 # Base 里不承载业务含义的管理列，适配时直接丢弃。
@@ -323,6 +330,15 @@ def normalize(payload: dict) -> dict:
         fields[f"竞品 {index}"] = competitor["name"]
         fields[f"竞品 {index} 官网域名"] = competitor["official_domain"]
 
+    # 按重要性排先后写，最在意的写在最前面；保留品牌方给的顺序
+    goals = list(dict.fromkeys(_string_list(case, GOAL_KEY, report)))
+    bad_goals = [g for g in goals if g not in GOALS]
+    if bad_goals:
+        report.error("invalid_enum", GOAL_KEY, f"{GOAL_KEY} 只接受 {list(GOALS)}，收到 {bad_goals}")
+    goals = [g for g in goals if g in GOALS]
+    if goals:
+        fields[GOAL_KEY] = JOIN_SEPARATOR.join(goals)
+
     note = case.get(NOTE_KEY)
     if note is not None and not isinstance(note, str):
         report.error("invalid_type", NOTE_KEY, "补充内容必须是字符串")
@@ -333,7 +349,7 @@ def normalize(payload: dict) -> dict:
     if not isinstance(options, dict):
         report.error("invalid_type", "options", "options 必须是对象")
         options = {}
-    unknown_options = sorted(set(options) - {"locale", "generation_stage"})
+    unknown_options = sorted(set(options) - {"locale", "generation_stage", "extra_prompt_types"})
     if unknown_options:
         report.error("unknown_field", "options", f"options 含未定义字段 {unknown_options}")
     locale = str(options.get("locale") or "en").strip().casefold()
@@ -345,6 +361,19 @@ def normalize(payload: dict) -> dict:
         report.error("invalid_enum", "options.generation_stage", f"generation_stage 只接受 {list(GENERATION_STAGES)}")
     elif stage == "diagnostic":
         report.warn("baseline_required", "options.generation_stage", "diagnostic 补题必须同时提供原 Discovery 题库作为 baseline")
+
+    # 没显式传 extra_prompt_types 时，按「希望解决的问题」选了哪些推出；显式传了以显式为准
+    if "extra_prompt_types" in options:
+        extra = options.get("extra_prompt_types") or []
+    else:
+        extra = [GOAL_TO_PROMPT_TYPE[g] for g in goals if g in GOAL_TO_PROMPT_TYPE]
+    if not isinstance(extra, list) or not all(isinstance(x, str) for x in extra):
+        report.error("invalid_type", "options.extra_prompt_types", "extra_prompt_types 必须是字符串数组")
+        extra = []
+    bad_extra = [x for x in extra if x not in EXTRA_PROMPT_TYPES]
+    if bad_extra:
+        report.error("invalid_enum", "options.extra_prompt_types", f"extra_prompt_types 只接受 {list(EXTRA_PROMPT_TYPES)}，收到 {bad_extra}")
+    extra = [x for x in EXTRA_PROMPT_TYPES if x in extra]
 
     handoff = _handoff(payload, report)
     normalized = {
@@ -358,6 +387,7 @@ def normalize(payload: dict) -> dict:
         "competitor_selection": {"status": "frozen", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
         "generation_stage": stage,
+        "extra_prompt_types": extra,
         "handoff": handoff,
     }
     return _result(report, normalized)
@@ -413,7 +443,7 @@ def from_base_record(record: dict) -> tuple[dict, list[dict]]:
             competitors.setdefault(int(m.group(1)), {})["名称"] = value
         elif m := BASE_NUMBERED.fullmatch(key):
             numbered.setdefault(m.group(1), {})[int(m.group(2))] = value
-        elif key in NUMBERED_LISTS or key in (TOPIC_KEY, B2B_LIST):
+        elif key in NUMBERED_LISTS or key in (TOPIC_KEY, B2B_LIST, GOAL_KEY):
             case[key] = [part.strip() for part in value.split(JOIN_SEPARATOR) if part.strip()]
         elif key in CASE_KEYS:
             case[key] = value

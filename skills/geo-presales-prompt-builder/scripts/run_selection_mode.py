@@ -36,7 +36,7 @@ agent 两种接法：
 可能出错的地方（本脚本针对的就是这些）：
   1. Case 缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
   2. agent 没写出 bank.json、超时或异常退出 → 失败，不拿半成品导出
-  3. 题库没过选词 validator、售前专属检查（check_presales_bank.py：题型、发现型过半、每主题≥5、对比题点名冻结竞品）
+  3. 题库没过选词 validator、售前专属检查（check_presales_bank.py：题型只出发现和 Case 点名的对比 / 评价、主题都有题、对比题点名冻结竞品）
      或导出检查（超 60 条、字段缺、类型不对） → 失败，报错原文进 result.json
   4. 题库的市场和传入的 --market 不一致 → 失败，避免把别的市场的题交上去
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
@@ -75,6 +75,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品已冻结，不增删、不替换。主题一律由你从矩阵行聚出；Case 填了主题（`topic_source` 为 `case`）时，它只当业务重点线索。
+- 题型：默认只出发现题。`inputs/case-normalized.json` 的 `extra_prompt_types`（由 Case「希望解决的问题」推出）列了 `Competitor` / `Evaluation` 时才允许出对比题 / 评价题，还要有买家证据才真的出，没出的在 notes.md 写原因；把这个列表原样写进 `config.extra_prompt_types`（空就写 `[]`）。Case 的「希望解决的问题」按重要性排先后；`补充内容` 里客户给的 AI 答错例子是出题依据之一。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：

@@ -30,7 +30,7 @@
 python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
-脚本先归一化 Case，建一个只含所需 skill 的独立工作目录，再让 agent 按下面的步骤调研、写 `out/bank.json`，最后跑第 8 步的两个检查，结果写进 `out/result.json`。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
+脚本先归一化 Case，建一个只含所需 skill 的独立工作目录，再让 agent 按下面的步骤调研、写 `out/bank.json`，最后跑第 9 步的检查，结果写进 `out/result.json`。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
 ### 线上没有浏览器
 
@@ -51,13 +51,14 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 | 1. 归一化 Case | 运行 `scripts/normalize_case.py`。线上那几个旧字段就够了，缺的业务字段不用找客户补 | `config.brand_name`、`config.official_domain`、`config.competitor_selection`；市场和语言写进 `config.collection_config.market` / `.language` |
 | 2. 研究预跑 | 每个产品线 × 市场语言出一份只有 `query` 列的 CSV：1 道品类认知题（`What should I look for when choosing [category]?`），再给目标品牌和每个竞品各出 1 道（`Evaluate the [category] company [brand]`），都用市场语言。用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台各跑 1 次，没选的平台不采。答案只当线索，打开它引用的页面核实后才能用 | 不进题库。答案目录路径和每个平台是否采到，写进 `out/notes.md` 的「预跑答案」 |
 | 3. 公开信号 | 收集三类：搜索词（`shared/scripts/collect_serp_signals.py`、`collect_keyword_data.py`，逐条人工判断，无关词直接跳过）、评价（`collect_reviews.py`）、社区（`net.py reddit` 等）。各站点走哪个通道查选词 skill 的 `references/community-channels.md`。没有客户数据这一项 | 买家原话：`config.buyer_quotes`（`[{输入编号, 原话, 约束}]`，约束只写 2–3 个关键词）。品类本身的基础人群或用途：`config.base_conditions`。非基础受众的自述说法：`config.audience_terms`。品类的不同叫法：`config.category_aliases` |
-| 4. 属性与相对竞品 | 按十二类查漏，B2B 和 B2C 分开（选词 SKILL → *Attribute means…* Step 1–4）。每个属性只判相对竞品：优势 / 持平 / 劣势 / 待确认，并写依据（预跑答案加核实页面）。不判重要性、可改变性，也不定优先级 | `config.attribute_plan`：`[{attribute, relative_competitor, relative_competitor_basis, no_carrier_reason}]`。劣势属性留在表里，但不挂到任何矩阵行上。优势、持平、待确认的属性最后没有题承载时，在 `no_carrier_reason` 写一句原因（如「所在行是 P3」「和某属性合并测」）；有题承载或判为劣势的不用写 |
-| 5. 矩阵行与优先级 | 枚举产品线 × 受众 × 市场 × 旅程阶段，只开值得测的格子；每行列出在这个处境下真正影响取舍的属性。行优先级按「业务重点 × 买家证据」判 P1 / P2 / P3：线上没有业务目标字段，业务重点从 Case 的差异化优势、补充内容和主题（Case 填了主题时）取，依据里写明出处；这几项都空时只按买家证据定档，`priority_basis` 写明「Case 无业务重点」。挂了待确认属性的行最高只能定 P2。`target_count` 按这一行里真正不同的决策需求数填，P3 行留空 | `config.slices`：`[{slice_id, topic_id, product_line, audience, market, journey_stage, attributes, priority, priority_basis, target_count}]`。没开的格子和不开的原因写进 `out/notes.md` 的「没开的格子」 |
-| 6. 聚主题 | 把 P1 / P2 行按决策任务聚成主题：同一个要解决的问题、同一组竞品、同一套评价标准算一个主题。主题名用买家的说法，题库里写 1–4 个英文词。每个主题计划题数合计至少 5 条；P3 行不出题。主题个数不受 3 个限制（研发放开前仍最多 3 个）。Case 填了主题（`topic_source` 为 `case`）时，它只当第 5 步的业务重点线索，主题仍从矩阵行聚 | `config.topics`：`[{topic_id, topic, source_slices, planned_prompts}]`，并把 `topic_id` 回填到对应的 `config.slices` 行 |
-| 7. 写题 | 规则看选词 SKILL 第 7、9、10、11 步，以及 `after-sales-rules.md` → *Reference wording per prompt type*。售前只出发现、对比、评价三类，发现型至少占一半。题面附加的条件必须出现在所引买家原话的约束里 | 每题的字段见下表 |
-| 8. 校验与导出 | 依次跑三条，都退出码 0 才算完成：① `python3 -I ../geo-prompt-selection-builder/scripts/validate_after_sales_set.py <bank.json>`，错误全部改掉、告警逐条看过；② `python3 -I scripts/check_presales_bank.py <bank.json>`，查售前专属的四条：只出三类题、发现型过半、每个主题至少 5 道、对比题点名冻结竞品；③ `python3 -I ../geo-prompt-selection-builder/scripts/export_upload_csv.py <bank.json> --out <目录>`。不跑本 skill 的 `validate_question_bank.py`：它查的是默认模式的 Tag 和配额结构 | `config.expected_total` 等于题数 |
+| 4. 属性与相对竞品 | 按十二类查漏，B2B 和 B2C 分开（选词 `selection-rules.md` → 3. 属性池）。每个属性只判相对竞品：写题前只要确认是不是劣势、是不是优势，其余记待确认；优势、持平、劣势写依据（预跑答案加核实页面）。同时记常见约束（买家提到这条属性时常带的条件和说法）和品牌取值（品牌的实际值和出处）。不判重要性、可改变性，也不定优先级 | `config.attribute_plan`：`[{attribute, relative_competitor, relative_competitor_basis, common_constraints, brand_value, no_carrier_reason}]`。劣势属性可以挂在矩阵行上，但不出题。相对竞品为优势的属性最后没有题承载时，在 `no_carrier_reason` 写一句原因；其他属性不用写 |
+| 5. 受众与核心使用场景 | 受众从 Case 的目标受众起步，按会不会改变候选来拆并。每类受众列出核心使用场景（买家在什么处境下、为了什么买），只列有证据、品牌在竞争的，写依据；预算、性能、痛点是属性不是场景（选词 `selection-rules.md` → 4） | 场景写在矩阵行的 `scene` 字段；受众的自述说法写进 `config.audience_terms` |
+| 6. 矩阵行与业务重要性 | 一行 ＝ 产品线 × 市场 × 受众 × 场景 × 旅程阶段，列出这一行买家看重的属性。旅程阶段三段：需求认知 / 方案考虑 / 购买决策；每个核心受众 × 核心场景 × 三段都过一遍，买家确实会在这个处境问 AI 的组合就开行，有公开证据写证据、没有的标「假设」，组合本身不成立的才不开，不看 Case 点没点名对比、评价（选词 `selection-rules.md` → 5 的全面梳理规则和依据举例表）。售前不出问题解决题，需求认知行都不出题；购买决策行只在 `extra_prompt_types` 点名、又有买家证据时出题。不出题的行照样判业务重要性、写进 `config.slices`，不带 `topic_id`，`priority_basis` 末尾写「本期不出：……」。售前报告只按题统计，不展示矩阵；售后选词接手时，这些行随完整矩阵写进对客确认表（选词 2.3.1）。业务重要性判高 / 中 / 低：线上没有业务目标字段，业务重点从 Case 的差异化优势、补充内容和主题（Case 填了主题时）取，依据里写明出处；这几项都空时，主要受众的核心场景记高、其他记中，`priority_basis` 写明「Case 无业务重点，按主要受众的核心场景定」。高、中都出题，题数按决策差异定；低不出题 | `config.slices`：`[{slice_id, topic_id, product_line, audience, scene, market, journey_stage, attributes, priority, priority_basis}]`。没开的行和原因写进 `out/notes.md` 的「没开的格子」 |
+| 7. 主题与主题优先级 | 本期出题的行（业务重要性为高和中，行上的题型本期要出）按核心购买需求聚成主题：买家会把它说成同一件事的放一起，需求不同、AI 推荐的会不同的拆开；只有两三个不同决策的方向并进相近主题，不数题。每个主题至少一道方案考虑行上的发现题。主题名用中文写，买家一看就懂是哪一类购买需求，不以单个属性或卖点命名、不带品牌，和同产品线其他主题分得开（「海外远程安全租房」），题库和上传 CSV 里都用这个中文名。主题优先级：有业务重要性为高的行为高，没有但父关键词有明确月搜索量（取哪家的量见选词 `selection-rules.md` → 6. 主题与主题优先级）为中，都弱为低。主题个数不受 3 个限制（研发放开前仍最多 3 个）。Case 填了主题（`topic_source` 为 `case`）时，它只当第 6 步的业务重点线索 | `config.topics`：`[{topic_id, topic, priority, priority_basis}]`，并把 `topic_id` 回填到对应的 `config.slices` 行 |
+| 8. 写题 | 规则看选词 `selection-rules.md` → 7. 写题。一道题 ＝ 一行 × 一条属性 × 一种类型，劣势属性跳过。售前默认只出发现题，和选词统一；`case-normalized.json` 的 `extra_prompt_types`（由 Case「希望解决的问题」推出）列了 `Competitor` / `Evaluation` 才允许出对比题 / 评价题，并把这个列表写进 `config.extra_prompt_types`；允许不等于必须，对比题要有买家在比的证据，评价题要有买家在问可信度的信号（选词 `selection-rules.md` → 1 的证据表），没有就不出、在 notes.md 写原因。Case 的「希望解决的问题」排在前面的优先考虑，`补充内容` 里客户给的 AI 答错例子当作依据之一。对比题只比 Case 冻结的竞品；报告的竞品胜率只读对比题，没出就为空。情感从发现题的回答里照常统计。题面条件取自属性的常见约束 | 每题的字段见下表 |
+| 9. 校验与导出 | 依次跑三条，都退出码 0 才算完成：① `python3 -I ../geo-prompt-selection-builder/scripts/validate_after_sales_set.py <bank.json>`，错误全部改掉、告警逐条看过；② `python3 -I scripts/check_presales_bank.py <bank.json>`，查售前专属的几条：对比、评价题要 `extra_prompt_types` 点名才出且它只能列这两类、主题都有题、对比题点名冻结竞品、属性池不为空；③ `python3 -I ../geo-prompt-selection-builder/scripts/export_upload_csv.py <bank.json> --out <目录>`。不跑本 skill 的 `validate_question_bank.py`：它查的是默认模式的 Tag 和配额结构 | — |
 
-`config` 里另写固定值：`lifecycle_status: "hypothesis"`、`evidence_status: "hypothesis"`。`generation_stage` 看题型：只有发现型写 `"discovery"`，含对比或评价写 `"diagnostic"`，否则选词 validator 会报「discovery 阶段只能有发现题」。根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`；后者是选词 validator 要求的固定值，不代表这是售后题库。
+`config` 里另写固定值：`lifecycle_status: "hypothesis"`、`evidence_status: "hypothesis"`。`generation_stage` 写 `"selection"`（2026-11-02 前的 `"discovery"` / `"diagnostic"` 照认，不再按它限制题型）。根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`；后者是选词 validator 要求的固定值，不代表这是售后题库。
 
 按本文字段造的一份 7 题样例（5 道发现、1 道对比、1 道评价）存在 `evals/fixtures/selection-mode-sample-bank.json`，三条检查都是退出码 0；`evals/e2e_presales_gates.py` 用它造违规样本，确认每条规则都拦得住（2026-10-29）。
 
@@ -65,28 +66,23 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 
 | 字段 | 填什么 |
 |---|---|
-| `question_id`、`intent_key` | 题号；`intent_key` 是同一意图在不同语言版本之间的配对键 |
-| `topic_id`、`slice_ref` | 所属主题和所属矩阵行。两者要对得上：这道题的 `topic_id` 必须等于它那一行的 `topic_id` |
-| `user_question`、`monitoring_prompt` | 题面，两个字段写同一句 |
+| `question_id` | 题号 |
+| `intent_key` | 同一意图在不同语言版本之间的配对键（多市场时） |
+| `topic_id`、`slice_ref` | 所属主题和所属矩阵行，两者要对得上；受众、场景、旅程阶段从这一行读，题上不再写 |
+| `user_question` | 题面 |
 | `zh_translation` | 中文意思 |
-| `prompt_type` | `Discovery` / `Competitor` / `Evaluation` |
+| `prompt_type` | `Discovery`；Case 点名时加 `Competitor` / `Evaluation` |
 | `region` | 市场，和 `collection_config.market` 一致 |
-| `analysis_type`、`formal_visibility_eligible` | 发现：`visibility,sentiment`、`true`；对比和评价：`sentiment`、`false` |
-| `group_role` | 发现填 `core`，对比填 `monitoring`，评价填 `experimental` |
-| `journey_stage` | 八段之一：发现 / 解决问题 / 评估 / 对比 / 替代方案 / 验证 / 交易 / 购后支持 |
-| `audience` | 受众；没有细分人群时填 `通用` |
-| `attribute_ref` | 这道题测的那一个属性，从所在行的 `attributes` 里选 |
-| `evidence_refs` | 所引买家原话的输入编号 |
-| `constraints` | 题面在属性之外附加的条件（关键词），没有就写 `[]`；受众不算条件 |
-| `priority` | 照抄所在行的优先级 |
+| `attribute_ref` | 这道题测的那一个属性，从所在行的 `attributes` 里选，不能是劣势 |
+| `constraints` | 题面在属性之外附加的条件（关键词），取自属性的常见约束；没有就写 `[]`；受众不算条件 |
+| `priority` | 提示词优先级，照抄所在行的业务重要性 |
 | `changeability` | 写 `待试跑`，售前不试跑 |
-| `quality_checks` | 照选词题库的写法 |
-| `tags` | 选填，只放其他字段推不出来的短名（属性、角色、场景） |
+| `tags` | 选填，只放其他字段推不出来的短名 |
 
-不写 `review_status`。售前没有审批这一步，一旦写了，validator 会按「只有已批准的题才算覆盖属性」报告警。
+按需才写：`condition_basis`（条件不在常见约束里时写依据）、`evidence_refs`（引用的买家原话编号）。旧样例里的 `monitoring_prompt`、`group_role`、`journey_stage`、`audience`、`analysis_type`、`formal_visibility_eligible`、`quality_checks` 仍能通过校验，新题库不用写。不写状态字段：售前没有审批这一步。
 
 ## 不做的事
 
 - 不做客户数据收集、对客确认、试跑排序、锁定正式题。
-- 不出品类认知题（它只用在第 2 步预跑）；不出问题解决、验证、准确性题。
+- 不出品类认知题（它只用在第 2 步预跑）；不出问题解决、验证题；准确性题不进题库。
 - 替代题等研发加上独立的 `diagnosis_intent` 之后再出（它要算可见度和情感）。在那之前它只能挂在 `competitor` 下，只算情感。上线后要同步改导出脚本的 `INTENT` / `QUESTION_TYPES`、本 skill validator 的 `V8_CSV_QUESTION_TYPES`，以及 `shared/canonical-intent-mapping.md`。

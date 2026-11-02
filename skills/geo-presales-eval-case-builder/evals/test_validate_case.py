@@ -205,10 +205,6 @@ class CaseParsingTest(unittest.TestCase):
         self.assertEqual(1, len(cases))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class OptionalBusinessFieldTest(unittest.TestCase):
     """与线上表单对齐：业务描述字段选填，查不到就省略整行。"""
 
@@ -233,3 +229,20 @@ class OptionalBusinessFieldTest(unittest.TestCase):
         body = B2B_BODY.format(topics=B2B_TOPICS).replace("| 公司名 | Example Co |\n", "")
         errors = MODULE.validate_case(1, body)
         self.assertTrue(any("必填字段：公司名" in e for e in errors), errors)
+
+
+class GoalFieldsTest(unittest.TestCase):
+    """需求收集（2026-11-02）：希望解决的问题选填，按重要性排先后；例子写进补充内容。"""
+
+    def body(self, rows: str) -> str:
+        return BASE_BODY.format(topics="彩色宝石首饰") + rows
+
+    def test_accepts_goal_field_in_priority_order(self) -> None:
+        self.assertEqual([], MODULE.validate_case(1, self.body("| 希望解决的问题 | 竞争定位，发现型可见度 |\n")))
+
+    def test_rejects_unknown_goal(self) -> None:
+        errors = MODULE.validate_case(1, self.body("| 希望解决的问题 | 全都要 |\n"))
+        self.assertTrue(any("希望解决的问题只能选" in e for e in errors), errors)
+
+if __name__ == "__main__":
+    unittest.main()

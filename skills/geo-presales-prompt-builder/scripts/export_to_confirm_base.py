@@ -48,13 +48,16 @@ DEFAULT_PLATFORMS = "ChatGPT、Gemini、Google AI Mode、Google AI Overviews"
 
 INTENT_ZH = {"Discovery": "发现", "Competitor": "对比", "Alternatives": "替代", "Evaluation": "评价",
              "Verification": "验证", "Accuracy": "准确性", "Category Awareness": "品类认知", "Information": "问题解决"}
-STAGE_BY_INTENT = {"发现": "发现", "品类认知": "发现", "对比": "对比", "替代": "替代方案", "评价": "验证",
-                   "验证": "验证", "准确性": "验证", "问题解决": "解决问题"}
-CORE_INTENTS = {"发现", "品类认知"}
+# 2026-11-02 起旅程阶段三段：需求认知 / 方案考虑 / 购买决策（选词 selection-rules.md → 5、7）
+STAGE_BY_INTENT = {"发现": "方案考虑", "品类认知": "方案考虑", "替代": "方案考虑", "对比": "购买决策", "评价": "购买决策",
+                   "验证": "方案考虑", "准确性": "购买决策", "问题解决": "需求认知"}
+TIER_ZH = {"P1": "高", "P2": "中", "P3": "低"}
+OLD_STAGES = {"发现": "方案考虑", "替代方案": "方案考虑", "评估": "购买决策", "对比": "购买决策", "验证": "购买决策",
+              "交易": "购买决策", "解决问题": "需求认知"}
 AUDIENCE_FIELD = re.compile(r"^(目标客户|目标企业画像) ?\d+$")
 # 模板里的选项值；调研文件用别的值会被拦下（受众、涉及品牌、产品线按本 Case 重建，不在此列）
 OPTIONS = {"来源类型": {"搜索数据", "PAA 与相关搜索", "评价", "社区", "销售记录", "客服记录", "GSC", "站内搜索", "AI 回答"},
-           "旅程阶段": {"发现", "解决问题", "评估", "对比", "替代方案", "验证", "交易", "购后支持"},
+           "旅程阶段": {"需求认知", "方案考虑", "购买决策"},
            "证据可信度": {"高", "中", "低"}, "品牌方要做什么": {"改官网", "提供材料"}}
 WRITE_TABLES = ("业务范围", "买家原话", "品牌事实核查", "属性池", "主题", "提示词矩阵", "提示词库")  # 主题表 2026-10-27 加回
 
@@ -70,6 +73,20 @@ def as_list(v):
     return v if isinstance(v, list) else [v]
 
 
+def rename_for_copy(spec, meta):
+    """2026-11-02 前复制的副本还叫「优先级」「优先级依据」（值 P1 / P2 / P3）：按副本实际字段名写。
+    旅程阶段的选项在写记录前按本次用到的值重建，新旧副本都写三段。"""
+    back = {"高": "P1", "中": "P2", "低": "P3"}
+    mat, lib = meta.get("提示词矩阵", {}), meta.get("提示词库", {})
+    for r in spec["提示词矩阵"]:
+        if "业务重要性" not in mat and "优先级" in mat:
+            r["优先级"] = [back[r.pop("业务重要性")[0]]]
+            r["优先级依据"] = r.pop("业务重要性依据")
+    for r in spec["提示词库"]:
+        if "提示词优先级" not in lib and "优先级" in lib:
+            r["优先级"] = [back[r.pop("提示词优先级")[0]]]
+
+
 def research_rows(research, line, collected_at):
     """调研文件 → 买家原话、品牌事实核查两表的行；选项值和必填链接不合格就停止。"""
     errors, quotes, facts = [], [], []
@@ -78,6 +95,8 @@ def research_rows(research, line, collected_at):
         for col in ("输入编号", "原话", "来源类型", "来源链接"):
             if not q.get(col):
                 errors.append(f"买家原话 {k}: 缺 {col}")
+        if q.get("旅程阶段") in OLD_STAGES:  # 2026-11-02 前的调研文件写八段
+            q = {**q, "旅程阶段": OLD_STAGES[q["旅程阶段"]]}
         for col in ("来源类型", "旅程阶段", "证据可信度"):
             if q.get(col) and q[col] not in OPTIONS[col]:
                 errors.append(f"买家原话 {k}: {col}「{q[col]}」不是模板选项")
@@ -159,7 +178,7 @@ def build_spec(bank, market, platforms, research=None):
                 if entry and entry.get(src) and row.get(dst) and row[dst] != [entry[src]]:
                     conflicts.append(f"{name}·{dst}: {row[dst][0]} / {entry[src]}（保留前者）")
             return row
-        row = {"属性": name, "属性编号": f"A-{len(pool) + 1:03d}", "产品线": [line], "判据与证据": note}
+        row = {"属性": name, "产品线": [line], "判据与证据": note}
         for src, dst in (("importance", "重要性"), ("changeability", "可改变性"), ("relative_competitor", "相对竞品")):
             if entry and entry.get(src):
                 row[dst] = [entry[src]]
@@ -167,9 +186,10 @@ def build_spec(bank, market, platforms, research=None):
         return row
 
     def add_row(topic_id, attribute, tier="P2", basis="", **cols):
+        # 2026-11-02 起矩阵字段叫「业务重要性」（高 / 中 / 低）；旧副本的「优先级」写入前在 rename_for_copy 里换回
         row = {"_key": f"{topic_id}|{attribute}", "_topic": topic_zh[topic_id], "切片编号": f"M-{len(matrix) + 1:03d}",
-               "产品线": [line], "优先级": [tier],
-               "优先级依据": basis or f"售前档位 {tier}，待按业务重点 × 买家证据重判（草稿）",
+               "产品线": [line], "业务重要性": [TIER_ZH[tier]],
+               "业务重要性依据": basis or f"售前档位 {TIER_ZH[tier]}，待按品牌方的业务目标重判（草稿）",
                "受众": [cols.pop("受众", base_audience)], **({"_attr": attribute} if attribute else {}), **cols}
         matrix.append(row)
         slot[(topic_id, attribute)] = row
@@ -203,21 +223,17 @@ def build_spec(bank, market, platforms, research=None):
         row.setdefault("_intents", []).append(intent)
         prompts.append({"编号": q["question_id"], "提示词": q["monitoring_prompt"], "中文含义": q.get("zh_translation", ""),
                         "主题": [topic_zh[q["topic_id"]]], "产品线": [line], "提示词类型": [intent], "状态": ["待审核"],
-                        "AI 认知差距": ["待基线"], "可改变性": ["待试跑"],
-                        "库分层": ["核心" if intent in CORE_INTENTS else "监测"], "所属切片": ["@" + row["_key"]],
-                        "优先级": row["优先级"], **({"_attr": attribute} if attribute else {}),
+                        "可改变性": ["待试跑"], "所属切片": ["@" + row["_key"]],
+                        "提示词优先级": row["业务重要性"], **({"_attr": attribute} if attribute else {}),
                         **({"证据": ["@" + x for x in evidence[q["question_id"]]]} if evidence.get(q["question_id"]) else {})})
     for row in matrix:
         intents = row.pop("_intents", [])
-        row["旅程阶段"] = [STAGE_BY_INTENT[intents[0]] if intents else "发现"]
-        if intents:
-            row["目标题数"] = len(intents)
-        elif "售前排除" not in row["备注"]:
+        row["旅程阶段"] = [STAGE_BY_INTENT[intents[0]] if intents else "方案考虑"]
+        if not intents and "售前排除" not in row["备注"]:
             row["备注"] = "首期不配提示词：售前题量内未覆盖。" + row["备注"]
     no_evidence = [p["编号"] for p in prompts if "证据" not in p] if research else []
-    # 主题表（2026-10-27 起）：一个主题一行；新模板的计划题数是公式，写入时按字段过滤掉
-    topics = [{"主题": topic_zh[t["topic_id"]], "产品线": [line], "状态": ["候选"],
-               "计划题数": sum(1 for q in questions if q["topic_id"] == t["topic_id"])} for t in cfg["topics"]]
+    # 主题表（2026-10-27 起）：一个主题一行；主题优先级售前不判，留给售后
+    topics = [{"主题": topic_zh[t["topic_id"]], "产品线": [line], "状态": ["候选"]} for t in cfg["topics"]]
     # 2026-10-23：非基础受众各占属性池一行「买家角色」，属性名与矩阵受众一字不差，重要性给该受众的切片封顶；
     # 售前不判业务分量，三列留空待售后补。业务目标、营销活动只有品牌方能给，留空行待补。
     for row in matrix:
@@ -227,7 +243,7 @@ def build_spec(bank, market, platforms, research=None):
             if a in pool:
                 pool[a].setdefault("类别", ["买家角色"])
             else:
-                pool[a] = {"属性": a, "属性编号": f"A-{len(pool) + 1:03d}", "类别": ["买家角色"], "产品线": [line],
+                pool[a] = {"属性": a, "类别": ["买家角色"], "产品线": [line],
                            "判据与证据": "受众行：重要性按业务分量判（标了优先或业务目标点名的=高），待售后补"}
     scope += [{"项目": "业务目标（1）", "内容": ""}, {"项目": "营销活动（1）", "内容": ""}]
     if market:  # 模板 2026-10-19 起每张表有「市场」字段，一份表可放多个市场
@@ -341,7 +357,8 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     def want(table, col):
         return sorted({x for r in spec[table] for x in (r.get(col) or [])})
     meta = {t: {f["name"]: f.get("type") for f in lk.fields(tables[t])} for t in WRITE_TABLES if t in tables}
-    v2 = "优先级依据" in meta.get("提示词矩阵", {})  # 2026-10-28 起的新模板
+    v2 = bool({"业务重要性依据", "优先级依据"} & set(meta.get("提示词矩阵", {})))  # 2026-10-28 起的新模板
+    rename_for_copy(spec, meta)
 
     dropped: dict[str, set] = {}
 
@@ -352,12 +369,10 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
             dropped.setdefault(table, set()).update(miss)
         return {k: v for k, v in row.items()
                 if not k.startswith("_") and k in kinds and kinds[k] not in ("formula", "lookup")}
-    if v2:  # 新模板属性池没有受众行；AI 认知差距默认值改为「待试跑」
+    if v2:  # 新模板属性池没有受众行
         spec["属性池"] = [r for r in spec["属性池"] if r.get("类别") != ["买家角色"]]
-        for r in spec["提示词库"]:
-            r["AI 认知差距"] = ["待试跑"]
     for table, col in (("业务范围", "市场"), ("买家原话", "市场"), ("品牌事实核查", "市场"), ("提示词矩阵", "市场"), ("提示词库", "市场"),
-                       ("提示词矩阵", "产品线"), ("提示词矩阵", "受众"), ("提示词库", "产品线"), ("提示词库", "主题"),
+                       ("提示词矩阵", "产品线"), ("提示词矩阵", "受众"), ("提示词矩阵", "旅程阶段"), ("买家原话", "旅程阶段"), ("提示词库", "产品线"), ("提示词库", "主题"),
                        ("主题", "市场"), ("主题", "产品线"),
                        ("买家原话", "产品线"), ("买家原话", "受众"), ("买家原话", "涉及品牌"), ("品牌事实核查", "产品线"),
                        ("属性池", "产品线")):

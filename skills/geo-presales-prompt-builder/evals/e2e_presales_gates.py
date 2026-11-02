@@ -77,12 +77,19 @@ def split_topic(b):  # 第二个主题只有 3 道题
         q(b, qid)["topic_id"] = "t_two"
 
 
-def discovery_minority(b):  # 发现型 3/7
-    for qid in ("US-003", "US-004"):
-        row = q(b, qid)
-        row.update(prompt_type="Evaluation", analysis_type="sentiment", formal_visibility_eligible=False,
-                   group_role="experimental", journey_stage="评估")
-        row["user_question"] = row["monitoring_prompt"] = f"Is BrandX good for {row['constraints'][0] if row['constraints'] else 'daily cleaning'}?"
+def empty_topic(b):  # config.topics 里多登记一个主题，一道题也没有
+    b["config"]["topics"].append({"topic_id": "t_empty", "topic": "Empty Topic",
+                                  "source_slices": [], "planned_prompts": 0})
+
+
+def undeclared_competitor(b):  # Case 没点名对比 / 评价，题库里却有（Suda 2026-11-02：默认只出发现题）
+    b["config"]["extra_prompt_types"] = []
+
+
+def discovery_only(b):  # 默认形态：只有发现题
+    b["config"]["extra_prompt_types"] = []
+    b["questions"] = [x for x in b["questions"] if x["prompt_type"] == "Discovery"]
+    b["config"]["expected_total"] = len(b["questions"])
 
 
 def alternatives(b):
@@ -100,10 +107,13 @@ def empty_plan(b):
     b["config"]["attribute_plan"] = []
 
 
-def weak_on_row(b):
+def weak_in_prompt(b):
+    # 劣势属性可以挂在矩阵行上，写题时剔除（2026-10-31）：拦的是测劣势属性的题
     b["config"]["attribute_plan"].append({"attribute": "价格", "relative_competitor": "劣势",
                                           "relative_competitor_basis": "竞品同档便宜两成"})
     b["config"]["slices"][0]["attributes"].append("价格")
+    q = next(q for q in b["questions"] if q.get("slice_ref") == b["config"]["slices"][0]["slice_id"])
+    q["attribute_ref"] = "价格"
 
 
 def row_attr_missing(b):
@@ -119,21 +129,22 @@ def basis_missing(b):
 
 
 def uncarried_no_reason(b):
-    b["config"]["attribute_plan"].append({"attribute": "售后服务", "relative_competitor": "持平",
-                                          "relative_competitor_basis": "评价站两边差不多"})
+    # 门禁 31（2026-11-02）：只有优势属性没题时要写原因
+    b["config"]["attribute_plan"].append({"attribute": "售后服务", "relative_competitor": "优势",
+                                          "relative_competitor_basis": "评价站本品响应快一倍"})
 
 
 FAILS = [
-    ("主题只有 3 道题", split_topic, "presales", "每个主题至少 5 道题"),
-    ("发现型不到一半", discovery_minority, "presales", "不到一半"),
+    ("登记了没有题的主题", empty_topic, "presales", "没有题"),
+    ("Case 没点名却出了对比、评价题", undeclared_competitor, "presales", "这些题型不对"),
     ("出了替代题", alternatives, "presales", "这些题型不对"),
     ("对比题点名非冻结竞品", stray_competitor, "presales", "没点名冻结竞品"),
     ("属性池为空", empty_plan, "presales", "attribute_plan 为空"),
-    ("劣势属性挂到矩阵行", weak_on_row, "validator", "lists 劣势 attributes"),
+    ("题测的是劣势属性", weak_in_prompt, "validator", "tests 劣势 attribute"),
     ("行属性不在属性池", row_attr_missing, "validator", "absent from attribute_plan"),
     ("属性池缺相对竞品", verdict_missing, "validator", "relative_competitor must be one of"),
     ("属性池相对竞品没写依据", basis_missing, "validator", "relative_competitor_basis is empty"),
-    ("没题的持平属性没写原因", uncarried_no_reason, "validator", "no_carrier_reason"),
+    ("没题的优势属性没写原因", uncarried_no_reason, "validator", "no_carrier_reason"),
 ]
 
 
@@ -144,13 +155,27 @@ def weak_in_pool_only(b):
 
 def uncarried_with_reason(b):
     uncarried_no_reason(b)
-    plan(b, "售后服务")["no_carrier_reason"] = "所在行是 P3，本期不出题"
+    plan(b, "售后服务")["no_carrier_reason"] = "所在行业务重要性为低，本期不出题"
+
+
+def unselected_stage_rows(b):  # 三段都梳理：没点名的类型对应的行留在 slices 里不出题（Suda 2026-11-02）
+    discovery_only(b)
+    for sid, stage, why in (("pet-aware", "需求认知", "售前不出问题解决题"),
+                            ("pet-decide", "购买决策", "Case 没点名对比、评价")):
+        b["config"]["slices"].append({"slice_id": sid, "product_line": "扫地机器人", "audience": "通用", "market": "US",
+                                      "journey_stage": stage, "attributes": ["宠物毛发清理"], "priority": "高",
+                                      "priority_basis": f"差异化优势写宠物毛发；本期不出：{why}"})
 
 
 PASSES = [
-    ("合格样例", lambda b: None),
+    ("合格样例（Case 点名了对比、评价）", lambda b: None),
+    ("只有发现题（默认形态）", discovery_only),
+    ("主题只有 3 道题（不设底线）", split_topic),
     ("劣势属性只留在属性池", weak_in_pool_only),
-    ("没题的持平属性写了 no_carrier_reason", uncarried_with_reason),
+    ("没点名的阶段行留在矩阵里、本期不出题", unselected_stage_rows),
+    ("没题的优势属性写了 no_carrier_reason", uncarried_with_reason),
+    ("没题的持平属性不用写原因", lambda b: b["config"]["attribute_plan"].append(
+        {"attribute": "外观", "relative_competitor": "持平", "relative_competitor_basis": "评价站两边差不多"})),
 ]
 
 if BUILD.exists():
@@ -189,10 +214,10 @@ rows.append(("线上入口：合格样例 → success，readiness 有值",
              good.get("status") == "success" and good.get("prompt_count") == 7 and bool(good.get("validator_readiness")),
              f"status={good.get('status')} prompt_count={good.get('prompt_count')} readiness={good.get('validator_readiness')!r}"))
 bad_bank = copy.deepcopy(base)
-split_topic(bad_bank)
-bad = entry("short-topic", bad_bank)
+empty_topic(bad_bank)
+bad = entry("empty-topic", bad_bank)
 stages = [e.get("stage") for e in bad.get("errors", [])]
-rows.append(("线上入口：主题只有 3 道 → failed，指出 presales_check",
+rows.append(("线上入口：登记了没有题的主题 → failed，指出 presales_check",
              bad.get("status") == "failed" and "presales_check" in stages,
              f"status={bad.get('status')} stages={stages}"))
 
@@ -200,8 +225,10 @@ rows.append(("线上入口：主题只有 3 道 → failed，指出 presales_che
 mode = (SKILL / "references" / "selection-mode.md").read_text(encoding="utf-8")
 runner = RUNNER.read_text(encoding="utf-8")
 rows.append(("selection-mode 不再提「交接文件」", "交接文件" not in mode, ""))
-rows.append(("selection-mode 第 8 步列了售前专属检查", "check_presales_bank.py" in mode, ""))
+rows.append(("selection-mode 第 9 步列了售前专属检查", "check_presales_bank.py" in mode, ""))
 rows.append(("selection-mode 写了 no_carrier_reason", "no_carrier_reason" in mode, ""))
+rows.append(("selection-mode 与 TASK 都写了默认只出发现题、extra_prompt_types",
+             "extra_prompt_types" in mode and "extra_prompt_types" in runner and "默认只出发现题" in mode, ""))
 rows.append(("TASK 结束检查含售前专属检查、notes.md 含预跑答案与没开的格子",
              "check_presales_bank.py out/bank.json" in runner and "「预跑答案」" in runner and "「没开的格子」" in runner, ""))
 

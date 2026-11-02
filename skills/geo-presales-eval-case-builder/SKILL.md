@@ -3,7 +3,7 @@ name: geo-presales-eval-case-builder
 description: Use when creating, completing, normalizing, auditing, or maintaining a single-product-line brand Case and its customer confirmation document in the overseas GEO presales diagnostic input evaluation set, including recording up to three manually supplied Topics (Topics are otherwise clustered at Prompt generation), splitting different product lines into separate Cases, writing results to the project Feishu Base, and delegating missing competitor discovery to overseas-geo-competitor-research. Also use for Topic-only maintenance of an existing Case's manual Topics. Do not use for competitor-only research, Prompt generation, answer collection, metric calculation, or report writing.
 metadata:
   author: 海外 GEO 项目
-  version: "1.13.0"
+  version: "1.14.0"
 ---
 
 # GEO 售前诊断输入评测集 Case 生成器
