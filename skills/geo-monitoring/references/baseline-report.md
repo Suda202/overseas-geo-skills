@@ -59,7 +59,7 @@ Sentiment and translations are prepared before the report is built, so the repor
   1. Question, Chinese meaning, topic and type tags; a platform filter at the top right that drives everything below.
   2. 品牌对比 — 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 正向情感占比 for the brand, `compare_brands` and the Prompt's most-mentioned brand; sorted by mentions, unmentioned brands last as 「未提及」; logo and name aligned.
   3. Brand's per-platform readings (全部平台 only).
-  4. Query Fan-outs — ChatGPT `search_model_queries`, Gemini `related_queries`, with counts; an empty state when the collection returned none.
+  4. Query Fan-outs — ChatGPT `search_model_queries` and Grok `tool_usages` web_search queries, with counts; then 延伸问题 — Gemini `related_queries` and Grok `follow_up_suggestions` (questions the platform suggests asking next, not retrieval queries; split out 2026-11-04), with counts. Each has its own empty state when the collection returned none.
   5. 回答记录 — one row per run: 平台, 采集时间 (the collection file's time; the payload has none), brand mentioned, brands named, 引用份额, 操作. No 「第 n 次」.
   6. A run's answer: only 「← 返回列表」 on top; meta shows 平台 · 采集时间; 中文译文 / 回答原文 tabs; 品牌提及 (all same-category brands; empty state 「这次回答没有提到任何同类平台或竞品」), 品牌情感 (all brands; empty state 「这次回答没有对品牌的明确褒贬」), citations, search sources.
 
@@ -76,9 +76,9 @@ Applies to Discovery and Alternatives Prompts only; named-brand types put the br
 | 竞品领先（引用以第三方为主） | Same, citations mostly review sites, communities, trade media | Next — reachable, but off-site work takes longer |
 | 无品牌点名 | t ≤ 20% and L − t < 30 points | Next — an open slot; first confirm the wording asks for candidates |
 | 已打平或领先 | t > 20% and L − t < 30 points | Last — the job is to hold; monitoring continues unchanged |
-| 来源追不上 | The Base 可改变性 is 低 (re-checked on these answers' top 20 cited domains) | Already one tier down in the Base; within its tier, last |
+| 来源追不上 | No executable source intervention has been identified after reviewing pages, evidence and available resources | Record the source constraints and feasible actions for manual review; no automatic tier change |
 
-Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — which already carries the 可改变性 低 drop) → pattern as above → 相对竞品 (优势 before 持平). Content effort is not a key; changeability already sits in the tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
+Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — inherited from business importance) → pattern as above → 相对竞品 (优势 before 持平; judged after the baseline for Prompts with a gap — the client Base has no attribute pool since 2026-11-04; leave it out of the order where not yet judged). Source structure describes possible interventions and evidence gaps. Citation shares alone do not establish changeability or alter the selection tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
 
 ## Display rules
 
@@ -86,6 +86,15 @@ Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P
 - Citation pills show the full source name and number (the presales style cut them at 120–180 px), link to the run's own citation, and are restored as pills in the translation.
 - Answer HTML is cleaned of crawler leftovers: empty-target images, empty links, `[text](<url>)`, `---`, ChatGPT widget residue (`:::writing`, `{#each}`, `{@body}`, `<Entity value=…>`), LaTeX (written as × ÷ ≥ ≈), double-escaped entities and markdown escapes. Translated tables (flattened to `a | b |` lines) are rebuilt as tables; heading-style `1.` lines keep their own numbers. The remaining few hits in 渲染残留自检 are answers the crawler cut off mid-markup.
 - Payload is gzipped into the page and unpacked in the browser; Hbrand with 5 runs' answers and translations is about 6 MB (15 MB uncompressed, which the app side panel could not open).
+
+## 平台自报参照 (Suda 2026-11-04)
+
+品牌方给了 GSC Generative AI Performance（近 3 个月 Impressions、Pages、Countries、Dates）或 Bing AI Performance（Cited Pages、Citations）时，原样存进客户基线目录，作为优化前的平台自报参照。它们记录的是真实用户在 Google、Bing AI 功能里看到或引用官网的次数，和我们按固定提示词抽样的读数互为补充。
+
+- **前后对比**：后续每个报告窗口取同样长度的时段（近 3 个月对近 3 个月），只比官网自己的展示量、被引页面数和引用量的变化方向。
+- **交给内容**：Bing Cited Pages 里已经被 AI 引用的官网页面，交接时列给内容团队，优先在这些页上补事实；新发的页面看它有没有出现在下一期的 Cited Pages 里。
+- **不混算**：不并进提及率、引用份额、引用率；GSC 这份没有查询词，不能对到某道提示词；两份都只覆盖品牌自己的官网和这两家平台。
+- 目前不进 HTML 页面，写在基线交付说明里。
 
 ## Definitions
 
@@ -95,4 +104,4 @@ Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P
 
 - Hbrand 2026-10-21: ChatGPT `search_model_queries` was empty in all 380 answers and Gemini returned related questions in 11 of 380, so Query Fan-outs is mostly empty. **Resolved 2026-10-29**: the collector was not broken — 10-28 and 10-29 batches returned the field in 100% of answers. That batch predates the fix; the files' mtimes were later refreshed by a downstream script, so judge emptiness by `task_result.model` and field content, never by file time.
 - ChatGPT fan-out shape changed with `gpt-6` (2026-10-29): one wide keyword-stuffed query instead of 2–3 decomposed ones, no `site:` operators. See [gap-cause-action-table.md](gap-cause-action-table.md) → *ChatGPT 两代形态不同*. Readings across the two model generations are not comparable.
-- Not in the report: 推荐率, 决胜率 (ad-hoc for comparison Prompts), 事实准确率 (retest table), Shopping GEO.
+- Not in the report: 推荐率, 决胜率 (ad-hoc for comparison Prompts), 事实准确率 (retest table), Shopping GEO, 平台自报参照 (GSC / Bing AI reports; see above).

@@ -623,17 +623,30 @@ def polish_details(data, cfg):
             brands.sort(key=lambda b: (b["brand"] != target, b["brand"]))
             r["sentiment"] = {"brands": brands}
             src = cfg["runs"][int(r.get("run") or 1) - 1] / f"scraper.{dir_of.get(plat_label)}" / cfg["region"] / f"{num}.json"
-            fan = []
+            # query fan-out = ChatGPT search_model_queries + Grok web_search 检索词；Gemini related_queries、Grok follow_up_suggestions 是推荐用户下一步问的延伸问题，分开放（2026-11-04）
+            got = {"search_model_queries": [], "related_queries": []}
             if src.exists():
                 t = json.loads(src.read_text(encoding="utf-8")).get("task_result") or {}
-                for field in ("search_model_queries", "related_queries"):
+                for field, out in got.items():
                     v = t.get(field)
                     v = v.get("queries") if isinstance(v, dict) else v
                     for q in v or []:
                         q = q.get("query") if isinstance(q, dict) else q
-                        if isinstance(q, str) and q.strip() and q.strip() not in fan:
-                            fan.append(q.strip())
-            r["fanout"] = fan
+                        if isinstance(q, str) and q.strip() and q.strip() not in out:
+                            out.append(q.strip())
+                for u in t.get("tool_usages") or []:  # Grok：web_search 的检索词在 tool_args 里
+                    if isinstance(u, dict) and u.get("tool_name") == "web_search":
+                        try:
+                            q = (json.loads(u.get("tool_args") or "{}") or {}).get("query")
+                        except (ValueError, AttributeError):
+                            q = None
+                        if isinstance(q, str) and q.strip() and q.strip() not in got["search_model_queries"]:
+                            got["search_model_queries"].append(q.strip())
+                for q in t.get("follow_up_suggestions") or []:  # Grok 推荐的延伸问题
+                    if isinstance(q, str) and q.strip() and q.strip() not in got["related_queries"]:
+                        got["related_queries"].append(q.strip())
+            r["fanout"] = got["search_model_queries"]
+            r["related"] = got["related_queries"]
             cites = r.get("citations") or []
 
             def link(m, cites=cites):
@@ -726,19 +739,19 @@ DRAWER_RUNS_JS = r"""    // 售后问题详情（Suda 2026-10-21/22，参考 Pro
         allRuns.push({ id: v.platform + "|" + i, platform: v.platform, r: r });
       });
     });
-    function fanBlock() {
+    function fanBlock(field, title, note, empty) {
       var cnt = {}, order = [];
       allRuns.forEach(function (x) {
-        (x.r.fanout || []).forEach(function (q) {
+        (x.r[field] || []).forEach(function (q) {
           var k = x.platform + "|" + q;
           if (!cnt[k]) { cnt[k] = 0; order.push(k); }
           cnt[k] += 1;
         });
       });
-      var head = '<h4 class="hb-sec">Query Fan-outs <span class="hb-sec-note">AI 研究这道题时自己生成的检索词</span></h4>';
-      if (!order.length) return head + '<p class="support-line">这一轮采集没有返回检索词（ChatGPT 的 search_model_queries 为空，Gemini 只在少数回答里带相关问题）。</p>';
+      var head = '<h4 class="hb-sec">' + title + ' <span class="hb-sec-note">' + note + '</span></h4>';
+      if (!order.length) return head + '<p class="support-line">' + empty + '</p>';
       order.sort(function (a, b) { return cnt[b] - cnt[a]; });
-      return head + '<table class="hb-runs"><thead><tr><th>检索词</th><th>平台</th><th>出现次数</th></tr></thead><tbody>' +
+      return head + '<table class="hb-runs"><thead><tr><th>' + (field === "fanout" ? "检索词" : "延伸问题") + '</th><th>平台</th><th>出现次数</th></tr></thead><tbody>' +
         order.map(function (k) { var i = k.indexOf("|"); return "<tr><td>" + esc(k.slice(i + 1)) + "</td><td>" + esc(k.slice(0, i)) + "</td><td>" + cnt[k] + "</td></tr>"; }).join("") +
         "</tbody></table>";
     }
@@ -764,7 +777,9 @@ DRAWER_RUNS_JS = r"""    // 售后问题详情（Suda 2026-10-21/22，参考 Pro
         '<p class="drawer-zh">' + esc(record ? record.zh : (entry.question_zh || "")) + "</p>" +
         '<p class="hb-dtags"><span>' + esc(record ? record.topic : "—") + "</span><span>" + esc(record ? record.intent : "—") + "</span></p></div>" +
         filter + "</div>" +
-        compBlock(drec) + platBlock() + fanBlock() +
+        compBlock(drec) + platBlock() +
+        fanBlock("fanout", "Query Fan-outs", "AI 研究这道题时自己生成的检索词（ChatGPT、Grok）", "这一轮采集没有返回检索词（只有 ChatGPT 和 Grok 返回）。") +
+        fanBlock("related", "延伸问题", "平台推荐用户下一步问的问题（Gemini、Grok），不是检索词", "这一轮采集没有返回延伸问题（Gemini 只在少数回答里带，Grok 基本都带）。") +
         '<h4 class="hb-sec">回答记录</h4>' +
         '<table class="hb-runs"><colgroup><col style="width:12%"><col style="width:14%"><col style="width:10%"><col>' +
         '<col style="width:10%"><col style="width:11%"></colgroup>' +
