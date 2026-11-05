@@ -2,6 +2,10 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.41.0（2026-11-05）主题定义改为核心购买决策 × 提示词类型
+
+Suda 定：主题 ＝ 同一核心购买决策 × 同一提示词类型下的一组相关问题。撤销 2.40.0 的「不够 5 题跨决策合成类型主题」，不同决策的同类型题不合并；发现题内部不再按问法细分。type-branches 的题量从「每个购买决策最多几道」改为按竞品 × 场景、场景、具体问题计，否则类型主题到不了 5 道。「三个条件」继续用来判核心购买决策；单主题不设上限、主题名不带品牌不变。售前生词 6.8.0 同步。改前快照 `.snapshots/topic-definition-decision-type-20261105-*/`。
+
 ## 2.40.1（2026-11-05）一个主题一种类型扩到售前；模板 Base 同步
 
 Suda 定：「通用」包括售前，并同意删模板列和图表。门禁 66 改查写了 `extra_prompt_types` 的售前题库（线上售前题库目前没有写这个键的存量）；售前不设 5 题下限，W59 的类型主题提醒不查售前。`selection-mode.md` 第 6、7 步、`run_selection_mode.py` 返修提示、`prompt-generation-principles.md` 同步；售前 skill 升 6.7.0；样例题库拆成发现、对比、评价三个主题。模板 Base：删提示词库「提示词类型」列（fldy1kYycE）和看板「按提示词类型」环形图，看板说明删对应一句，各类型读法并入矩阵「提示词类型」字段说明。改前快照 `.snapshots/template-prompt-type-field-20261105-192209/`、`.snapshots/topic-one-type-presales-20261105-192502/`。

@@ -952,8 +952,7 @@ def topic_checks(config: dict, questions: list[dict], intents: dict[int, str],
                 mixed.append(f"{tid}: {' + '.join(types)}")
         if mixed:
             fail(f"Gate 66: Topics mixing Prompt types ({'; '.join(mixed)}); the dashboard has no type field, so "
-                 "keep one type per Topic — other types go to a decision + type Topic, or a type Topic across "
-                 "decisions when one decision has under 5", errors)
+                 "keep one type per Topic — a Topic is one core purchase decision × one Prompt type", errors)
     no_discovery = [] if one_type_per_topic else sorted(
         str(tid) for tid, items in by_topic.items()
         if items and not any(intents.get(id(r)) == "Discovery" for r in items))
@@ -973,7 +972,7 @@ def topic_checks(config: dict, questions: list[dict], intents: dict[int, str],
                 floor.append(f"{tid}: {len(kpi)} KPI Prompts / {len(decisions)} decision signatures")
             active = [q for q in items if str(q.get("status") or "").strip() != "停测"]
             if one_type_per_topic and not presales and not kpi and active and len(active) < 5:
-                floor.append(f"{tid}: {len(active)} non-Discovery Prompts, merge same-type Prompts across decisions")
+                floor.append(f"{tid}: {len(active)} non-Discovery Prompts")
         if floor:
             warnings.append(f"[W59] Topics below the default coverage target ({'; '.join(floor)}); "
                             "in order: (1) add missed buyer constraints, scenes, audiences or limits; (2) build compound "
