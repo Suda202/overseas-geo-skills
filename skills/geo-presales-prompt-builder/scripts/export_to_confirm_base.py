@@ -2,15 +2,16 @@
 
 副本不发给客户：售前没有客户逐条确认，表里的分级是我方判断。只写售前有的东西：
   业务范围     ← case_fields、冻结竞品、采集配置（市场、平台）、调研文件的 scope_facts
-  买家原话     ← 调研文件的 buyer_quotes
+  需求信号     ← 调研文件的 buyer_quotes（2026-11-04 前的副本表名是买家原话，按副本实际表名写）
   品牌事实核查 ← 调研文件的 fact_checks
-  属性池       ← attribute_plan：每个属性一行，写相对竞品（旧模板副本另写重要性 / 可改变性）
+  属性池       ← attribute_plan：每个属性一行，写相对竞品（旧模板副本另写重要性 / 可改变性）；2026-11-04 起模板
+                 没有属性池，属性名写进矩阵、提示词库的「买方约束」选项，相对竞品不写
   主题         ← config.topics：每个主题一行（2026-10-27 起）
   提示词矩阵   ← attribute_plan：每个 Topic × 属性一行，用「属性关联」挂属性池；没有属性的品类题挂在空属性行。
                  新模板（2026-10-28 起，矩阵有「优先级依据」）另写「主题」关联和「优先级」：售前档位只作草稿，
                  优先级依据注明「待按业务重点 × 买家证据重判」——售前没有业务重点信息，本脚本不替售后判
   提示词库     ← questions；新模板另挂「属性」，优先级按所在行预填
-  提示词库     ← questions；「证据」按调研文件的 prompt_evidence 挂买家原话
+  提示词库     ← questions；「证据」按调研文件的 prompt_evidence 挂需求信号
 基线三表只删【示例】行，不写；需要品牌方提供的数据保持模板原样。调研文件格式见 references/legacy/public-research.md（默认模式已归档，本脚本只用于旧流程）。
 
 用法：
@@ -56,10 +57,51 @@ OLD_STAGES = {"发现": "方案考虑", "替代方案": "方案考虑", "评估"
               "交易": "购买决策", "解决问题": "需求认知"}
 AUDIENCE_FIELD = re.compile(r"^(目标客户|目标企业画像) ?\d+$")
 # 模板里的选项值；调研文件用别的值会被拦下（受众、涉及品牌、产品线按本 Case 重建，不在此列）
-OPTIONS = {"来源类型": {"搜索数据", "PAA 与相关搜索", "评价", "社区", "销售记录", "客服记录", "GSC", "站内搜索", "AI 回答"},
+# 来源类型：前一行是 2026-11-04 前的旧选项（旧副本和旧调研文件），写进新模板「需求信号」时按 new_source() 换成新选项
+OPTIONS = {"来源类型": {"搜索数据", "PAA 与相关搜索", "评价", "社区", "销售记录", "客服记录", "GSC", "站内搜索", "AI 回答",
+                    "Bing", "Google Ads", "关键词工具", "电商平台搜索", "搜索联想", "销售", "客服", "AI 检索词",
+                    "Bing AI 检索词", "query fan-outs", "AI 追问", "模型建议问题",
+                    "DataForSEO", "Semrush", "Ahrefs", "Similarweb", "Keyword Planner", "Naver", "品牌官网", "竞品官网"},
            "旅程阶段": {"需求认知", "方案考虑", "购买决策"},
            "证据可信度": {"高", "中", "低"}, "品牌方要做什么": {"改官网", "提供材料"}}
-WRITE_TABLES = ("业务范围", "买家原话", "品牌事实核查", "属性池", "主题", "提示词矩阵", "提示词库")  # 主题表 2026-10-27 加回
+WRITE_TABLES = ("业务范围", "需求信号", "买家原话", "品牌事实核查", "属性池", "主题", "提示词矩阵", "提示词库")  # 主题表 2026-10-27 加回
+NEW_SOURCE = {"PAA 与相关搜索": "搜索联想", "销售记录": "销售", "客服记录": "客服",
+              "AI 回答": "query fan-outs", "AI 检索词": "query fan-outs"}  # 售前只用公开证据，没有 Bing 后台数据，AI 来源都是模型生成
+SCOPE_KEY = re.compile(r"（\d+）|（优先）|（本期）|（后续）|（我方填）")
+
+
+def to_signal_row(q):
+    """旧「买家原话」行 → 2026-11-04 起的「需求信号」行：来源说明 + 来源链接 合成出处，中文意思改叫译文，
+    旅程阶段、涉及品牌、证据可信度、收集日期不再记，受众保留。"""
+    row = {k: v for k, v in q.items() if k in ("输入编号", "原话", "约束", "产品线", "市场", "月搜索量", "受众")}
+    if q.get("中文意思") or q.get("译文"):
+        row["译文"] = q.get("译文") or q.get("中文意思")
+    src = q.get("来源类型")
+    where = "｜".join(str(x) for x in (q.get("出处"), q.get("来源说明"), q.get("来源链接")) if x)
+    if src:
+        row["来源类型"] = [new_source(x, where) for x in as_list(src)]
+    if where:
+        row["出处"] = where
+    return row
+
+
+# 2026-11-04 起关键词工具按工具分选项；旧的「搜索数据」「关键词工具」按出处里写的工具名认
+# 「Google Ads 月搜索量」是 collect_keyword_data.py volume 的出处写法；先认搜索联想，它的出处可能另写「搜索量：Ahrefs」
+TOOL_IN_WHERE = [("DataForSEO", "DataForSEO"), ("Google Ads 月搜索量", "DataForSEO"), ("Semrush", "Semrush"),
+                 ("Ahrefs", "Ahrefs"), ("Similarweb", "Similarweb"), ("Keyword Planner", "Keyword Planner"), ("Naver", "Naver")]
+SUGGEST_IN_WHERE = ("自动补全", "相关搜索", "People Also Ask", "PAA", "suggestqueries")
+
+
+def new_source(x, where):
+    if x not in ("搜索数据", "关键词工具"):
+        return NEW_SOURCE.get(x, x)
+    low = where.lower()
+    if any(k.lower() in low for k in SUGGEST_IN_WHERE):
+        return "搜索联想"
+    for key, tool in TOOL_IN_WHERE:
+        if key.lower() in low:
+            return tool
+    sys.exit(f"来源类型「{x}」认不出是哪个工具，请在出处里写明工具名：{where[:80]}")
 
 
 def tag_value(q, prefix):
@@ -79,9 +121,12 @@ def rename_for_copy(spec, meta):
     back = {"高": "P1", "中": "P2", "低": "P3"}
     mat, lib = meta.get("提示词矩阵", {}), meta.get("提示词库", {})
     for r in spec["提示词矩阵"]:
-        if "业务重要性" not in mat and "优先级" in mat:
-            r["优先级"] = [back[r.pop("业务重要性")[0]]]
-            r["优先级依据"] = r.pop("业务重要性依据")
+        if "业务优先级" not in mat and "业务重要性" in mat:  # 2026-11-02 至 11-04 的副本
+            r["业务重要性"] = r.pop("业务优先级")
+            r["业务重要性依据"] = r.pop("业务优先级依据")
+        elif "业务优先级" not in mat and "优先级" in mat:
+            r["优先级"] = [back[r.pop("业务优先级")[0]]]
+            r["优先级依据"] = r.pop("业务优先级依据")
     for r in spec["提示词库"]:
         if "提示词优先级" not in lib and "优先级" in lib:
             r["优先级"] = [back[r.pop("提示词优先级")[0]]]
@@ -141,10 +186,10 @@ def build_spec(bank, market, platforms, research=None):
     brand = cf["品牌名称"] + (f"（{cf['公司名']}）" if cf.get("公司名") else "")
     for item, value in [("品牌", brand), ("业务模式", cf.get("业务模式")), ("品类", cf["品类"]),
                         ("市场与语言", market), ("官方域名", cf.get("官方域名")),
-                        ("适用边界", cf.get("适用边界")), ("产品线（1）（优先）", line)]:
+                        ("适用边界", cf.get("适用边界")), ("产品线（1）（本期）", line)]:
         if value:
             scope.append({"项目": item, "内容": value})
-    scope += [{"项目": f"主要受众（{i}）", "内容": a} for i, a in enumerate(audiences, 1)]
+    scope += [{"项目": f"主要受众（{i}）（我方填）", "内容": a} for i, a in enumerate(audiences, 1)]
     scope.append({"项目": "平台", "内容": platforms})
     research = research or {}
     if not any(r["项目"] == "品牌与产品别名" for r in research.get("scope_facts", [])):
@@ -188,8 +233,8 @@ def build_spec(bank, market, platforms, research=None):
     def add_row(topic_id, attribute, tier="P2", basis="", **cols):
         # 2026-11-02 起矩阵字段叫「业务重要性」（高 / 中 / 低）；旧副本的「优先级」写入前在 rename_for_copy 里换回
         row = {"_key": f"{topic_id}|{attribute}", "_topic": topic_zh[topic_id], "切片编号": f"M-{len(matrix) + 1:03d}",
-               "产品线": [line], "业务重要性": [TIER_ZH[tier]],
-               "业务重要性依据": basis or f"售前档位 {TIER_ZH[tier]}，待按品牌方的业务目标重判（草稿）",
+               "产品线": [line], "业务优先级": [TIER_ZH[tier]],
+               "业务优先级依据": basis or f"售前档位 {TIER_ZH[tier]}，待按需求重要性、商业相关性重判（草稿）",
                "受众": [cols.pop("受众", base_audience)], **({"_attr": attribute} if attribute else {}), **cols}
         matrix.append(row)
         slot[(topic_id, attribute)] = row
@@ -224,7 +269,7 @@ def build_spec(bank, market, platforms, research=None):
         prompts.append({"编号": q["question_id"], "提示词": q["monitoring_prompt"], "中文含义": q.get("zh_translation", ""),
                         "主题": [topic_zh[q["topic_id"]]], "产品线": [line], "提示词类型": [intent], "状态": ["待审核"],
                         "可改变性": ["待试跑"], "所属切片": ["@" + row["_key"]],
-                        "提示词优先级": row["业务重要性"], **({"_attr": attribute} if attribute else {}),
+                        "提示词优先级": row["业务优先级"], **({"_attr": attribute} if attribute else {}),
                         **({"证据": ["@" + x for x in evidence[q["question_id"]]]} if evidence.get(q["question_id"]) else {})})
     for row in matrix:
         intents = row.pop("_intents", [])
@@ -331,6 +376,9 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
             break
         time.sleep(10)
     tables = {t["name"]: t["id"] for t in lk.run("+table-list")["tables"]}
+    if "需求信号" in tables and "买家原话" in spec:  # 2026-11-04 起模板表名「需求信号」、字段精简
+        spec["需求信号"] = [to_signal_row(q) for q in spec.pop("买家原话")]
+    sig = "需求信号" if "需求信号" in spec else "买家原话"
 
     # 1) 删【示例】行。写入的五张表已有非示例行说明导出过：默认停止；--rewrite 先把这些行存快照再整表清空
     why = {}
@@ -347,7 +395,7 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
                 json.dumps(rows, ensure_ascii=False, indent=1))
         if name == "业务范围":
             for r in rows:
-                key = re.sub(r"（\d+）|（优先）|（后续）", "", str(r.get("项目", "")).replace("【示例】", ""))
+                key = SCOPE_KEY.sub("", str(r.get("项目", "")).replace("【示例】", ""))
                 if r.get("为什么重要"):
                     why.setdefault(key, r["为什么重要"])
         drop = [r for r in rows if is_example(r) or (rewrite and name in WRITE_TABLES)]
@@ -357,7 +405,11 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     def want(table, col):
         return sorted({x for r in spec[table] for x in (r.get(col) or [])})
     meta = {t: {f["name"]: f.get("type") for f in lk.fields(tables[t])} for t in WRITE_TABLES if t in tables}
-    v2 = bool({"业务重要性依据", "优先级依据"} & set(meta.get("提示词矩阵", {})))  # 2026-10-28 起的新模板
+    if "相对竞品依据" in meta.get("属性池", {}):  # 2026-11-04 起模板字段名
+        for r in spec["属性池"]:
+            if "判据与证据" in r:
+                r["相对竞品依据"] = r.pop("判据与证据")
+    v2 = bool({"业务优先级依据", "业务重要性依据", "优先级依据"} & set(meta.get("提示词矩阵", {})))  # 2026-10-28 起的新模板
     rename_for_copy(spec, meta)
 
     dropped: dict[str, set] = {}
@@ -371,12 +423,22 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
                 if not k.startswith("_") and k in kinds and kinds[k] not in ("formula", "lookup")}
     if v2:  # 新模板属性池没有受众行
         spec["属性池"] = [r for r in spec["属性池"] if r.get("类别") != ["买家角色"]]
+    # 2026-11-04 起模板没有属性池：属性名写进矩阵、提示词库的「买方约束」选项；售前判的相对竞品不写（基线后再判）
+    no_pool = "属性池" not in tables and "买方约束" in meta.get("提示词矩阵", {})
+    if no_pool:
+        if spec["属性池"]:
+            print(f"模板没有属性池：{len(spec['属性池'])} 条属性只写成「买方约束」选项，售前的相对竞品判断不写入", file=sys.stderr)
+        spec["属性池"] = []
+        for r in spec["提示词矩阵"] + spec["提示词库"]:
+            if r.get("_attr"):
+                r["买方约束"] = [r["_attr"]]
     for table, col in (("业务范围", "市场"), ("买家原话", "市场"), ("品牌事实核查", "市场"), ("提示词矩阵", "市场"), ("提示词库", "市场"),
                        ("提示词矩阵", "产品线"), ("提示词矩阵", "受众"), ("提示词矩阵", "旅程阶段"), ("买家原话", "旅程阶段"), ("提示词库", "产品线"), ("提示词库", "主题"),
                        ("主题", "市场"), ("主题", "产品线"),
                        ("买家原话", "产品线"), ("买家原话", "受众"), ("买家原话", "涉及品牌"), ("品牌事实核查", "产品线"),
-                       ("属性池", "产品线")):
-        if not spec[table] or table not in tables:
+                       ("需求信号", "市场"), ("需求信号", "产品线"), ("需求信号", "受众"),
+                       ("属性池", "产品线"), ("提示词矩阵", "买方约束"), ("提示词库", "买方约束")):
+        if not spec.get(table) or table not in tables:
             continue
         f = next((f for f in lk.fields(tables[table]) if f["name"] == col), None)
         if f is None or f.get("type") != "select":  # 2026-10-19 前的副本没有「市场」；新模板提示词库「主题」是引用
@@ -388,17 +450,17 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     # 3) 写记录；「为什么重要」只写在每类的第一行
     seen = set()
     for r in spec["业务范围"]:
-        key = re.sub(r"（\d+）|（优先）|（后续）", "", r["项目"])
+        key = SCOPE_KEY.sub("", r["项目"])
         if key in why and key not in seen:
             r["为什么重要"] = why[key]
         seen.add(key)
     lk.create(tables["业务范围"], [writable("业务范围", r) for r in spec["业务范围"]])
     if spec["品牌事实核查"]:
         lk.create(tables["品牌事实核查"], [writable("品牌事实核查", r) for r in spec["品牌事实核查"]])
-    qid = dict(zip((q["输入编号"] for q in spec["买家原话"]),
-                   lk.create(tables["买家原话"], [writable("买家原话", r) for r in spec["买家原话"]])
-                   if spec["买家原话"] else []))
-    if "属性池" not in tables:  # 2026-10-20 前复制的副本没有属性池，矩阵也没有「属性关联」
+    qid = dict(zip((q["输入编号"] for q in spec[sig]),
+                   lk.create(tables[sig], [writable(sig, r) for r in spec[sig]])
+                   if spec[sig] else []))
+    if "属性池" not in tables and not no_pool:  # 2026-10-20 前复制的副本没有属性池，矩阵也没有「属性关联」
         raise SystemExit("这份副本没有「属性池」表，是 2026-10-20 前的旧结构；请从当前模板重新复制")
     aid = dict(zip((r["属性"] for r in spec["属性池"]),
                    lk.create(tables["属性池"], [writable("属性池", r) for r in spec["属性池"]]) if spec["属性池"] else []))
@@ -411,7 +473,7 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     mrows = []
     for r in spec["提示词矩阵"]:
         row = writable("提示词矩阵", r)
-        if r.get("_attr"):
+        if r.get("_attr") and not no_pool:
             row["属性关联"] = [{"id": aid[r["_attr"]]}]
         if v2 and r["_topic"] in tid:
             row["主题"] = [{"id": tid[r["_topic"]]}]
@@ -436,7 +498,7 @@ def deploy(base, spec, rewrite=False, snap_dir=None):
     linked = sum(1 for r in prompts_back if r.get("所属切片"))
     evid = sum(1 for r in prompts_back if r.get("证据"))
     want_evid = sum(1 for p in spec["提示词库"] if "证据" in p)
-    attr_linked = sum(1 for r in lk.records(tables["提示词矩阵"]) if r.get("属性关联"))
+    attr_linked = sum(1 for r in lk.records(tables["提示词矩阵"]) if r.get("买方约束" if no_pool else "属性关联"))
     want_attr = sum(1 for r in spec["提示词矩阵"] if r.get("_attr"))
     print(json.dumps({"回读行数": back, "应有行数": expect, "已挂切片的提示词": linked, "已挂证据的提示词": evid,
                       "已挂属性的切片": attr_linked, "应挂属性的切片": want_attr}, ensure_ascii=False))

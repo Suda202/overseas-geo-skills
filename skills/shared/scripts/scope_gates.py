@@ -23,7 +23,7 @@ blind review, on two counts the validator never checked.
 Both read the per-Prompt `constraints` list — the buyer conditions the Prompt
 carries beyond its attribute, written as 约束-column keywords — and the
 bank's buyer-quote table `config.buyer_quotes` (输入编号 / 原话 / 约束, the
-client Base 买家原话 columns). `config.base_conditions` lists the category's
+client Base 需求信号 columns). `config.base_conditions` lists the category's
 base audience or use (「私家车」「日常驾驶」), which is the category itself
 and never a condition.
 
@@ -36,6 +36,15 @@ data, the research pre-run, a competitor's filters or plain buyer common sense.
 Such a basis is written per Prompt in `condition_basis` ({condition: basis}, or
 a list of {"condition", "basis"}); a condition with a written basis is not
 reported and counts as decision-changing in gate 2.
+
+Since 2026-11-04 (Suda) the client Base no longer records 约束 on 需求信号 and
+the attribute pool is gone: a Prompt's concrete conditions (budget, home type,
+district) are taken from the buyer quotes it cites. When no quote in the bank
+carries a 约束 cell, gate 1 checks that every declared condition rests on at
+least one cited quote or a written `condition_basis`, and that every number in
+the query appears in a cited quote or a basis; whether the quote really says it
+is read by the reviewer, who sees the quote linked on the Prompt. Banks whose
+quotes still carry 约束 keep the keyword check above.
 """
 from __future__ import annotations
 
@@ -186,6 +195,18 @@ def unsupported_conditions(row: dict, quote_constraints: dict[str, str],
     numbers — it renders "both sides" or "overnight" as 两侧 / 一整夜.
     """
     cited, unknown = _cited(row, quote_constraints)
+    if not _has_cells(quote_constraints):
+        texts = [(quote_texts or {}).get(h, "") for h in cited]
+        base = set(constraint_keywords(base_conditions or []))
+        declared = [k for k in constraint_keywords(row.get("constraints")) if k not in base]
+        based = list(condition_basis(row))
+        based_numbers = set().union(set(), *(numbers_in(k) for k in based))
+        return {
+            "unknown_refs": unknown,
+            "keywords": [] if cited else [k for k in declared if not keyword_supported(k, based)],
+            "numbers": sorted(numbers_in(row.get("user_question")) - set().union(set(), *(numbers_in(t) for t in texts))
+                              - based_numbers),
+        }
     cells = [quote_constraints[h] for h in cited]
     evidence_kw = [k for cell in cells for k in constraint_keywords(cell)]
     texts = [(quote_texts or {}).get(h, "") for h in cited]
@@ -202,9 +223,18 @@ def unsupported_conditions(row: dict, quote_constraints: dict[str, str],
     }
 
 
+def _has_cells(quote_constraints: dict[str, str]) -> bool:
+    """Does any quote still carry a 约束 cell (banks before 2026-11-04)?"""
+    return any(str(v or "").strip() for v in quote_constraints.values())
+
+
 def supported_keywords(row: dict, quote_constraints: dict[str, str]) -> list[str]:
-    """The declared constraints that a cited quote's 约束 column or a written `condition_basis` backs."""
+    """The declared constraints that a cited quote's 约束 column or a written `condition_basis` backs.
+    Without 约束 cells (2026-11-04 on), a Prompt that cites a quote counts all its declared constraints as backed."""
     cited, _ = _cited(row, quote_constraints)
+    if not _has_cells(quote_constraints):
+        declared = constraint_keywords(row.get("constraints"))
+        return declared if cited else [k for k in declared if keyword_supported(k, list(condition_basis(row)))]
     evidence_kw = [k for h in cited for k in constraint_keywords(quote_constraints[h])] + list(condition_basis(row))
     return [k for k in constraint_keywords(row.get("constraints")) if keyword_supported(k, evidence_kw)]
 

@@ -26,8 +26,8 @@
 
 产物（<out>/）：
   raw/                  每个任务的原始返回
-  signals.csv           列与对客 Base「买家原话」表一致；来源类型「评价」，来源说明写平台、对象、星级、日期，
-                        来源链接写该条评价（或商品、应用页）的地址；中文意思、受众、旅程阶段等留空待人工判
+  signals.csv           列与对客 Base「需求信号」表一致；来源类型「评价」，出处写平台、品牌、对象、星级、日期（平台放第一段，出题原因按它认站点），
+                        末尾是该条评价（或商品、应用页）的地址；译文、受众、买方约束留空待人工判
   reviews.csv           内部用：平台、对象、星级、日期、标题、正文、链接、有用数、应用版本；不存评价人姓名
   summary.json          调用次数、花费、每个对象取到几条、失败项
 
@@ -253,13 +253,13 @@ def write_outputs(r: Runner, platform: str, rows: list[dict], per_target: dict):
         if k in seen:
             continue
         seen.add(k)
-        note = "｜".join(x for x in (row["platform"], row["target"],
+        note = "｜".join(x for x in (row["platform"], args.brand, row["target"],
                                      f"原评价在 {row['source_site']}" if row["source_site"] else "",
                                      f"{row['rating']} 星" if row["rating"] else "",
                                      row["date"], f"版本 {row['version']}" if row["version"] else "") if x)
         s = dict.fromkeys(kd.FIELDS, "")
-        s.update({"产品线": args.product_line, "涉及品牌": args.brand, "来源类型": "评价", "原话": row["text"],
-                  "来源说明": note, "来源链接": row["url"], "收集日期": today, "证据可信度": "中"})
+        s.update({"产品线": args.product_line, "来源类型": "评价", "原话": row["text"],
+                  "出处": "｜".join(x for x in (note, row["url"]) if x)})
         signal_rows.append(s)
     for i, s in enumerate(signal_rows, 1):
         s["输入编号"] = f"{args.id_prefix}{i:03d}"
@@ -314,8 +314,8 @@ def main() -> int:
         if name in ("google-shopping", "google-maps"):
             p.add_argument("--match", default="", help="商品标题或商家名必须含这个词，如品牌名")
         p.add_argument("--product-line", default="", help="写入 产品线 列")
-        p.add_argument("--brand", default="", help="写入 涉及品牌 列（评价对象的品牌）")
-        p.add_argument("--id-prefix", default="R", help="输入编号前缀，避免与已有买家原话撞号")
+        p.add_argument("--brand", default="", help="评价对象的品牌，写在出处第二段")
+        p.add_argument("--id-prefix", default="R", help="输入编号前缀，避免与已有需求信号撞号")
         p.add_argument("--budget-usd", type=float, default=1.0, help="本次累计花费上限，默认 1 美元")
         p.add_argument("--wait", type=int, default=600, help="每个任务最多等几秒")
         p.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")

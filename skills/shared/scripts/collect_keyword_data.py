@@ -25,14 +25,14 @@
 
 产物（<out>/）：
   raw/<子命令>-<摘要>.json   原始请求与返回，作证据留存
-  signals.csv               列与对客 Base「买家原话」表一致；来源类型「搜索数据」，月搜索量填分档
-                            （>10,000 / >1000 / >100 / <100；确切数在 volumes.csv），中文意思、受众、旅程阶段等留空待人工判
+  signals.csv               列与对客 Base「需求信号」表一致；来源类型「DataForSEO」，月搜索量填分档
+                            （>10,000 / >1000 / >100 / <100；确切数在 volumes.csv），译文、受众、买方约束留空待人工判
   volumes.csv               内部用：关键词、月均搜索量、近 12 个月逐月量、竞争度、CPC、搜索意图
   summary.json              调用次数、累计花费、失败项
-  trends 子命令的产物不进 signals.csv（Trends 只定用哪个品类词和避开哪几个月，不是买家原话）：
+  trends 子命令的产物不进 signals.csv（Trends 只定用哪个品类词和避开哪几个月，不是需求信号）：
   trends.csv                每个叫法的平均热度、排名、热度最高的三个日历月、逐周序列
   trends_queries.csv        --queries 时：每个叫法的热门与飙升相关查询
-  summary.json 的 note      可直接贴进买家原话表「来源说明」与任务记录的一句话（叫法对比 + 旺季月份）
+  summary.json 的 note      可直接贴进主题优先级依据与任务记录的一句话（叫法对比 + 旺季月份）
 
 读数口径（signal-sources.md → 关键词工具）：搜索量只作方向判断，不当 AI 提问量；说主题规模时
 取同一需求几种说法里量最大的那个词，不相加。韩国谷歌量偏低，量级以 Naver 关键词工具为主。
@@ -64,8 +64,8 @@ TRENDS_RANGES = ["past_30_days", "past_90_days", "past_12_months", "past_5_years
 TRENDS_RANGE_LABEL = {"past_30_days": "近 30 天", "past_90_days": "近 90 天", "past_12_months": "近 12 个月",
                       "past_5_years": "近 5 年"}
 USER_PATH = "appendix/user_data"
-FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "月搜索量", "原话", "中文意思", "受众", "旅程阶段",
-          "约束", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
+FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "受众", "买方约束",
+          "出处", "引用它的问题"]
 VOLUME_FIELDS = ["keyword", "search_volume", "tier", "monthly", "competition", "cpc", "main_intent", "seed", "source"]
 # DataForSEO 国家 location_code = 2000 + ISO 3166 数字代码；表外市场用 --location-code。
 COUNTRY = {"us": 2840, "gb": 2826, "uk": 2826, "sg": 2702, "my": 2458, "th": 2764, "tw": 2158, "kr": 2410,
@@ -290,9 +290,8 @@ def write_outputs(r: Runner, rows: list[dict], command: str):
         if row["search_volume"] == "":
             note += "｜无数据"
         s = dict.fromkeys(FIELDS, "")
-        s.update({"产品线": args.product_line, "来源类型": "搜索数据", "月搜索量": row["tier"], "原话": row["keyword"],
-                  "来源说明": note + ("｜沙盒假数据" if args.sandbox else ""), "收集日期": today,
-                  "证据可信度": "中" if row["search_volume"] != "" else "低"})
+        s.update({"产品线": args.product_line, "来源类型": "DataForSEO", "月搜索量": row["tier"], "原话": row["keyword"],
+                  "出处": note + f"｜{today}" + ("｜沙盒假数据" if args.sandbox else "")})
         signal_rows.append(s)
     for i, s in enumerate(signal_rows, 1):
         s["输入编号"] = f"{args.id_prefix}{i:03d}"
@@ -401,7 +400,7 @@ def write_trends_outputs(r: Runner, rows, ranked, queries, check_url):
     (r.out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n付费调用 {r.paid_calls} 次，花费 {r.cost:.4f} 美元" + ("（沙盒假数据）" if args.sandbox else ""))
     if note:
-        print(f"来源说明：{note}")
+        print(f"依据用语：{note}")
     if no_data:
         print(f"没有足够数据（小品类或小市场常见）：{'、'.join(no_data)}")
     if r.failed:
@@ -427,7 +426,7 @@ def main() -> int:
         p.add_argument("--lang", required=True, help="语言代码，如 en、th、ko；繁体中文 Google Ads 用 zh_TW")
         p.add_argument("--out", required=True, help="产物目录")
         p.add_argument("--product-line", default="", help="写入 产品线 列")
-        p.add_argument("--id-prefix", default="K", help="输入编号前缀，避免与已有买家原话撞号")
+        p.add_argument("--id-prefix", default="K", help="输入编号前缀，避免与已有需求信号撞号")
         p.add_argument("--budget-usd", type=float, default=1.0, help="本次累计花费上限，默认 1 美元")
         p.add_argument("--sandbox", action="store_true", help="走沙盒（免费，假数据），验证流程用")
         p.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")

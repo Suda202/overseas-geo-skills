@@ -31,8 +31,8 @@ Key 依次读环境变量 SCRAPELESS_API_KEY、macOS 钥匙串（服务名 SCRAP
 产物（<out>/）：
   raw/<种子词>.json           原始返回，作证据留存；.html 只在 JSON 缺 related_questions 时另存
   raw/<种子词>.L2-<n>.json    --paa-depth 2 时第 1 层第 n 条 PAA 的展开返回
-  signals.csv                列与对客 Base「买家原话」表一致；中文意思、受众、旅程阶段、涉及品牌、月搜索量留空待人工判
-                             （PAA、相关搜索、自动补全都不带搜索量；月搜索量只对 Ahrefs 等关键词工具的词填）
+  signals.csv                列与对客 Base「需求信号」表一致，来源类型记「搜索联想」；译文、受众、买方约束留空待人工判
+                             （PAA、相关搜索、自动补全都不带搜索量，月搜索量留空）
   summary.json               每个种子词各类信号条数与失败原因；PAA 为 0 的种子词单独列出
 """
 from __future__ import annotations
@@ -59,12 +59,12 @@ RESULT_PATH = "/api/v1/scraper/result/"
 SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
 PAA_TAG = re.compile(r"<div[^>]*\brelated-question-pair\b[^>]*>")
 DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
-FIELDS = ["输入编号", "产品线", "涉及品牌", "来源类型", "月搜索量", "原话", "中文意思", "受众", "旅程阶段",
-          "约束", "来源说明", "来源链接", "收集日期", "证据可信度", "引用它的问题"]
-KINDS = {"paa": ("Google People Also Ask", "中"),
-         "paa2": ("Google People Also Ask 第 2 层", "中"),
-         "related": ("Google 相关搜索", "中"),
-         "autocomplete": ("Google 自动补全", "低")}
+FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "受众", "买方约束",
+          "出处", "引用它的问题"]
+KINDS = {"paa": "Google People Also Ask",
+         "paa2": "Google People Also Ask 第 2 层",
+         "related": "Google 相关搜索",
+         "autocomplete": "Google 自动补全"}
 
 
 class Fatal(Exception):
@@ -242,7 +242,7 @@ def main() -> int:
     ap.add_argument("--hl", required=True, help="语言代码，如 en、th")
     ap.add_argument("--out", required=True, help="产物目录")
     ap.add_argument("--product-line", default="", help="写入 产品线 列")
-    ap.add_argument("--id-prefix", default="S", help="输入编号前缀，避免与已有买家原话撞号")
+    ap.add_argument("--id-prefix", default="S", help="输入编号前缀，避免与已有需求信号撞号")
     ap.add_argument("--timeout", type=float, default=180)
     ap.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")
     ap.add_argument("--cache-only", action="store_true", help="只用 raw/ 缓存，不发付费调用")
@@ -322,18 +322,17 @@ def main() -> int:
             rec["error"] = (rec["error"] + "；" if rec["error"] else "") + "自动补全接口失败"
         for kind, items in found.items():
             rec[kind] = len(items)
-            label, grade = KINDS[kind]
+            label = KINDS[kind]
             for text in items:
                 k = (kind, text.lower())
                 if k in seen:
-                    seen[k]["来源说明"] += f"；另见种子词：{seed}"
+                    seen[k]["出处"] += f"；另见种子词：{seed}"
                     continue
                 row = dict.fromkeys(FIELDS, "")
                 via = f"｜展开自：{parents[text]}" if kind == "paa2" else ""
-                row.update({"产品线": args.product_line, "来源类型": "搜索数据", "原话": text,
-                            "来源说明": f"{label}｜种子词：{seed}{via}｜gl={args.gl} hl={args.hl}",
-                            "来源链接": search_link(seed, args.gl, args.hl), "收集日期": today,
-                            "证据可信度": grade})
+                row.update({"产品线": args.product_line, "来源类型": "搜索联想", "原话": text,
+                            "出处": f"{label}｜种子词：{seed}{via}｜gl={args.gl} hl={args.hl}｜{today}｜"
+                                    f"{search_link(seed, args.gl, args.hl)}"})
                 seen[k] = row
                 rows.append(row)
         per_seed.append(rec)
@@ -349,7 +348,7 @@ def main() -> int:
         w.writerows(rows)
     summary = {
         "market": {"gl": args.gl, "hl": args.hl}, "collected": today, "paid_calls": paid_calls,
-        "totals": {k: sum(1 for r in rows if r["来源说明"].split("｜")[0] == KINDS[k][0]) for k in KINDS},
+        "totals": {k: sum(1 for r in rows if r["出处"].split("｜")[0] == KINDS[k]) for k in KINDS},
         "zero_paa_seeds": [r["seed"] for r in per_seed if not r["error"] and r["paa"] == 0],
         "failed_seeds": [{"seed": r["seed"], "error": r["error"]} for r in per_seed if r["error"]],
         "per_seed": per_seed,
