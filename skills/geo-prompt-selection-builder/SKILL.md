@@ -3,12 +3,12 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, research buyers, build the attribute pool, audiences and core usage scenes, the prompt matrix with business importance, Topics (the purchase intents we sell) with Topic priority, write Prompts, read the 3-run trial, and help the brand party pick and lock the formal set; later add, merge or retire Prompts. Use for the presales word-selection tool and for ongoing monitoring-set maintenance; do not use for the early presales diagnosis bank (geo-presales-prompt-builder), running baselines, collection or baseline reports (geo-monitoring), defining metric calibers, written report conclusions, or automatic competitor discovery.
 metadata:
   author: Overseas GEO Project
-  version: "2.4.0"
+  version: "2.33.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
 
-选词决定测哪些题：从业务范围和买家调研出发，梳理属性、受众与场景，画提示词矩阵，聚成主题（我们卖的购买意图），写题，读试跑结果，由品牌方挑正式题并锁版；签约后补、并、停题。跑基线、按期采集、出报告归 `geo-monitoring`。它也是写题规则的唯一来源，`geo-presales-prompt-builder` 引用本 skill 的写题规则与门禁。
+选词决定测哪些题：从业务范围和买家调研出发，梳理买方约束、受众与购买任务，画提示词矩阵，聚出主题候选（我们卖的购买意图），写题后定稿主题，读试跑结果，由品牌方挑正式题并锁版；签约后补、并、停题。跑基线、按期采集、出报告归 `geo-monitoring`。它也是写题规则的唯一来源，`geo-presales-prompt-builder` 引用本 skill 的写题规则与门禁。
 
 **规则全文在 [references/selection-rules.md](references/selection-rules.md)，按下面 9 步分节。开始任何一步前先读对应一节。**
 
@@ -16,17 +16,17 @@ metadata:
 
 | 步 | 做什么 | 按什么判断 | 产出 |
 |-|-|-|-|
-| 1 | 确认业务范围 | 品牌方先填，我们核对；问品牌方最希望解决哪些 AI 搜索问题，默认只做发现型可见度，其他目标看证据再出 | 业务范围表 |
-| 2 | 调研 | 先预跑（品类认知 ＋ 品牌和竞品评价，各平台 1 次），再查公开资料和品牌方数据 | 买家原话表、预跑答案 |
-| 3 | 属性池 | 收得宽；只判相对竞品；记常见约束和品牌取值 | 属性池表、品牌事实核查表 |
-| 4 | 受众与核心使用场景 | 受众按改不改变候选来拆并；场景只列有证据、品牌在竞争的 | 业务范围里的受众行和场景行，交品牌方确认后冻结 |
-| 5 | 提示词矩阵与业务重要性 | 一行 ＝ 产品线 × 市场 × 受众 × 场景 × 旅程阶段（需求认知 / 方案考虑 / 购买决策），挂这一行看重的属性；核心受众 × 核心场景 × 三段都过一遍，买家会在这个处境问 AI 就开行（没证据标假设），组合本身不成立才不开，不看目标；每行判业务重要性，高 / 中出题、低不出 | 提示词矩阵表 |
-| 6 | 主题与主题优先级 | 要出题的行按核心购买需求聚合；能独立交付才单开；高 ＝ 有业务重要性为高的行，中 ＝ 有搜索需求，低 ＝ 都弱 | 主题表 |
-| 7 | 写题 | 一道题 ＝ 一行 × 一条属性 × 一种类型，以发现为主，其他类型按品牌方选的目标和证据出；出不出、出几道只看 selection-rules 第 7 步类型表 | 提示词库、题库 JSON |
-| 8 | 试跑 | 每题每个监测平台 3 次；判题是否合格和可改变性；验证题只在试跑后按 selection-rules 第 8 步的条件触发；品牌读数不进选题 | 回写提示词库、试跑报告 |
-| 9 | 选正式题、锁版 | 品牌方按主题挑，每主题最多 10 道；不按单题读数挑；锁考核口径 | 正式题集版本、上传 CSV |
+| 1 | 确认业务范围 | 品牌方先填，我们核对；按目标和买家需求出题，预跑正负面表现不决定准入 | 业务范围表 |
+| 2 | 调研 | 先预跑（品类认知 ＋ 品牌和竞品评价，各平台 1 次），再查公开资料和品牌方数据；看品牌官网卖什么、卖给谁、在哪卖、能做到什么，整理品牌能力清单；3 家竞品官网轻量看三个问题（服务谁、强调什么条件、暴露哪些买家问题），只当线索、要找买家信号 | 需求信号表、预跑答案、品牌能力清单 |
+| 3 | 买方约束 | 收得宽、统一粒度（一条 ＝ 买家比较选项的一个维度，买家任务写成矩阵行）；不判重要性、不逐条判相对竞品，只记品牌有可核实明显劣势的几条；写题前确认硬条件 | 三张表共用的「买方约束」选项、品牌明显劣势记录 |
+| 4 | 受众与购买任务 | 受众按改不改变候选来拆并；购买任务是买家在找什么、要定什么，换了任务候选或起作用的约束会变，只多看一条约束的挂成约束 | 业务范围里的受众行和购买任务行，交品牌方确认后冻结 |
+| 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 受众 × 购买任务 × 旅程阶段（需求认知 / 方案考虑 / 购买决策），挂这一行看重的买方约束；核心受众 × 购买任务 × 三段只作查漏清单，只开真实存在、决策不同、有合理需求依据的行（没证据标假设）；范围外、没依据、品牌做不到又没服务路径的不开，记进 notes「没开的格子」；每行登记可能的提示词类型；每行判一次业务优先级：一类买家需求对品牌的商业价值、战略重要性和当前业务重点的贡献（Aleyda），不打分、不看证据多少、强弱、阶段；高 / 中出题，低默认不出 | 提示词矩阵表 |
+| 6 | 主题与主题优先级 | 在本期产品线范围内按主要买家需求及解决方案类别划分主题，一条产品线可以有多个主题；买家意图、竞争对手、评价标准和内容策略相近的放一起，差异显著时拆，品牌方要独立监测时可单拆；属性、场景、购买条件写成主题内的题；先把要出题的行聚成主题候选，第 7 步写完候选题后定稿、试跑后按候选集合复核；品牌能合理满足任务就出题，不要求同一产品形态；买方约束和问法不单开主题；每主题配 5–10 题，题数不判断粗细；主题优先级默认取组内多数行的业务优先级（没有多数时人工判断），同档按搜索量排先后；优先级差异不作为拆主题的依据；要跨主题切数据的维度（多为受众、主推卖点）登记成切片标签，主题的切分轴不做标签 | 主题表、`config.tag_dimensions` |
+| 7 | 写题 | 一道题表达一个完整购买任务，关联矩阵行和相关属性，类型取自所在行登记的提示词类型；本期只做发现型可见度，只出发现题，其他类型按行登记、留待以后开放；写题时逐题判断能不能自然问出发现题，问不出的本期不出；出几道看 selection-rules 第 7 步类型表；题面条件落在品牌明显劣势里的，出题原因写风险提示，不降档 | 提示词库、题库 JSON |
+| 8 | 试跑 | 每题每个监测平台 3 次；判题是否合格（点名品牌少的题用脚本先筛），记录信源结构与动作假设；零提及时可临时点名核查，记录在题库之外；品牌读数不进选题 | 回写合格判断、试跑报告、独立诊断记录 |
+| 9 | 选正式题、锁版 | 品牌方按业务优先级和增量覆盖挑题，同档按覆盖、质量、代表性挑，每条产品线 × 国家 × 语言合计最多 60 道、单主题不设上限；锁考核口径 | 正式题集版本、上传 CSV |
 
-**接手售前选词时**：售前每个市场留一份 `bank.json` 和 `notes.md`（`run_selection_mode.py` 工作目录的 `out/`）。买家原话、属性、矩阵行、主题照收，用品牌方的业务目标重判业务重要性，用品牌方数据复核属性池；`notes.md`「预跑答案」里的答案直接用，不重跑，「未覆盖来源」补采。售前与选词的分工见 `../shared/prompt-generation-principles.md` → 售前与售后的边界。
+**接手售前选词时**：售前每个市场留一份 `bank.json` 和 `notes.md`（`run_selection_mode.py` 工作目录的 `out/`）。需求信号、买方约束、矩阵行、主题照收，用品牌方填的核心目标客户与购买场景重判业务优先级，用品牌方数据复核买方约束；`notes.md`「预跑答案」里的答案直接用，不重跑；售前预跑只有品类认知题，品牌和竞品评价题要用时补跑；「未覆盖来源」补采。售前与选词的分工见 `../shared/prompt-generation-principles.md` → 售前与售后的边界。
 
 **维护已有题集**：先判断这次是新增、改写、合并还是停测，保留旧题号和证据；规则见 selection-rules.md → 维护。
 
@@ -61,7 +61,9 @@ metadata:
 | `scripts/check_client_base.py --base <token> [--template]` | 对客确认表发出前检查 |
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |
 | `scripts/changeability_domains.py --bank <bank.json> --collect <试跑目录> --out <dir> [--official …] [--competitor-domain …] [--community-domain …] [--write]` | 试跑后按引用前 20 域名预判可改变性，人工复核 |
+| `scripts/trial_brand_count.py --bank <bank.json> --collect <试跑目录> --out <dir> [--lexicon <品牌词表>]` | 试跑后数发现、替代题答案点了几个品牌，标出点名品牌少的题，人工判原因 |
 | `scripts/export_upload_csv.py <bank.json> --out <dir>` | 导出上传 CSV |
+| `scripts/write_tags.py --base <token> --bank <bank.json> [--write]` | 把切片标签写进提示词库「标签」列 |
 | `scripts/check_skill_terms.py` | 维护本 skill 时扫已退役说法 |
 
 ## 维护本 skill

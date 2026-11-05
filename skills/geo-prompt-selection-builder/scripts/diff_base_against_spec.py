@@ -19,7 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-DEFAULT_KEYS = {"提示词矩阵": "切片编号", "提示词库": "编号", "买家原话": "输入编号", "业务范围": "项目",
+DEFAULT_KEYS = {"提示词矩阵": "切片编号", "提示词库": "编号", "需求信号": "输入编号", "买家原话": "输入编号", "业务范围": "项目",
                 "属性池": "属性", "需要品牌方提供的数据": "数据", "品牌事实核查": "事实项",
                 "主题": "主题+市场"}  # 「+」连起几个字段当一个主键（主题表一行 = 主题 × 市场）
 
@@ -104,7 +104,7 @@ def main():
     want = a.tables.split(",") if a.tables else list(spec)
     tids = tables(a.base)
 
-    # 读线上：要比的表，加上链接会指向的表（属性池、买家原话等），用来把 record_id 还原成主键
+    # 读线上：要比的表，加上链接会指向的表（属性池、需求信号等），用来把 record_id 还原成主键
     need = set(want) | {"属性池"}
     for t in want:
         for r in spec.get(t, []):

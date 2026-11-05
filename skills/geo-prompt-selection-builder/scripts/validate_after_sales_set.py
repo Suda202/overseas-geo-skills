@@ -108,6 +108,10 @@ if str(_SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SHARED_SCRIPTS))
 import prompt_gates as _prompt_gates  # noqa: E402
 import scope_gates as _scope_gates  # noqa: E402
+# Cross-Topic slice tags (Suda 2026-11-03): one rule for export and the W62/W63 warnings.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tag_dimensions import tag_plan as _tag_plan  # noqa: E402
 
 # Evidence source families for the diversity warning. Classification is by
 # keyword because evidence_refs are free strings; refs that match nothing are
@@ -334,7 +338,7 @@ def scope_checks(
 ) -> None:
     """Gates 36–37 (warnings): conditions with no quote and no written basis; one decision asked twice.
 
-    Both need the bank's buyer-quote table (`config.buyer_quotes`, the 买家原话
+    Both need the bank's buyer-quote table (`config.buyer_quotes`, the 需求信号
     输入编号 / 原话 / 约束 columns); without it the scope gate cannot read the
     约束 column and says so. A Prompt's `constraints` list is what both gates
     compare; see shared/scripts/scope_gates.py.
@@ -350,7 +354,7 @@ def scope_checks(
     quote_constraints, quote_texts = _scope_gates.quote_index(config)
     common = common_constraints(config)
     if not quote_constraints and not common:
-        warnings.append("[W36] neither attribute_plan common_constraints (常见约束) nor config.buyer_quotes: gates 36–37 "
+        warnings.append("[W36] neither attribute_plan common_constraints nor config.buyer_quotes (需求信号): gates 36–37 "
                         "(conditions without a basis, one decision asked twice) were skipped")
         return
     # A condition taken from the attribute's 常见约束 in 属性池 is backed (Suda 2026-11-01): Prompts no longer
@@ -368,8 +372,8 @@ def scope_checks(
         if outside:
             # Warning since 2026-10-30 (Suda): quote research is never complete, so a
             # condition may rest on other evidence — written in condition_basis.
-            warnings.append(f"[W36] {qid}: condition outside the cited evidence {outside}; take it from the 常见约束 of an "
-                            f"attribute on its row (add it there with its source), write its basis in condition_basis "
+            warnings.append(f"[W36] {qid}: condition outside the cited evidence {outside}; cite the 需求信号 it comes from in "
+                            f"evidence_refs, write its basis in condition_basis "
                             f"(search data, pre-run answer, competitor filter, buyer common sense), or drop it from the Prompt")
     if unknown:
         shown = ", ".join(f"{q} {refs}" for q, refs in list(unknown.items())[:6])
@@ -524,30 +528,12 @@ LEGACY_EIGHT_STAGES = {"发现": "方案考虑", "替代方案": "方案考虑",
 # by its content), so they are recognised but never converted.
 OLD_JOURNEY_STAGES = {"了解需求", "比较方案", "评估是否适合", "准备购买", "使用与续费"}
 GROUP_ROLES = {"core", "experimental", "monitoring"}
-# Which journey stages each Prompt type can sit on (selection-rules.md → 7. 写题). Verification sits on the
-# row of the Discovery Prompt that triggered it and is not checked; Accuracy is no longer written.
-INTENT_STAGES = {
-    "Discovery": {"方案考虑"},  # "where to buy / price / stock" questions are not written (Suda 2026-11-02)
-    "Alternatives": {"方案考虑"},
-    "Competitor": {"购买决策"},
-    "Evaluation": {"购买决策"},
-    "Information": {"需求认知"},
-}
-# The eight-stage table, kept for banks that still carry eight-stage labels.
-LEGACY_INTENT_STAGES = {
-    "Discovery": {"发现", "解决问题", "交易"},
-    "Category Awareness": {"发现", "解决问题"},
-    "Competitor": {"对比", "替代方案"},
-    "Alternatives": {"替代方案"},
-    "Evaluation": {"评估", "验证"},
-    "Verification": {"验证", "购后支持"},
-    "Accuracy": {"验证", "购后支持"},
-    "Information": {"解决问题", "交易", "验证", "购后支持"},
-}
-# Prompt types that never count toward the mention-rate KPI. Alternatives counts since 2026-11-02 (Suda).
+# Supported row types. Journey stages describe buyer context independently.
+REGISTERED_TYPES = {"Discovery", "Alternatives", "Competitor", "Evaluation", "Information"}
+# Prompt types that never count toward the mention-rate KPI. Only Discovery counts since 2026-11-03 (Suda); Alternatives is reported on its own under 竞争定位.
 NON_VISIBILITY_INTENTS = {"Category Awareness", "Verification", "Accuracy", "Information"}
 # The mention-rate KPI reads these types (Suda 2026-11-02).
-KPI_INTENTS = {"Discovery", "Alternatives"}
+KPI_INTENTS = {"Discovery"}
 LAYER_TO_ROLE = {"核心": "core", "实验": "experimental", "监测": "monitoring",
                  "core": "core", "experimental": "experimental", "monitoring": "monitoring"}
 FIELD_ALIASES = {
@@ -679,20 +665,10 @@ def field_contract_checks(
     report(f"journey_stage is not one of {'/'.join(JOURNEY_STAGES)}", odd, formal, "W7")
     post = [r for r in questions if stage_of(r) == "购后支持"]
     report("journey_stage 购后支持: post-purchase questions are outside selection since 2026-11-02 "
-           "(no three-stage home); keep them only on older banks", post, False, "W7")
+           "(no three-stage home); keep them only on older banks", post, stage == "selection", "W7")
     bad_role = [r for r in questions if fields[id(r)]["group_role"] and fields[id(r)]["group_role"] not in GROUP_ROLES]
     report(f"group_role is not one of {sorted(GROUP_ROLES)}", bad_role, formal, "W58")
 
-    def misfit(r: dict) -> bool:
-        intent, value = intents.get(id(r)), stage_of(r)
-        if value in JOURNEY_STAGES:
-            return intent in INTENT_STAGES and value not in INTENT_STAGES[intent]
-        if value in LEGACY_EIGHT_STAGES:
-            return intent in LEGACY_INTENT_STAGES and value not in LEGACY_INTENT_STAGES[intent]
-        return False
-    bad_pair = [r for r in questions if misfit(r)]
-    report("prompt_type does not fit journey_stage (需求认知: 问题解决; 方案考虑: 发现, 替代; 购买决策: 对比, 评价 "
-           "— see selection-rules.md → 7. 写题)", bad_pair, True)
     leaking = [r for r in questions if intents.get(id(r)) in NON_VISIBILITY_INTENTS
                and r.get("formal_visibility_eligible") is True]
     report("Category Awareness, Verification, Accuracy and Information Prompts must set formal_visibility_eligible: false", leaking, True)
@@ -792,10 +768,12 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
     """Matrix rows (config.slices) carry the one 业务重要性 judgement (Suda 2026-10-28 / 11-01 / 11-02).
 
     Each row: {slice_id, topic_id, product_line, audience, scene, journey_stage, attributes, priority,
-    priority_basis}; priority is 业务重要性. 低 rows get no Prompts this period; 高 and 中 rows follow the same
-    count rules (decision differences); every Prompt sits on a row
-    whose Topic it shares and never tests a 劣势 attribute. A Prompt's own priority equals its row's,
-    sits one tier lower when its 可改变性 is 低, or differs with a recorded priority_change_reason.
+    priority_basis}; priority is 业务优先级 (Aleyda: commercial value, strategic importance, current business
+    focus; Suda 2026-11-05). 高 and 中 rows get Prompts; 低 rows get none by default (W64 when they carry some —
+    allowed only to fill 高 / 中 coverage, with a recorded decision). Situations out of scope, without a
+    reasonable demand basis, or the brand cannot serve are not opened as rows (they go to notes). Every Prompt sits on a row
+    whose Topic it shares. Relative disadvantage is not an exclusion. Priority equals its row's
+    unless a priority_change_reason records a business decision.
     Banks without config.slices skip these checks (legacy shape).
     """
     slices = config.get("slices")
@@ -815,12 +793,33 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
         by_id[sid] = row
         tier = str(row.get("priority") or "").strip()
         if tier not in TIER_INDEX:
-            fail(f"slice {sid}: priority must be 高 / 中 / 低 (legacy P1 / P2 / P3)", errors)
+            fail(f"slice {sid}: priority must be 高 / 中 / 低 (legacy P1 / P2 / P3); a situation the brand cannot "
+                 "use or serve is not opened as a row", errors)
         elif is_blank(row.get("priority_basis")):
             fail(f"slice {sid}: priority_basis is empty — a priority with no written basis is not made", errors)
         tid = row.get("topic_id")
         if not is_blank(tid) and tid not in topic_ids:
             fail(f"slice {sid}: topic_id {tid!r} is not in config.topics", errors)
+        # Gate 60: a row registers which Prompt types it can carry (slices.prompt_types, Suda 2026-11-03).
+        # Every non-default type needs a written basis (buyer evidence
+        # or an explicit 假设). Rows without the key are older banks and are not checked.
+        registered = row.get("prompt_types")
+        if registered is not None:
+            stage_label = str(row.get("journey_stage") or "").strip()
+            stage3 = stage_label if stage_label in JOURNEY_STAGES else LEGACY_EIGHT_STAGES.get(stage_label)
+            if not isinstance(registered, list) or not all(isinstance(x, dict) for x in registered):
+                fail(f"slice {sid}: prompt_types must be a list of {{type, basis}} objects", errors)
+            else:
+                for entry in registered:
+                    rtype = str(entry.get("type") or "").strip()
+                    if rtype not in REGISTERED_TYPES:
+                        fail(f"slice {sid}: prompt_types registers {rtype!r}; it must be one of "
+                             f"{sorted(REGISTERED_TYPES)} (Verification is an external diagnostic, never registered)", errors)
+                        continue
+                    default_discovery = rtype == "Discovery" and stage3 == "方案考虑"
+                    if not default_discovery and is_blank(entry.get("basis")):
+                        fail(f"slice {sid}: prompt_types registers {rtype} with no basis — write the buyer evidence "
+                             "or an explicit 「假设：……」; a type with neither is not registered", errors)
     # Category Awareness is the research pre-run before the attribute pool, never a bank Prompt (Suda 2026-10-29).
     ca = [str(q.get("question_id")) for q in questions
           if str(q.get("prompt_type") or q.get("intent") or "").strip() == "Category Awareness"]
@@ -830,6 +829,7 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
     verdicts = plan_verdicts(config)
     unfiled: list[str] = []
     per_row: Counter[str] = Counter()
+    low_carried: list[str] = []
     for q in questions:
         qid = str(q.get("question_id"))
         ref = str(q.get("slice_ref") or "").strip()
@@ -842,19 +842,25 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
             continue
         per_row[ref] += 1
         tier = str(row.get("priority") or "").strip()
+        # Gate 61: a Prompt's type must be registered on its row (rows with prompt_types only).
+        # Legacy diagnostic types are outside registered selection types.
+        registered = row.get("prompt_types")
+        if isinstance(registered, list) and all(isinstance(x, dict) for x in registered):
+            qtype = str(q.get("prompt_type") or q.get("intent") or "").strip()
+            allowed = {str(x.get("type") or "").strip() for x in registered}
+            if qtype in REGISTERED_TYPES and qtype not in allowed:
+                fail(f"{qid}: prompt_type {qtype} is not registered on row {ref} (registered: "
+                     f"{', '.join(sorted(allowed)) or 'none'}); register it with its basis, or move the Prompt", errors)
         if TIER_INDEX.get(tier) == 2:
-            fail(f"{qid}: sits on 低 row {ref}; 低 rows get no Prompts this period", errors)
+            low_carried.append(f"{qid}({ref})")
         if not is_blank(row.get("topic_id")) and q.get("topic_id") != row.get("topic_id"):
             fail(f"{qid}: topic_id {q.get('topic_id')!r} differs from its row {ref}'s {row.get('topic_id')!r}", errors)
-        attr = str(q.get("attribute_ref") or q.get("attribute") or "").strip()
-        if attr and verdicts.get(attr) == "劣势":
-            fail(f"{qid}: tests 劣势 attribute {attr!r}; a row may list it, but no Prompt is written on it", errors)
         change = str(q.get("changeability") or "").strip()
         if change and change not in CHANGEABILITY:
             fail(f"{qid}: changeability must be one of {'/'.join(CHANGEABILITY)}", errors)
         own = str(q.get("priority") or "").strip()
         if own and tier in TIER_INDEX:
-            expected = TIER_INDEX[tier] + (1 if change == "低" and TIER_INDEX[tier] < 2 else 0)
+            expected = TIER_INDEX[tier]
             if TIER_INDEX.get(own) != expected and is_blank(q.get("priority_change_reason")):
                 warnings.append(f"[W55] {qid}: priority {own} differs from the expected tier "
                                 f"(row {ref} {tier}, 可改变性 {change or '待试跑'}) with no priority_change_reason")
@@ -868,11 +874,15 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
     if bare:
         warnings.append(f"[W48] 高 / 中 方案考虑 rows with no Prompt ({len(bare)}): {', '.join(bare[:8])}{' …' if len(bare) > 8 else ''}; "
                         "write their Prompts, or record why this row gets none")
+    if low_carried:
+        warnings.append(f"[W64] Prompts on 低 rows ({len(low_carried)}): {', '.join(low_carried[:8])}{' …' if len(low_carried) > 8 else ''}; "
+                        "低 rows get no Prompts by default — keep them only to fill 高 / 中 coverage and record the decision")
     if unfiled:
         warnings.append(f"[W53] Prompts with no slice_ref ({len(unfiled)}): "
                         f"{', '.join(unfiled[:6])}{' …' if len(unfiled) > 6 else ''}; every Prompt sits on a matrix row")
-    # Attribute pool <-> matrix rows: the pool judges only 相对竞品; 优势 / 持平 / 劣势 carry a written basis,
-    # 待确认 may wait for the trial (Suda 2026-10-31). A row lists pool attributes only; 劣势 may be listed.
+    # attribute_plan is the 买方约束 list (the client Base has no attribute pool since 2026-11-04). A verdict, when
+    # given, is one of 优势 / 持平 / 劣势 / 待确认 and 优势 / 持平 / 劣势 carry a written basis; banks written after
+    # 2026-11-04 may leave it empty (judged after the baseline). A row lists plan names only.
     plan = config.get("attribute_plan")
     if not plan or not isinstance(plan, list) or not all(isinstance(e, dict) for e in plan):
         return
@@ -881,6 +891,8 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
         if not name:
             continue
         verdict = verdicts.get(name, "")
+        if not verdict:  # 2026-11-04 起相对竞品在基线后判，写题前可以不填
+            continue
         if verdict not in RELATIVE_VERDICTS:
             fail(f"attribute_plan {name!r}: relative_competitor must be one of {'/'.join(RELATIVE_VERDICTS)}, "
                  f"got {verdict!r}", errors)
@@ -896,23 +908,13 @@ def slice_checks(config: dict, questions: list[dict], topic_ids: set, errors: li
 
 
 def topic_checks(config: dict, questions: list[dict], intents: dict[int, str],
-                 errors: list[str], warnings: list[str]) -> None:
+                 errors: list[str], warnings: list[str], stage: str | None = None) -> None:
     """Topics are the unit the brand party buys (Suda 2026-10-31 / 11-01).
 
-    Every Topic holds at least one Prompt and at least one Discovery Prompt on a 方案考虑 row (gate 41):
-    a Topic made only of brand-requested 对比 / 评价 / 问题解决 Prompts is not a buyer need we can sell. Older banks
-    (eight-stage or no stage) count any Discovery Prompt. Topic priority is 高 / 中 / 低 with a written
-    basis: 高 when a row with 业务重要性 高 sits in it, 中 when none does but its parent keyword shows search
-    demand, 低 otherwise.
+    Every Topic holds a Discovery Prompt. W59 is a coverage review prompt,
+    not a statistical guarantee or an instruction to merge buyer tasks.
     """
     rows = slice_index(config)
-
-    def stage_of(q: dict) -> str:
-        own = str(q.get("journey_stage") or "").strip()
-        if own:
-            return own
-        value = (rows.get(str(q.get("slice_ref") or "").strip()) or {}).get("journey_stage")
-        return str(value or "").strip()
     topics = [t for t in config.get("topics") or [] if isinstance(t, dict)]
     by_topic: dict[object, list[dict]] = {}
     for q in questions:
@@ -921,13 +923,34 @@ def topic_checks(config: dict, questions: list[dict], intents: dict[int, str],
     if empty and questions:
         fail(f"Topics with no Prompt ({len(empty)}): {', '.join(empty)}; drop them or file Prompts under them", errors)
     no_discovery = sorted(str(tid) for tid, items in by_topic.items()
-                          if items and not any(intents.get(id(r)) == "Discovery"
-                                               and stage_of(r) not in {"需求认知", "购买决策"} for r in items))
+                          if items and not any(intents.get(id(r)) == "Discovery" for r in items))
     if no_discovery:
-        fail(f"Topics with no Discovery Prompt on a 方案考虑 row ({len(no_discovery)}): {', '.join(no_discovery)}; "
-             "a purchased Topic's mention rate is read from its 方案考虑 Discovery Prompts — add one or file these "
+        fail(f"Topics with no Discovery Prompt ({len(no_discovery)}): {', '.join(no_discovery)}; "
+             "a purchased Topic needs a Discovery Prompt — add one or file these "
              "Prompts under the Topic of the same buyer need", errors)
-    high_topics = {r.get("topic_id") for r in rows.values() if TIER_INDEX.get(str(r.get("priority") or "").strip()) == 0}
+    if stage == "selection":
+        floor = []
+        for tid, items in sorted(by_topic.items(), key=lambda kv: str(kv[0])):
+            kpi = [q for q in items if intents.get(id(q)) in KPI_INTENTS
+                   and str(q.get("status") or "").strip() != "停测"]
+            decisions = {(str(q.get("attribute_ref") or "").strip(),
+                          tuple(sorted(str(c).strip() for c in (q.get("constraints") or []))))
+                         for q in kpi}
+            if kpi and (len(kpi) < 5 or len(decisions) < 4):
+                floor.append(f"{tid}: {len(kpi)} KPI Prompts / {len(decisions)} decision signatures")
+        if floor:
+            warnings.append(f"[W59] Topics below the default coverage target ({'; '.join(floor)}); "
+                            "in order: (1) add missed buyer constraints, scenes, audiences or limits; (2) build compound "
+                            "conditions with real purchase meaning — never pad with synonyms, reordering or mechanical "
+                            "condition permutations; (3) check over-splitting — merge only adjacent Topics of the same "
+                            "purchase decision with similar candidate solutions. Record the decision if still short.")
+    # Topic priority is summarised, not judged again (Suda 2026-11-05): by default the tier most of its rows carry;
+    # a tie has no default and needs a human call. Tier differences are never a reason to split a Topic.
+    row_tiers: dict = {}
+    for r in rows.values():
+        idx = TIER_INDEX.get(str(r.get("priority") or "").strip())
+        if idx is not None and r.get("topic_id"):
+            row_tiers.setdefault(r.get("topic_id"), []).append(idx)
     for t in topics:
         tid, level = t.get("topic_id"), str(t.get("priority") or "").strip()
         if not level:
@@ -936,9 +959,16 @@ def topic_checks(config: dict, questions: list[dict], intents: dict[int, str],
             fail(f"topic {tid}: priority must be one of {'/'.join(TOPIC_PRIORITIES)}", errors)
         elif is_blank(t.get("priority_basis")):
             fail(f"topic {tid}: priority_basis is empty — a priority with no written basis is not made", errors)
-        elif rows and (tid in high_topics) != (level == "高"):
-            warnings.append(f"[W46] topic {tid}: priority {level} but {'a 高 row sits' if tid in high_topics else 'no 高 row sits'} "
-                            "in it; 主题优先级 高 means a row with 业务重要性 高 sits in this Topic")
+        elif row_tiers.get(tid):
+            counts = Counter(row_tiers[tid])
+            top = max(counts.values())
+            leaders = [i for i, n in counts.items() if n == top]
+            if len(leaders) > 1:
+                warnings.append(f"[W46] topic {tid}: rows split evenly across tiers, no majority; decide 主题优先级 by hand "
+                                "and record the reason")
+            elif level != ("高", "中", "低")[leaders[0]]:
+                warnings.append(f"[W46] topic {tid}: priority {level} but most of its rows are {('高', '中', '低')[leaders[0]]}; "
+                                "主题优先级 defaults to the tier most of its rows carry — record the reason if overridden")
 
 
 BUSINESS_GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
@@ -949,8 +979,8 @@ def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], wa
 
     config.business_goals = {selected: [goals in the brand party's order], information_named: bool}. Only
     generation_stage "selection" banks are checked; presales banks declare config.extra_prompt_types instead
-    and are skipped. Alternatives are not checked: they may be written without 竞争定位 (1–2 competitors).
-    Verification is not checked: it is triggered after the trial, not by a goal at writing time.
+    and are skipped. Alternatives belong to 竞争定位.
+    Verification is outside selection banks and rejected by the main type check.
     """
     goals = config.get("business_goals")
     selected = goals.get("selected") if isinstance(goals, dict) else None
@@ -979,6 +1009,7 @@ def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], wa
                         "Prompts the step-1 evidence supports, or record why none is written")
     unasked = [(t, label) for t, label, ok in (
         ("Competitor", "竞争定位", "竞争定位" in chosen),
+        ("Alternatives", "竞争定位", "竞争定位" in chosen),
         ("Evaluation", "声誉与信任", "声誉与信任" in chosen),
         ("Information", "information_named", named_info),
     ) if not ok and by_type.get(t)]
@@ -1043,6 +1074,8 @@ def main() -> int:
         intent = normalized_intent(row, errors)
         row_intents[id(row)] = intent
         role_counts[intent] += 1
+        if stage == "selection" and intent == "Verification":
+            fail(f"{question_id}: Verification is a temporary zero-mention diagnostic outside the question bank", errors)
         if not intent:
             fail(f"{question_id}: missing prompt_type", errors)
         elif intent not in INTENTS:
@@ -1086,10 +1119,19 @@ def main() -> int:
     wording_checks(config, questions, row_intents, errors, warnings)
     field_contract_checks(config, questions, row_intents, stage, errors, warnings)
     if not legacy_full_bank:
-        topic_checks(config, questions, row_intents, errors, warnings)
+        topic_checks(config, questions, row_intents, errors, warnings, stage)
     # Gates 49–52: selection banks only; presales banks carry extra_prompt_types instead.
     if stage == "selection" and "extra_prompt_types" not in config:
         goal_checks(config, questions, row_intents, warnings)
+        # Gates W62/W63 (Suda 2026-11-03): slice tags cut data across Topics. A value inside one Topic,
+        # or under 5 Prompts, duplicates the Topic filter or reads as noise; export drops it either way.
+        _, tag_problems, unregistered = _tag_plan(config, questions)
+        for problem in tag_problems:
+            warnings.append(f"[W62] tag_dimensions: {problem}")
+        if unregistered:
+            listed = "; ".join(f"{qid}: {'、'.join(tags)}" for qid, tags in list(unregistered.items())[:6])
+            warnings.append(f"[W63] hand-written tags not registered as a 自定义 value in config.tag_dimensions "
+                            f"({listed}{' …' if len(unregistered) > 6 else ''}); export leaves them out")
     scope_checks(config, questions, stage, errors, warnings, row_intents)
     audience_checks(config, questions, stage, warnings, row_intents)
 
@@ -1241,7 +1283,7 @@ def main() -> int:
                 )
 
     # Unused buyer-language inputs (warning only). When the bank carries the
-    # collected 买家原话 index, every input should either back a Prompt or have
+    # collected 需求信号 index, every input should either back a Prompt or have
     # been consciously set aside; silently unused inputs are the cheapest
     # evidence for the next expansion round.
     audience_inputs = config.get("audience_inputs") or []
@@ -1276,13 +1318,21 @@ def main() -> int:
     elif lifecycle in {"customer_confirmed", "locked", "formal_baseline", "active"}:
         # No Prompt floor per Topic (Suda 2026-10-30): a Topic holds as many Prompts as it has
         # distinct decision needs; the formal count is not a clustering concern.
-        # 交付范围：正式题每个采购主题最多 10 条；候选阶段（customer_confirmed）不设上限。
+        # 交付范围（Suda 2026-11-05）：正式题每条产品线 × 每个国家 × 每种语言合计最多 60 条，单个主题不设上限
+        # （一个题库 = 一个国家 × 一种语言，所以在题库内按产品线数）；候选阶段（customer_confirmed）不设上限。
         if lifecycle in {"locked", "formal_baseline", "active"}:
-            long_topics = {topic_id: count for topic_id, count in topic_counts.items() if count > 10}
-            if long_topics:
+            formal_slices = slice_index(config)
+            per_line: Counter[str] = Counter()
+            for row in questions:
+                if row_intents.get(id(row)) == "Verification" or str(row.get("status") or "").strip() == "停测":
+                    continue
+                line = row.get("product_line") or (formal_slices.get(str(row.get("slice_ref") or "").strip()) or {}).get("product_line")
+                per_line[str(line or "").strip() or "—"] += 1
+            over = {line: n for line, n in sorted(per_line.items()) if n > 60}
+            if over:
                 fail(
-                    "formal set allows at most 10 Prompts per purchased Topic; "
-                    f"move the rest out of the deliverable set: {long_topics}",
+                    "formal set allows at most 60 Prompts per product line × country × language; "
+                    f"move the rest out of the deliverable set: {over}",
                     errors,
                 )
 

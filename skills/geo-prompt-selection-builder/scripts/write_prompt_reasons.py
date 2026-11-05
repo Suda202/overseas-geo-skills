@@ -5,12 +5,12 @@
   新结构（2026-10-28 起，提示词矩阵有「业务重要性依据」字段；2026-11-02 前叫「优先级依据」）——规则见
   references/client-facing-attribute-pool.md → *提示词矩阵* / *提示词库*：
   - 默认档位 = 所属切片（矩阵行）的「业务重要性」（高 / 中 / 低；2026-11-02 前叫「优先级」，旧 Base 为 P1 / P2 / P3）；
-    这道题「可改变性」为「低」时降一档。字段名新旧都认，写回 Base 里实际有的那个。
+    可改变性用于诊断，优先级按业务重要性继承。字段名新旧都认，写回 Base 里实际有的那个。
   - 「提示词优先级」（旧 Base 叫「优先级」）是可编辑单选：空着时按默认档位预填；人改过、和默认不一致的，
     出题原因结尾保留「改档：理由，定为 Px。」，没写的列出来（check_client_base.py 也会拦）。
-  - 出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的买家原话
+  - 出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的需求信号
     （按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么是这个档位
-    （切片「优先级依据」原文，加可改变性降档说明）。判断只写在矩阵行，这里不留第二份。
+    （切片「优先级依据」原文）。判断只写在矩阵行，这里不留第二份。
   旧结构（2026-10-27 及以前发出的 Base，旧客户不迁移）——档位取属性池
   「重要性 × 可改变性」查表，写「建议优先级」，按原来的规则运行。
 
@@ -40,13 +40,34 @@ DROP_V2 = {**DROP, "高": "中", "中": "低", "低": "低"}
 IMP = {"高": "买家挑{noun}时会因为它直接排除一个选项",
        "中": "买家会拿它比较，但不靠它决定",
        "低": "买家不拿它做取舍"}
-SOURCE_LABEL = {"社区": "社区原话", "评价": "应用商店评价", "PAA 与相关搜索": "Google 相关搜索",
-                "搜索数据": "搜索词", "GSC": "品牌方 Google 搜索后台查询",
-                "销售记录": "销售记录", "客服记录": "客服记录", "站内搜索": "站内搜索词"}
-SOURCE_RANK = {"社区": 0, "评价": 1, "客服记录": 2, "销售记录": 3, "GSC": 4, "站内搜索": 5,
-               "PAA 与相关搜索": 6, "搜索数据": 7}
+# 来源类型的显示名；「销售记录」「客服记录」「搜索数据」「PAA 与相关搜索」「AI 检索词」是 2026-11-04 前的旧选项，旧 Base 照读
+SOURCE_LABEL = {"社区": "社区原话", "评价": "用户评价", "搜索联想": "Google 相关搜索", "PAA 与相关搜索": "Google 相关搜索",
+                "关键词工具": "搜索词", "搜索数据": "搜索词", "GSC": "品牌方 Google 搜索后台查询",
+                "Bing": "品牌方 Bing 搜索后台查询", "Google Ads": "Google 广告搜索词",
+                "电商平台搜索": "电商平台搜索词", "AI 检索词": "AI 检索词",
+                "Bing AI 检索词": "Bing AI 检索词", "query fan-outs": "AI 检索时拆出的子查询",
+                "AI 追问": "AI 回答末尾的追问", "模型建议问题": "AI 推荐的延伸问题",
+                "销售": "销售记录", "销售记录": "销售记录", "客服": "客服记录", "客服记录": "客服记录",
+                "站内搜索": "站内搜索词", "品牌官网": "品牌官网线索", "竞品官网": "竞品官网线索"}
+# 挑代表原话的先后：买家亲口说的在前，AI 检索词最后
+SOURCE_RANK = {"社区": 0, "评价": 1, "客服": 2, "客服记录": 2, "销售": 3, "销售记录": 3, "GSC": 4, "Bing": 5,
+               "Google Ads": 6, "站内搜索": 7, "电商平台搜索": 8, "搜索联想": 9, "PAA 与相关搜索": 9,
+               "关键词工具": 10, "搜索数据": 10, "AI 检索词": 11, "Bing AI 检索词": 11, "query fan-outs": 12, "AI 追问": 12, "模型建议问题": 13,
+               "品牌官网": 14, "竞品官网": 14}
+SITE_CLUES = {"品牌官网", "竞品官网"}  # 品牌自己写的内容，只计数，不拿来当代表原话（2026-11-05）
 SITE_SOURCES = {"社区", "评价"}  # 只给这两类列站点
-# 通用平台名：来源说明以它开头就归到这个名字（「PTT Stock 板」→ PTT）
+# 关键词工具 2026-11-04 起按工具分选项；出题原因里仍合成「搜索词」一类计数
+KEYWORD_TOOLS = {"DataForSEO", "Semrush", "Ahrefs", "Similarweb", "Keyword Planner", "Naver"}
+SIGNAL_TABLES = ("需求信号", "买家原话")  # 2026-11-04 改名；旧 Base 还叫买家原话
+# 网址域名 → 站点名（「出处」里有网址时按它认）
+SITE_DOMAINS = {"reddit.com": "Reddit", "ptt.cc": "PTT", "dcard.tw": "Dcard", "mobile01.com": "Mobile01",
+                "pantip.com": "Pantip", "trustpilot.com": "Trustpilot", "g2.com": "G2", "capterra.com": "Capterra",
+                "play.google.com": "Google Play", "apps.apple.com": "App Store", "youtube.com": "YouTube",
+                "quora.com": "Quora", "facebook.com": "Facebook", "instagram.com": "Instagram",
+                "threads.net": "Threads", "tiktok.com": "TikTok", "x.com": "X", "twitter.com": "X",
+                "xiaohongshu.com": "小红书", "zhihu.com": "知乎", "weibo.com": "微博", "bilibili.com": "B站",
+                "hardwarezone.com.sg": "HardwareZone", "hardwarezone.com": "HardwareZone", "kin.naver.com": "네이버 지식iN", "blog.naver.com": "네이버 블로그", "cafe.naver.com": "네이버 카페"}
+# 通用平台名：出处（旧 Base 是来源说明）以它开头就归到这个名字（「PTT Stock 板」→ PTT）
 PLATFORMS = ["PTT", "Dcard", "Mobile01", "CMoney", "巴哈姆特", "Reddit", "YouTube", "Quora", "Facebook",
              "Instagram", "Threads", "TikTok", "X", "Twitter", "Trustpilot", "G2", "Capterra", "Amazon",
              "Google Play", "App Store", "小红书", "知乎", "微博", "抖音", "B站", "Pantip",
@@ -81,11 +102,22 @@ def basis(evidence: str, label: str) -> str:
 
 
 def site_of(note: str) -> str:
+    """出处认站点：已知网址按域名认 → 各段开头的平台名 → 第一段人写的说明 → 网址的域名。"""
+    m = re.search(r"https?://([^/\s)\]]+)", note)
+    host = m.group(1).lower().removeprefix("www.") if m else ""
+    for dom, name in SITE_DOMAINS.items():
+        if host == dom or host.endswith("." + dom):
+            return name
+    if re.match(r"amazon\.", host):
+        return "Amazon"
+    for part in re.split(r"[｜|]", note):
+        for p in PLATFORMS:
+            if part.strip().startswith(p):
+                return p
     head = re.split(r"[｜|／/]", note, maxsplit=1)[0].strip()
-    for p in PLATFORMS:
-        if head.startswith(p):
-            return p
-    return re.sub(r"\s*板$", "", head)[:20]
+    if head and not head.startswith(("http", "[http")):
+        return re.sub(r"\s*板$", "", re.split(r"[（(，,]", head)[0]).strip()[:20]
+    return host
 
 
 def condition(sl) -> str:
@@ -97,8 +129,8 @@ def situation(typ, who, cond, brand, noun, baseline):
     """第一部分：这道题测哪类买家在什么处境下的需求。"""
     if typ == "发现":
         if baseline:
-            return f"不加任何条件问这一类{noun}，看 AI 默认推荐谁。"
-        return f"{who}找{noun}时在意「{cond}」，看 AI 推荐时会不会列出 {brand}。"
+            return f"不加任何条件问这一类{noun}，看 AI 默认提到谁。"
+        return f"{who}找{noun}时在意「{cond}」，看 AI 的回答里会不会提到 {brand}。"
     if typ == "替代":
         return f"{who}在找现有{noun}之外的选择（{cond}），看 AI 列出的选项里有没有 {brand}。"
     if typ == "对比":
@@ -116,29 +148,38 @@ def situation(typ, who, cond, brand, noun, baseline):
     return None
 
 
+def source_group(e):
+    t = text(e.get("来源类型"))
+    return "关键词工具" if t in KEYWORD_TOOLS else t
+
+
 def evidence_part(rows):
     """第二部分：按来源类型计数，社区和评价列站点，再挑一条代表原话。"""
     cnt, sites = collections.Counter(), collections.defaultdict(set)
     for e in rows:
-        t = text(e.get("来源类型"))
+        t = source_group(e)
         cnt[t] += 1
-        if t in SITE_SOURCES and text(e.get("来源说明")):
-            sites[t].add(site_of(text(e.get("来源说明"))))
+        where = text(e.get("出处")) or text(e.get("来源说明"))
+        if t in SITE_SOURCES and where:
+            sites[t].add(site_of(where))
     if not cnt:
         return ""
     order = sorted(cnt, key=lambda t: (-cnt[t], SOURCE_RANK.get(t, 9)))
     parts = [f"{SOURCE_LABEL.get(t, t)} {cnt[t]} 条" + (f"（{'、'.join(sorted(sites[t]))}）" if sites[t] else "")
              for t in order]
-    rep = sorted(rows, key=lambda e: (SOURCE_RANK.get(text(e.get("来源类型")), 9),
-                                      {"高": 0, "中": 1, "低": 2}.get(text(e.get("证据可信度")), 3)))[0]
-    z = (text(rep.get("中文意思")) or text(rep.get("原话"))).strip().rstrip("。？?！!")
+    # 同一来源类型里：旧 Base 看证据可信度，新 Base 有月搜索量的在前
+    buyer_rows = [e for e in rows if source_group(e) not in SITE_CLUES]
+    rep = sorted(buyer_rows, key=lambda e: (SOURCE_RANK.get(source_group(e), 12),
+                                            {"高": 0, "中": 1, "低": 2}.get(text(e.get("证据可信度")), 3),
+                                            0 if text(e.get("月搜索量")) else 1))[0] if buyer_rows else {}
+    z = (text(rep.get("译文")) or text(rep.get("中文意思")) or text(rep.get("原话"))).strip().rstrip("。？?！!")
     quote = f"，例如「{z[:38]}{'…' if len(z) > 38 else ''}」" if z else ""
     return f"依据：{'、'.join(parts)}{quote}。"
 
 
 def attribute_part(a, noun):
     """第三部分：属性为什么是这个档位，判断原文取自属性池。返回 (文字, 缺的标签)。"""
-    ev = text(a.get("判据与证据") if "判据与证据" in a else a.get("判据"))
+    ev = text(next((a[k] for k in ("相对竞品依据", "判据与证据", "判据") if k in a), ""))  # 2026-11-04 起叫相对竞品依据；旧名照认
     imp, chg = text(a.get("重要性")), text(a.get("可改变性"))
     name = text(a.get("属性"))
     if name.startswith("品类基线"):
@@ -169,13 +210,15 @@ class Lark:
             sys.exit(f"lark-cli 失败：{args[0]} {p.stdout[-400:]} {p.stderr[-400:]}")
         return out
 
-    def records(self, table):
+    def records(self, table, missing_ok=False):
         with tempfile.TemporaryDirectory(dir=Path.cwd(), prefix=".reasons_tmp_") as d:
             out = Path(d) / "rows.ndjson"
             subprocess.run(["lark-cli", "base", "+record-list", "--base-token", self.base,
                             "--table-id", table, "--format", "ndjson",
                             "--output", str(out), "--overwrite"], capture_output=True, text=True)
             if not out.exists():
+                if missing_ok:
+                    return None
                 print(f"读不到表：{table}", file=sys.stderr)
                 sys.exit(2)
             return [json.loads(x) for x in out.read_text().splitlines() if x.strip()]
@@ -187,16 +230,18 @@ class Lark:
                        js={"update_records": dict(items[i:i + 200])})
 
 
-def load_dump(d, table):
+def load_dump(d, table, missing_ok=False):
     p = Path(d) / f"{table}.ndjson"
     if not p.exists():
+        if missing_ok:
+            return None
         print(f"读不到：{p}", file=sys.stderr)
         sys.exit(2)
     return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
 
 def new_structure(matrix) -> bool:
     # 2026-10-26 前的旧矩阵也有「优先级」，按依据字段认；2026-11-02 起改名「业务重要性依据」
-    return any("业务重要性依据" in r or "优先级依据" in r for r in matrix.values())
+    return any(k in r for r in matrix.values() for k in ("业务优先级依据", "业务重要性依据", "优先级依据"))
 
 
 def first(row, *names):
@@ -208,7 +253,7 @@ def first(row, *names):
 
 
 def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
-    """新结构：档位取矩阵行，可改变性低降一档。返回 (更新, [], 缺改档理由, 算不出)。"""
+    """新结构：档位取矩阵行。返回 (更新, [], 缺改档理由, 算不出)。"""
     out, need, skipped = {}, [], []
     tier_field = "提示词优先级" if any("提示词优先级" in r for r in lib) else "优先级"
     for r in lib:
@@ -218,21 +263,25 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
             skipped.append((code, "没有所属切片"))
             continue
         sl = matrix[sl_ids[0]]
-        row_tier = first(sl, "业务重要性", "优先级")
+        row_tier = first(sl, "业务优先级", "业务重要性", "优先级")
         if row_tier not in ROW_TIERS:
-            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判业务重要性"))
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判业务优先级"))
             continue
-        why = NOISE.sub("", first(sl, "业务重要性依据", "优先级依据").split("\n", 1)[0]).strip().rstrip("。；;")
+        why = NOISE.sub("", first(sl, "业务优先级依据", "业务重要性依据", "优先级依据").split("\n", 1)[0]).strip().rstrip("。；;")
         if not why:
-            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写业务重要性依据"))
+            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写业务优先级依据"))
             continue
         aud = text(sl.get("受众"))
         who = "买家" if (not aud or aud in base_audiences) else aud
         named = next((a for a in aliases if a and a in text(r.get("提示词"))), brand)
-        att_ids = ids(r.get("属性"))
-        att = pool.get(att_ids[0]) if att_ids else None
+        # 2026-11-04 起是选项字段「买方约束」（多选，第一个是主约束）；更早的 Base 链接属性池「属性」
+        if "买方约束" in r:
+            att = (text(r.get("买方约束")).split("/") or [""])[0] or None
+        else:
+            att_ids = ids(r.get("属性"))
+            att = text(pool[att_ids[0]].get("属性")) if att_ids and att_ids[0] in pool else None
         need_text = text(sl.get("备注")).strip()
-        cond = (text(att.get("属性")) if att else "") or need_text[:30] or "这一类需求"
+        cond = att or need_text[:30] or "这一类需求"
         p1 = situation(typ, who, cond, named if typ in ("验证", "准确性") else brand, noun, att is None)
         if p1 is None:
             skipped.append((code, f"提示词类型「{typ}」没有句式"))
@@ -242,9 +291,6 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
         p3 = f"这个处境：{why}。"
         if att is None:
             p3 = f"测品类整体格局；{p3}"
-        if text(r.get("可改变性")) == "低" and tier not in ("P3", "低"):
-            tier = DROP_V2[tier]
-            p3 += "试跑时 AI 引用的来源以品牌难影响的第三方为主，再降一档。"
         fields = {}
         manual = text(r.get(tier_field))
         if not manual:
@@ -335,7 +381,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--base", help="对客确认 Base 的 token")
-    src.add_argument("--from-dump", help="离线目录，含 属性池/提示词矩阵/买家原话/提示词库 .ndjson；只能预览")
+    src.add_argument("--from-dump", help="离线目录，含 属性池/提示词矩阵/需求信号（旧 Base 为买家原话）/提示词库 .ndjson；只能预览")
     ap.add_argument("--brand", required=True, help="题面里称呼的品牌或产品名，如 Nina")
     ap.add_argument("--alias", action="append", default=[], help="点名题里可能出现的其他名字（公司名等），可重复")
     ap.add_argument("--noun", default="产品", help="品类名词，写进句子：买家找「工具」时…")
@@ -348,10 +394,13 @@ def main():
         ap.error("--write 只能配 --base")
 
     lark = Lark(a.base) if a.base else None
-    get = lark.records if lark else (lambda t: load_dump(a.from_dump, t))
-    pool = {r["record_id"]: r for r in get("属性池")}
+    get = lark.records if lark else (lambda t, missing_ok=False: load_dump(a.from_dump, t, missing_ok))
+    pool = {r["record_id"]: r for r in (get("属性池", True) or [])}  # 2026-11-04 起没有属性池
     matrix = {r["record_id"]: r for r in get("提示词矩阵")}
-    quotes = {r["record_id"]: r for r in get("买家原话")}
+    signals = next((rows for rows in (get(t, True) for t in SIGNAL_TABLES) if rows is not None), None)
+    if signals is None:
+        sys.exit(f"读不到需求信号表（{' / '.join(SIGNAL_TABLES)}）")
+    quotes = {r["record_id"]: r for r in signals}
     lib = get("提示词库")
     base_aud = set(a.base_audience) or {
         collections.Counter(text(r.get("受众")) for r in matrix.values() if text(r.get("受众"))).most_common(1)[0][0]}

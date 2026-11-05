@@ -4,15 +4,18 @@
 列：query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name
 
 - diagnosis_intent 用后端枚举；它和 prompt_type 取值不完全一样，提示词类型的中文名写进 tags 第一个。
+- tags 后面接跨主题切片标签：选词新题库（generation_stage: selection）和写了 config.tag_dimensions 的题库，
+  按登记的维度从矩阵行和属性池派生（口径在 tag_dimensions.py，落在不到 2 个主题、不到 5 道题、
+  和主题重复的值不出，打印原因）；售前题库和旧题库没写 tag_dimensions 时照旧带出题目自己的 tags。
   替代（Alternatives）后端还没有枚举，按映射表临时记 competitor，tags 里的「替代」区分；
   研发会加独立枚举、算可见度和情感（Suda 2026-10-29），上线后改 INTENT / QUESTION_TYPES；
-  问题解决（Information）后端不支持，不导出，打印题号。
+  问题解决（Information）后端不支持，验证（Verification）只作临时诊断，两者不导出并打印题号。
 - question_types 按 diagnosis_intent 固定填（发现 visibility,sentiment；对比、评价 sentiment；
   验证、准确性、品类认知 visibility），口径见 shared/canonical-intent-mapping.md。
 - purchase_intent / persona_name / scene_name 留空：本地报告脚本（build_report_data.py）读上传 CSV 时不取这三列；
   线上后端是否读它们未确认，确认前留空（output-contract.md → 上传 CSV）。
 - 上传时市场在上传页另选，所以 CSV 不带市场；题库有几个 region 就出几份，每份一个市场。
-- 题目没写 topic 时按 topic_id 去 config.topics 取主题名（长虹华意题库只有 topic_id）。
+- 题目没写 topic 时按 topic_id 去 config.topics 取主题名（某制造业客户题库只有 topic_id）。
 - 不导出 status 为 retired / 停测、review_status 为 需修改 的题，打印题号。
 - 写完用售前 validator 的上传 CSV 检查（validate_v8_csv_rows）自检，不过就退出码 1。
 
@@ -29,7 +32,7 @@ from pathlib import Path
 HEADERS = ["query", "question_zh", "topic", "diagnosis_intent", "tags", "question_types",
            "purchase_intent", "persona_name", "scene_name"]
 INTENT = {"Discovery": "discovery", "Competitor": "competitor", "Alternatives": "competitor",
-          "Evaluation": "evaluation", "Verification": "verification", "Accuracy": "accuracy",
+          "Evaluation": "evaluation", "Accuracy": "accuracy",
           "Category Awareness": "category_awareness"}
 QUESTION_TYPES = {"discovery": "visibility,sentiment", "competitor": "sentiment", "evaluation": "sentiment",
                   "verification": "visibility", "accuracy": "visibility", "category_awareness": "visibility"}
@@ -40,10 +43,14 @@ SKIP_STATUS = {"retired", "停测"}
 SKIP_REVIEW = {"需修改", "needs_revision"}
 PRESALES_VALIDATOR = (Path(__file__).resolve().parents[2]
                       / "geo-presales-prompt-builder" / "scripts" / "validate_question_bank.py")
+# -I 不把脚本目录放进 sys.path，同目录的 tag_dimensions 要手动加
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tag_dimensions import tag_plan  # noqa: E402
 
 
 def tags_cell(prompt_type, tags):
-    """类型中文名放第一个，再接题库自带的 tags；超长就从后面丢，保证短于 200 字。"""
+    """类型中文名放第一个，再接切片标签；超长就从后面丢，保证短于 200 字。"""
     out = [TYPE_ZH[prompt_type]] + [str(t).strip() for t in tags or [] if str(t).strip() and str(t).strip() != TYPE_ZH[prompt_type]]
     while len(",".join(out)) >= TAGS_MAX and len(out) > 1:
         out.pop()
@@ -68,6 +75,8 @@ def main():
     bank = json.loads(a.bank.read_text(encoding="utf-8"))
     topic_names = {str(t.get("topic_id") or "").strip(): str(t.get("topic") or t.get("name") or "").strip()
                    for t in (bank.get("config") or {}).get("topics") or [] if isinstance(t, dict)}
+    config = bank.get("config") or {}
+    derived, tag_problems, _ = tag_plan(config, bank["questions"])
     by_region, skipped, held = {}, [], []
     for q in bank["questions"]:
         status, review = str(q.get("status") or "").strip(), str(q.get("review_status") or "").strip()
@@ -90,7 +99,7 @@ def main():
             "question_zh": str(q.get("zh_translation") or "").strip(),
             "topic": labels.get(topic, topic),
             "diagnosis_intent": intent,
-            "tags": tags_cell(typ, q.get("tags")),
+            "tags": tags_cell(typ, derived[id(q)] if derived else q.get("tags")),
             "question_types": QUESTION_TYPES[intent],
             "purchase_intent": "", "persona_name": "", "scene_name": "",
         })
@@ -108,8 +117,10 @@ def main():
         for e in errors:
             failed = True
             print("  问题：" + e)
+    for p in tag_problems:
+        print("  标签没出：" + p)
     if skipped:
-        print(f"没导出 {len(skipped)} 道（后端没有对应的 diagnosis_intent）：{', '.join(skipped)}")
+        print(f"没导出 {len(skipped)} 道（临时诊断或后端未支持的类型）：{', '.join(skipped)}")
     if held:
         print(f"没导出 {len(held)} 道（停测或需修改）：{', '.join(held)}")
     sys.exit(1 if failed else 0)
