@@ -267,7 +267,7 @@ def build_spec(bank, market, platforms, research=None):
             raise SystemExit(f"{q['question_id']} 的属性「{attribute}」不在 {q['topic_id']} 的 attribute_plan 里")
         row.setdefault("_intents", []).append(intent)
         prompts.append({"编号": q["question_id"], "提示词": q["monitoring_prompt"], "中文含义": q.get("zh_translation", ""),
-                        "主题": [topic_zh[q["topic_id"]]], "产品线": [line], "提示词类型": [intent], "状态": ["待审核"],
+                        "主题": [topic_zh[q["topic_id"]]], "产品线": [line], "状态": ["待审核"],
                         "可改变性": ["待试跑"], "所属切片": ["@" + row["_key"]],
                         "提示词优先级": row["业务优先级"], **({"_attr": attribute} if attribute else {}),
                         **({"证据": ["@" + x for x in evidence[q["question_id"]]]} if evidence.get(q["question_id"]) else {})})

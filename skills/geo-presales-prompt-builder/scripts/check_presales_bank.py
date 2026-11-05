@@ -101,7 +101,7 @@ def check(data: dict) -> list[str]:
 
     plan = config.get("attribute_plan")
     if not isinstance(plan, list) or not plan:
-        errors.append("config.attribute_plan 为空：先按第 4 步列属性并判相对竞品")
+        errors.append("config.attribute_plan 为空：先列买方约束名单（选词 selection-rules 第 3 步）")
     return errors
 
 

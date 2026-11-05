@@ -3,7 +3,7 @@
 
 先按表结构认新旧：提示词矩阵有「业务重要性依据」（2026-11-02 前叫「优先级依据」）字段的是新结构
 （2026-10-28 起），否则是旧结构（旧客户 Base 不迁移，照旧规则查）。三个优先级字段 2026-11-02 改名：
-矩阵「业务重要性」、主题「主题优先级」、提示词库「提示词优先级」；旧名照认，--template 要求新名。
+矩阵「业务重要性」、主题「主题优先级」；2026-11-05 起提示词库不再有优先级列，旧 Base 留着照认。
 
 新结构查：
   1. 属性池：相对竞品为优势 / 持平 / 劣势的行，「相对竞品依据」不空（旧 Base 的「判据与证据」要有「相对竞品（值）：…」一行）；
@@ -11,14 +11,14 @@
   2. 提示词矩阵：每行有「业务重要性」（高 / 中 / 低；旧 Base 的 P1 / P2 / P3 同序）和依据；
      挂了题的行有「主题」；每行都有档位，品牌用不上、硬条件的处境不开行（2026-11-05）；劣势属性可以挂在行上；用新字段名的 Base，旅程阶段是
      需求认知 / 方案考虑 / 购买决策三段（2026-11-02）；有「提示词类型」（旧名可出题型）字段时（2026-11-03 起），
-     值来自发现、替代、对比、评价、问题解决，阶段和题型分别判断，
-     除方案考虑行的发现外，每个登记的类型在「提示词类型依据」里有一行「类型：依据」（证据或「假设：……」），
-     行上挂的题的「提示词类型」都在登记范围内（验证题不查）；对客表放完整矩阵，需求认知、购买决策行没挂题的
-     是品牌方没选的目标，业务重要性依据里要写「本期不出：……」（2026-11-02），不写在备注（2026-11-02 审核清单 D1）。
+     值来自发现、替代、对比、评价、问题解决，阶段和题型分别判断；类型不再要求单独写依据（2026-11-05 起去掉「提示词类型依据」列），
+     行上挂的题的「提示词类型」都在登记范围内（验证题不查）。2026-11-05 起一行一种提示词类型（单选）：
+     同一受众、购买任务、类型、买方约束只开一行，低档没挂题的发现行依据里写「本期不出：……」，
+     非发现行本期不出题不用写；旧 Base（多选）照旧：需求认知、购买决策行没挂题的，依据里写「本期不出：……」。
   3. 主题表：「状态」不空（单个主题不设题数上限，2026-11-05）；有「主题优先级」列时（2026-11-01 起），
      它是高 / 中 / 低且依据不空。候选主题不设题数底线（2026-10-30）。
-  4. 提示词库：状态为正式的题每条产品线 × 每个市场 × 每种语言不超过 60 道（2026-11-05）；没有停测行；每道题有出题原因、提示词优先级；默认档位 = 所属切片的业务重要性，
-     可改变性只作诊断观察；和默认不一致的，出题原因里有「改档：理由，定为 X」；
+  4. 提示词库：状态为正式的题每条产品线 × 每个市场 × 每种语言不超过 60 道（2026-11-05）；没有停测行；每道题有出题原因，
+     有所属切片（档位只读切片，2026-11-05 起题上没有优先级列）；
      相对弱势可保留；临时验证保存到独立诊断记录；不该有品类认知题（只在属性池前预跑）。
   5. 已移除的字段：属性池「重要性」「可改变性」「优先级」「判断冲突」「属性编号」，提示词矩阵「约束」
      「可改变性」「候选主题」「目标题数」「覆盖情况」，提示词库「建议优先级」「信源壁垒」「库分层」
@@ -73,9 +73,8 @@ RETIRED_FIELDS_V2 = {
 # 行档位：2026-11-01 起高 / 中 / 低；旧 Base 的 P1 / P2 / P3 同序
 TIER = {"P1": 0, "高": 0, "P2": 1, "中": 1, "P3": 2, "低": 2}
 STAGES = ("需求认知", "方案考虑", "购买决策")
-# --template 要求的新字段名（2026-11-02）
-NEW_NAMES = {"提示词矩阵": ("业务优先级", "业务优先级依据"), "主题": ("主题优先级", "主题优先级依据"),
-             "提示词库": ("提示词优先级",)}
+# --template 要求的新字段名（2026-11-02；提示词库的「提示词优先级」2026-11-05 撤，不再要求）
+NEW_NAMES = {"提示词矩阵": ("业务优先级", "业务优先级依据"), "主题": ("主题优先级", "主题优先级依据")}
 # 阶段独立标注，正式类型均可按买家证据登记；临时验证存题库之外。
 STAGE_TYPES = {stage: {"发现", "替代", "对比", "评价", "问题解决"}
                for stage in ("需求认知", "方案考虑", "购买决策")}
@@ -219,6 +218,16 @@ def check_matrix_v2(rows, prompt_rows, pool_rows=()):
         for i in ids(p.get("所属切片")):
             on_row.setdefault(i, []).append(text(p.get("编号")))
             type_on_row.setdefault(i, []).append((text(p.get("编号")), text(p.get("提示词类型"))))
+    # 看板没有类型字段，一个主题只放一种提示词类型（2026-11-05）；旧 Base 一行多种类型的不查
+    topic_types = {}
+    for r in rows:
+        rtypes = {t for t in text(r.get("提示词类型")).split("/") if t}
+        if len(rtypes) == 1 and on_row.get(r.get("record_id")):
+            for tid in ids(r.get("主题")):
+                topic_types.setdefault(tid, set()).update(rtypes)
+    for tid, types in topic_types.items():
+        if len(types) > 1:
+            problems.append(f"主题 {tid}：挂了{'、'.join(sorted(types))}几种提示词类型的题；一个主题只放一种类型（selection-rules.md → 6）")
     for r in rows:
         sid = text(r.get("切片编号")) or r.get("record_id")
         tier = first(r, "业务优先级", "业务重要性", "优先级")
@@ -231,13 +240,17 @@ def check_matrix_v2(rows, prompt_rows, pool_rows=()):
         if ("业务优先级" in r or "业务重要性" in r) and stage and stage not in STAGES:
             problems.append(f"提示词矩阵 {sid}：旅程阶段「{stage}」不是需求认知 / 方案考虑 / 购买决策（2026-11-02 起三段）")
         carried = on_row.get(r.get("record_id"), [])
+        # 2026-11-05 起一行一种提示词类型；旧 Base 一行登记多种（多选），照旧按阶段查
+        row_types = {t for t in text(r.get("提示词类型") or r.get("可出题型")).split("/") if t}
+        single = next(iter(row_types)) if len(row_types) == 1 else None
         if carried and not ids(r.get("主题")):
             problems.append(f"提示词矩阵 {sid}：挂了题但没挂「主题」")
         # 低档行默认不出题（2026-11-05）：没挂题的要在依据末尾写「本期不出：业务优先级低，原因……」；为补高、中覆盖挂了题的不报
-        if ("业务优先级" in r or "业务重要性" in r) and TIER[tier] == 2 and not carried and "本期不出" not in first(r, "业务优先级依据", "业务重要性依据"):
-            problems.append(f"提示词矩阵 {sid}：业务优先级为低，依据末尾要写「本期不出：业务优先级低，原因……」")
-        if (("业务优先级" in r or "业务重要性" in r) and stage in ("需求认知", "购买决策") and TIER[tier] < 2 and not carried
+        if (("业务优先级" in r or "业务重要性" in r) and TIER[tier] == 2 and not carried and single in (None, "发现")
                 and "本期不出" not in first(r, "业务优先级依据", "业务重要性依据")):
+            problems.append(f"提示词矩阵 {sid}：业务优先级为低，依据末尾要写「本期不出：业务优先级低，原因……」")
+        if (("业务优先级" in r or "业务重要性" in r) and single is None and stage in ("需求认知", "购买决策") and TIER[tier] < 2
+                and not carried and "本期不出" not in first(r, "业务优先级依据", "业务重要性依据")):
             problems.append(f"提示词矩阵 {sid}：{stage}行本期没出题，业务优先级依据末尾要写「本期不出：……」说明原因")
         # 本期不出的理由不能是试跑读数：品牌读数不进选题（Hbrand 2026-11-04 M-024、M-025）
         reason = first(r, "业务优先级依据", "业务重要性依据").split("本期不出", 1)
@@ -246,27 +259,34 @@ def check_matrix_v2(rows, prompt_rows, pool_rows=()):
         # 行上的提示词类型（2026-11-03 起；2026-11-04 前字段叫「可出题型」）：有这个字段才查，没有的是旧 Base 不迁移
         type_field = next((k for k in ("提示词类型", "可出题型") if k in r), None)
         if type_field:
-            basis_field = f"{type_field}依据"
             registered = {t for t in text(r.get(type_field)).split("/") if t}
-            basis = text(r.get(basis_field))
             ceiling = STAGE_TYPES.get(stage, set())
             for rtype in sorted(registered - ceiling):
                 problems.append(f"提示词矩阵 {sid}：{stage}行登记了「{rtype}」，超出该阶段允许的类型"
                                 f"（{('、'.join(sorted(ceiling)) or '无')}）；核对证据该开哪一行，不放宽映射")
-            for rtype in sorted(registered & ceiling):
-                if (stage, rtype) not in DEFAULT_TYPES and f"{rtype}：" not in basis and f"{rtype}:" not in basis:
-                    problems.append(f"提示词矩阵 {sid}：登记了「{rtype}」但「{basis_field}」里没有"
-                                    f"「{rtype}：依据」一行（买家证据或「假设：……」）")
             for pid, ptype in type_on_row.get(r.get("record_id"), []):
                 if ptype and ptype != "验证" and ptype in {t for s in STAGE_TYPES.values() for t in s} and ptype not in registered:
-                    problems.append(f"提示词矩阵 {sid}：挂了{ptype}题 {pid}，但「{type_field}」没登记{ptype}")
-    # 同一受众、同一购买任务只开一行（2026-11-04；2026-11-05 起字段叫购买任务，旧名场景、购买场景照认）
-    seen = {}
+                    problems.append(f"提示词矩阵 {sid}：挂了{ptype}题 {pid}，但这一行的「{type_field}」是"
+                                    f"{'、'.join(sorted(registered)) or '空'}；同一购买任务另开一行{ptype}行，把题挂过去")
+    # 同一受众、同一购买任务、同一提示词类型只开一行（2026-11-05 起按类型分行）；
+    # 旧 Base 一行登记多种类型的，照旧按受众、购买任务、买方约束完全相同查（2026-11-04）
+    seen, legacy_seen = {}, {}
     for r in rows:
-        key = (text(r.get("购买任务")) or text(r.get("场景")) or text(r.get("购买场景")), text(r.get("受众")), "/".join(sorted(t for t in text(r.get("买方约束")).split("/") if t)))
-        if key[0] and key[2]:
-            seen.setdefault(key, []).append(text(r.get("切片编号")) or r.get("record_id"))
-    for (scene, _, cons), sids in seen.items():
+        task = text(r.get("购买任务")) or text(r.get("场景")) or text(r.get("购买场景"))
+        rtypes = {t for t in text(r.get("提示词类型") or r.get("可出题型")).split("/") if t}
+        label = text(r.get("切片编号")) or r.get("record_id")
+        if not task:
+            continue
+        cons = "/".join(sorted(t for t in text(r.get("买方约束")).split("/") if t))
+        if len(rtypes) == 1:
+            if cons:
+                seen.setdefault((task, text(r.get("受众")), next(iter(rtypes)), cons), []).append(label)
+        elif cons:
+            legacy_seen.setdefault((task, text(r.get("受众")), cons), []).append(label)
+    for (scene, _, rtype, cons), sids in seen.items():
+        if len(sids) > 1:
+            problems.append(f"提示词矩阵 {'、'.join(sids)}：受众、购买任务「{scene}」、提示词类型「{rtype}」、买方约束「{cons}」都相同；同一任务的同一类型只开一行")
+    for (scene, _, cons), sids in legacy_seen.items():
         if len(sids) > 1:
             problems.append(f"提示词矩阵 {'、'.join(sids)}：受众、购买任务「{scene}」、买方约束「{cons}」完全相同；同一任务只开一行，放在一个旅程阶段")
     for r in rows:
@@ -309,23 +329,12 @@ def check_prompts_v2(rows, matrix, pool_rows=()):
         reason = text(r.get("出题原因"))
         if not reason.strip():
             problems.append(f"提示词库「{code}」没有出题原因")
-        manual = first(r, "提示词优先级", "优先级")
-        if not manual:
-            problems.append(f"提示词库「{code}」「提示词优先级」是空的（应按所属切片预填）")
-            continue
         sl = next((matrix[i] for i in ids(r.get("所属切片")) if i in matrix), None)
         if sl is None:
             problems.append(f"提示词库「{code}」没有所属切片")
             continue
-        tier = first(sl, "业务优先级", "业务重要性", "优先级")
-        if tier not in TIER:
-            continue
-        default = tier
-        if manual != default:
-            m = re.search(r"改档[：:](.+)", reason, re.S)
-            if not m or f"定为 {manual}" not in m.group(1):
-                problems.append(f"提示词库「{code}」：提示词优先级为 {manual}，按规则是 {default}"
-                                f"（切片 {tier}），出题原因里没有写「改档：理由，定为 {manual}」")
+        # 2026-11-05 起提示词库没有优先级列：档位只读所属切片，不再查题的档位一致性。
+        # 旧 Base 还留着「提示词优先级」/「优先级」列的照样接受，值不对也不拦。
     # 正式题总额度（2026-11-05）：每条产品线 × 每个国家 × 每种语言合计最多 60 道，单个主题不设上限。
     # 市场多选的题每个市场各算一次；Base 没有「语言」字段时按产品线 × 市场数（同一市场两种语言会合并计数，偏严）。
     quota = {}
@@ -372,7 +381,7 @@ def check_signals_v2(sig_rows, matrix_rows, pool_names=None):
     zero_rows = [text(m.get("切片编号")) or "（无编号）" for m in matrix_rows
                  if not any(sa & auds(m) and sc & buyer_constraints(m, pool_names) for sa, sc in sigs)]
     if zero_rows:
-        notes.append(f"{len(zero_rows)} 行矩阵没有信号支撑（只有假设，依据写在提示词类型依据或业务优先级依据）：{'、'.join(zero_rows)}")
+        notes.append(f"{len(zero_rows)} 行矩阵没有信号支撑（只有假设，依据写在业务优先级依据）：{'、'.join(zero_rows)}")
     zero_auds = sorted(a for a in m_auds if not any(a in sa for sa, _ in sigs))
     if zero_auds:
         notes.append(f"这些受众没有信号：{'、'.join(zero_auds)}")
@@ -421,7 +430,7 @@ def check_fields_v2(fields):
     for table, retired in RETIRED_FIELDS_V2.items():
         for f in fields.get(table, []):
             if f in retired:
-                problems.append(f"{table} 还有字段「{f}」：已移除（2026-10-28 / 11-01，见 client-facing-attribute-pool.md）")
+                problems.append(f"{table} 还有字段「{f}」：已移除（2026-10-28 / 11-01，见 client-facing-base.md）")
     return problems
 
 

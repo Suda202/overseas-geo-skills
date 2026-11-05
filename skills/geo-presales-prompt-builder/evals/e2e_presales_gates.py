@@ -90,6 +90,14 @@ def discovery_only(b):  # 默认形态：只有发现题
     b["config"]["extra_prompt_types"] = []
     b["questions"] = [x for x in b["questions"] if x["prompt_type"] == "Discovery"]
     b["config"]["expected_total"] = len(b["questions"])
+    b["config"]["topics"] = [t for t in b["config"]["topics"] if t["topic_id"] == "t_rv"]
+    b["config"]["slices"] = [r for r in b["config"]["slices"] if r.get("topic_id") == "t_rv"]
+
+
+def mixed_topic(b):  # 对比题回到发现主题：看板没有类型字段，一个主题只放一种类型
+    b["config"]["slices"][2]["topic_id"] = "t_rv"
+    b["config"]["topics"] = [t for t in b["config"]["topics"] if t["topic_id"] != "t_cmp"]
+    q(b, "US-006")["topic_id"] = "t_rv"
 
 
 def alternatives(b):
@@ -108,7 +116,7 @@ def empty_plan(b):
 
 
 def weak_in_prompt(b):
-    # 劣势属性可以挂在矩阵行上，写题时剔除（2026-10-31）：拦的是测劣势属性的题
+    # 相对弱势可保留（选词 2.32.0）：测劣势属性的题照出，只在出题原因里写风险提示
     b["config"]["attribute_plan"].append({"attribute": "价格", "relative_competitor": "劣势",
                                           "relative_competitor_basis": "竞品同档便宜两成"})
     b["config"]["slices"][0]["attributes"].append("价格")
@@ -136,13 +144,12 @@ def uncarried_no_reason(b):
 
 FAILS = [
     ("登记了没有题的主题", empty_topic, "presales", "没有题"),
+    ("发现题和对比题放在同一主题", mixed_topic, "validator", "Gate 66"),
     ("Case 没点名却出了对比、评价题", undeclared_competitor, "presales", "这些题型不对"),
     ("出了替代题", alternatives, "presales", "这些题型不对"),
     ("对比题点名非冻结竞品", stray_competitor, "presales", "没点名冻结竞品"),
     ("属性池为空", empty_plan, "presales", "attribute_plan 为空"),
-    ("题测的是劣势属性", weak_in_prompt, "validator", "tests 劣势 attribute"),
     ("行属性不在属性池", row_attr_missing, "validator", "absent from attribute_plan"),
-    ("属性池缺相对竞品", verdict_missing, "validator", "relative_competitor must be one of"),
     ("属性池相对竞品没写依据", basis_missing, "validator", "relative_competitor_basis is empty"),
     ("没题的优势属性没写原因", uncarried_no_reason, "validator", "no_carrier_reason"),
 ]
@@ -172,6 +179,8 @@ PASSES = [
     ("只有发现题（默认形态）", discovery_only),
     ("主题只有 3 道题（不设底线）", split_topic),
     ("劣势属性只留在属性池", weak_in_pool_only),
+    ("题测劣势属性照出（相对弱势可保留，2.32.0）", weak_in_prompt),
+    ("旧题库属性缺相对竞品照过（新口径不判）", verdict_missing),
     ("没点名的阶段行留在矩阵里、本期不出题", unselected_stage_rows),
     ("没题的优势属性写了 no_carrier_reason", uncarried_with_reason),
     ("没题的持平属性不用写原因", lambda b: b["config"]["attribute_plan"].append(

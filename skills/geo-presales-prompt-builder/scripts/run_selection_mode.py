@@ -7,6 +7,9 @@
     prepare   归一化 Case，建独立工作目录（skill 拷贝、inputs/、TASK.md）
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
     finalize  跑选词 validator、售前专属检查和导出脚本，写 out/result.json
+    返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
+              finalize，默认最多 2 轮（--repair-rounds，0 关闭）；最后一轮授权 agent 丢题不丢库
+              （改不好的题删掉、题号进 config.retired，每个主题仍只放一种提示词类型）
 
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt,gemini --out <工作目录> --agent sdk
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt --out <工作目录> --agent-cmd "<命令>"
@@ -27,18 +30,19 @@ agent 两种接法：
 产物（都在工作目录里）：
   out/bank.json        题库 JSON（内部底稿）
   out/upload/*.csv     交给线上的 9 字段题（每个市场一份）
-  out/result.json      {status, market, locale, upload_files, prompt_count, topics, errors…}
-  logs/                agent 记录、两个检查与导出的原始输出
+  out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, errors…}
+  logs/                agent 记录（返修轮带 -repair<n> 后缀）、两个检查与导出的原始输出
+  REPAIR-<n>.md        每轮返修回喂 agent 的任务（报错原文在里面）
 
-退出码：0 生词成功；1 生词失败（agent 出错、超时或检查没过，原因见 result.json）；
+退出码：0 生词成功；1 生词失败（agent 出错、超时，或返修轮次用完检查仍没过，原因见 result.json）；
 2 输入或环境有错（Case 归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
   1. Case 缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
-  2. agent 没写出 bank.json、超时或异常退出 → 失败，不拿半成品导出
+  2. agent 没写出 bank.json、超时或异常退出 → 没有 bank.json 就失败，不返修、不拿半成品导出
   3. 题库没过选词 validator、售前专属检查（check_presales_bank.py：题型只出发现和 Case 点名的对比 / 评价、主题都有题、对比题点名冻结竞品）
-     或导出检查（超 60 条、字段缺、类型不对） → 失败，报错原文进 result.json
-  4. 题库的市场和传入的 --market 不一致 → 失败，避免把别的市场的题交上去
+     或导出检查（超 60 条、字段缺、类型不对） → 回喂报错返修（最多 --repair-rounds 轮），仍没过才失败，报错原文进 result.json
+  4. 题库的市场和传入的 --market 不一致 → 同样走返修（agent 改 region），仍不一致才失败
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
   5. 工作目录已存在 → 拒绝覆盖，避免两个 Case 共用一个目录
   6. 没有 SCRAPELESS_API_KEY → agent 采不了研究预跑会凭空写题，启动前就停下
@@ -93,6 +97,24 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 `python3 .agents/skills/geo-presales-prompt-builder/scripts/check_presales_bank.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
 最后只回复一行：`DONE <validator 输出里的 readiness>`。
+"""
+
+REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max_rounds} 轮）。工作目录里已有 out/bank.json，但结束检查没过。
+
+只做返修：按下面的报错改 `out/bank.json`（需要时更新 `out/notes.md`），不要重做调研（research/ 里已有材料），不要访问工作目录以外的路径。
+{drop_clause}
+报错原文：
+
+{errors}
+
+改完后依次运行，三条都要退出码 0；有错就继续改：
+`python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
+`python3 .agents/skills/geo-presales-prompt-builder/scripts/check_presales_bank.py out/bank.json`
+`python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
+最后只回复一行：`DONE <validator 输出里的 readiness>`。
+"""
+
+DROP_CLAUSE = """这是最后一轮返修，丢题不丢库：报错指向的题能改就改，改不好的直接删掉，不要为凑数新写题。删掉的题号和原因记进 `config.retired`，并写进 `out/notes.md`「删题」一节；空了的主题连主题登记一起删。宁可少交几道题，不要交整库失败。
 """
 
 
@@ -165,7 +187,7 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
     return 0
 
 
-async def _run_sdk(ws: Path, task: str, timeout: int) -> dict:
+async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage, query  # noqa: PLC0415
     model = os.environ.get("AGENT_MODEL", "").strip()
     if not os.environ.get("ANTHROPIC_BASE_URL") or not os.environ.get("ANTHROPIC_API_KEY") or not model:
@@ -181,7 +203,7 @@ async def _run_sdk(ws: Path, task: str, timeout: int) -> dict:
                               disallowed_tools=["WebSearch", "WebFetch"], setting_sources=["project"],
                               max_turns=600)
     record: dict = {"tool_calls": 0}
-    with (ws / "logs/agent.jsonl").open("w", encoding="utf-8") as log:
+    with (ws / f"logs/agent{tag}.jsonl").open("w", encoding="utf-8") as log:
         async def consume():
             async for m in query(prompt=task, options=opts):
                 if isinstance(m, AssistantMessage):
@@ -194,27 +216,29 @@ async def _run_sdk(ws: Path, task: str, timeout: int) -> dict:
     return record
 
 
-def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int) -> dict:
-    task = (ws / "TASK.md").read_text(encoding="utf-8")
+def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
+              task_path: Path | None = None, tag: str = "") -> dict:
+    task_path = task_path or ws / "TASK.md"
+    task = task_path.read_text(encoding="utf-8")
     started = time.time()
-    record: dict = {"agent": "sdk" if agent == "sdk" else "cmd"}
+    record: dict = {"agent": "sdk" if agent == "sdk" else "cmd", "task_file": task_path.name}
     try:
         if agent == "sdk":
-            record.update(asyncio.run(_run_sdk(ws, task, timeout)))
+            record.update(asyncio.run(_run_sdk(ws, task, timeout, tag)))
         else:
-            env = dict(os.environ, WORKSPACE=str(ws), TASK_FILE=str(ws / "TASK.md"))
-            with (ws / "logs/agent.log").open("w", encoding="utf-8") as log:
+            env = dict(os.environ, WORKSPACE=str(ws), TASK_FILE=str(task_path))
+            with (ws / f"logs/agent{tag}.log").open("w", encoding="utf-8") as log:
                 proc = subprocess.run(agent_cmd, shell=True, cwd=ws, env=env, stdout=log,
                                       stderr=subprocess.STDOUT, timeout=timeout)
             record["exit_code"] = proc.returncode
             if proc.returncode != 0:
-                record["error"] = f"agent 命令退出码 {proc.returncode}，输出见 logs/agent.log"
+                record["error"] = f"agent 命令退出码 {proc.returncode}，输出见 logs/agent{tag}.log"
     except (asyncio.TimeoutError, subprocess.TimeoutExpired):
         record["error"] = f"agent 超时（{timeout} 秒）"
     except Exception as exc:  # noqa: BLE001 - 任何 agent 异常都记成生词失败，不让流水线崩
         record["error"] = f"{type(exc).__name__}: {str(exc)[:2000]}"
     record["wall_secs"] = round(time.time() - started, 1)
-    write_json(ws / "logs/agent-run.json", record)
+    write_json(ws / f"logs/agent-run{tag}.json", record)
     return record
 
 
@@ -235,11 +259,13 @@ def _tail(text: str, lines: int = 60) -> str:
     return "\n".join(text.strip().splitlines()[-lines:])
 
 
-def finalize(ws: Path, agent_record: dict | None = None) -> int:
+def finalize(ws: Path, agent_record: dict | None = None, repair_rounds: int | None = None) -> int:
     prior = json.loads((ws / "out/result.json").read_text(encoding="utf-8")) if (ws / "out/result.json").exists() else {}
     market, locale = prior.get("market", ""), prior.get("locale", "")
     result = {"status": "failed", "market": market, "locale": locale, "platforms": prior.get("platforms", []), "errors": [],
               "warnings": prior.get("warnings", [])}
+    if repair_rounds is not None:
+        result["repair_rounds"] = repair_rounds
     if agent_record and agent_record.get("error"):
         result["errors"].append({"stage": "agent", "message": agent_record["error"]})
     bank = ws / "out/bank.json"
@@ -293,6 +319,18 @@ def finalize(ws: Path, agent_record: dict | None = None) -> int:
     return 0 if result["status"] == "success" else 1
 
 
+def repair_task(ws: Path, round_no: int, max_rounds: int) -> Path:
+    """把上一轮 result.json 的报错写成返修任务，返回任务文件路径。"""
+    result = json.loads((ws / "out/result.json").read_text(encoding="utf-8"))
+    errors = "\n\n".join(f"[{e.get('stage', '?')}] {e.get('output') or e.get('message', '')}".strip()
+                         for e in result.get("errors", []))
+    drop = DROP_CLAUSE if round_no >= max_rounds else ""
+    path = ws / f"REPAIR-{round_no}.md"
+    path.write_text(REPAIR_TASK.format(round=round_no, max_rounds=max_rounds, drop_clause=drop, errors=errors),
+                    encoding="utf-8")
+    return path
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -307,7 +345,9 @@ def main() -> int:
         if name == "run":
             p.add_argument("--agent", choices=["sdk"], help="内置 Claude Agent SDK 适配")
             p.add_argument("--agent-cmd", help="宿主 harness 的命令，在工作目录里执行")
-            p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="agent 时间上限（秒）")
+            p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="agent 时间上限（秒），每轮返修同额")
+            p.add_argument("--repair-rounds", type=int, default=2,
+                           help="检查没过时回喂报错返修的最大轮数（默认 2，0 关闭；最后一轮授权丢题不丢库）")
     p = sub.add_parser("finalize")
     p.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
@@ -329,7 +369,14 @@ def main() -> int:
         print("缺少 SCRAPELESS_API_KEY，未启动 agent", file=sys.stderr)
         return 2
     record = run_agent(ws, a.agent, a.agent_cmd, a.timeout)
-    return finalize(ws, record)
+    code = finalize(ws, record, repair_rounds=0)
+    rounds = 0
+    while code != 0 and rounds < max(a.repair_rounds, 0) and (ws / "out/bank.json").exists():
+        rounds += 1
+        task_path = repair_task(ws, rounds, a.repair_rounds)
+        record = run_agent(ws, a.agent, a.agent_cmd, a.timeout, task_path=task_path, tag=f"-repair{rounds}")
+        code = finalize(ws, record, repair_rounds=rounds)
+    return code
 
 
 if __name__ == "__main__":

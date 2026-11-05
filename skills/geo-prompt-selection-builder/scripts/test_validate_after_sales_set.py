@@ -429,18 +429,16 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         ]
         for row in data["questions"]:
             row["slice_ref"] = "M-001"
-            row["priority"] = "高"
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        # 可改变性低保留业务重要性
+        # 可改变性低保留业务重要性（2026-11-05 起题上没有优先级，档位只读所在行；旧题库带的值照认不查）
         data["questions"][0]["changeability"] = "低"
         data["questions"][0]["priority"] = "高"
-        self.assertNotIn("differs from the expected", validate(data).stdout)
-        # 手改档位没写原因：告警
+        self.assertNotIn("[W55]", validate(data).stdout)
         data["questions"][1]["priority"] = "低"
-        self.assertIn("differs from the expected tier", validate(data).stdout)
+        self.assertNotIn("[W55]", validate(data).stdout)
         data["questions"][1]["priority_change_reason"] = "品牌方：本期不主推"
-        self.assertNotIn("differs from the expected tier", validate(data).stdout)
+        self.assertNotIn("[W55]", validate(data).stdout)
         # 低档行可以出题（Suda 2026-11-05）；行没定档、行优先级没写依据、主题对不上：报错
         data["questions"][2]["slice_ref"] = "M-002"
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
@@ -517,6 +515,29 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Topics with no Discovery Prompt", result.stdout)
         self.assertIn("topic_2", result.stdout)
+
+    def test_selection_topic_holds_one_prompt_type(self) -> None:
+        data = staged_bank(6, "hypothesis")
+        data["config"]["generation_stage"] = "selection"
+        data["config"]["slices"] = [
+            {"slice_id": "M-001", "topic_id": "topic_1", "prompt_type": "Discovery", "priority": "高", "priority_basis": "x"},
+            {"slice_id": "M-002", "topic_id": "topic_1", "prompt_type": "Competitor", "priority": "高", "priority_basis": "x"},
+        ]
+        for row in data["questions"]:
+            row["slice_ref"] = "M-001"
+        data["questions"][0].update({"slice_ref": "M-002", "prompt_type": "Competitor"})
+        self.assertIn("Gate 66", validate(data).stdout)
+        # the same Topic is fine once it holds a single type, and needs no Discovery Prompt then
+        data["config"]["slices"][0]["prompt_type"] = "Competitor"
+        for row in data["questions"]:
+            row.update({"slice_ref": "M-002", "prompt_type": "Competitor"})
+        stdout = validate(data).stdout
+        self.assertNotIn("Gate 66", stdout)
+        self.assertNotIn("Topics with no Discovery Prompt", stdout)
+        # presales banks follow the same rule
+        data["config"]["extra_prompt_types"] = ["Competitor"]
+        data["questions"][0].update({"prompt_type": "Discovery"})
+        self.assertIn("Gate 66", validate(data).stdout)
 
     def test_topic_priority_has_a_basis(self) -> None:
         data = staged_bank(2, "hypothesis")

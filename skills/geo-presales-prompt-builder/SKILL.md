@@ -1,9 +1,9 @@
 ---
 name: geo-presales-prompt-builder
-description: Generate the overseas GEO presales diagnosis Prompt set (售前生词) from a brand Case using the selection method — normalize the Case, research public signals with no browser login, judge attributes against competitors, draw matrix rows, cluster Topics, write Prompts, validate, and export the nine-field upload rows for the online diagnosis report. Also the one-command online runner. Do not use it for collecting answers, building the report, client confirmation Bases, or after-sales monitoring sets (geo-prompt-selection-builder).
+description: Generate the overseas GEO presales diagnosis Prompt set (售前生词) from a brand Case using the selection method — normalize the Case, research public signals with no browser login, organize buyer constraints, draw matrix rows with business priority, cluster Topics, write Prompts, validate, and export the nine-field upload rows for the online diagnosis report. Also the one-command online runner (with bounded self-repair). Do not use it for collecting answers, building the report, client confirmation Bases, or after-sales monitoring sets (geo-prompt-selection-builder).
 metadata:
   author: Overseas GEO Project
-  version: "6.5.0"
+  version: "6.7.0"
 ---
 
 # 售前生词
@@ -28,7 +28,7 @@ metadata:
 ## 怎么做
 
 1. 读 [Case 输入合同](references/input-contract.md)。线上表单和本地飞书记录都先跑 `scripts/normalize_case.py`（飞书加 `--from-base-record`）；`ok=false` 时把 `errors` 原样交回，不替上游补字段。
-2. 按 [售前生词步骤](references/selection-mode.md) 做完第 2–9 步：研究预跑 → 公开信号 → 属性与相对竞品 → 受众与购买任务 → 矩阵行与业务优先级 → 主题与主题优先级 → 写题 → 校验与导出。每一步的判断记在题库 JSON 的哪个字段，那里都写了。
+2. 按 [售前生词步骤](references/selection-mode.md) 做完第 2–9 步：研究预跑 → 公开信号 → 买方约束 → 受众与购买任务 → 矩阵行与业务优先级 → 主题与主题优先级 → 写题 → 校验与导出。每一步的判断记在题库 JSON 的哪个字段，那里都写了。
 3. 交付：`bank.json`（内部底稿）、`notes.md` 和导出的 9 字段题。选词 validator、售前专属检查（`scripts/check_presales_bank.py`）和导出脚本都是退出码 0 才算完成。
 
 线上无人值守时用一条命令跑完：
@@ -37,7 +37,7 @@ metadata:
 python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
-宿主有自己的 agent 框架时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物见脚本开头说明。
+宿主有自己的 agent 框架时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。检查没过时脚本把报错回喂 agent 返修（默认最多 2 轮，最后一轮授权丢题不丢库），仍没过才算失败。环境变量、退出码和产物见脚本开头说明。
 
 ## 文件
 
@@ -51,6 +51,7 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 | `scripts/run_selection_mode.py` | 线上一条命令入口 |
 | `scripts/check_presales_bank.py` | 售前专属检查：默认只出发现题、对比 / 评价要 Case 点名、主题都有题、对比题点名冻结竞品 |
 | `evals/e2e_presales_gates.py` | 门禁端到端校验，用 `evals/fixtures/` 里的合格样例逐条造违规样本 |
+| `evals/e2e_repair_loop.py` | 返修循环端到端校验：修好、丢题保底、关闭返修、无 bank 四条路径 |
 | `scripts/validate_question_bank.py` | 旧 v8 题库校验，以及上传行检查（导出脚本会调用） |
 | `references/legacy/` | 已归档的默认模式规则，只用于读懂 10-29 之前的旧题库 |
 

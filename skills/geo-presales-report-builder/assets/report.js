@@ -161,6 +161,12 @@
 
   /* ---------- 核心洞察 KPI ---------- */
 
+  // 对比、评价题各成主题（一个主题一种类型）：这类切片没有发现题，不算提及率和引用，空值不代表品牌没出现。
+  function isTypeOnlySlice(slice) {
+    var records = slice.records || [];
+    return records.length > 0 && !records.some(function (r) { return r.discovery; });
+  }
+
   function renderKpis() {
     var slice = currentSlice();
     var k = slice.kpis || {};
@@ -337,7 +343,7 @@
           logo(META.official_domain, 18) +
           '<small class="page-url">' + esc(row[0]) + "</small></div>" +
           '<span class="count">' + esc(row[1]) + "</span></div>";
-      }).join("") || emptyRow("官网尚未被引用"));
+      }).join("") || emptyRow(isTypeOnlySlice(slice) ? "这个主题没有发现题，不统计引用" : "官网尚未被引用"));
     }
   }
 
@@ -877,7 +883,9 @@
     var scope = (state.region || "全部地区") + (state.platform ? " · " + state.platform : "") +
       (state.topic ? " · " + state.topic : "");
 
-    if (leader && target) {
+    if (isTypeOnlySlice(slice)) {
+      setInsight("overviewInsight", "这个主题只有对比或评价题，不算提及率，逐题结果看「明细」。", []);
+    } else if (leader && target) {
       var gap = (parseFloat(leader[2]) - parseFloat(target[2])).toFixed(1);
       var mentionRate = parseFloat(k.mention_rate) || 0;
       var mentionRank = parseInt(k.mention_rank) || 0;
@@ -927,7 +935,9 @@
       }).filter(Boolean);
       var headline = "";
       var points = [];
-      if (!vals.length) {
+      if (isTypeOnlySlice(slice)) {
+        headline = "这个主题只有对比或评价题，不算提及率。";
+      } else if (!vals.length) {
         headline = "当前切片下监测对象未进入任何平台回答。";
       } else {
         var sorted = vals.slice().sort(function (a, b) { return b.value - a.value; });

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""写提示词库的「提示词优先级」「出题原因」（对客确认 Base，任意客户通用）。
+"""写出提示词库的「出题原因」（对客确认 Base，任意客户通用）。
 
 两种结构自动识别：
   新结构（2026-10-28 起，提示词矩阵有「业务重要性依据」字段；2026-11-02 前叫「优先级依据」）——规则见
-  references/client-facing-attribute-pool.md → *提示词矩阵* / *提示词库*：
-  - 默认档位 = 所属切片（矩阵行）的「业务重要性」（高 / 中 / 低；2026-11-02 前叫「优先级」，旧 Base 为 P1 / P2 / P3）；
-    可改变性用于诊断，优先级按业务重要性继承。字段名新旧都认，写回 Base 里实际有的那个。
-  - 「提示词优先级」（旧 Base 叫「优先级」）是可编辑单选：空着时按默认档位预填；人改过、和默认不一致的，
-    出题原因结尾保留「改档：理由，定为 Px。」，没写的列出来（check_client_base.py 也会拦）。
+  references/client-facing-base.md → *提示词矩阵* / *提示词库*：
+  - 2026-11-05 起提示词库不再有优先级列，档位只读所属切片（矩阵行）的「业务重要性」
+    （高 / 中 / 低；2026-11-02 前叫「优先级」，旧 Base 为 P1 / P2 / P3）。旧 Base 还留着
+    「提示词优先级」列的，照旧按行档位预填，人改过的列出来，不再拦截。
   - 出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的需求信号
-    （按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么是这个档位
+    （按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么重要
     （切片「优先级依据」原文）。判断只写在矩阵行，这里不留第二份。
   旧结构（2026-10-27 及以前发出的 Base，旧客户不迁移）——档位取属性池
   「重要性 × 可改变性」查表，写「建议优先级」，按原来的规则运行。
@@ -255,7 +254,7 @@ def first(row, *names):
 def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
     """新结构：档位取矩阵行。返回 (更新, [], 缺改档理由, 算不出)。"""
     out, need, skipped = {}, [], []
-    tier_field = "提示词优先级" if any("提示词优先级" in r for r in lib) else "优先级"
+    legacy_tier_field = "提示词优先级" if any("提示词优先级" in r for r in lib) else ("优先级" if any("优先级" in r for r in lib) else None)
     for r in lib:
         code, typ = text(r.get("编号")), text(r.get("提示词类型"))
         sl_ids = ids(r.get("所属切片"))
@@ -263,6 +262,7 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
             skipped.append((code, "没有所属切片"))
             continue
         sl = matrix[sl_ids[0]]
+        typ = typ or text(sl.get("提示词类型"))  # 2026-11-05 起提示词库不设类型列，类型读所属切片
         row_tier = first(sl, "业务优先级", "业务重要性", "优先级")
         if row_tier not in ROW_TIERS:
             skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判业务优先级"))
@@ -292,19 +292,13 @@ def build_v2(pool, matrix, quotes, lib, brand, aliases, noun, base_audiences):
         if att is None:
             p3 = f"测品类整体格局；{p3}"
         fields = {}
-        manual = text(r.get(tier_field))
-        if not manual:
-            manual = tier
-            fields[tier_field] = [tier]
-        if manual == tier:
-            tail = f"提示词优先级：{tier}。" if tier_field == "提示词优先级" else f"所以是 {tier}。"
-        else:
-            tail = f"按规则是 {tier}。"
-            m = re.search(r"改档[：:].*$", text(r.get("出题原因")), re.S)
-            if m and f"定为 {manual}" in m.group(0):
-                tail += m.group(0)
-            else:
-                need.append((code, tier, manual))
+        # 2026-11-05 起提示词库没有优先级列；旧 Base 还留着这一列的照旧按行档位预填，人改过的只列出不拦。
+        manual = text(r.get(legacy_tier_field)) if legacy_tier_field else ""
+        if legacy_tier_field and not manual:
+            fields[legacy_tier_field] = [tier]
+        if legacy_tier_field and manual and manual != tier:
+            need.append((code, tier, manual))
+        tail = f"所以是 {tier}。" if legacy_tier_field else ""
         reason = f"{p1}{p2}{p3}{tail}"
         if reason != text(r.get("出题原因")):
             fields["出题原因"] = reason
