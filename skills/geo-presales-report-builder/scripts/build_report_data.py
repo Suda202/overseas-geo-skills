@@ -222,21 +222,34 @@ CSV_INTENT_MAP = {
     "sentiment": "sentiment",
     "category_awareness": "market_perception",
     "market_perception": "market_perception",
+    # 选词八类里后端还没有枚举的四类（2026-11-06）：只进我们自己的报告，按意图类型在明细里筛
+    "alternatives": "alternatives",
+    "trust": "trust",
+    "information": "information",
+    "transactional": "transactional",
+    "support": "support",
 }
 # 后端 diagnostic_intent -> 中文客户标签
+# 标签按 shared/canonical-intent-mapping.md 的「中文客户标签」（2026-11-06 起竞品→对比、评价→评估、旧验证→能力核查）
 INTENT_LABEL = {
     "discovery": "发现",
-    "competitor": "竞品",
-    "validation": "验证",
+    "information": "问题解决",
+    "sentiment": "评估",
+    "competitor": "对比",
+    "alternatives": "替代",
+    "trust": "验证",
+    "transactional": "交易",
+    "support": "售后",
+    "validation": "能力核查",
     "accuracy": "准确性",
-    "sentiment": "评价",
     "market_perception": "品类认知",
 }
-INTENT_ORDER = ["discovery", "competitor", "validation", "accuracy", "sentiment",
-                "market_perception"]
+INTENT_ORDER = ["discovery", "information", "sentiment", "competitor", "alternatives", "trust",
+                "transactional", "support", "validation", "accuracy", "market_perception"]
 # questions.py 的 v5 推导：competitor->comparison，validation/accuracy/sentiment->decision
-FUNNEL_OVERRIDE = {"competitor": "comparison", "validation": "decision",
-                   "accuracy": "decision", "sentiment": "decision"}
+FUNNEL_OVERRIDE = {"competitor": "comparison", "alternatives": "comparison", "validation": "decision",
+                   "accuracy": "decision", "sentiment": "decision", "trust": "decision",
+                   "transactional": "decision", "support": "decision"}
 
 # 后端 source_type -> 契约固定 7 类中文名 + 填充色
 # 后端 source_type -> 报告展示的 7 类（以现行《引用来源分类》定义为准，不得增删）
@@ -640,7 +653,7 @@ def build_question_bank(rows: list[dict], config: dict, topics: list[str]) -> di
             "generation_sequence": index,
             "question_text": str(row["query"]).strip(),
             "question_zh": str(row.get("question_zh") or "").strip() or None,
-            "question_type": "generic" if backend_intent in {"discovery", "market_perception"} else "branded",
+            "question_type": "generic" if backend_intent in {"discovery", "market_perception", "information"} else "branded",
             "funnel_intent": FUNNEL_OVERRIDE.get(backend_intent, "recommendation"),
             "diagnostic_intent": backend_intent,
             "analysis_type": analysis_type,

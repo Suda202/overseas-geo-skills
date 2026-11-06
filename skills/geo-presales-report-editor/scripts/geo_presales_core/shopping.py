@@ -17,7 +17,7 @@ report-builder 都引用它，不各自解析平台字段——平台字段分�
 口径（Suda 2026-10-14 裁定）：
 - 四个平台（ChatGPT / AIO / AI Mode / Gemini）分开算，不跨平台合并——各平台每条回答的
   卡数量级不同（Gemini 12–19 张，ChatGPT 1–6 张），合池后排名没有意义。
-- 购物触发率用全部有效回答，按诊断意图拆开报；购物可见度、商品、商家、卡位只用 Discovery，
+- 商品卡触发率用全部有效回答，按诊断意图拆开报；品牌商品卡入选率、商品、商家、卡位只用 Discovery，
   与正式可见度同口径（题面带品牌的题会必然抬高本品牌）。
 - 没有商品字段的平台（Perplexity）返回 None，显示「—」，不按 0% 计。
 """
@@ -424,7 +424,7 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
             "card_source": {k: v for k, v in PLATFORM_PRODUCT_FIELDS.items()},
             "shopping_mode_rate_denominator": "该平台全部有效回答；分子为至少有一张商品卡的回答；按诊断意图另拆",
             "shopping_visibility_denominator": "该平台触发购物的有效 Discovery 回答；分子为至少有一张该品牌商品卡的回答（回答级去重）",
-            "shopping_exposure_rate_denominator": "该平台全部有效 Discovery 回答（推导指标 = 购物可见度 × Discovery 触发率）",
+            "shopping_exposure_rate_denominator": "该平台全部有效 Discovery 回答（推导指标 = 品牌商品卡入选率 × Discovery 触发率）",
             "product_exposure_denominator": "该平台触发购物的有效 Discovery 回答；同一商品在一条回答内只计一次",
             "average_card_position": "品牌/商品在回答内首张卡的位置（平台字段顺序，1 起）取平均；仅内部字段",
             "merchant_share_denominator": "该平台触发购物的 Discovery 回答中全部购买选项（offer）；同一回答内商家+链接相同只计一次",

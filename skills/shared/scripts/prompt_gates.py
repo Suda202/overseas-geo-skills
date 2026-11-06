@@ -1,4 +1,4 @@
-"""Prompt writing gates shared by geo-prompt-selection-builder and geo-presales-prompt-builder.
+"""Prompt writing gates used by geo-prompt-selection-builder (presales generation merged in 2026-11-06).
 
 One implementation so the two validators can never judge the same Prompt differently.
 English only; non-Latin locales keep their registry-based checks in each validator.

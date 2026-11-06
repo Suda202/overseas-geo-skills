@@ -1,51 +1,64 @@
-# 跨 Skill 共享：提示词类型规范映射表
+# 跨 Skill 共享：意图类型规范映射表
 
-本文件是售前 skill 家族的唯一权威词表。消费方共六个：geo-presales-eval-case-builder / geo-presales-prompt-builder / geo-presales-report-editor / geo-presales-report-audit / geo-presales-report-builder / geo-presales-sentiment-judge，各自的"开始前读取"均指向本文件。各 skill 内部不得另行定义同概念的别名。
+本文件是售前 skill 家族的唯一权威词表。消费方共五个：geo-prompt-selection-builder / geo-presales-report-editor / geo-presales-report-audit / geo-presales-report-builder / geo-presales-sentiment-judge，各自的"开始前读取"均指向本文件。各 skill 内部不得另行定义同概念的别名。
 
-**命名（2026-10-22 Suda 定）**：这个维度统一叫「提示词类型」（Prompt Type），原名「诊断意图 / 意图 / Intent」停用。售前题库标签 `Prompt Type: …`，售后题库 JSON 字段 `prompt_type`，对客多维表格字段「提示词类型」。原「Prompt Task」买家任务标签层已删除，不再写。只有两处仍保留旧名，因为它们是与后端的接口约定：上传 CSV 列 `diagnosis_intent` 和后端字段 `diagnostic_intent`。旧题库不迁移。
+**命名**：这个维度对客叫「意图类型」（2026-11-06 Suda 定；2026-10-22 至 11-06 叫「提示词类型」，更早叫「诊断意图 / 意图」）。英文仍叫 Prompt Type：售前题库标签 `Prompt Type: …`，售后题库 JSON 字段 `prompt_type`，都不改；对客多维表格字段「意图类型」（旧 Base 的「提示词类型」照认）。上传 CSV 列 `diagnosis_intent` 和后端字段 `diagnostic_intent` 是与后端的接口约定，不改。原「Prompt Task」买家任务标签层已删除。旧题库不迁移。
 
 ## 完整映射
 
-下表包含历史数据兼容映射。Verification 和 Accuracy 的旧值仅用于读取历史数据。当前选词的临时验证单独记在内部诊断记录中，不生成题库记录或上传行。
+选词的意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后，定义见选词 selection-rules.md → 5「意图类型：八类」。下表另含历史数据兼容映射：Verification（旧的 yes/no 能力核查）和 Accuracy 的旧值仅用于读取历史数据；能力核查现归评估，准确性题在题库之外，不生成上传行。
 
-| 题库标签 | 后端 diagnostic_intent | 中文客户标签 | analysis_type | formal_visibility_eligible | 报告模块归属 |
+| 题库标签 | 后端 diagnostic_intent | 中文客户标签 | 统计指标 | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
-| `Prompt Type: Discovery` | `discovery` | 发现（发现类问题） | `visibility,sentiment` | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
-| `Prompt Type: Competitor` | `competitor` | 对比（原「竞品」→「竞品对比」，2026-10-23 简化为「对比」） | `sentiment` | `false` | M02 竞品表现（决胜与情感） |
-| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持，接入前需后端加枚举；临时上传按 `competitor` 适配） | 替代（替代类问题） | `sentiment` | `false` | **仅售后**（2026-10-22 从 Competitor 拆出）：点名竞品问替代方案（「[领头竞品] 最好的替代方案」），品牌不是对比的一边、答案是名单，读数是**提及率**（替代方案名单里的提及：5 次里几次被列入、列第几；Suda 2026-10-23 起不再另叫列入率）+ 情感，单独成行报；2026-11-02 起计入提及率考核（Suda 定，推翻 10-23「未定」），formal_visibility_eligible 两种值 validator 都接受；后端加 `alternatives` 枚举并计入可见度之前，线上报告看不到替代题的提及率，我们自己的基线报告照算；列入≠推荐。不点名的替代问法仍是 Discovery。2026-10-22 前的题库维持 Competitor 不迁移 |
-| `Prompt Type: Verification` | `validation` | 验证（验证类问题） | —（空） | `false` | 历史数据兼容；当前临时验证只存内部诊断记录 |
-| `Prompt Type: Accuracy` | `accuracy` | 准确性（准确性类问题） | `accuracy` | `false` | 无独立模块；作为准确性输入 M05 品牌进入 |
-| `Prompt Type: Evaluation` | `sentiment` | 评价（评价类问题） | `sentiment` | `false` | M04 品牌表达 |
-| `Prompt Type: Category Awareness` | `market_perception` | 品类认知（品类认知类问题） | —（空） | `true` | M08 购买框架（品类认知 / Market Perception） |
-| `Prompt Type: Information` | `information`（后端尚未支持，接入前需后端加枚举） | 问题解决 | `citation` | `false` | **仅售后**（Suda 2026-10-19; client label renamed from 信息 and scope narrowed to problem-solving on 2026-10-26）：买家的问题解决型问题，AI 给建议不列候选，只统计品牌官网是否被引用；售前不使用 |
+| `Prompt Type: Discovery` | `discovery` | 发现 | 提及率、情感 | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
+| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持；接入前按 `competitor` 上传，`tags` 第一个写「替代」） | 替代 | 提及率、情感 | `false` | **仅售后**：点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
+| `Prompt Type: Competitor` | `competitor` | 对比 | 胜负、情感 | `false` | M02 竞品表现（决胜与情感） |
+| `Prompt Type: Evaluation` | `sentiment` | 评估（问本品适不适合、有没有某能力） | 情感 | `false` | M04 品牌表达 |
+| `Prompt Type: Trust` | 后端尚未支持 | 验证（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | **仅售后选词**；本期不出，不导出上传 CSV |
+| `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 提及率 | `false` | **仅售后**：AI 多给步骤和建议，多数回答不提品牌，提及率基数小；品牌出现在解决步骤里（「用 X 查」）是这类题里最有价值的位置。售前不使用 |
+| `Prompt Type: Transactional` | 后端尚未支持 | 交易（点名本品问哪里买、价格、库存） | 准确性 | `false` | **仅售后选词**；本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
+| `Prompt Type: Support` | 后端尚未支持 | 售后（点名本品问安装、使用、故障、维修、退换） | 准确性 | `false` | **仅售后选词**；本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
+| `Prompt Type: Category Awareness` | `market_perception` | 品类认知 | —（M08 自有读法） | `true` | M08 购买框架（品类认知 / Market Perception）；只用于调研预跑，不进选词题库 |
+| `Prompt Type: Accuracy` | `accuracy` | 准确性 | 准确性 | `false` | 无独立模块；作为准确性输入 M05 品牌进入。默认不出，有必要时才出，在题库之外，不上传 |
+| `Prompt Type: Verification` | `validation` | 能力核查（旧） | — | `false` | 历史数据兼容；现在问「有没有某能力」归 Evaluation。不要和新的验证类型 Trust 混用 |
 
-**上传值和后端内部值是两层，别混用（2026-10-29）。** 上表「后端 diagnostic_intent」列是后端统计包里存的值；我们上传 CSV 或走接口传入时，`diagnosis_intent` 填的是上传值，由后端自己换成内部值（报告侧的对照在 `geo-presales-report-builder/scripts/build_report_data.py` 的 `CSV_INTENT_MAP`）。两层不同的只有三个：评价传 `evaluation`（内部存 `sentiment`），历史验证记录用 `verification`（内部存 `validation`，当前临时验证不上传），品类认知传 `category_awareness`（内部存 `market_perception`）；发现、对比、准确性两层同名。上传值的全集以售前 validator 的 `V8_CSV_QUESTION_TYPES` 为准。评价题的 `analysis_type` / `question_types` 是 `sentiment`，和内部值同名，但它是另一个字段。
+**统计指标由意图类型决定，不另设字段。** 每道题统计什么只看上表「统计指标」列，提示词库和题库都不另设分析维度字段。另有两条对所有类型都适用：
 
-**历史验证与准确性映射**。旧数据保留 Verification 和 Accuracy 两个值及其独立含义。当前选词仅在有效发现题零提及时按需做临时点名验证，记录在题库之外。事实错误进入品牌事实核查表。触发、记录与判读要求见选词 selection-rules.md 第 8 步。
+- **引用所有类型都统计**（引用份额、官网被引用率、引用来源），按意图类型分开看。「全部类型」汇总的引用只合并题面不点名品牌的类型，因为题面点名品牌会把它的官网拉进引用（口径见 `geo-monitoring/references/baseline-report.md`、`geo-monitoring/scripts/build_baseline_html.py`）。
+- **提及只数正文里的品牌**：先去掉引用标记（「([RivalH1][5])」这类脚注、引用卡片标题）再识别，口径同 `geo-presales-report-audit/scripts/de_cite_crawl.py` 的 `strip_citations`。正文里写出来的品牌都算提及，包括被当作数据来源点名的（「Source: SRX Property Index」「According to rival-h2.example」）；提及不等于推荐。
 
-**报告模块按事实来源划分，不按提示词类型划分，两者不是一一对应。** 一个模块可以消费多种提示词类型的样本（M02 同时用 Discovery 的竞争位置与 Competitor 的决胜结果），一种意图也可能不进任何模块（验证与准确性只作为诊断输入）。下表的模块归属只说明「该意图的样本最终进入哪些模块」，不要把它读成「该意图等于某个模块」。
+**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本按 `diagnosis_intent` 自动填（发现 `visibility,sentiment`，对比、评估 `sentiment`），不手填。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，然后从上传模板删掉这一列。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。
 
-*重要：`formal_visibility_eligible = true` 表示进入后端可见度处理管线，**不等于**进入正式 Visibility 指标（品牌进入率、平均提及位置、声量、问题机会）。报告侧正式 Visibility 指标和主要引用生态**只使用 Discovery（`Prompt Type: Discovery`）**；Competitor 只统计情感并进入独立的 M02 竞品表现，不再进入可见度题集；Category Awareness 进入独立的 M08 购买框架。
+**准确性怎么判。** 交易、售后和准确性题读的是 AI 说的事实对不对。
 
-情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他提示词类型而删除；它仍不得进入正式 Visibility。
+- 有品牌方资料（品牌事实核查表）时，对照事实表判对、错。
+- 没有品牌方资料时，只能对照官网、官方帮助页、官方店铺页这些公开页面，记 AI 说法和官方公开信息冲突的地方；官方页面没写的记「无法核对」，不进分母。这时报的是「和官方公开信息冲突的回答占比」，不叫准确率。
+- 不同平台说法互相矛盾，只当提示，说明这条事实在公开层不清楚，不直接判错。
 
-购物层（Shopping GEO）同样两条独立判定：购物触发率用全部有效回答、按提示词类型拆开报；购物可见度、商品曝光、商家份额只用 Discovery。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+**上传值和后端内部值是两层，别混用。** 上表「后端 diagnostic_intent」列是后端统计包里存的值；我们上传 CSV 或走接口传入时，`diagnosis_intent` 填的是上传值，由后端自己换成内部值（报告侧的对照在 `geo-presales-report-builder/scripts/build_report_data.py` 的 `CSV_INTENT_MAP`）。两层不同的只有三个：评估传 `evaluation`（内部存 `sentiment`），历史能力核查记录用 `verification`（内部存 `validation`，已不再出），品类认知传 `category_awareness`（内部存 `market_perception`）；发现、对比、准确性两层同名。上传值的全集以售前 validator 的 `V8_CSV_QUESTION_TYPES` 为准。
 
-> **迁移说明**：`Prompt Type: Discovery`、`Prompt Type: Competitor` 等提示词类型 Tag 当前作为默认枚举使用，计划迁移为项目自定义 Tags（不再是固定枚举）。迁移完成前，仍以本表为默认对照；迁移后，`analysis_type` 和 `formal_visibility_eligible` 的推导规则须在自定义 Tag 的定义文件中重新声明，不得依赖本表题库标签列自动推导。
+**历史验证与准确性映射**。旧数据保留 Verification 和 Accuracy 两个值及其独立含义。现在：问「有没有某能力」是评估（Evaluation）；新的「验证」类型（Trust）只问可信度，和旧 Verification 是两回事；零提及不再专门出点名题，按 geo-monitoring/references/trial-and-lock.md「零提及怎么诊断」找原因；准确性题默认不出，我们判断有必要时才出，在题库之外，问句和判定记进品牌事实核查表。
 
-## 提示词类型与旅程阶段
+**报告模块按事实来源划分，不按意图类型划分，两者不是一一对应。** 一个模块可以消费多种意图类型的样本（M02 同时用 Discovery 的竞争位置与 Competitor 的决胜结果），一种意图也可能不进任何模块（验证与准确性只作为诊断输入）。上表的模块归属只说明「该意图的样本最终进入哪些模块」，不要把它读成「该意图等于某个模块」。
 
-旅程阶段按买家处境判断，使用需求认知、方案考虑、购买决策三段。提示词类型按回答任务和读数口径判断。选词矩阵一行只有一种提示词类型，同一购买任务几种问法开几行；阶段按类型取默认值、可以改，validator 检查题的类型和所在行一致，不强制一一映射。
+*重要：`formal_visibility_eligible = true` 表示进入后端可见度处理管线，**不等于**进入正式 Visibility 指标（品牌进入率、平均提及位置、声量、问题机会）。正式 Visibility 指标**只使用 Discovery**；替代、问题解决的提及率按类型单独看。售前报告的主要引用生态只用 Discovery（售前只出发现题）；Competitor 只统计情感并进入独立的 M02 竞品表现；Category Awareness 进入独立的 M08 购买框架。
 
-发现题通常出现在方案考虑，比较、评价通常出现在购买决策。具体买家证据优先于这种常见分布。题型是否进入本期范围按业务目标和需求证据判断。
+情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他意图类型而删除；它仍不得进入正式 Visibility。
 
-Verification、Accuracy 和 Category Awareness 均不进入当前选词题库。旧题库的阶段和值保留兼容读取，不迁移历史数据。规则正文见选词 selection-rules.md 第 5、7、8 步。
+购物层（Shopping GEO）只在有商品卡展示机会的产品线上统计（开不开由我们按商品属性推理，消费类实体商品开、软件和服务关、工业类试跑后定），和提及率分开报：商品卡触发率用发现、替代、对比、交易四类题，按意图类型拆开报；品牌商品卡入选率（出现商品卡的回答里有本品卡的比例）、商品曝光、商家份额只用发现和替代。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+
+> **迁移说明**：`Prompt Type: Discovery`、`Prompt Type: Competitor` 等意图类型 Tag 当前作为默认枚举使用，计划迁移为项目自定义 Tags（不再是固定枚举）。迁移完成前，仍以本表为默认对照；迁移后，统计指标和 `formal_visibility_eligible` 的推导规则须在自定义 Tag 的定义文件中重新声明，不得依赖本表题库标签列自动推导。
+
+## 意图类型与旅程阶段
+
+2026-11-06 起选词不设旅程阶段：八类意图类型按买家想完成什么任务判断，已经覆盖旅程阶段要表达的信息。选词矩阵一行只有一种意图类型，同一使用场景几种问法开几行；validator 检查题的类型和所在行一致。题型是否进入本期范围按业务目标和需求证据判断。
+
+Verification、Accuracy 和 Category Awareness 均不进入当前选词题库。旧题库的旅程阶段（三段或八段）和旧类型值保留兼容读取，不迁移历史数据。规则正文见选词 selection-rules.md 第 5、7、8 步。
 
 ## 问题类型（后端枚举）
 
-后端问题类型只有两个值：`visibility`、`sentiment`。
-- `accuracy` 是 diagnostic_intent 值，不是问题类型。
-- 任何 intent 的 `analysis_type` 如为 `accuracy`，对应后端问题类型仍按分析处理（当前售前默认配额为 0）。
+后端问题类型（上传列 `question_types`）现在只有两个值：`visibility`、`sentiment`，是过渡字段，见上文「上传列 `question_types` 是过渡字段」。
+- `accuracy` 现在只是 diagnostic_intent 值，不是问题类型；交易、售后要统计准确性，需后端先加这项指标。
 
 ## `target_attributes` 来源
 
@@ -53,7 +66,7 @@ Report Editor 的后端输入字段 `target_attributes` 由**后端摄入层**�
 
 ## 字段名称互查
 
-| 概念 | Case Builder（飞书 Base 字段） | Prompt Builder（输入合同） | Report Editor（后端字段） |
+| 概念 | 飞书 Case 表字段 | Prompt Builder（输入合同） | Report Editor（后端字段） |
 |---|---|---|---|
 | 多值痛点 | `痛点`（单字段合并，`，`分隔） | `痛点 1…n`（编号兼容，合并单字段也接受） | — |
 | 多值使用场景 | `使用场景`（单字段合并） | `使用场景 1…n`（编号兼容） | — |
@@ -74,4 +87,4 @@ Report Editor 的后端输入字段 `target_attributes` 由**后端摄入层**�
 | M08 | 购买框架（品类认知 / Market Perception） | `market_perception_diagnostics` |
 | M10 | 最终摘要 | M01–M08 |
 
-模块编号按事实来源分配，与提示词类型编号无关。**M09 是未使用的编号**（后端从未定义过该模块，编号从 M08 直接跳到 M10），不是本表遗漏。旧数据的验证、准确性没有对应模块，其历史诊断输入分别进入 M04 与 M01、M05。当前临时验证保存在内部诊断记录中。完整职责与依赖见 `geo-presales-report-editor/references/backend-report-task-contract.md`。
+模块编号按事实来源分配，与意图类型编号无关。**M09 是未使用的编号**（后端从未定义过该模块，编号从 M08 直接跳到 M10），不是本表遗漏。旧数据的验证、准确性没有对应模块，其历史诊断输入分别进入 M04 与 M01、M05。当前临时验证保存在内部诊断记录中。完整职责与依赖见 `geo-presales-report-editor/references/backend-report-task-contract.md`。

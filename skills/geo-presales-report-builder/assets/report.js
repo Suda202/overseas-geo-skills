@@ -769,7 +769,7 @@
       '<p class="drawer-zh">' + esc(record ? record.zh : entry.question_zh) + "</p>" +
       '<div class="detail-meta-grid">' +
       '<div class="detail-meta-cell"><span>主题</span><strong>' + esc(record ? record.topic : "—") + "</strong></div>" +
-      '<div class="detail-meta-cell"><span>提示词类型</span><strong>' + esc(record ? record.intent : "—") + "</strong></div>" +
+      '<div class="detail-meta-cell"><span>意图类型</span><strong>' + esc(record ? record.intent : "—") + "</strong></div>" +
       '<div class="detail-meta-cell"><span>标签</span><strong>' + esc(record ? record.tag : "—") + "</strong></div>" +
       '<div class="detail-meta-cell"><span>引用份额</span><strong>' +
       esc(entry.citation_share || "—") + "</strong></div>" +
@@ -1033,7 +1033,7 @@
       var label = r.intent || "";
       if (label && intents.indexOf(label) < 0) intents.push(label);
     });
-    var html = '<option value="">全部类型</option>';
+    var html = '<option value="">全部意图类型</option>';
     intents.forEach(function (label) {
       html += '<option value="' + esc(label) + '"' + (state.recordIntent === label ? " selected" : "") + '>' + esc(label) + "</option>";
     });

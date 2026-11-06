@@ -153,7 +153,7 @@
 
 ## D9 · 购物层字段（警告 / 信息）
 
-**现象**：商品卡与回答正文、引用是不同的层，平台交付字段里混着三类不该计入的东西——AIO 的 `products` 字段（文档定义为 sponsored products，AI 概览内商品在 `source[type=product]`）、ChatGPT 的空占位卡、广告卡。直接数 `products` 会让 AIO 购物触发率虚高、ChatGPT 卡位错位。
+**现象**：商品卡与回答正文、引用是不同的层，平台交付字段里混着三类不该计入的东西——AIO 的 `products` 字段（文档定义为 sponsored products，AI 概览内商品在 `source[type=product]`）、ChatGPT 的空占位卡、广告卡。直接数 `products` 会让 AIO 商品卡触发率虚高、ChatGPT 卡位错位。
 
 **检测**（`audit_shopping`，抽取规则引用 core `shopping.extract_product_cards`）：
 

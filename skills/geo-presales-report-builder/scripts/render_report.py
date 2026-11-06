@@ -236,8 +236,8 @@ def build_body(meta: dict) -> str:
             body.append(
                 '<div class="records-toolbar">'
                 '<input class="records-search" id="recordSearch" type="search" placeholder="搜索编号或问题（中英文）" aria-label="搜索问题">'
-                '<select class="records-intent-select" id="recordIntentFilter" aria-label="按提示词类型筛选">'
-                '<option value="">全部类型</option>'
+                '<select class="records-intent-select" id="recordIntentFilter" aria-label="按意图类型筛选">'
+                '<option value="">全部意图类型</option>'
                 '</select>'
                 '</div>'
                 '<div class="table-wrap records">'

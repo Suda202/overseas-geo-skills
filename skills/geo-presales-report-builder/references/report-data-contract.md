@@ -188,7 +188,7 @@
 - `by_platform` 键是平台目录名（`chatgpt` / `overview` / `aimode` / `gemini`）。全部平台切片也只给逐平台结果，不合池。没有商品字段的平台进 `unsupported_platforms`，不出现在 `by_platform` 里。
 - 比率字段都是 core 的 `{numerator, denominator, raw, display}` 结构，分子分母随值携带；分母为 0 时 `raw=null`、`display="—"`。
 - `products` / `competitor_products_where_target_absent` / `merchants` 各截前 20 行；`target_products` 全量。
-- 只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。`verify_report_data.py` 独立复算每平台的有效回答数、触发数、Discovery 触发数和目标品牌购物可见度分子分母。
+- 只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。`verify_report_data.py` 独立复算每平台的有效回答数、触发数、Discovery 触发数和目标品牌品牌商品卡入选率分子分母。
 
 **records**
 

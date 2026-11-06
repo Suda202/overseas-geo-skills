@@ -31,7 +31,7 @@ Key 依次读环境变量 SCRAPELESS_API_KEY、macOS 钥匙串（服务名 SCRAP
 产物（<out>/）：
   raw/<种子词>.json           原始返回，作证据留存；.html 只在 JSON 缺 related_questions 时另存
   raw/<种子词>.L2-<n>.json    --paa-depth 2 时第 1 层第 n 条 PAA 的展开返回
-  signals.csv                列与对客 Base「需求信号」表一致，来源类型记「搜索联想」；译文、受众、买方约束留空待人工判
+  signals.csv                列与对客 Base「需求信号」表一致，来源类型记「搜索联想」；译文、目标客户、约束条件留空待人工判
                              （PAA、相关搜索、自动补全都不带搜索量，月搜索量留空）
   summary.json               每个种子词各类信号条数与失败原因；PAA 为 0 的种子词单独列出
 """
@@ -59,7 +59,7 @@ RESULT_PATH = "/api/v1/scraper/result/"
 SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
 PAA_TAG = re.compile(r"<div[^>]*\brelated-question-pair\b[^>]*>")
 DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
-FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "受众", "买方约束",
+FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "目标客户", "约束条件",
           "出处", "引用它的问题"]
 KINDS = {"paa": "Google People Also Ask",
          "paa2": "Google People Also Ask 第 2 层",

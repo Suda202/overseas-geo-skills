@@ -869,7 +869,7 @@ def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[st
         out.append(f"{key}: sources.official_share {sources.get('official_share')!r} "
                    f"!= 复算 {expected['official_share']!r}")
 
-    # 购物层：按平台对账触发数与目标品牌购物可见度（分子分母都对）。
+    # 购物层：按平台对账触发数与目标品牌品牌商品卡入选率（分子分母都对）。
     shopping = slc.get("shopping")
     if shopping is None:
         out.append(f"{key}: 缺少 shopping 块")
@@ -1066,7 +1066,7 @@ def _shopping_mutations(mutate, slices):
         mutate(f"把 {key} 的 {platform_dir} 购物触发数加 3",
                ["slices", key, "shopping", "by_platform", platform_dir],
                lambda n: n.__setitem__("shopping_answers", n["shopping_answers"] + 3)),
-        mutate(f"把 {key} 的 {platform_dir} 目标品牌购物可见度分子加 1",
+        mutate(f"把 {key} 的 {platform_dir} 目标品牌品牌商品卡入选率分子加 1",
                ["slices", key, "shopping", "by_platform", platform_dir, "target", "shopping_visibility"],
                lambda n: n.__setitem__("numerator", n["numerator"] + 1)),
         mutate(f"删掉 {key} 的 {platform_dir} 购物统计",
@@ -1140,7 +1140,7 @@ def main(argv=None) -> int:
             got = ((slices.get(key, {}).get("shopping") or {}).get("by_platform") or {}).get(platform_dir) or {}
             vis = (got.get("target") or {}).get("shopping_visibility") or {}
             print(f"            购物[{platform_dir}] 触发 {got.get('shopping_answers')}/{got.get('valid_answers')}"
-                  f"（复算 {row['shopping']}/{row['valid']}）  目标购物可见度 "
+                  f"（复算 {row['shopping']}/{row['valid']}）  目标品牌商品卡入选率 "
                   f"{vis.get('numerator')}/{vis.get('denominator')}（复算 {row['target']}/{row['discovery_shopping']}）")
     if failures:
         print(f"\n校验失败 {len(failures)} 项：", file=sys.stderr)

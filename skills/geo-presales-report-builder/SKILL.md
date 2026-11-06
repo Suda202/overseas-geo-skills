@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, V4.0 prototype styling) directly from Scrapeless crawler collection data plus a Case record, covering visibility, citations, sentiment, content planning and per-question detail with country / platform / topic filtering. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.3.1"
+  version: "2.3.2"
 ---
 
 # 海外 GEO 售前诊断报告生成
@@ -183,7 +183,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 引用份额 | 指向官网的引用次数 ÷ 全部引用次数。**四个层级都保留**：单条回答（抽屉）、单题（明细表）、单平台（平台切片）、多回答多平台（全量切片）。官网、来源类别、域名、页面四处份额同一口径：分子、分母都是**未去重引用次数**；去重（到回答 / 到 URL）只用于 `citation_units.unique_sources` 这类「有多少个不同来源」的计数，不进任何份额的分子分母，也不参与榜单挑选和排序 |
 | 官网引用率 | 正文至少引用一次目标品牌官网的 Discovery 回答数 ÷ 该切片 Discovery 有效回答数；按回答计票，一条回答引用多次也只算一次，分子分母随值给出（`official_citation_counts`）。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算，也不得把后两者叫「官网引用率」。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
 | 带官网的提及率 | 目标品牌被提及的 Discovery 回答中，正文至少引用一次其官网的回答数 ÷ 目标品牌被提及的 Discovery 回答数；分子分母随值给出（`linked_mention_counts`）。偏低 = 被提到了但 AI 没拿官网作依据。与引用份额分母不同，不互相换算；跨平台看平台切片。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
-| 购物层（Shopping GEO） | 购物触发率、购物可见度、商品曝光、商家份额、平均商品卡位置，按平台分开算，全部平台切片也不合池。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 只在 `load_samples` 用 `extract_product_cards` 挂卡、把 `metrics["shopping"]` 原样放进切片。**只进 report-data.json，不在售前 HTML 展示**（render 时剥掉） |
+| 购物层（Shopping GEO） | 商品卡触发率、品牌商品卡入选率、商品曝光、商家份额、平均商品卡位置，按平台分开算，全部平台切片也不合池。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 只在 `load_samples` 用 `extract_product_cards` 挂卡、把 `metrics["shopping"]` 原样放进切片。**只进 report-data.json，不在售前 HTML 展示**（render 时剥掉） |
 | 正向情感占比 | 正向 Claim 信号 ÷（正向 + 负向 Claim 信号），**排除中性**（句级降级路径按句数计） |
 
 **引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-presales-crawl-integrity` 的数据分层契约与缺陷 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
