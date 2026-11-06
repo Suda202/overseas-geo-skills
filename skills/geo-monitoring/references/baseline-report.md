@@ -15,18 +15,18 @@ S=<项目根>/.agents/skills/geo-monitoring/scripts/build_baseline_html.py
 Sentiment and translations are prepared before the report is built, so the report is generated once with everything in it (Suda 2026-10-22).
 
 1. **Collect** each round into its own directory (`collect_r1` … `collect_rN`, `scraper.<platform>/<region>/NNNN.json`, numbered by `questions_csv` row order) and run `geo-presales-crawl-integrity` on each.
-2. **Prepare** — `python3 -I $S --config baseline-html.json --prepare`. Writes `out_dir/collect` (all rounds merged, files `<NNNN>-r<RR>.json`, region directory = 提示词类型), `out_dir/questions.csv` and `out_dir/lexicon.json`. Nothing is computed yet.
+2. **Prepare** — `python3 -I $S --config baseline-html.json --prepare`. Writes `out_dir/collect` (all rounds merged, files `<NNNN>-r<RR>.json`, region directory = 意图类型), `out_dir/questions.csv` and `out_dir/lexicon.json`. Nothing is computed yet.
 3. **Sentiment** (skip it and the 04 情感 module and the per-answer sentiment are left out):
    - `python3 <sentiment-judge>/scripts/sentiment_sentences.py extract --bank out_dir/questions.csv --crawl-dir out_dir/collect --lexicon out_dir/lexicon.json --output sentiment/units.json`
    - `python3 -I $S --config baseline-html.json --export-claim-batches sentiment/batches` → hand each `batch-NN.json` to a subagent that writes `batch-NN.claims.json` (`unit_index / brand / claim / sentiment`, rules in sentiment-judge `judgment-rules.md`). One subagent per one or two batches; it must not delegate.
    - `python3 -I $S --config baseline-html.json --merge-claims sentiment/batches` → `sentiment/claims-raw.json` (unit index and brand checked).
    - Cluster claim → attribute → theme by hand in `claim-attributes.json` / `attribute-themes.json` (sentiment-judge `claim-layer-contract.md`: an attribute is a standalone phrase without a theme prefix, synonyms merged, distinct selling points kept apart), then `claims-assemble` and `claims-metrics`; set `sentiment` in the config.
 4. **Translations** (skip them and each run shows 回答原文 only), in parallel with step 3:
-   - `python3 -I $S --config baseline-html.json --export-translations translation-batches` → `batch-NN.json` (`key / text`, 60 answers each, key `提示词类型|平台|0001#r01`). The text is the answer after the report's own rendering and clean-up, with citations as 「来源名+编号」 (HDB2) so they can be restored as pills.
+   - `python3 -I $S --config baseline-html.json --export-translations translation-batches` → `batch-NN.json` (`key / text`, 60 answers each, key `意图类型|平台|0001#r01`). The text is the answer after the report's own rendering and clean-up, with citations as 「来源名+编号」 (HDB2) so they can be restored as pills.
    - One cheap subagent per two batches writes `batch-NN.zh.json` (`{key: 中文}`): keep paragraph and list structure, brand / project / term names, numbers, URLs and citation markers as they are; write after every 10 items; validate the JSON; translate itself, never hand the work on. Check each returned file for key count, line count and length ratio before accepting it — a subagent that delegates and returns early leaves no file.
    - Set `translations` in the config.
 5. **Build** — `python3 -I $S --config baseline-html.json`. Computes every slice, stops if verify_report_data disagrees on any of them, attaches sentiment (reconciled against `claims-metrics`) and translations, and renders the HTML. `--render-only` re-renders without recomputing.
-6. **Check** — the build prints `校验通过：N 个切片全部与独立复算一致`, the sentiment reconciliation and a `渲染残留自检` line; open the HTML, switch 提示词类型 / 平台 / 主题, open a few Prompt details and runs.
+6. **Check** — the build prints `校验通过：N 个切片全部与独立复算一致`, the sentiment reconciliation and a `渲染残留自检` line; open the HTML, switch 意图类型 / 平台 / 主题, open a few Prompt details and runs.
 
 ## Config
 
@@ -49,12 +49,12 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 ## What the page shows
 
-- **Filters** above 核心洞察, acting on every module: 提示词类型 × 平台 × 主题. Every formal Prompt counts in the baseline report, named-brand ones included (Suda 2026-10-20); choose 发现 for natural visibility.
+- **Filters** above 核心洞察, acting on every module: 意图类型 × 平台 × 主题. Every formal Prompt counts in the baseline report, named-brand ones included (Suda 2026-10-20); choose 发现 for natural visibility.
 - **01 KPI row**: 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率. Labels never say 官网引用份额 / 官网引用率; tooltips never say 「可见度问题」.
 - **02 可见度**: presales modules; the platform × brand matrix has logos.
 - **03 引用**: every 引用份额 is paired with 引用率 (answers citing that source at least once ÷ valid answers) — official pages, source categories, domains, pages; URLs on one line, full on hover; no top-N cut. **The whole module and the KPI-row 引用份额 / 引用率 count Discovery and Category Awareness answers only** (Profound ch4, adopted 2026-10-22: "scope your citation analysis to discovery prompts" — a Prompt that names a brand pulls that brand's own pages into the citations and inflates its share). Named-brand types (Competitor, Alternatives, Evaluation, Verification, Accuracy) are excluded from these aggregates and read citation-wise only in 问题明细 and the Prompt detail, where every type still shows its own per-Prompt 引用份额.
 - **04 情感**: the brand's pooled positive share (positive signals ÷ all signals, no cross-platform equal-weight line), competitor shares and the theme × brand matrix whose cells show the top attribute phrase; themes where no shown brand has a signal are dropped.
-- **问题明细**: one row per Prompt with the brand's 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率; Topic rows read the Topic slice's pooled value, never an average of Prompt rows. No inline expansion, no extra columns. Its own 提示词类型 and 平台 dropdowns (the 平台 dropdown moves the page filter).
+- **问题明细**: one row per Prompt with the brand's 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率; Topic rows read the Topic slice's pooled value, never an average of Prompt rows. No inline expansion, no extra columns. Its own 意图类型 and 平台 dropdowns (the 平台 dropdown moves the page filter).
 - **查看 (Prompt detail)**, top to bottom (Suda 2026-10-22, a simplified take on Profound's Prompt page):
   1. Question, Chinese meaning, topic and type tags; a platform filter at the top right that drives everything below.
   2. 品牌对比 — 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 正向情感占比 for the brand, `compare_brands` and the Prompt's most-mentioned brand; sorted by mentions, unmentioned brands last as 「未提及」; logo and name aligned.
@@ -65,7 +65,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 ## 优化顺序 (Suda 2026-10-23)
 
-The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 and, on 2026-10-28, by the per-Prompt 可改变性 (高 / 中 / 低, from the top 20 cited domains). They are computed per formal Prompt from the formal baseline (30 runs per query × platform × country × language), pooled across platforms, and used to order optimisation work. They never change the selection 优先级 (提示词库 优先级, prefilled from the matrix row).
+The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 and, on 2026-10-28, by the per-Prompt 可改变性 (高 / 中 / 低, from the top 20 cited domains). They are computed per formal Prompt from the formal baseline (7 runs per query × platform × country × language), pooled across platforms, and used to order optimisation work. They never change the selection 优先级 (提示词库 优先级, prefilled from the matrix row).
 
 Applies to Discovery and Alternatives Prompts only; named-brand types put the brand in the question and would always read as mentioned. Let t = the brand's mention rate on the Prompt and L = the highest rate among the other brands named as candidates:
 
@@ -78,7 +78,7 @@ Applies to Discovery and Alternatives Prompts only; named-brand types put the br
 | 已打平或领先 | t > 20% and L − t < 30 points | Last — the job is to hold; monitoring continues unchanged |
 | 来源追不上 | No executable source intervention has been identified after reviewing pages, evidence and available resources | Record the source constraints and feasible actions for manual review; no automatic tier change |
 
-Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — inherited from business importance) → pattern as above → 相对竞品 (优势 before 持平; judged after the baseline for Prompts with a gap — the client Base has no attribute pool since 2026-11-04; leave it out of the order where not yet judged). Source structure describes possible interventions and evidence gaps. Citation shares alone do not establish changeability or alter the selection tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 30 runs per cell a 50% reading carries roughly ±18 points per platform (1.96 × √(p(1−p)/n)), so a Prompt within a few points of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
+Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — inherited from business importance) → pattern as above → 相对竞品 (优势 before 持平; judged after the baseline for Prompts with a gap — the client Base has no attribute pool since 2026-11-04; leave it out of the order where not yet judged). Source structure describes possible interventions and evidence gaps. Citation shares alone do not establish changeability or alter the selection tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 7 runs per cell a 50% reading carries roughly ±37 points on a single platform and about ±19 pooled over four platforms (1.96 × √(p(1−p)/n)), so patterns are assigned on the pooled reading only — never per platform — and a Prompt within the pooled margin of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
 
 ## Display rules
 

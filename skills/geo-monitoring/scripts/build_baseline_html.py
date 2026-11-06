@@ -5,7 +5,7 @@
 render_report.py），只做售后口径适配，不改那个 skill 的源码：
 
 1. 合成采集目录：N 轮采集放进同一个「平台 × 意图」目录。售前报告的「地区」一层在这里放意图，页面上的
-   地区筛选就成了提示词类型筛选（全部类型 / 发现 / 问题解决 / …），与平台、主题两行筛选任意组合。每题 N 个文件，
+   地区筛选就成了意图类型筛选（全部类型 / 发现 / 问题解决 / …），与平台、主题两行筛选任意组合。每题 N 个文件，
    文件里补上题面（AI Overviews 不回传题面，build_report_data 靠题面把文件归到题）。
 2. 选词阶段所有题都计入可见度（Suda 2026-10-20）：题库 CSV 统一标 discovery，真实意图回写到页面数据。
 3. 售后口径：品牌识别前去掉裸 URL；指定别名区分大小写（ERA、SRX 这类缩写撞普通词）；可选按机构拆
@@ -46,21 +46,23 @@ for p in (str(SK), str(CORE)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-INTENT_ZH = {"discovery": "发现", "information": "问题解决", "evaluation": "评价", "sentiment": "评价",
-             "verification": "验证", "validation": "验证", "competitor": "对比", "alternatives": "替代",
+# 2026-11-06：八类意图类型；「评价」改叫「评估」，旧 verification / validation 是能力核查，和新的验证（trust）不同
+INTENT_ZH = {"discovery": "发现", "information": "问题解决", "evaluation": "评估", "sentiment": "评估",
+             "verification": "能力核查", "validation": "能力核查", "competitor": "对比", "alternatives": "替代",
+             "trust": "验证", "transactional": "交易", "support": "售后",
              "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
-INTENT_ORDER = ["发现", "问题解决", "评价", "验证", "对比", "替代", "准确性", "品类认知"]
+INTENT_ORDER = ["发现", "问题解决", "评估", "对比", "替代", "验证", "交易", "售后", "能力核查", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
 # 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
-# Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是提示词类型，
+# Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是意图类型，
 # 所以「全部类型」切片的引用口径 = 只合池这两类 region；单类型切片仍按该类型自己的回答算，逐题读数不受影响。
 CITATION_SCOPE_TYPES = ("发现", "品类认知")
 CITATION_KPI_FIELDS = ("official_share", "official_citation_rate", "official_citation_counts")
 
 
 def citation_regions(regions) -> list:
-    """「全部类型」引用聚合合池的 region（= 提示词类型）。build 与 verify 两侧共用这一个判断。"""
+    """「全部类型」引用聚合合池的 region（= 意图类型）。build 与 verify 两侧共用这一个判断。"""
     return [r for r in regions if r in CITATION_SCOPE_TYPES]
 
 
@@ -217,7 +219,7 @@ def intent_of(cfg: dict) -> dict:
     for q in bank["questions"] + (bank.get("config") or {}).get("retired", []):
         raw = str(q.get("prompt_type") or q.get("intent") or q.get("diagnosis_intent") or "").strip().casefold()
         if raw not in INTENT_ZH:
-            raise SystemExit(f"{q['question_id']} 提示词类型 {raw!r} 不认识")
+            raise SystemExit(f"{q['question_id']} 意图类型 {raw!r} 不认识")
         out[q["question_id"]] = INTENT_ZH[raw]
     return out
 
@@ -995,8 +997,8 @@ def render(cfg, data_path: Path, out: Path):
     html = rr.build_html(data)
     replace = [
         ('"全部地区"', '"全部类型"'),
-        ('shown.push("地区")', 'shown.push("提示词类型")'),
-        ('aria-label="地区筛选"', 'aria-label="提示词类型筛选"'),
+        ('shown.push("地区")', 'shown.push("意图类型")'),
+        ('aria-label="地区筛选"', 'aria-label="意图类型筛选"'),
         ('["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"]',
          '["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。全部类型时只统计发现与品类认知题（题面点名品牌会把它的官网拉进引用），选中某一类型时按该类型统计。"],\n'
          '      ["引用率", k.official_citation_rate, "正文至少引用一次监测对象官网的回答 ÷ 有效回答。按回答计，一条回答引用多次只算一次。统计范围同引用份额。"]'),
@@ -1134,7 +1136,7 @@ def render(cfg, data_path: Path, out: Path):
 
 def export_translations(cfg, brd, out_dir: Path, batch_size: int = 60) -> None:
     """导出每次运行的回答原文供翻译，直接读 --prepare 合成的 out_dir/collect，不用先生成报告。
-    batch-NN.json = [{key, text}]，key = 「提示词类型|平台|0001#r01」；文本按报告同一套渲染与清理后取纯文字，
+    batch-NN.json = [{key, text}]，key = 「意图类型|平台|0001#r01」；文本按报告同一套渲染与清理后取纯文字，
     引用标记成「来源名+编号」（HDB2），回填时据此还原成引用标签。译文写同目录 batch-NN.zh.json（{key: 中文}）。"""
     collect = cfg["out_dir"] / "collect"
     if not collect.exists():
