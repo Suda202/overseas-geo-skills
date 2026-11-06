@@ -45,7 +45,7 @@
 
 情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他意图类型而删除；它仍不得进入正式 Visibility。
 
-购物层（Shopping GEO）只在有商品卡展示机会的产品线上统计（开不开由我们按商品属性推理，消费类实体商品开、软件和服务关、工业类试跑后定），和提及率分开报：商品卡触发率用发现、替代、对比、交易四类题，按意图类型拆开报；品牌商品卡入选率（出现商品卡的回答里有本品卡的比例）、商品曝光、商家份额只用发现和替代。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+购物层（Shopping GEO）只在有商品卡展示机会的产品线上统计（开不开由我们按商品属性推理，消费类实体商品开、软件和服务关、工业类试跑后定），和提及率分开报：发现、替代、对比、交易四类题都进汇总（商品卡触发率、品牌商品卡入选率等），支持按意图类型筛选；其他类型照常采集、不进汇总。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
 
 > **迁移说明**：`Prompt Type: Discovery`、`Prompt Type: Competitor` 等意图类型 Tag 当前作为默认枚举使用，计划迁移为项目自定义 Tags（不再是固定枚举）。迁移完成前，仍以本表为默认对照；迁移后，统计指标和 `formal_visibility_eligible` 的推导规则须在自定义 Tag 的定义文件中重新声明，不得依赖本表题库标签列自动推导。
 

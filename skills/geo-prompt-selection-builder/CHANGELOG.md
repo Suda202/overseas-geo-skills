@@ -2,6 +2,10 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.51.1（2026-11-06）商品卡指标四类都进汇总
+
+Suda 定（看过 Profound 文档：Shopping 指标由商品卡是否触发驱动，不按意图类型硬排除）：发现、替代、对比、交易四类题都进商品卡触发率、品牌商品卡入选率等汇总，支持按意图类型筛选；评估、验证、问题解决、售后照常采集商品卡字段、不进汇总。原「入选率只用发现、替代」「对比、交易只报出现率」撤销，出现率改为四类上可选。改 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」（report-editor 2.7.1）、shared 映射表购物一段。代码未改，实现现状一句改为接入替代、对比、交易时加进取样并做按类型筛选。
+
 ## 2.51.0（2026-11-06）商品卡指标：哪些产品线、哪些题、算什么
 
 Suda 定：商品卡是不是要统计由我们按产品线的商品属性推理决定，不让品牌方填；指标对标 Profound Shopping（Shopping Mode Rate、Shopping Visibility Score），和发现题提及率分开报。
