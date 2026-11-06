@@ -1,6 +1,6 @@
-# 售前 Case 输入合同（presales-case-input/v1）
+# Case 输入合同（presales-case-input/v1）
 
-给接入方（线上接口、本地飞书读取）用。调用方按本文组好一个 JSON，先过 `scripts/normalize_case.py` 校验和归一化，通过后再交给 skill 生成题库。不需要读 skill 的其他文件。
+给接入方用：线上表单收集的数据、本地的一个 Case 文件（JSON），或本地飞书读取的记录。调用方按本文组好一个 JSON，先过 `scripts/normalize_case.py` 校验和归一化，通过后再交给选词生成题库（线上一条命令入口见 [online-runner.md](online-runner.md)）。接入方不需要读 skill 的其他文件。版本号沿用 `presales-case-input/v1`，已接入的调用方不用改。
 
 ## 1. 调用流程
 
@@ -20,7 +20,7 @@
 {
   "input_version": "presales-case-input/v1",
   "case": { "...": "见第 3 节" },
-  "options": { "locale": "en", "generation_stage": "discovery" },
+  "options": { "locale": "en" },
   "handoff": { "...": "见第 5 节，可省略" }
 }
 ```
@@ -52,20 +52,20 @@
 | `产品特性` | 产品特性 | string 或 string[] | 否 | |
 | `差异化优势` | 差异化优势 | string 或 string[] | 否 | 数组会按「，」合并成一个字符串 |
 | `适用边界` | 适用边界 | string | 否 | |
-| `主题` | 无（2026-10-29 起线上表单去掉监测主题） | string 或 string[] | 否 | 生词时主题从矩阵行聚出；填了只当矩阵行业务优先级的线索，不当主题名单；不传时归一化结果的 `topic_source` 为 `to_derive`。旧 Case 带着主题也能通过：1–3 个，第一个记为宽泛主题 |
+| `主题` | 无（2026-10-29 起线上表单去掉监测主题） | string 或 string[] | 否 | 生词时主题从矩阵行聚出；填了只当矩阵行业务优先级的线索，不当主题名单，个数不限；不传时归一化结果的 `topic_source` 为 `to_derive` |
 | `官方域名` | 官方域名 | string | 是 | 以 `http://` 或 `https://` 开头的完整网址 |
-| `竞品` | 竞品（添加竞品） | object[] | 是 | 1–3 个，见下表 |
+| `竞品` | 竞品（添加竞品） | object[] | 是 | 1–3 个，见下表。取客户填的，不冻结 |
 | `补充内容` | 补充内容 | string | 否 | 省略时按空字符串处理 |
-| `希望解决的问题` | 最希望改善的 AI 搜索表现 | string 或 string[] | 否 | 只接受下表 4 个选项名，按重要性排先后，最在意的写在最前面，顺序原样保留；不填就只出发现题。决定 `options.extra_prompt_types` 的默认值。客户见过 AI 答错、推荐了竞品的例子写进 `补充内容` |
+| `希望解决的问题` | 最希望改善的 AI 搜索表现 | string 或 string[] | 否 | 只接受下表 4 个选项名，按重要性排先后，最在意的写在最前面，顺序原样保留。只记进 `case_fields`，当矩阵行业务优先级的线索；本期只出发现题，选了什么都不解锁其他题型（和选词一致）。客户见过 AI 答错、推荐了竞品的例子写进 `补充内容` |
 
 `希望解决的问题` 的选项（与选词 `selection-rules.md` 第 1 步一致）：
 
-| 选项名 | 表单说明 | 售前怎么处理 |
-|---|---|---|
-| 发现型可见度 | 希望用户寻找产品、服务或供应商时，AI 的回答里提到我们的品牌 | 发现题，选不选都默认出 |
-| 竞争定位 | 希望用户比较竞品、寻找替代方案时，把我们列入考虑范围 | 允许出对比题（`Competitor`），只比冻结竞品，要有买家在比的证据；替代题等后端有独立枚举再出 |
-| 品牌呈现 | 希望 AI 正确描述品牌、产品能力和适用场景 | 售前没有验证题，只记录，例子里说错的事实交给售后 |
-| 声誉与信任 | 希望了解 AI 如何评价我们的可靠性、口碑及购买风险 | 允许出评价题（`Evaluation`），要有买家在问可信度的信号 |
+| 选项名 | 表单说明 |
+|---|---|
+| 发现型可见度 | 希望用户寻找产品、服务或供应商时，AI 的回答里提到我们的品牌 |
+| 竞争定位 | 希望用户比较竞品、寻找替代方案时，把我们列入考虑范围 |
+| 品牌呈现 | 希望 AI 正确描述品牌、产品能力和适用场景 |
+| 声誉与信任 | 希望了解 AI 如何评价我们的可靠性、口碑及购买风险 |
 | `购买标准`、`集成与兼容`、`信任与合规` | 无 | string 或 string[] | 否 | 线上表单没有这三项，只有飞书 Case 会带。仅 `B2B` 和 `B2B / B2C` 可填，纯 `B2C` 必须省略 |
 | `地理与市场` | 无（见 `options` 的国家/地区） | string 或 string[] | 否 | |
 
@@ -89,8 +89,8 @@
 | 字段 | 默认 | 可选值 |
 |---|---|---|
 | `locale` | `en` | 题面语言，对应线上表单的「语言」；必须是 `references/locale-templates.json` 已登记的键（当前为 `en`、`th`） |
-| `extra_prompt_types` | 按 `希望解决的问题` 推出 | 不传时：选了「竞争定位」得 `Competitor`，选了「声誉与信任」得 `Evaluation`，都没选为 `[]`（只出发现题）。显式传了以显式为准，只接受 `Competitor`、`Evaluation`。报告的竞品胜率只读对比题，没出时为空 |
-| `generation_stage` | `discovery` | `discovery`：只生成发现型问题；`diagnostic`：在已有题库上补竞品、评价题，此时调用方必须同时提供原 Discovery 题库 |
+
+旧选项 `extra_prompt_types`、`generation_stage` 照收不报错，但不再生效，归一化时给 `deprecated_option` 告警（2026-11-06）：题型按选词规则定，本期只出发现题。
 
 ## 5. `handoff`（可省略）
 
@@ -126,9 +126,8 @@
     "derived_field_sources": { "brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名" },
     "topics": [{ "topic_id": "topic_1", "source_field": "主题 1（宽泛）", "source_value": "..." }],
     "topic_source": "case",
-    "competitor_selection": { "status": "frozen", "selection_count": 3, "formal_competitors": [ "..." ] },
+    "competitor_selection": { "status": "client_input", "selection_count": 3, "formal_competitors": [ "..." ] },
     "locale": "en",
-    "generation_stage": "discovery",
     "handoff": { "confirmation_status": "none", "confirmed_fields": [], "sources": [] }
   }
 }
@@ -154,9 +153,9 @@
 | `invalid_type` | 类型不对，例如竞品不是对象数组 |
 | `invalid_item` | 数组里有空值或非字符串 |
 | `duplicate_item` | 列表项重复、竞品重名 |
-| `invalid_enum` | 枚举值不在允许范围（业务模式、locale、generation_stage、input_version、确认状态） |
+| `invalid_enum` | 枚举值不在允许范围（业务模式、locale、input_version、确认状态、希望解决的问题） |
 | `invalid_url` | 网址不是完整的 http(s) 地址 |
-| `count_out_of_range` | 传了主题但不是 1–3 个，或竞品不是 1–3 个 |
+| `count_out_of_range` | 竞品不是 1–3 个 |
 | `invalid_reference` | confirmed_fields 引用了不存在的字段 |
 | `forbidden_for_b2c` | 纯 B2C Case 填了 B2B 专属字段 |
 | `unknown_field` | 出现未定义字段 |
@@ -168,14 +167,14 @@
 | `pending_value` | B2B 字段是「待人工确认」；三个选填字段会被当作未填写丢弃 |
 | `count_suggestion` | 列表项数量超出建议范围 |
 | `comma_in_item` | 列表项里含中文逗号；接口按一项接收没问题，但写回飞书合并列后再读会被拆错 |
-| `baseline_required` | `diagnostic` 阶段需要原题库 |
+| `deprecated_option` | 传了已停用的 `extra_prompt_types` 或 `generation_stage`，照收不生效 |
 | `confirmation_without_fields` | 状态是 `confirmed` 但没列已确认字段 |
 | `alias_ignored` | 同时传了 `垂直行业` 和 `目标企业画像`，已按后者取值 |
 | `renamed_column`、`ignored_column` | 仅飞书适配：旧列名已转换、管理列已忽略 |
 
 ## 7. skill 拿到 `normalized` 之后做什么
 
-`case_fields`、`topics` 的来源映射、`competitor_selection`、`locale`、`generation_stage` 直接写进题库 `config`，skill 不改。以下内容需要判断，仍由 skill 生成：主题英文名 `topics[].topic`、品类英文名 `category_label`、`brand_object_type`、`attribute_plan`、全部题目。
+`case_fields`、`topics` 的来源映射、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：主题、品类名 `category_label`、`brand_object_type`、`attribute_plan`、矩阵行、全部题目（见 [online-runner.md](online-runner.md)）。
 
 ## 8. 飞书来源（本地用）
 
@@ -197,7 +196,7 @@ python3 scripts/normalize_case.py readback.ndjson --from-base-record
 python3 evals/e2e_input_contract.py
 ```
 
-检查内容：两份示例 payload 归一化后和现有题库的 `case_fields` 逐字段相等，拼回题库后通过 `validate_question_bank.py`；同一 Case 走飞书路径和接口路径的归一化结果一致；三条真实飞书 Record 的处理结果符合预期；13 类错误输入都返回对应错误码；只填必填项、1 个竞品、文本框字符串都能通过。结果写入 `reports/input-contract-e2e.md`。接口层自行实现校验时，用同一批示例和错误输入对账。
+检查内容：两份示例 payload 归一化后和现有题库的 `case_fields` 逐字段相等；同一 Case 走飞书路径和接口路径的归一化结果一致；三条真实飞书 Record 的处理结果符合预期；13 类错误输入都返回对应错误码；只填必填项、1 个竞品、文本框字符串都能通过。结果写入 `reports/input-contract-e2e.md`。接口层自行实现校验时，用同一批示例和错误输入对账。
 
 示例 payload：
 

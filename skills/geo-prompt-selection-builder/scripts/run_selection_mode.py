@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""售前选词模式的一条命令入口：表单 Case → 每个市场一批 9 字段的题（Suda 2026-10-29）。
+"""选词的线上一条命令入口：Case（表单数据或文件）→ 每个市场一批 9 字段的题（Suda 2026-10-29；
+2026-11-06 随售前生词并入选词 skill）。
 
-线上生词改为在服务器上跑本 skill 的选词模式（references/selection-mode.md）。本脚本把
+规则见 references/online-runner.md 和 references/selection-rules.md。本脚本把
 确定性的部分包起来，中间的调研和写题交给 agent：
 
     prepare   归一化 Case，建独立工作目录（skill 拷贝、inputs/、TASK.md）
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
-    finalize  跑选词 validator、售前专属检查和导出脚本，写 out/result.json
+    finalize  跑选词 validator 和导出脚本，写 out/result.json
     返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
               finalize，默认最多 2 轮（--repair-rounds，0 关闭）；最后一轮授权 agent 丢题不丢库
-              （改不好的题删掉、题号进 config.retired，每个主题仍只放一种提示词类型）
+              （改不好的题删掉、题号进 config.retired，每个主题仍只放一种意图类型）
 
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt,gemini --out <工作目录> --agent sdk
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt --out <工作目录> --agent-cmd "<命令>"
@@ -40,8 +41,7 @@ agent 两种接法：
 可能出错的地方（本脚本针对的就是这些）：
   1. Case 缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
   2. agent 没写出 bank.json、超时或异常退出 → 没有 bank.json 就失败，不返修、不拿半成品导出
-  3. 题库没过选词 validator、售前专属检查（check_presales_bank.py：题型只出发现和 Case 点名的对比 / 评价、主题都有题、对比题点名冻结竞品）
-     或导出检查（超 60 条、字段缺、类型不对） → 回喂报错返修（最多 --repair-rounds 轮），仍没过才失败，报错原文进 result.json
+  3. 题库没过选词 validator（含主题都有题、一个主题一种类型）或导出检查（超 60 条、字段缺、类型不对） → 回喂报错返修（最多 --repair-rounds 轮），仍没过才失败，报错原文进 result.json
   4. 题库的市场和传入的 --market 不一致 → 同样走返修（agent 改 region），仍不一致才失败
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
   5. 工作目录已存在 → 拒绝覆盖，避免两个 Case 共用一个目录
@@ -63,10 +63,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SKILLS = SKILL.parent
-# 选词模式会用到的 skill；geo-monitoring 要带上，选词 skill 里有指向它的软链。
-SKILL_DIRS = ("geo-presales-prompt-builder", "geo-prompt-selection-builder", "shared",
-              "geo-presales-report-builder", "geo-monitoring")
-# legacy = 已归档的默认模式规则，不给 agent 看，免得混用两套口径
+# 会用到的 skill：选词本身、shared 的联网与信号脚本、售前报告的采集器（研究预跑）、
+# 监测（选词文档里有指向它的链接）。
+SKILL_DIRS = ("geo-prompt-selection-builder", "shared", "geo-presales-report-builder", "geo-monitoring")
+# legacy = 已归档的旧规则，不给 agent 看，免得混用两套口径
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
                                 "*.local.json", "build", "legacy")
 DEFAULT_TIMEOUT = 120 * 60
@@ -75,26 +75,25 @@ KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "over
 
 TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续，把假设写进 `out/notes.md`。
 
-任务：给这个品牌生成售前诊断题。按 `.agents/skills/geo-presales-prompt-builder/references/selection-mode.md`（售前生词步骤）逐步做；它引用的选词规则在 `.agents/skills/geo-prompt-selection-builder/`。
+任务：给这个品牌生成一批提示词。先读 `.agents/skills/geo-prompt-selection-builder/references/online-runner.md`（线上和本地不一样的地方），再按 `.agents/skills/geo-prompt-selection-builder/references/selection-rules.md` 第 1–8 步逐步做。只做到校验与导出，不试跑、不写对客确认表。
 
 输入：
-- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品已冻结，不增删、不替换。主题一律由你从矩阵行聚出；Case 填了主题（`topic_source` 为 `case`）时，它只当业务重点线索。
-- 题型：默认只出发现题。`inputs/case-normalized.json` 的 `extra_prompt_types`（由 Case「希望解决的问题」推出）列了 `Competitor` / `Evaluation` 时才允许出对比题 / 评价题，还要有买家证据才真的出，没出的在 notes.md 写原因；把这个列表原样写进 `config.extra_prompt_types`（空就写 `[]`）。Case 的「希望解决的问题」按重要性排先后；`补充内容` 里客户给的 AI 答错例子是出题依据之一。
+- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限；Case 填了主题（`topic_source` 为 `case`）时，它只当业务重点线索。
+- 题型：只出发现题。Case 的「希望解决的问题」按重要性排先后，只当业务优先级的线索；`补充内容` 里客户给的 AI 答错例子是出题依据之一。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
 - 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
 - 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
-- 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 selection-mode.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
+- 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 online-runner.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
 - 调研过程文件都放 `research/`。只在本工作目录里读写，不要访问工作目录以外的路径。
 
 交付（只写这两个路径）：
-1. `out/bank.json`：题库 JSON，字段按 selection-mode.md。
-2. `out/notes.md`：简短记录，分这几节：「预跑答案」（研究预跑的答案目录和每个平台是否采到）、「受众」、「购买任务候选」（每个任务推理的解决方案类型、品牌能否满足、回答里会不会出现品牌这一类）、「属性与相对竞品」、「没开的格子」（矩阵里没开的格子和原因）、「主题」（每个主题为什么成立）、「假设」、「未覆盖来源」、「validator 告警」。
+1. `out/bank.json`：题库 JSON，字段按 `.agents/skills/geo-prompt-selection-builder/references/output-contract.md` 和 online-runner.md。
+2. `out/notes.md`：简短记录，分这几节：「预跑答案」（研究预跑的答案目录和每个平台是否采到）、「目标客户」、「使用场景候选」（每个场景推理的解决方案类型、品牌能否满足、回答里会不会出现品牌这一类）、「约束条件」、「没开的格子」（矩阵里没开的格子和原因）、「主题」（每个主题为什么成立）、「假设」、「未覆盖来源」、「validator 告警」。
 
-结束前依次运行，三条都要退出码 0；有错就改题库再跑：
+结束前依次运行，两条都要退出码 0；有错就改题库再跑：
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
-`python3 .agents/skills/geo-presales-prompt-builder/scripts/check_presales_bank.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
 最后只回复一行：`DONE <validator 输出里的 readiness>`。
 """
@@ -107,14 +106,13 @@ REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max
 
 {errors}
 
-改完后依次运行，三条都要退出码 0；有错就继续改：
+改完后依次运行，两条都要退出码 0；有错就继续改：
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
-`python3 .agents/skills/geo-presales-prompt-builder/scripts/check_presales_bank.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
 最后只回复一行：`DONE <validator 输出里的 readiness>`。
 """
 
-DROP_CLAUSE = """这是最后一轮返修，丢题不丢库：报错指向的题能改就改，改不好的直接删掉，不要为凑数新写题。删掉的题号和原因记进 `config.retired`，并写进 `out/notes.md`「删题」一节；空了的主题连主题登记一起删。宁可少交几道题，不要交整库失败。
+DROP_CLAUSE = """这是最后一轮返修，丢题不丢库：报错指向的题能改就改，改不好的直接删掉，不要为凑数新写题。删掉的题号和原因记进 `config.retired`，并写进 `out/notes.md`「删题」一节；空了的主题连主题登记一起删，删题后每个主题仍只放一种意图类型。宁可少交几道题，不要交整库失败。
 """
 
 
@@ -274,13 +272,11 @@ def finalize(ws: Path, agent_record: dict | None = None, repair_rounds: int | No
         write_json(ws / "out/result.json", result)
         return 1
     tools = ws / ".agents/skills/geo-prompt-selection-builder/scripts"
-    presales_tools = ws / ".agents/skills/geo-presales-prompt-builder/scripts"
     upload = ws / "out/upload"
     if upload.exists():
         shutil.rmtree(upload)  # 只认这一次导出的文件
     checks = {
         "validator": [sys.executable, "-I", str(tools / "validate_after_sales_set.py"), str(bank)],
-        "presales_check": [sys.executable, "-I", str(presales_tools / "check_presales_bank.py"), str(bank)],
         "export": [sys.executable, "-I", str(tools / "export_upload_csv.py"), str(bank), "--out", str(upload)],
     }
     exits = {}

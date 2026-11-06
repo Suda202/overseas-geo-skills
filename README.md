@@ -1,26 +1,26 @@
 # 海外 GEO Skills
 
-这个仓库有 11 个 Skill，但大部分是被别的 Skill 调用的零件。日常只需要从下面「按你要做的事找入口」里找一个入口，其余的由入口按需调用。
+这个仓库有 8 个 Skill 和一个共享目录 `shared/`，大部分 Skill 是被别的 Skill 调用的零件。日常只需要从下面「按你要做的事找入口」里找一个入口，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
 | 你要做的事 | 用这个 Skill | 阶段 |
 | --- | --- | --- |
-| 品牌信息进来，生成售前诊断题 | `geo-presales-prompt-builder`（售前生词） | 售前诊断 |
+| 品牌信息进来，生成售前诊断题 | `geo-prompt-selection-builder`（选词，线上出口） | 售前诊断 |
 | 有题、有采集，要出给客户看的 HTML 诊断报告 | `geo-presales-pipeline` | 售前诊断 |
 | 已交付的诊断报告要改 | `geo-presales-report-audit`，再 `geo-presales-report-editor` | 售前诊断 |
-| 签约前后定长期监测哪些题、出对客确认表 | `geo-prompt-selection-builder`（选词） | 选词 |
-| 题定好了，跑正式基线和按期采集 | `geo-monitoring` | 监测 |
+| 签约前后定长期监测哪些题、出对客确认表 | `geo-prompt-selection-builder`（选词，本地出口） | 选词 |
+| 试跑、挑正式题并锁版，跑正式基线和按期采集 | `geo-monitoring` | 监测 |
 
 下面这几个一般不直接用，由上面的入口调用：
 
 | Skill | 谁调用它 | 做什么 |
 | --- | --- | --- |
-| `geo-presales-eval-case-builder` | 需要先整理品牌信息时 | 把品牌资料整理成 Case，写飞书 Base |
-| `overseas-geo-competitor-research` | Case Builder | 联网核验并冻结 3 个正式竞品 |
 | `geo-presales-crawl-integrity` | pipeline、监测 | 算指标前检查采集能不能用 |
 | `geo-presales-report-builder` | pipeline | 算可见度与引用指标，渲染 HTML 报告；`collect_answers.py` 采集也在这里 |
 | `geo-presales-sentiment-judge` | pipeline | 句级情感判读，算正向情感占比 |
+
+售前生词、品牌信息整理（Case Builder）和竞品核验原来是三个独立 Skill，已经退役：生词并进选词，Case 改由线上表单或本地 JSON 提供、用选词的 `normalize_case.py` 归一化，竞品照用 Case 里填的。
 
 ## 售前诊断
 
@@ -32,27 +32,16 @@
 
 | 环节 | 输入 | 输出 | Skill |
 | --- | --- | --- | --- |
-| ① 准备品牌信息 | 品牌资料 | Case：品牌、官网、品类、业务描述、1–3 个竞品 | `geo-presales-eval-case-builder`（线上由销售填表单） |
-| ② 生词 | Case | 每个市场一批诊断题，9 个字段 | `geo-presales-prompt-builder` |
+| ① 准备品牌信息 | 品牌资料 | Case：品牌、官网、品类、业务描述、1–3 个竞品 | 线上由销售填表单；本地按输入合同写 JSON |
+| ② 生词 | Case | 每个市场一批诊断题，9 个字段 | `geo-prompt-selection-builder` |
 | ③ 采集与出报告 | 诊断题 + Case | 单文件 HTML 诊断报告 | 线上：沿用线上原有流程；本地：`geo-presales-pipeline` |
 | ④ 修改已交付报告 | 已交付报告 | 修正后的品牌识别、客户结论、上传 CSV | `geo-presales-report-audit`、`geo-presales-report-editor` |
 
-### ② 生词（`geo-presales-prompt-builder`）
+### ② 生词（`geo-prompt-selection-builder`）
 
-**输入**：一份 Case，格式见 `skills/geo-presales-prompt-builder/references/input-contract.md`。必填只有公司名、品牌名称、业务模式、品类、官方域名、1–3 个竞品；业务描述字段都是选填。不需要预先填主题，主题在生词时从调研结果里聚出来。
+**输入**：一份 Case，格式见 `skills/geo-prompt-selection-builder/references/input-contract.md`，先过 `scripts/normalize_case.py`。不需要预先填主题，主题在生词时从调研结果里聚出来。
 
-**怎么生**：用选词的方法，写题规则只有一份，在 `geo-prompt-selection-builder`：
-
-1. 归一化 Case（`scripts/normalize_case.py`）。
-2. 研究预跑：在客户选的 AI 平台上，各问一次品类怎么选、目标品牌和每个竞品怎么样。
-3. 收公开信号：搜索词、评价、社区里的买家原话。
-4. 判断每个属性相对竞品的位置：优势、持平、劣势或待确认。
-5. 画买家处境矩阵，给每一行定优先级。
-6. 从矩阵的 P1、P2 行聚出主题。
-7. 写题、去重。
-8. 过两道检查再导出 9 字段题：选词校验器（`validate_after_sales_set.py`）查写题的通用规则；售前专属检查（`scripts/check_presales_bank.py`）查只出发现、对比、评价三类，发现型至少一半，每个主题至少 5 道，对比题必须点名 Case 里的竞品。
-
-步骤细节和每一步判断记在题库 JSON 哪里，见 `references/selection-mode.md`。
+**怎么生**：规则和本地选词完全一样，都在 `references/selection-rules.md`，按 8 步走（见下文「选词」）；线上和本地不一样的几步写在 `references/online-runner.md`：没有品牌方数据、没有浏览器登录态、研究预跑只放 1 道品类认知题、只交上传行。导出前 `validate_after_sales_set.py` 和 `export_upload_csv.py` 都要退出码 0。
 
 **输出**：每个市场一批题，每个市场最多 60 条，每题 9 个字段：
 
@@ -60,17 +49,18 @@
 query, question_zh, topic, diagnosis_intent, tags, question_types, purchase_intent, persona_name, scene_name
 ```
 
-题型只出发现、对比、评价三类，发现型至少占一半。报告主题就是题里的 `topic`。
+目前只出发现题。`question_types` 由导出脚本按意图类型自动填，是过渡字段：每种意图类型统计什么由类型决定，见 `skills/shared/canonical-intent-mapping.md`。报告主题就是题里的 `topic`。
 
 **线上一条命令跑完**：
 
 ```bash
-python3 skills/geo-presales-prompt-builder/scripts/run_selection_mode.py run \
+python3 skills/geo-prompt-selection-builder/scripts/run_selection_mode.py run \
   --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
 - `--platforms` 填客户在表单里选的 AI 平台（`chatgpt`、`gemini`、`aimode`、`overview`、`perplexity`、`copilot`、`grok`、`alexa`）。
 - 宿主有自己的 agent 框架时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。
+- 检查没过时，脚本把报错回喂 agent 返修，默认最多 2 轮（`--repair-rounds`）。
 - 退出码：`0` 成功；`1` 生词失败；`2` 输入或环境有错，这种情况不启动 agent。结果写在工作目录的 `out/result.json`。
 
 **用到的外部服务**：
@@ -86,8 +76,6 @@ python3 skills/geo-presales-prompt-builder/scripts/run_selection_mode.py run \
 不用任何浏览器登录态。要登录才能看的站跳过，并记进 `notes.md` 的「未覆盖来源」。
 
 **不做的事**：不采集回答、不算指标、不出报告；不做对客确认表、试跑和锁定正式题；不增删竞品。
-
-**旧题库**：2026-10-29 之前用的是「默认模式」（Case 先填 1–3 个主题，属性按重要性和可改变性分级）。这套规则已归档到 `references/legacy/`，只用来读懂旧题库；旧题库仍用 `scripts/validate_question_bank.py` 校验。
 
 ### ③ 采集与出报告（`geo-presales-pipeline`）
 
@@ -106,23 +94,26 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 先用 `geo-presales-report-audit` 把品牌提及识别和首现排序改对，再用 `geo-presales-report-editor` 改客户结论、出上传 CSV。
 
-## 选词：定长期监测哪些题（`geo-prompt-selection-builder`）
+## 选词：生成要测的题（`geo-prompt-selection-builder`）
 
-签约前后用，比售前生词多了客户数据、对客确认表、试跑和锁定正式题：
+售前生词和签约后定长期监测题用同一套规则，一个 Skill 两个出口：线上一条命令只交上传行；本地多了品牌方数据和对客确认表（飞书多维表格）。到导出为止：
 
-| 阶段 | 回答什么 | 产出 |
+| 步 | 做什么 | 产出 |
 | --- | --- | --- |
-| 1 调研 → 属性池 | 买家在意什么，我们相对竞品站在哪 | 属性池（只判相对竞品）；研究预跑先爬再调研 |
-| 2 矩阵与主题 | 哪些买家处境值得测、各测几题 | 提示词矩阵：每行优先级 = 业务重点 × 买家证据；从 P1、P2 行聚出主题 |
-| 3 写题 | 题面怎么问 | 候选题，每个条件都要有买家原话支撑 |
-| 4 试跑 | 题问得对不对，内容能不能影响答案 | 各监测平台各跑 3 次；按引用域名判可改变性 |
-| 5 客户选词与锁版 | 正式测哪些题 | 每个采购主题最多 10 道正式题，锁定考核口径 |
+| 1 | 确认业务范围（线上用 Case 代替） | 业务范围表 |
+| 2 | 调研：研究预跑、需求信号、品牌与竞品官网 | 需求信号表、预跑答案 |
+| 3 | 约束条件 | 三张表共用的约束条件 |
+| 4 | 目标客户与使用场景 | 品牌方确认后冻结 |
+| 5 | 提示词矩阵：一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型，每行判一次业务优先级 | 提示词矩阵 |
+| 6 | 主题 ＝ 同一类候选 × 同一意图类型，每主题至少 5 题 | 主题表 |
+| 7 | 写题：目前只在高、中档发现行上出题 | 提示词库、题库 JSON |
+| 8 | 校验与导出 | 对客确认表和 / 或上传 CSV |
 
-确定性校验用 `scripts/validate_after_sales_set.py`。试跑读数不进任何统计，品牌自己被提及多少也不参与排序。正式题面不可改，要改就停测旧题、开新题号。
+确定性校验用 `scripts/validate_after_sales_set.py`，只认现行结构，旧结构的历史题库直接报不支持。意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后；目前只出发现题。
 
-## 监测：跑数并解释差距（`geo-monitoring`）
+## 监测：试跑、锁版、跑数并解释差距（`geo-monitoring`）
 
-只跑和算，不改题、不选题。正式基线每个 query × 平台 × 国家 × 语言跑 30 次，产出单文件 HTML 基线报告和交给内容团队的缺口方向。采集同样用 `collect_answers.py`，跑之前先过 crawl-integrity。
+不写题。候选题在每个监测平台各试跑 3 次，判题问得对不对；品牌方挑正式题并锁版后跑正式基线，每个 query × 平台 × 国家 × 语言 7 次，产出单文件 HTML 基线报告和交给内容团队的缺口方向；之后按题型定频率采集。采集同样用 `collect_answers.py`，跑之前先过 crawl-integrity。
 
 ## 指标口径
 
@@ -133,8 +124,9 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 提及率、提及率排名、声量份额、平均提及位置、可见度 | report-builder | 只统计发现题 |
 | 引用次数、引用份额、引用率 | report-builder | 只数正文里带编号的引用标记；份额按未去重次数算 |
 | 正向情感占比 | sentiment-judge 判读，report-builder 按切片汇总 | 正向 ÷（正向 + 负向），不设中性档 |
+| 商品卡触发率、品牌商品卡入选率、品牌商品卡出现率 | report-builder（实现在 core `shopping.py`） | 只在有商品卡展示机会的产品线上统计，按平台分开算，和提及率分开报；公式见 `skills/geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」 |
 
-题型与后端字段的对照见 `skills/shared/canonical-intent-mapping.md`。上传时填的 `diagnosis_intent` 和后端内部存的值是两层，评价题上传填 `evaluation`。
+每种意图类型统计哪些指标（提及率、情感、胜负、准确性）由类型决定，引用所有类型都统计，对照和后端字段见 `skills/shared/canonical-intent-mapping.md`。上传时填的 `diagnosis_intent` 和后端内部存的值是两层，评估题上传填 `evaluation`。
 
 ## 开发与维护
 
@@ -147,15 +139,13 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 在仓库根目录运行，全部通过才算干净：
 
 ```bash
-python3 -m unittest discover -s skills/geo-presales-eval-case-builder/evals -p 'test_*.py'
-python3 -m unittest discover -s skills/geo-presales-prompt-builder/evals -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-report-audit/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-report-builder/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-report-editor/scripts/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-sentiment-judge/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-prompt-selection-builder/scripts -p 'test_*.py'
-python3 -m unittest discover -s skills/overseas-geo-competitor-research/scripts/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
+python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 ```
 
 测试不调用外部 AI 平台。
@@ -166,4 +156,4 @@ python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
 
 ### 不随仓库分发
 
-按客户生成的品牌词表、引用域名缓存、`build/` 运行产物、客户 Case 与采集数据都不入库，`.gitignore` 已排除。仓库里的 Case 示例（`references/input-examples/` 下的 b2b、b2c 两份）是通用模板，不是真实客户。
+按客户生成的品牌词表、引用域名缓存、`build/` 运行产物、客户 Case 与采集数据都不入库，`.gitignore` 已排除。仓库里的 Case 示例（`skills/geo-prompt-selection-builder/references/input-examples/` 下的 b2b、b2c 两份）是通用模板，不是真实客户。

@@ -9,7 +9,7 @@ Two entry points share one set of rules:
   with "，", flat 竞品 n columns, markdown-wrapped URLs) into that payload first.
 
 Output is deterministic: ``case_fields`` with numbered fields expanded, Topic
-source mapping, frozen competitor selection, options and handoff. Fields that
+source mapping, the client's competitors (not frozen), locale and handoff. Fields that
 need model judgment (English ``topic`` / ``category_label``, ``brand_object_type``,
 ``attribute_plan``) are left to the skill.
 
@@ -38,7 +38,7 @@ B2B_LIST = "目标企业画像"
 B2B_JOINABLE = ("购买标准", "集成与兼容", "信任与合规")
 OPTIONAL_JOINABLE = ("差异化优势", "地理与市场")
 NUMBERED_LISTS = ("目标客户", "痛点", "使用场景", "产品特性")
-# Case Builder 合同的建议数量；超出只告警，不阻断。
+# 建议数量；超出只告警，不阻断。
 SUGGESTED_COUNTS = {"目标企业画像": (1, 5), "目标客户": (1, 5), "痛点": (2, 5), "使用场景": (2, 5), "产品特性": (2, 5)}
 TOPIC_KEY = "主题"
 COMPETITOR_KEY = "竞品"
@@ -46,17 +46,15 @@ NOTE_KEY = "补充内容"
 # 需求收集「最希望改善的 AI 搜索表现」（Suda 2026-11-02），选项名与选词 selection-rules.md 第 1 步一致。
 GOAL_KEY = "希望解决的问题"
 GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
-# 选了哪项就允许出哪类专项题；发现题不管选没选都默认出；品牌呈现售前没有验证题，只记录
-GOAL_TO_PROMPT_TYPE = {"竞争定位": "Competitor", "声誉与信任": "Evaluation"}
+# 只记进 case_fields 当业务重点线索；本期只出发现题，选了什么都不解锁其他类型（2026-11-06，与选词一致）
 CASE_KEYS = set(
     SCALAR_REQUIRED + SCALAR_OPTIONAL + (B2B_LIST,) + B2B_JOINABLE + OPTIONAL_JOINABLE
     + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY, GOAL_KEY)
 )
 COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
-GENERATION_STAGES = ("discovery", "diagnostic")
-# 售前默认只出发现题；对比、评价要调用方点名才出（Suda 2026-11-02）
-EXTRA_PROMPT_TYPES = ("Competitor", "Evaluation")
+# 旧选项照收不报错，但不再生效：题型按选词规则定（本期只出发现题），阶段一律是选词（2026-11-06）
+DEPRECATED_OPTIONS = ("generation_stage", "extra_prompt_types")
 JOIN_SEPARATOR = "，"
 
 # Base 里不承载业务含义的管理列，适配时直接丢弃。
@@ -312,14 +310,11 @@ def normalize(payload: dict) -> dict:
             fields[f"{field} {index}"] = item
 
     # 主题选填（Suda 2026-10-29）：线上表单去掉了监测主题，生词时从矩阵行聚出主题。
-    # 旧 Case 带着主题也收（1–3 个，第一个宽泛），结果里 topic_source 区分两种情况。
+    # 填了只当业务重点线索，个数不限（2026-11-06）；结果里 topic_source 区分两种情况。
     topics = _string_list(case, TOPIC_KEY, report)
-    if topics and not 1 <= len(topics) <= 3:
-        report.error("count_out_of_range", TOPIC_KEY, f"主题必须 1–3 个，收到 {len(topics)} 个")
-        topics = topics[:3]
     topic_entries = []
     for index, topic in enumerate(topics, start=1):
-        # 第一个主题是核心品类 Coverage Topic，其余为同产品线的 Depth Topic（Case Builder 合同）。
+        # 列名沿用旧写法（第一个记「宽泛」），飞书读回时按同一正则认。
         source_field = f"主题 {index}（{'宽泛' if index == 1 else '细分'}）"
         fields[source_field] = topic
         topic_entries.append({"topic_id": f"topic_{index}", "source_field": source_field, "source_value": topic})
@@ -349,31 +344,17 @@ def normalize(payload: dict) -> dict:
     if not isinstance(options, dict):
         report.error("invalid_type", "options", "options 必须是对象")
         options = {}
-    unknown_options = sorted(set(options) - {"locale", "generation_stage", "extra_prompt_types"})
+    unknown_options = sorted(set(options) - {"locale", *DEPRECATED_OPTIONS})
     if unknown_options:
         report.error("unknown_field", "options", f"options 含未定义字段 {unknown_options}")
     locale = str(options.get("locale") or "en").strip().casefold()
     locales = _registered_locales()
     if locale not in locales:
         report.error("invalid_enum", "options.locale", f"locale 只接受已登记语言 {sorted(locales)}")
-    stage = options.get("generation_stage") or "discovery"
-    if stage not in GENERATION_STAGES:
-        report.error("invalid_enum", "options.generation_stage", f"generation_stage 只接受 {list(GENERATION_STAGES)}")
-    elif stage == "diagnostic":
-        report.warn("baseline_required", "options.generation_stage", "diagnostic 补题必须同时提供原 Discovery 题库作为 baseline")
-
-    # 没显式传 extra_prompt_types 时，按「希望解决的问题」选了哪些推出；显式传了以显式为准
-    if "extra_prompt_types" in options:
-        extra = options.get("extra_prompt_types") or []
-    else:
-        extra = [GOAL_TO_PROMPT_TYPE[g] for g in goals if g in GOAL_TO_PROMPT_TYPE]
-    if not isinstance(extra, list) or not all(isinstance(x, str) for x in extra):
-        report.error("invalid_type", "options.extra_prompt_types", "extra_prompt_types 必须是字符串数组")
-        extra = []
-    bad_extra = [x for x in extra if x not in EXTRA_PROMPT_TYPES]
-    if bad_extra:
-        report.error("invalid_enum", "options.extra_prompt_types", f"extra_prompt_types 只接受 {list(EXTRA_PROMPT_TYPES)}，收到 {bad_extra}")
-    extra = [x for x in EXTRA_PROMPT_TYPES if x in extra]
+    for key in DEPRECATED_OPTIONS:
+        if key in options:
+            report.warn("deprecated_option", f"options.{key}",
+                        f"{key} 已停用，照收不生效：本期只出发现题，阶段一律按选词处理")
 
     handoff = _handoff(payload, report)
     normalized = {
@@ -384,10 +365,9 @@ def normalize(payload: dict) -> dict:
         "topics": topic_entries,
         # case = 调用方填了主题；to_derive = 没填，生词时从矩阵行聚出
         "topic_source": "case" if topic_entries else "to_derive",
-        "competitor_selection": {"status": "frozen", "selection_count": len(competitors), "formal_competitors": competitors},
+        # 竞品取客户填的，不冻结；试跑后按答案补哪几家归监测（2026-11-06）
+        "competitor_selection": {"status": "client_input", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
-        "generation_stage": stage,
-        "extra_prompt_types": extra,
         "handoff": handoff,
     }
     return _result(report, normalized)

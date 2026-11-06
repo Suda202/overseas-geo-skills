@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:  # -I 不把脚本目录放进 sys.path
     sys.path.insert(0, str(HERE))
 from tag_dimensions import tag_plan  # noqa: E402
+from validate_after_sales_set import legacy_markers  # noqa: E402
 from write_prompt_reasons import Lark, text  # noqa: E402
 
 TABLE, FIELD = "提示词库", "标签"
@@ -38,7 +39,7 @@ def field_def(lark):
     out = lark._json("+field-get", "--table-id", TABLE, "--field-id", FIELD)
     field = (out.get("data") or {}).get("field")
     if not field or field.get("type") != "select" or not field.get("multiple"):
-        print(f"{TABLE}没有多选字段「{FIELD}」：从模板复制的 Base 才有，旧 Base 先按模板加字段", file=sys.stderr)
+        print(f"{TABLE}没有多选字段「{FIELD}」：从模板复制的 Base 才有；旧 Base 不支持", file=sys.stderr)
         sys.exit(2)
     return field
 
@@ -53,12 +54,13 @@ def main():
     wanted = {}
     for path in a.bank:
         bank = json.loads(path.read_text(encoding="utf-8"))
+        markers = legacy_markers(bank)
+        if markers:
+            print(f"{path.name} 是不支持的旧结构（{'; '.join(markers)}）：旧题库不迁移", file=sys.stderr)
+            sys.exit(2)
         derived, problems, _ = tag_plan(bank.get("config") or {}, bank["questions"])
         for p in problems:
             print(f"{path.name} 标签没出：{p}")
-        if not derived:
-            print(f"{path.name} 不是选词新题库、也没写 config.tag_dimensions，跳过")
-            continue
         for q in bank["questions"]:
             code = str(q.get("question_id") or "").strip()
             if code and id(q) in derived:

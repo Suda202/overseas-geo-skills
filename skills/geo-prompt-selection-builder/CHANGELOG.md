@@ -2,6 +2,156 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.51.0（2026-11-06）商品卡指标：哪些产品线、哪些题、算什么
+
+Suda 定：商品卡是不是要统计由我们按产品线的商品属性推理决定，不让品牌方填；指标对标 Profound Shopping（Shopping Mode Rate、Shopping Visibility Score），和发现题提及率分开报。
+
+- **产品线开关**（selection-rules 第 1 步、output-contract 新增 `config.shopping_cards`）：消费类实体商品开；软件、SaaS、服务、房地产关；工业、工程类记「试跑后定」，由监测按试跑出卡比例定（≥5% 开）。售前没有试跑，工业类记关（online-runner）。5% 的依据是本地 ChatGPT 发现题实测：Obrand 86%、Pbrand 70%、Bbrand 64%、某品牌 57%、Abrand 36%，Ebrand 3%，360 和 Hbrand 1–2%。
+- **指标清单**（`geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」，report-editor 2.7.0）：对客三项——商品卡触发率（出卡回答 ÷ 有效回答，发现、替代、对比、交易，按类型拆）、品牌商品卡入选率（有本品卡的回答 ÷ 出卡回答，发现、替代，竞品同式）、品牌商品卡出现率（有本品卡的回答 ÷ 有效回答，发现、替代上可选，对比、交易上是唯一读数）；商品曝光率、平均商品卡位置、商家份额、商家内品牌份额、官方店入口占比留作内部字段。原「购物触发率 / 购物可见度 / 购物曝光率」改名，内部字段名不变；report-builder（2.3.2）SKILL、report-data-contract、verify_report_data、shopping.py 说明、crawl-integrity 缺陷目录、shared 映射表同步。
+- **监测**（1.8.2）：trial-and-lock「试跑」加工业类开关判法。
+- 实现未改：`shopping.py` 仍按 Discovery 取样，触发率按全部意图拆开，没按产品线开关和四类题过滤；售前只有发现题，读数不受影响。监测报告接入替代题商品卡时再改。
+- 改前快照在项目根 `.snapshots/*.shopping-*.bak`。检查：report-builder、report-editor 单测通过。
+
+## 2.50.0（2026-11-06）不再兼容旧题库和旧 Base
+
+Suda 定：「不要兼容旧题库了」；Hbrand 选词 2.1 和 360 选词两份按旧结构写的题库「不补，报错就报错」。2.48.0 拆出的 `validate_legacy_bank.py` 随之删除，旧题库门禁不再保留。
+
+- **validator 只认现行结构**：`legacy_markers()` 认出旧结构就报 `unsupported old structure` 并列出命中项，退出码 2，不往下查、不出告警。旧结构：`generation_stage` 不是 `selection`、没有矩阵行、`extra_prompt_types`（旧售前题库）、`leader_default`、行没写 `prompt_type` 或写 `prompt_types` 列表或档位 P1–P3、旅程阶段、`group_role`、旧字段名（`intent`、`Prompt Type:` 标签、`persona`、`buyer`、`attribute`、`buyer_demand_evidence`、`condition_slot`、`review_status`）、`attribute_plan` 的 `{p1, p2, p3}` 写法或带 `relative_competitor`、`priority`、`common_constraints`、`brand_value`。
+- **删掉的门禁和兼容**：7 / W7、31、33、41、44、W58、W55，60 / 61 读 `prompt_types` 列表的分支，无 `generation_stage` 的 v8 固定配额，售前题库（`extra_prompt_types`）的豁免，`formal_visibility_eligible` 门禁和豁免，`monitoring_prompt` 一致性，`expected_total`，常见约束当条件依据，`review_status`、英文审核状态别名，试跑 5 次、基线 5 次和按天数窗口。基线 30 次保留：某车载品牌、Bbrand 两份现行题库今天写的就是 30，锁版前改 7。
+- **锁版门禁 14、26 留在 validator**：锁版归 `geo-monitoring`，但这两条读题库 JSON 的 `lifecycle_status`、`trial`、`baseline`，题库锁版时要查，监测 skill 没有自己的 validator。
+- **其他脚本**：`check_client_base.py`、`write_prompt_reasons.py` 只认现行 Base（无属性池、矩阵有目标客户 / 使用场景 / 意图类型 / 约束条件 / 业务优先级及依据），删掉旧结构检查和写「建议优先级」的旧流程、字段旧名换算、旧来源类型选项；`export_upload_csv.py`、`write_tags.py` 遇旧结构题库退出码 2；`tag_dimensions.py` 维度只认目标客户、使用场景、属性 / 约束条件、自定义，属性维度必须登记 values。`normalize_case.py` 的 Case 旧选项告警属于输入合同，没动。
+- 测试：pytest 去掉旧结构用例，新增每种旧结构都被拒收的用例，`validate()` 遇到被拒收的夹具直接失败，防止 assertNotIn 空过；2026-10-22 盲审样本在测试里就地转成现行结构再跑门禁 36–37，覆盖率下限不变。verify_workflow 夹具改成现行结构（64/64，`reports/workflow-e2e.json` 已重生成），同样防空过；线上返修夹具 `online-sample-bank.json` 档位 P1 改高、删不再写的字段。
+- 对照：某车载品牌、Bbrand 选词-20261106 两份现行题库删前删后报错、告警、退出码逐条一致，上传 CSV 逐字节一致。Hbrand 选词 2.1、360 选词按预期报不支持。
+- 改前快照 `.snapshots/drop-legacy-compat-20261106-175219/`（项目根）。
+
+## 2.49.0（2026-11-06）统计指标由意图类型决定
+
+Suda 定：每种意图类型统计什么由类型本身决定，提示词库不加分析维度字段；上传列 `question_types` 是过渡字段，后端改为按 `diagnostic_intent` 决定统计什么之后删掉。
+
+- **shared/canonical-intent-mapping.md**：映射表 `analysis_type` 列改为「统计指标」——发现、替代：提及率、情感；对比：胜负、情感；评估、验证：情感；问题解决：提及率；交易、售后：准确性。新增三段：引用所有类型都统计、按类型分开看（「全部类型」汇总只合并不点名品牌的类型，沿用基线报告口径）；提及只数去掉引用标记后的正文，正文里当数据来源点名的品牌也算提及；准确性怎么判（有品牌方资料对照事实表；没有时只对照官方公开页面记冲突，官网没写的记「无法核对」，不叫准确率；平台互相矛盾只当提示）。删掉替代行里与 11-03 口径相反的「2026-11-02 起计入提及率考核」。「后端问题类型」节改为过渡字段说明。
+- **问题解决改看提及率**（推翻 10-23「只看引用」）：Hbrand 10-21 基线 41 道问题解决题 607 条有效回答，去引用标记后竞品正文提及 11 次（1.8%），其中 Gemini 在「西晒怎么查」的步骤里写「Cross-Check with Property Listings (RivalH1 / rival-h2.example)」，品牌出现在解决步骤里是这类题最有价值的位置；引用照常统计（竞品官网被引 27.5%）。
+- **交易、售后改看准确性**：原读数「渠道是否指对、官网卖家占比」「帮助页引用、政策准确性」收为准确性；引用照常统计。
+- type-branches.md「出几道、读什么」、`geo-monitoring/SKILL.md`（1.8.1）「采集频率与重跑」读法、online-runner.md、output-contract.md、`export_upload_csv.py` 说明同步。导出逻辑不变：替代仍按 `competitor` + `sentiment` 上传，等后端加 `alternatives` 枚举。
+- 待后端：按 `diagnostic_intent` 决定统计指标；加替代、验证、问题解决、交易、售后枚举；加准确性指标。
+- 改前快照 `.snapshots/intent-metrics-20261106-174615/`（项目根）。检查：check_skill_terms 通过，pytest 78 passed，verify_workflow 87/87，Bbrand 题库导出冒烟退出码 0。
+
+## 2.48.0（2026-11-06）validator 拆出旧题库门禁
+
+2.50.0 起旧题库不再兼容，本版拆出的 `validate_legacy_bank.py` 已删除。
+
+接 2.47.0「不再兼容旧题库」：主 validator 只反映现行选词门禁，旧客户题库（Abrand、Bbrand 9 月版、UNI_A、Ebrand 等，已定不迁移）改用单独脚本，判定结果不变。
+
+- **新增 `scripts/validate_legacy_bank.py`**：旧题库门禁搬到这里，7 / W7、31、33、41、44、W58、60 / 61 的 `prompt_types` 列表分支、`group_role` 分层规则、无 `generation_stage` 的 v8 固定配额，以及只对旧题库才有的放宽（`discovery` / `diagnostic` 不查 W47、W49–W52、W59、W62、W63，不拒收 Verification、Accuracy）。它继承主 validator 的类、只覆写这些分支，现行门禁的改动自动带到旧题库。选单独脚本、没加 `--legacy` 开关：开关会让主文件继续带着全部旧分支，而这次的目的是主文件读起来只有现行规则。
+- **主 validator 拒收旧结构**：`legacy_markers()` 认九种旧结构标记（没有或旧的 `generation_stage`、没有矩阵行、行缺 `prompt_type`、`prompt_types` 列表、旅程阶段、`group_role`、`{p1, p2, p3}` 属性计划、属性计划带相对竞品或优先级、`leader_default`）；命中任一项就逐项列出并指向旧脚本，退出码 2，不静默跳过。原来近 500 行的 `main()` 拆成 `BankValidator` 类里按门禁分组的方法。
+- **锁版门禁 14、26 留在主 validator**：锁版归 `geo-monitoring`，但这两条读的是题库 JSON 上的 `lifecycle_status`、`trial`、`baseline`，新题库锁版同样要查，监测 skill 没有自己的 validator。旧脚本照常跑它们。
+- **W55 删除**（2026-11-05 已停用，原来只剩一行空赋值）。
+- output-contract：门禁表只列现行门禁，新增「旧题库」一节（判定标记、旧脚本命令、只在旧脚本里的门禁表）；`slices`、`attribute_plan`、题字段里「旧题库照认」的说法改成「写了按旧题库处理」。SKILL.md 脚本表加旧脚本。`check_skill_terms.py` 加退役说法「旧字段名只在 validator 里兼容 / discovery、diagnostic 照认 / 两个键都没有的不查」，用改前快照验证三处都能扫出。
+- 测试：pytest 现行用例改用现行结构的题库（`current_bank`），旧结构用例改跑旧脚本；新增旧结构拒收 / 旧脚本接收 / 两个脚本对现行题库输出一致的用例。verify_workflow 按结构分派脚本，新增「主 validator 拒收旧题库」一例（87/87），`reports/workflow-e2e.json` 已重生成。`evals/fixtures/online-sample-bank.json`（线上返修 e2e 夹具）去掉旅程阶段、`group_role`、相对竞品，行补 `prompt_type`，改成现行结构。
+- 前后一致性：评测数据与 30-选Topic与生词 下 58 份题库（旧题库 56 份走旧脚本，某车载品牌、Bbrand 选词-20261106 两份走主脚本）拆分前后报错、告警、退出码、就绪结论逐条一致；另用 1,200 份随机改动的题库做差分，旧脚本与拆分前完全一致，现行结构题库上主脚本与拆分前完全一致。对照表在会话笔记 `legacy-validator-split-20261106.md`。
+- 改前快照 `.snapshots/legacy-validator-split-20261106-171505/`、`.snapshots/legacy-validator-split-20261106-174000/`。
+
+## 2.47.0（2026-11-06）正文精简：改名残留、暂停类型规则归位、SKILL 表格只做索引
+
+Suda 定（审阅「选词 skill 还有没有过度复杂」后）：先修改名残留、把本期不出的七类规则集中到 type-branches、SKILL.md 步骤表只留索引；同时不再兼容旧题库和旧 Base。规则本身不变。
+
+- **改名残留**：selection-rules「9 步」改 8 步；「目标目标客户」两处；约束条件查漏「十二类」统一为十一类；「搜索量不进行的业务优先级」改成「不进矩阵行的业务优先级」；第 7 步「完整购买决策任务」改「完整使用场景」；client-facing-base 里「购买任务」残留随旧名说明一起删。`geo-monitoring/references/trial-and-lock.md` 指向的「全面梳理」小节已不存在，改指「用清单查漏，只开成立的行」。
+- **W59 写进正文**：validator 一直要求主题里至少 4 个不同决策（约束条件组合），正文只写了 5 道；selection-rules 第 6 步硬要求 3 补上这一句。
+- **暂停类型规则归位**：第 1 步四目标表和「目标开放后按目标和买家需求决定是否出题」、第 5 步非发现行的业务优先级上限（2.46.0 新增）整段移到 type-branches.md（新小节「对应哪个目标」「业务优先级上限」），selection-rules 各留一句指向；第 5 步八类表删「什么时候开行」列；第 5、7 步重复的「本期只出发现」「其他七类见 type-branches」合成一处。selection-rules 中「本期不出 / 开放后 / 暂停 / 本期只」从 20 处降到 12 处。
+- **SKILL.md 步骤表只做索引**：第 2、5、6、7 步单元格原来是 selection-rules 的长摘要，今天第 6 步改了三版、每次要同步两处；改成一句话加节号，判断标准以 selection-rules 为准。SKILL.md 从 11.5 KB 降到 8.6 KB。正文里交代来历的日期（「2026-11-06 前叫……」「2026-11-05 之前的题库……」「旧 Base 不迁移」等）删除。
+- **不再兼容旧题库**：selection-rules、client-facing-base 里的旧题库、旧 Base 兼容说明全部删除；validator 和其他脚本里的兼容分支由另一会话删（见下一版）。
+- 阶段表（总纲「每一步能说什么」）保留试跑、基线、持续监测几行：它是「前一步只能提假设」这条原则唯一的定义处，监测 skill 里没有同样的表。
+- `check_skill_terms.py` 加 6 条：目标目标、9 步分节、十二类、不进行的业务优先级、购买任务、旧 Base 兼容说法；用改前快照验证每条都能扫出旧文本。
+- 改前快照 `.snapshots/selection-simplify-AC-20261106-171053/`。三项检查：check_skill_terms 通过，pytest 72 passed，verify_workflow 86/86。
+
+## 2.46.1（2026-11-06）正式基线每格 30 次改为 7 次
+
+Suda 定：正式基线（Before）每个 query × 平台 × 国家 × 语言跑 7 次，不再跑 30 次。
+
+- validator 的 `baseline.planned_runs` 改为要求 7，旧项目写 5 或 30 的照认；eval 用例同步（7 次为正例、30 次为旧口径正例、8 次和 2 次报错），`reports/workflow-e2e.json` 已重生成，86/86 通过。
+- output-contract、selection-rules、`check_skill_terms.py`、`check_client_base.py`、shared/prompt-generation-principles 里的「30 次」改为「7 次」。
+- 监测 skill 同步升到 1.8.0：SKILL「正式基线与版本」「采集频率与重跑」、trial-and-lock、gap-cause-action-table、baseline-report 改为 7 次。7 次下单平台单题 50% 读数误差约 ±37 个百分点，单题读数只看方向；竞争格局五档只按跨平台合并读数分（四个平台合并约 ±19 个百分点），不按单平台分。
+- 改前快照在项目根 `.snapshots/*.20261106-171426.bak`。
+
+## 2.46.0（2026-11-06）非发现行的档位按意图类型和本期目标定上限
+
+Suda 定（Bbrand 选词时发现交易、验证、评估行都被判成高）：原规则「其他七类行档位默认跟同任务的发现行」会把已知道本品、已选定本品的人的问题也抬成高。
+
+- **新增判档因素：意图类型和本期目标对不对得上**（selection-rules 第 5 步）。同一使用场景，不同意图类型的提问人处在购买的不同位置：发现、替代是新获客，对比是争取被选，评估、验证是已知本品在决定买不买，交易、售后是已选定或已买，问题解决不直接找品牌。按品牌方本期要解决的问题定上限：短板是知名度时，替代、对比可与发现行同档，评估、验证最高中，交易、售后默认低，问题解决默认最高中（品牌方点名问题型诉求时可同档）；短板是口碑或信任时评估、验证可同档；把官网直购、客服或复购列为目标时交易、售后可到中。只定上限，上限内照常按商业价值、战略重要性、当前业务重点判。
+- 「不拿来调档」清单去掉「意图类型」，改为只按上一条看它和目标的对应。
+- **主题优先级**：同一档里先排发现类主题（考核口径），再按父关键词月搜索量排。
+- 改了 selection-rules 第 5、6 步，type-branches、client-facing-base、SKILL；`check_skill_terms.py` 加退役说法「默认跟同任务的发现行」。validator 不加新门禁。改前快照 `.snapshots/priority-goal-fit-20261106-163514/`。
+
+## 2.45.1（2026-11-06）提示词库加回「意图类型」查找列
+
+Suda 定：线上有诊断意图字段，提示词库要能直接看到每道题的类型。原来「不设意图类型列」的理由（后台看板没有这个字段）不对：后台有 `diagnosis_intent`。类型只有一个来源（矩阵行，一行一种类型），所以这一列从所属切片带出，不手填。
+
+- 模板 Base 提示词库加公式字段「意图类型」（`[所属切片].[意图类型].LISTCOMBINE().ARRAYJOIN("、")`），两个视图都放在「主题」后面；回读两条示例行都算出「发现」。
+- client-facing-base.md 提示词库字段清单加这一列，「不设意图类型列」改为查找带出的说明。
+- `check_client_base.py --template` 要求提示词库有「意图类型」；模板检查通过，Hbrand 实表检查结果不变。
+- 旧 Base 的手填「提示词类型」列不迁移（Hbrand 的 `sync_from_base.py` 读的就是这一列，不能删）。
+
+## 2.45.0（2026-11-06）主题按同一类候选划分；对客 Base 不带看板
+
+Suda 定：
+
+- **主题 ＝ 同一类候选 × 同一意图类型**。「候选」指 AI 回答时推荐的那一类东西（某类产品、平台或服务商）。原来的三个条件里，「核心需求一致」「解决方案范围相近」落地时是同一个判断，合成一句：AI 回答这些题，推荐的是不是同一类东西；「读数能说清哪块要优化」降为试跑后的复核。目标客户、使用场景、约束条件是主题内题与题的差别，只有让候选换了一类才拆。「核心意图 / 核心需求」的说法删掉，不再和意图类型撞名。改了 selection-rules 第 6 步、SKILL 第 6 步、online-runner、shared/prompt-generation-principles。
+- **约束条件查漏清单去掉「使用场景」**：场景是矩阵的一列，十二类变十一类，撤回 2.43.0 里自造的「使用情境里的条件」。
+- **对客 Base 不再带「覆盖分布」看板**：Suda 已从模板删除，client-facing-base 删掉看板一节。模板 Base 的「旅程阶段」字段也已删（快照 `.snapshots/template-journey-stage-20261106-151808/`）。
+
+## 2.44.0（2026-11-06）售前生词并入选词；试跑、锁版、停测搬到监测；Case Builder、竞品研究退役
+
+Suda 定：售前生词的输入可能是一个文件或线上表单数据，主题不限数，对比和评估题默认不出，竞品是客户输入加试跑答案、不冻结；生词只做到出题，试跑几次、品牌方挑题锁版都和生词无关。两个 skill 规则已经一样，只剩输入、输出和运行环境不同，合成一个，不分两个版本。
+
+- **并入**：`normalize_case.py`、`run_selection_mode.py`（含返修循环）、`input-contract.md`、`input-examples/`、`locale-templates.json` 搬进本 skill；新增 `references/online-runner.md`，只写线上和本地不一样的地方（Case 代替业务范围、只预跑品类认知、没有浏览器、业务优先级从 Case 字段推、只交上传行）。runner 只跑 validator 和导出两项检查。
+- **输出两个出口**：题库 JSON 是唯一底稿，按场景导出飞书对客确认表、9 字段上传行，或两者都要。
+- **Case 输入合同**：`extra_prompt_types`、`generation_stage` 照收不生效（`deprecated_option` 告警），「希望解决的问题」只当业务优先级线索；Case 主题个数不限；竞品状态 `client_input`、不冻结。版本号仍是 `presales-case-input/v1`，已接入的调用方不用改。
+- **删掉**：`check_presales_bank.py`（「主题都有题」validator 本来就查；题型按 `business_goals` 走 W52；冻结竞品、`extra_prompt_types` 点名两条作废；「约束条件名单不为空」没有搬）、`e2e_presales_gates.py`。上传行检查从旧 `validate_question_bank.py` 原样搬进 `export_upload_csv.py`（新旧函数对 4 个真实上传 CSV 和 3 组造的坏数据结果一致）。
+- **搬到监测**：原第 8 步试跑、第 9 步选正式题与锁版、维护里的停测 / 措辞不可改 / 复查 / 复核节奏，原文搬进 `geo-monitoring/references/trial-and-lock.md`；`trial_brand_count.py`、`changeability_domains.py` 搬进 `geo-monitoring/scripts/`。本 skill 第 8 步改为「校验与导出」，维护只留加题、并题。竞品不足 3 个时由监测按试跑发现题答案补。
+- **退役归档**：`geo-presales-prompt-builder`、`overseas-geo-competitor-research`、`geo-presales-eval-case-builder` 移到 `90-历史归档/旧版与过程稿/退役skill/`，`.claude/skills` 软链已删。改了 pipeline、shared 三份文档、`prompt_gates.py`、`test_prompt_gates.py`、`redact_publish_tree.py`、售前选词工具 PRD 的 skill 引用。`check_skill_terms.py` 加三条退役说法。
+- 验证：validator 测试 72 通过，`verify_workflow.py` 86/86，`e2e_input_contract.py` 43/43，`e2e_repair_loop.py` 全过，`test_prompt_gates` 通过，退役说法扫描 0 条。快照 `.snapshots/merge-presales-into-selection-20261106-151118/`。
+
+## 2.43.0（2026-11-06）矩阵四个字段改名；准确性题默认不出
+
+Suda 定：
+
+- **字段改名**：受众 → 目标客户，购买任务 → 使用场景，买方约束 → 约束条件，提示词类型 → 意图类型。矩阵一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型，挂约束条件；一行就是一个覆盖切片（Aleyda 的 scenario），不另设一列。
+- **使用场景的定义**：目标客户在什么情境下用产品、要解决什么问题（停车被刮蹭要留证据、跑网约车要记录车内纠纷；平台类写在什么情境下找什么）。换了场景，要解决的问题和候选会变；只多看一条条件的写成约束条件；同一场景要的结果不同（平台 vs 房源）照旧分行、在场景里写明。约束条件查漏清单去掉「使用场景」一类（场景是矩阵的一列，第 4 步梳理），十二类变十一类。主题定义里的「核心意图」改叫「核心需求」，避免和意图类型撞名。
+- **兼容**：JSON 键不改（`audience`、`scene`、`attributes`、`prompt_type`）；`check_client_base.py`、`write_prompt_reasons.py` 读 Base 时把旧字段名换成新名，旧 Base 不迁移；`tag_dimensions` 新旧维度名都认；三个采集脚本产出的 signals.csv 列名改成目标客户、约束条件；售前旧流程 `export_to_confirm_base.py` 写新模板时自动换名。基线 HTML 的筛选标签改叫意图类型筛选。
+- **准确性题默认不出**：只在我们判断有必要时出（如关键事实修复上线后要确认 AI 读到了），零提及不触发。
+- 模板 Base：五个字段改名并改说明，示例场景改成场景写法，业务范围两类行改名，看板两张图和说明文字跟着改。快照 `.snapshots/field-rename-20261106-144355/`。
+
+## 2.42.0（2026-11-06）提示词类型改为八类，删除旅程阶段
+
+Suda 定（讨论稿 `30-选Topic与生词/方案/提示词类型八类-定稿方案-20261106.md`）：
+
+- **删旅程阶段**：Hbrand、Bbrand 新格式 34 行的阶段全部等于按类型取的默认值，业务优先级、主题、挑题、切片标签都不读它。矩阵一行 ＝ 产品线 × 市场 × 受众 × 购买任务 × 提示词类型。旧题库、旧 Base 的阶段照认，不迁移；模板 Base 的「旅程阶段」字段 Suda 确认后已删（删前快照 `.snapshots/template-journey-stage-20261106-151808/`），看板「按旅程阶段」图已改成「按提示词类型」。
+- **购买任务保留**：去掉后同受众同类型的行分不开（Bbrand M-001/002/003/006），主题也没有可聚的依据。
+- **提示词类型八类**：参考 Aleyda 九段客户旅程，发现与候选名单合成「发现」，只用推荐式一种问法、不设探索式 / 候选式标签；评价改名评估；新增验证（Trust，只问可信度）、交易（Transactional）、售后（Support，题面必须点名品牌、型号或服务名）。验证的英文键用 Trust，避免和历史 Verification（`validation`）混。
+- **能力核查并入评估**：`Does [brand] offer X?` 是买家真会问的评估问法；零提及不再专门出点名题，先查可爬性、引用页和推荐理由句（selection-rules 第 8 步）。
+- **准确性单独保留在八类之外**：按品牌事实核查表的事实点名问值，只用于修复上线前后验收和开放品牌呈现后，不进题库、名额、考核；validator 拒绝新选词库里的 Accuracy。
+- **目标对应**：评估、验证归声誉与信任；交易、售后不属于四个目标，写了就 W52 告警。后端没有替代、问题解决、验证、交易、售后的枚举，这几类不导出上传 CSV。
+- 第 408 行补平台类客户：问「去哪买、去哪找」按发现题写。
+- 改动：SKILL、selection-rules、type-branches（重写为七类）、client-facing-base、output-contract、signal-sources；validator（类型集、W51/W52、Verification/Accuracy 报错文案）、check_client_base（八类选项、不再按阶段限制类型）、tag_dimensions、export_upload_csv、write_prompt_reasons、check_skill_terms；shared 两份文档；售前 selection-mode、input-contract、export_to_confirm_base 等；监测 SKILL、gap-cause-action-table、build_baseline_html。测试补 EightTypeTests 和两个 e2e 用例。模板 Base 提示词类型选项换八类、字段说明去旧说法。快照 `.snapshots/eight-types-20261106-135640/`。
+
+## 2.41.2（2026-11-06）主题表删信号条数、主题范围、状态
+
+Suda 定：三列都不影响定档和排序。信号条数取决于收集了几个来源、主题里有几行，容易被读成需求大小，且靠手填会过时（模板与 Hbrand 精度还设成 2 位，显示成 4.00）；没有信号支撑的情况在矩阵行一级查。主题范围与「切片」关联的矩阵行重复。状态能从提示词库推出：主题里有「正式」题即已采购。
+
+- 线上删字段：模板 Base 信号条数；Hbrand 信号条数、状态、主题范围；360 买家原话条数、状态、主题范围。改前快照（含字段定义和全部记录）：项目根 `.snapshots/drop-topic-fields-20261106-112947/`。
+- client-facing-base 主题表字段清单改为 `主题 | 市场 | 产品线 | 主题优先级 | 主题优先级依据 | 父关键词 | 月搜索量 | 切片`；「状态是候选的主题」改为「提示词库里还没有正式题的主题」。
+- `check_client_base.py` 去掉「主题状态不空」，五个字段登记为已移除；`check_skill_terms.py` 加退役说法。
+- Hbrand `sync_from_base.py` 改为直接读提示词库的状态，不再用主题状态套到每道题上；「不批准」的题不进题库。W59 题少理由从删前的主题范围搬进脚本常量。重跑后 36 道题逐字段与改前一致（线上提示词库状态目前全空，都按待审核），只有 W59 的说明文字变了；validator 通过，`check_client_base.py` 对 Hbrand 和模板都通过。
+- 飞书《生词规则》主题表一行删「状态」「买家原话条数」。
+
+## 2.41.1（2026-11-06）主题表删「GSC 展示」列
+
+Suda 定：GSC 展示量取决于官网自己的排名，不参与主题优先级判档和排序，单设一列容易被读成需求大小。对照 Ahrefs（GSC 只作题源，主题需求量用父关键词谷歌月搜索量）、Peec、Profound、LLMrefs、SE Ranking、AthenaHQ，没有一家用 GSC 展示量给主题排优先级。父关键词查不到搜索量时，可在主题优先级依据里写一句非品牌展示量证明需求存在。
+
+- 线上删字段 `fld9bDPUOq`：模板 Base（J5j2…）、Hbrand（A6Rq…）、360（VdfL…）三张主题表；360 主题优先级、主题优先级依据两个字段说明去掉 GSC。360 两行原值「有曝光」「0」、模板两条示例值在快照里。
+- 飞书《生词规则》主题表一行删「GSC 展示」。
+- client-facing-base、selection-rules 第 6 步同步；`check_skill_terms.py` 加退役说法。
+- 改前快照：项目根 `.snapshots/drop-gsc-column-20261106-110536/`。
+
 ## 2.41.0（2026-11-05）主题定义改为核心购买决策 × 提示词类型
 
 Suda 定：主题 ＝ 同一核心购买决策 × 同一提示词类型下的一组相关问题。撤销 2.40.0 的「不够 5 题跨决策合成类型主题」，不同决策的同类型题不合并；发现题内部不再按问法细分。type-branches 的题量从「每个购买决策最多几道」改为按竞品 × 场景、场景、具体问题计，否则类型主题到不了 5 道。「三个条件」继续用来判核心购买决策；单主题不设上限、主题名不带品牌不变。售前生词 6.8.0 同步。改前快照 `.snapshots/topic-definition-decision-type-20261105-*/`。

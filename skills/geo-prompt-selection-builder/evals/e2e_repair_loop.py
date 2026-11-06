@@ -29,7 +29,7 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 RUNNER = SKILL / "scripts" / "run_selection_mode.py"
-FIXTURE = SKILL / "evals" / "fixtures" / "selection-mode-sample-bank.json"
+FIXTURE = SKILL / "evals" / "fixtures" / "online-sample-bank.json"
 CASE = SKILL / "references" / "input-examples" / "b2c-example.json"
 FIXTURE_COUNT = len(json.loads(FIXTURE.read_text(encoding="utf-8"))["questions"])
 
