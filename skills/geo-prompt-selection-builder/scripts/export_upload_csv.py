@@ -4,8 +4,8 @@
 列：query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name
 
 - 只认现行结构的题库：旧结构（validate_after_sales_set.legacy_markers 认出的）报「不支持的旧结构」，退出码 2，不导出。
-- diagnosis_intent 用后端枚举；它和 prompt_type 取值不完全一样，意图类型的中文名写进 tags 第一个。
-- tags 后面接跨主题切片标签：按 config.tag_dimensions 从矩阵行派生（口径在 tag_dimensions.py，落在不到 2 个主题、
+- diagnosis_intent 用后端枚举。tags 不重复写 diagnosis_intent 已经表达的类型：只有替代题在 tags 第一个写「替代」（见下）。
+- tags 写跨主题切片标签：按 config.tag_dimensions 从矩阵行派生（口径在 tag_dimensions.py，落在不到 2 个主题、
   不到 5 道题、和主题重复的值不出，打印原因）。
   替代（Alternatives）后端还没有枚举，按映射表临时记 competitor，tags 里的「替代」区分；
   研发会加独立枚举、算可见度和情感（Suda 2026-10-29），上线后改 INTENT / QUESTION_TYPES；
@@ -46,9 +46,15 @@ from tag_dimensions import TYPE_ZH, tag_plan  # noqa: E402
 from validate_after_sales_set import legacy_markers  # noqa: E402
 
 
+# diagnosis_intent 表达不了的类型才在 tags 第一个写中文名（现在只有替代：后端没有 alternatives 枚举，临时按 competitor 上传）。
+# 后端加了独立枚举就从这里删掉（Suda 2026-11-07：发现、对比、评估和 diagnosis_intent 重复，不写）。
+TYPE_IN_TAGS = {"Alternatives"}
+
+
 def tags_cell(prompt_type, tags):
-    """类型中文名放第一个，再接切片标签；超长就从后面丢，保证短于 200 字。"""
-    out = [TYPE_ZH[prompt_type]] + [str(t).strip() for t in tags or [] if str(t).strip() and str(t).strip() != TYPE_ZH[prompt_type]]
+    """替代题先写「替代」，其他类型只写切片标签；超长就从后面丢，保证短于 200 字。"""
+    head = [TYPE_ZH[prompt_type]] if prompt_type in TYPE_IN_TAGS else []
+    out = head + [str(t).strip() for t in tags or [] if str(t).strip() and str(t).strip() not in TYPE_ZH.values()]
     while len(",".join(out)) >= TAGS_MAX and len(out) > 1:
         out.pop()
     return ",".join(out)

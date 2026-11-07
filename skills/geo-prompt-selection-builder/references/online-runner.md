@@ -19,7 +19,7 @@
 | `question_zh` | `zh_translation` |
 | `topic` | 题目的 `topic`；没有就按 `topic_id` 去 `config.topics` 查。需要换显示名时导出加 `--topic-label "题库主题=显示名"` |
 | `diagnosis_intent` | 由 `prompt_type` 换成后端枚举（发现 `discovery`） |
-| `tags` | 第一个是意图类型的中文名，后面接切片标签（selection-rules.md → 6「切片标签」）；总长不到 200 字 |
+| `tags` | 切片标签（selection-rules.md → 6「切片标签」），可以为空；只有替代题在第一个写「替代」（后端没有 alternatives 枚举，临时按 competitor 上传），其他类型不重复写 `diagnosis_intent` 已经表达的类型；总长不到 200 字 |
 | `question_types` | 由 `diagnosis_intent` 定：发现 `visibility,sentiment`。过渡字段，后端改为按意图类型决定统计什么之后删掉（shared/canonical-intent-mapping.md） |
 | `purchase_intent`、`persona_name`、`scene_name` | 留空 |
 

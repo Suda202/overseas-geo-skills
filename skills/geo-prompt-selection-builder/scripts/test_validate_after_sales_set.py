@@ -848,7 +848,23 @@ class SliceTagTests(unittest.TestCase):
             self.assertIn("标签没出：目标客户「购房者」", run.stdout, run.stdout + run.stderr)
             rows = list(csv.DictReader((Path(tmp) / "bank.United States.upload.csv").open(encoding="utf-8-sig")))
         tags = {r["tags"] for r in rows}
-        self.assertEqual(tags, {"发现,租房者", "发现"}, tags)
+        self.assertEqual(tags, {"租房者", ""}, tags)  # 发现和 diagnosis_intent 重复，不写进 tags
+
+    def test_export_type_in_tags_only_for_alternatives(self) -> None:
+        """Suda 2026-11-07: only 替代 (uploaded as competitor) carries its type name in tags."""
+        data = tag_bank([])
+        data["questions"][0]["prompt_type"] = "Alternatives"
+        data["questions"][1]["prompt_type"] = "Competitor"
+        with tempfile.TemporaryDirectory() as tmp:
+            bank = Path(tmp) / "bank.json"
+            bank.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            subprocess.run([sys.executable, "-I", str(EXPORT), str(bank), "--out", tmp],
+                           text=True, capture_output=True, check=False)
+            rows = list(csv.DictReader((Path(tmp) / "bank.United States.upload.csv").open(encoding="utf-8-sig")))
+        by = {r["query"]: (r["diagnosis_intent"], r["tags"]) for r in rows}
+        self.assertEqual(by[data["questions"][0]["user_question"]], ("competitor", "替代"))
+        self.assertEqual(by[data["questions"][1]["user_question"]], ("competitor", ""))
+        self.assertEqual(by[data["questions"][2]["user_question"]], ("discovery", ""))
 
 
 if __name__ == "__main__":

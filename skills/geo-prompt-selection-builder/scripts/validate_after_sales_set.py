@@ -1047,7 +1047,7 @@ class BankValidator:
             return
         self.carried_names = carried_by(self.approved_rows)
         self.written_names = carried_by(questions)
-        pending = [f"{name}({str(entry.get('priority') or '').strip() or '?'})" for entry in plan
+        pending = [name for entry in plan
                    if (name := str(entry.get("attribute") or "").strip())
                    and name not in self.carried_names and name in self.written_names]
         if pending:

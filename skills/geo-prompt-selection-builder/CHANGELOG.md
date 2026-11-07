@@ -2,6 +2,69 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 报告侧（2026-11-07 夜）数据筛选改多选；核心洞察引用只看发现、替代；回答详情渲染商品卡（report-builder 2.7.0、监测 1.8.4；选词版本不变）
+
+- **多选筛选**：地区、平台、意图类型、主题四个下拉都能多选。预算切片只覆盖单选组合，所以数据层新增 `facts`（逐条有效回答的提及、引用、商品卡事实 + Claim），页面新增 `assets/report-engine.js` 按选中组合现算，公式逐条对应 Python。门禁 `scripts/check_engine_parity.js`：每个预算切片对应的单选组合跑一遍引擎，KPI、可见度、引用、情感、商品卡、问题明细逐项一致才算过（Bbrand 180 个切片全过）。HTML 不再嵌预算切片，Bbrand 12.9MB → 3.9MB。监测基线报告渲染前去掉 `facts`，仍是单选。
+- **核心洞察的引用份额、引用率改为只看发现＋替代**（`config.citation_scope = "visibility"`），和提及率同一批题；引用模块、问题明细仍是全部意图类型。Bbrand：全部类型 13.1% / 26.1%，发现＋替代 0% / 0%（官网只在点名题里被引用）。统计范围一行只写一组类型。
+- 修 `attach_sentiment.py`：「类型:X」切片之前按主题名过滤，情感全空，改为按题的意图类型过滤。
+- 问题明细主题行：正向情感占比取该主题的情感汇总（之前占位「—」）；引用两列取该主题全部回答（同问题行）；「查看」不换行；0.0% 写 0%。
+- 回答详情第二层：回答正文上方按平台顺序渲染商品卡（图片、标题、价格、评分、商家，本品描边并标是否有官网购买链接），数据来自 `details[].product_cards`；去掉与第一层重复的主题、意图类型、标签。抽屉品牌对比列同问题明细，加引用份额、引用率、正向情感占比。
+
+## 报告侧（2026-11-07 晚）官网购买链接覆盖率；商品卡模块版式
+
+- core `shopping.py` 品牌级、SKU 级都加 `official_link_coverage`（出现该品牌 / SKU 卡的回答里，卡带官网购买链接的占比；官网判定沿用 offer.channel）。HTML 品牌对比和 SKU 表的切换加第三项「官网购买链接覆盖率」。Bbrand 读数：ChatGPT、AI Mode、AIO 都是 100%（每条出现 Bbrand 卡的回答都有 brand-b.example 链接），RivalB3 ChatGPT 66%。
+- 商品卡触发率改成一个指标卡（全部平台时合计）；「本品 SKU」改名「SKU」；统计范围里「提及类」改叫「可见度」。
+
+## 报告侧（2026-11-07 傍晚）商品卡分品牌级、SKU 级；核心洞察加引用率（report-builder 2.6.0 内修订）
+
+- **SKU 级**：core `shopping.py` 新增 `sku_of` 和 `target_skus[]`（SKU 商品卡提及率、平均位置，分母同品牌级）；`build_report_data.py` / `run_pipeline.py` 加 `--sku-map`（「SKU 名 + 正则」归并表，按顺序第一条命中胜出）；HTML 购物商品卡模块在品牌对比下面加「本品 SKU」表，跟品牌对比共用指标切换。Bbrand 归并表 `sku-map.json`：硬线套件（配件）先判，再分 H1 四路 / 三路 / Pro / 双路 / 未写路数、G300H Plus。读数：ChatGPT 上 H1 四路 24%；AI Mode、AIO 的卡标题多不带型号，「未识别型号」分别 83%、60%。
+- **核心洞察**：引用份额旁边加引用率。监测基线 HTML 只改引用份额的提示文字，不再重复插入引用率。
+- **问题明细**：去掉和上方重复的三个筛选，只留搜索框；选了意图类型后主题下拉不再消失（显隐按整份报告判断，不按收窄后的选项数）。
+
+## 报告侧（2026-11-07 下午）售前 HTML 第二轮精简（report-builder 2.6.0；选词版本不变）
+
+Suda 看预览后逐条定。
+
+- **购物商品卡**：只留商品卡触发率（单独一块）和品牌对比（商品卡提及率 / 平均位置切换）。商品卡份额、首位率、本品商品（SKU）、购买渠道（商家份额、官网购买链接占比）计算和展示都删掉，core `shopping.py` 不再产出 `products`、`target_products`、`merchants`、`target_offer_channel`、`shelf_share`、`first_card_rate`。核心洞察的商品卡提及率在「全部平台」时按回答跨平台合计（不含接口未返回的平台）。
+- **筛选**：数据筛选吸顶；地区、平台、意图类型、主题全改下拉；问题明细只留搜索框，筛选用上方吸顶的那一组。平台顺序 ChatGPT 第一。
+- **统计范围**：每个模块标题右侧写本模块统计哪几类意图（随筛选变），01 指标下一行写同样的范围，不写题数。
+- **删解释性文字**：情感的跨平台等权附注、抽屉里的本品各平台读数和延伸问题、Fan-out 的说明句、可见度结论里的「怎么看」、「不含 Gemini（接口未返回）」、问题明细每题的意图类型标注。i 提示改成 body 上的浮层，修了表格里被裁掉的问题。
+- **引用模块**：参照 Hbrand 加引用率（`sources.rates`、`sources.official_citation_rate`），每个引用份额旁配引用率。
+- **抽屉**：平台按钮移到标签下面、品牌对比上面。
+- **情感**：Suda 认可 6 类判法全部按建议，删 3 条 Claim（Bbrand「客服响应快」为厂商自述；Rexing 两条纯规格），Bbrand 正向情感占比 53.6% → 53.4%。待裁决清单改写成中文版 `build/情感待裁决-中文.md`（Bbrand 评测目录）。
+- **监测基线 HTML**：删掉售前已不需要的补丁（跨平台等权、引用说明句），统计范围在基线报告里隐藏（基线所有类型都计入提及率）。Hbrand 选中 10 题试跑在临时副本里重建通过。
+- 验证：Bbrand 180 个切片独立复算一致；六组测试全过（audit 35、builder 40、editor 77、sentiment 21、选词 58、shared 2）。改前快照在项目根 `.snapshots/`（`*.trim-*`、`*.kpiscope-*`、`*.rates-*`、`*.docs3.bak`、`brand-b-claims-raw.json.*`）。
+
+## 报告侧（2026-11-07）售前 HTML 改版：筛选前置、购物商品卡独立成模块、问题明细参照 Hbrand（report-builder 2.5.0、report-editor 2.9.0、监测 1.8.3；选词版本不变）
+
+Suda 定（看 Bbrand H1 预览后）。
+
+- **统计口径（只用于售前 HTML，上传 CSV 和后端不变）**：提及类指标默认算发现＋替代，只剩问题解决题时算问题解决，点名品牌的类型不算；引用默认算全部意图类型，按筛选收窄。core `compute_metrics` 新增 `config.visibility_intent_groups`、`config.citation_scope`，不写时仍是只看 Discovery；`verify_report_data.py` 同口径独立复算。代价写进 metric-scope 契约：点名题会把官网拉进引用（Bbrand 全部类型引用份额 13.1%，只看发现题 0%）。监测基线 HTML 仍按 10-22 口径。
+- **意图类型切片**：题库有两种以上意图类型时多出「类型:X」切片，数据筛选加意图类型下拉；主题改成下拉，按意图类型收窄。
+- **页面**：数据筛选移到 01 前面；内容规划模块删掉；情感没数据时不出；01 加「商品卡提及率」（全部平台时看 ChatGPT）；指标解释不再写「可见度问题」。
+- **购物商品卡独立成模块（03）**：核心 3 项（商品卡触发率、商品卡提及率、商品卡平均位置）＋辅助 3 项（商品卡份额、SKU 商品卡提及率、官网购买链接占比），品牌对比可切换提及率 / 平均位置 / 份额 / 首位率。「品牌商品卡入选率」改名「商品卡提及率」。core 新增 `shelf_share`、`first_card_rate`、`product_field_returned`；一条商品字段都没返回的平台（2026-10 中起的 Gemini，11-07 复测 3 道 ChatGPT 出卡的发现题仍没有）写「接口未返回」，不写 0%。
+- **问题明细与抽屉（参照 Hbrand 基线报告）**：明细加平均提及位置、引用率，主题行取主题切片合计值，点名类型的提及类列写「—」；抽屉先看问题概览（品牌对比、本品各平台读数、Query Fan-outs、延伸问题、回答记录），再点进单次回答。一题多次运行用 `0003-r2.json` 命名，details 带 run / time / fanout / related。引用模块不加「仅统计发现题……」那类说明。
+- **监测基线 HTML**：`build_baseline_html.py` 删掉售前已自带的补丁（抽屉运行列表、筛选挪动、明细平台下拉、旧话术），details 摊平成按文件一条；Hbrand 选中 10 题试跑重建通过、页面检查正常（交付目录已恢复原文件）。
+- **验证**：Bbrand H1（52 题，ChatGPT 38 题 3 次）180 个切片独立复算一致、突变 29/29；六组测试全过（audit 35、builder 40、editor 77、sentiment 21、选词 58、shared 2）。
+- 改前快照在项目根 `.snapshots/`（`*.scope-*`、`*.v2-*`、`*.rename-*`、`shopping-html-*`、`build_baseline_html.py.*`）。
+
+## 2.51.2（2026-11-07）上传 CSV 的 tags 不再重复写类型
+
+- Suda 2026-11-07：`diagnosis_intent` 已经写了发现、对比、评估，`tags` 第一个再写类型中文名是重复。`export_upload_csv.py` 的 `tags_cell` 改为只有替代题（后端没有 alternatives 枚举，临时按 competitor 上传）在 tags 第一个写「替代」，其他类型只写切片标签，没有标签就留空；后端加了替代枚举后把 `TYPE_IN_TAGS` 清空。
+- 下游不受影响：售前报告的意图类型标签和筛选读 `diagnosis_intent`（`build_report_data.py` 的 `INTENT_LABEL`），tags 只作切片标签显示；Base 的「标签」列（`write_tags.py`）本来就不写类型。
+- 同步改 output-contract.md、online-runner.md、client-facing-base.md；测试改 1 条、加 1 条（替代写「替代」、对比和发现不写），58 条全过。
+
+## 报告侧（2026-11-06）商品卡指标接进代码和售前 HTML（report-builder 2.4.0、report-editor 2.8.0；选词版本不变）
+
+接 2.51.1 的口径。
+
+- **core `shopping.py`**：新增 `SHOPPING_SCOPE_INTENTS`（发现、替代、对比、交易）。商品卡触发率、品牌商品卡入选率、商品、商家、卡位都只在这四类题里算，原来只看 Discovery。`shopping_mode_rate` 的分母改为四类题有效回答（新字段 `scope_answers`）；`discovery_answers`、`discovery_shopping_*` 两个字段删掉；`all_intent_shopping_answers` 和 `shopping_mode_rate_by_intent` 保留作诊断。`verify_report_data.py` 的独立复算同步改成四类（按中文标签另写一份 `SHOPPING_SCOPE_LABELS`），突变测试 29/29 全检出。
+- **售前 HTML**：02 可见度底部、结论之前加「AI 购物商品卡」面板。一张表：列是平台（跟平台筛选走），第一行是商品卡触发率，下面一组是品牌商品卡入选率（目标品牌在前，配置竞品按配置顺序，开放品牌不进表）；指标名带 i 提示写公式，悬停数字看分子 / 分母。品牌商品卡出现率、商品、商家、卡位不展示。`slim_for_html` 只留面板要的字段（HTML 从 2.76MB 涨到 2.86MB）。
+- **面板开关**：`build_report_data.py` / `run_pipeline.py` 加 `--shopping-cards 开|关`，写进 `meta.shopping_cards`（来自选词 `config.shopping_cards`）。没传时按数据判：最宽切片里任一平台触发率到 5% 才显示。当前主题下没有四类题时也隐藏。
+- **验证**：Bbrand H1（52 题、四平台）显示正常，AI Mode 19% / ChatGPT 94% / Gemini 0% / AIO 32%，Bbrand 入选率 83% / 24% / — / 60%；只选可信度主题时隐藏；`--shopping-cards 关` 时隐藏；Hbrand（触发率 0%）自动隐藏；控制台无报错。六组测试全过（audit 35、builder 40、editor 77、sentiment 21、选词 57、shared 2）。
+- 文档：render-spec 新增「AI 购物商品卡面板」，report-data-contract 的 shopping 字段，metric-scope-and-copy-contract 的模块归属和实现说明，report-builder SKILL 的购物层一行。
+- 改前快照在项目根 `.snapshots/shopping-html-20261106-*/` 和 `*.shophtml-*.bak`。
+
 ## 2.51.1（2026-11-06）商品卡指标四类都进汇总
 
 Suda 定（看过 Profound 文档：Shopping 指标由商品卡是否触发驱动，不按意图类型硬排除）：发现、替代、对比、交易四类题都进商品卡触发率、品牌商品卡入选率等汇总，支持按意图类型筛选；评估、验证、问题解决、售后照常采集商品卡字段、不进汇总。原「入选率只用发现、替代」「对比、交易只报出现率」撤销，出现率改为四类上可选。改 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」（report-editor 2.7.1）、shared 映射表购物一段。代码未改，实现现状一句改为接入替代、对比、交易时加进取样并做按类型筛选。
@@ -26,6 +89,7 @@ Suda 定：「不要兼容旧题库了」；Hbrand 选词 2.1 和 360 选词两�
 - **其他脚本**：`check_client_base.py`、`write_prompt_reasons.py` 只认现行 Base（无属性池、矩阵有目标客户 / 使用场景 / 意图类型 / 约束条件 / 业务优先级及依据），删掉旧结构检查和写「建议优先级」的旧流程、字段旧名换算、旧来源类型选项；`export_upload_csv.py`、`write_tags.py` 遇旧结构题库退出码 2；`tag_dimensions.py` 维度只认目标客户、使用场景、属性 / 约束条件、自定义，属性维度必须登记 values。`normalize_case.py` 的 Case 旧选项告警属于输入合同，没动。
 - 测试：pytest 去掉旧结构用例，新增每种旧结构都被拒收的用例，`validate()` 遇到被拒收的夹具直接失败，防止 assertNotIn 空过；2026-10-22 盲审样本在测试里就地转成现行结构再跑门禁 36–37，覆盖率下限不变。verify_workflow 夹具改成现行结构（64/64，`reports/workflow-e2e.json` 已重生成），同样防空过；线上返修夹具 `online-sample-bank.json` 档位 P1 改高、删不再写的字段。
 - 对照：某车载品牌、Bbrand 选词-20261106 两份现行题库删前删后报错、告警、退出码逐条一致，上传 CSV 逐字节一致。Hbrand 选词 2.1、360 选词按预期报不支持。
+- 收尾：W57 列出的约束条件后面不再挂「(?)」（原来是属性优先级，现行 `attribute_plan` 没有这个字段）。两份现行题库只有这一行文字变了，两边都按 `gate: W57` 记了处理，仍是已处理。
 - 改前快照 `.snapshots/drop-legacy-compat-20261106-175219/`（项目根）。
 
 ## 2.49.0（2026-11-06）统计指标由意图类型决定
