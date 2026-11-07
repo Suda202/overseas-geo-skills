@@ -17,30 +17,42 @@ from urllib.parse import urlsplit
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
-NAV_ITEMS = [
-    ("overview", "核心洞察"),
-    ("competition", "可见度"),
-    ("sources", "引用"),
-    ("distribution", "情感"),
-    ("opportunities", "内容规划"),
-    ("records", "明细"),
+# 模块顺序；购物商品卡、情感没有数据时整块不出，其余按顺序编号（Suda 2026-11-07：内容规划去掉）
+SECTION_ORDER = [
+    ("overview", "核心洞察", "核心洞察"),
+    ("competition", "可见度", "可见度"),
+    ("shopping", "购物商品卡", "商品卡"),
+    ("sources", "引用", "引用"),
+    ("distribution", "情感", "情感"),
+    ("records", "问题明细", "明细"),
 ]
 
-SECTIONS = [
-    ("01", "overview", "核心洞察"),
-    ("02", "competition", "可见度"),
-    ("03", "sources", "引用"),
-    ("04", "distribution", "情感"),
-    ("05", "opportunities", "内容规划"),
-    ("附录", "records", "问题明细"),
-]
+
+def sections_for(meta: dict) -> list[tuple[str, str, str, str]]:
+    """(编号, id, 标题, 导航名)。"""
+    shown = []
+    for section_id, title, nav in SECTION_ORDER:
+        if section_id == "shopping" and not (meta.get("shopping") or {}).get("enabled"):
+            continue
+        if section_id == "distribution" and meta.get("sentiment_claims_status") != "complete":
+            continue
+        shown.append((section_id, title, nav))
+    out, n = [], 0
+    for section_id, title, nav in shown:
+        if section_id == "records":
+            out.append(("附录", section_id, title, nav))
+        else:
+            n += 1
+            out.append((f"{n:02d}", section_id, title, nav))
+    return out
 
 KPI_TIPS = [
-    ("提及率", "发现类问题中，监测对象被 AI 提及的比例。越高说明监测对象越容易进入相关回答。"),
+    ("提及率", "提到监测对象的回答 ÷ 有效回答。默认统计发现、替代类问题，筛选意图类型后按所选类型统计。"),
     ("提及率排名", "按提及率由高到低在当前品牌集合中的位置。"),
     ("声量份额", "监测对象提及量 ÷ 全部纳入品牌的提及量之和。"),
     ("平均提及位置", "监测对象被提及时的平均位置。数值越小，表示位置越靠前。"),
     ("引用份额", "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"),
+    ("引用率", "正文至少引用一次监测对象官网的回答 ÷ 有效回答。"),
 ]
 
 
@@ -66,11 +78,13 @@ def kpi_row() -> str:
     return '<div class="kpis" id="overviewKpis">' + "".join(cells) + "</div>"
 
 
-def section_head(number: str, title: str) -> str:
+def section_head(number: str, title: str, section_id: str = "") -> str:
+    # 右侧写本模块统计哪几类意图（report.js renderScopes 按筛选填）
+    scope = f'<span class="section-scope" id="scope-{esc(section_id)}"></span>' if section_id else ""
     return (
         '<div class="section-head"><div class="section-title">'
         f'<span class="section-no">{esc(number)}</span><h2>{esc(title)}</h2>'
-        "</div></div>"
+        "</div>" + scope + "</div>"
     )
 
 
@@ -104,11 +118,14 @@ def build_body(meta: dict) -> str:
     shared_filter = (
         '<div class="shared-filter" id="sharedFilter" aria-label="数据筛选">'
         '<div class="shared-filter-head"><strong>数据筛选</strong>'
-        '<span id="filterScope">地区、平台和主题同时作用于 02 / 03 / 04 / 05 模块</span></div>'
+        '<span id="filterScope"></span></div>'
         '<div style="display:grid;gap:12px">'
-        '<div class="filter-tabs" id="regionTabs" aria-label="地区筛选"></div>'
-        '<div class="filter-tabs" id="platformTabs" aria-label="平台筛选"></div>'
-        '<div class="filter-tabs" id="topicTabs" aria-label="主题筛选"></div>'
+        '<div class="filter-selects">'
+        '<select id="regionSelect" aria-label="地区筛选"></select>'
+        '<select id="platformSelect" aria-label="平台筛选"></select>'
+        '<select id="intentSelect" aria-label="意图类型筛选"></select>'
+        '<select id="topicSelect" aria-label="主题筛选"></select>'
+        "</div>"
         "</div></div>"
     )
 
@@ -126,9 +143,10 @@ def build_body(meta: dict) -> str:
         'id="sourceShareBadge">引用份额 <b style="color:var(--gold-deep);font:700 18px/1 var(--serif);margin-left:1px">—</b></span>'
     )
 
-    parts = []
-    for number, section_id, title in SECTIONS:
-        body = [section_head(number, title)]
+    sections = sections_for(meta)
+    parts = [shared_filter]
+    for number, section_id, title, _nav in sections:
+        body = [section_head(number, title, section_id)]
         if section_id == "overview":
             body.append('<div class="section-body">')
             body.append(kpi_row())
@@ -157,6 +175,28 @@ def build_body(meta: dict) -> str:
                 "</div></div></article>"
             )
             body.append(insight_note("结论", "competitionInsight"))
+            body.append("</div>")
+        elif section_id == "shopping":
+            # 三个指标是主体，品牌 / SKU 是切换（2026-11-07 Suda）
+            def shop_panel(title: str, tip: str, table_id: str) -> str:
+                return (
+                    '<article class="panel matrix-panel shop-metric" style="margin-top:20px"><div class="panel-head">'
+                    f'<h3>{esc(title)}<span class="info" data-tip="{esc(tip)}">i</span></h3></div>'
+                    '<div class="panel-body"><div class="matrix-wrap">'
+                    f'<table class="matrix shop-table" id="{table_id}"></table>'
+                    "</div></div></article>"
+                )
+            body.append('<div class="section-body">')
+            body.append(
+                '<div class="shop-top"><div class="kpis shop-kpis" id="shoppingCore"></div>'
+                '<span class="matrix-switch" id="shopLevelSwitch">'
+                '<button type="button" class="active" data-shop-level="brand">品牌</button>'
+                '<button type="button" data-shop-level="sku">SKU</button>'
+                "</span></div>"
+            )
+            body.append(shop_panel("商品卡提及率", "出现商品卡的回答里，有该品牌（SKU）商品卡的回答占比。只数商品卡，不含正文提及。", "shopVis"))
+            body.append(shop_panel("商品卡平均位置", "该品牌（SKU）商品卡在每条回答里最靠前那张的位置取平均，数值越小越靠前。", "shopPos"))
+            body.append(shop_panel("官网购买链接覆盖率", "出现该品牌（SKU）商品卡的回答里，商品卡带官网购买链接的回答占比。", "shopLink"))
             body.append("</div>")
         elif section_id == "sources":
             body.append('<div class="section-body">')
@@ -214,31 +254,11 @@ def build_body(meta: dict) -> str:
                 "</div></div></article>"
             )
             body.append("</div>")
-        elif section_id == "opportunities":
-            body.append('<div class="section-body">')
-            body.append(
-                '<div class="grid-2" style="gap:24px">'
-                '<article class="panel" style="border-top:3px solid var(--gold)">'
-                '<div class="panel-head" style="justify-content:space-between"><h3>官网阵地</h3>'
-                '<span class="tag gold">事实定义权</span></div>'
-                '<div class="panel-body"><div id="officialPlan"></div></div></article>'
-                '<article class="panel" style="border-top:3px solid var(--blue)">'
-                '<div class="panel-head" style="justify-content:space-between"><h3>第三方阵地</h3>'
-                '<span class="tag blue">推荐与信任背书</span></div>'
-                '<div class="panel-body"><div id="thirdPartyPlan"></div></div></article>'
-                "</div>"
-            )
-            body.append(insight_note("落地服务闭环", "opportunitiesInsight"))
-            body.append("</div>")
-            body.append("</div>")
         elif section_id == "records":
             body.append('<div class="section-body">')
             body.append(
                 '<div class="records-toolbar">'
                 '<input class="records-search" id="recordSearch" type="search" placeholder="搜索编号或问题（中英文）" aria-label="搜索问题">'
-                '<select class="records-intent-select" id="recordIntentFilter" aria-label="按意图类型筛选">'
-                '<option value="">全部意图类型</option>'
-                '</select>'
                 '</div>'
                 '<div class="table-wrap records">'
                 '<table class="records-table" id="recordTable" style="min-width:1080px"></table>'
@@ -247,10 +267,8 @@ def build_body(meta: dict) -> str:
             )
             body.append("</div>")
         parts.append(f'<section class="section" id="{section_id}">' + "".join(body) + "</section>")
-        if section_id == "overview":
-            parts.append(shared_filter)
 
-    nav = "".join(f'<a href="#{sid}">{esc(label)}</a>' for sid, label in NAV_ITEMS)
+    nav = "".join(f'<a href="#{sid}">{esc(label)}</a>' for _n, sid, _t, label in sections)
 
     shell = (
         '<body class="formal-report">'
@@ -308,18 +326,92 @@ def slim_for_html(data: dict) -> dict:
     """
     import copy
     slim = copy.deepcopy(data)
-    for slice_value in slim.get("slices", {}).values():
+    for slice_key, slice_value in slim.get("slices", {}).items():
+        keep_brands = slice_key.endswith("|")  # 只有不分主题的切片给抽屉「品牌对比」用
         for record in slice_value.get("records", []):
-            record.pop("brands", None)
-        # 带官网的提及率、官网引用率只供统计与下游读取，不进售前 HTML（Suda 2026-09-29 / 2026-10-20）。
-        for field in ("linked_mention_rate", "linked_mention_counts",
-                      "official_citation_rate", "official_citation_counts"):
+            brands = record.pop("brands", None) or []
+            if keep_brands:
+                # 目标品牌、配置竞品，加本题被提到最多的 4 个开放品牌
+                core = [b for b in brands if b.get("role") in ("target", "competitor")]
+                extra = sorted((b for b in brands if b.get("role") not in ("target", "competitor") and b.get("mention_count")),
+                               key=lambda b: -b["mention_count"])[:4]
+                record["brands"] = [{k: b.get(k) for k in ("name", "role", "mention_count", "mention_rate",
+                                                           "share_of_voice", "average_rank",
+                                                           "citation_share", "citation_rate")} for b in core + extra]
+        # 带官网的提及率只供统计与下游读取，不进售前 HTML（Suda 2026-09-29）。
+        # 引用率（官网引用率）2026-11-07 起进问题明细，参照 Hbrand 基线报告。
+        for field in ("linked_mention_rate", "linked_mention_counts", "official_citation_counts"):
             (slice_value.get("kpis") or {}).pop(field, None)
         for row in slice_value.get("competition_all", []):
             row.pop("linked_mention_rate", None)
-        # Shopping GEO 统计块同理：售前页面暂无购物模块（Suda 2026-10-14）。
-        slice_value.pop("shopping", None)
+        # 购物层只留「AI 购物商品卡」面板要用的数：每平台触发率，目标品牌与配置竞品的入选率。
+        # 商品、商家、卡位和逐题下钻是内部字段，不进 HTML（Suda 2026-11-06）。
+        slice_value["shopping"] = slim_shopping(slice_value.get("shopping"))
+    slim.setdefault("meta", {})["shopping"] = shopping_switch(slim)
+    # 有逐条回答事实时，页面按筛选现算（report-engine.js），预算切片不进 HTML；
+    # 切片仍留在 report-data.json 里供 verify / 对账 / 下游读取
+    if slim.get("facts"):
+        slim["slices"] = {}
     return slim
+
+
+SHOPPING_MIN_TRIGGER = 0.05  # 工业类产品线的开关门槛，和 geo-monitoring trial-and-lock 同一个数
+
+
+def _rate(value) -> dict:
+    value = value if isinstance(value, dict) else {}
+    return {key: value.get(key) for key in ("numerator", "denominator", "display", "raw")}
+
+
+def slim_shopping(block) -> dict:
+    """购物商品卡模块要用的数；逐题下钻等其余字段不进 HTML。"""
+    out = {}
+    for platform_dir, row in ((block or {}).get("by_platform") or {}).items():
+        out[platform_dir] = {
+            "product_field_returned": row.get("product_field_returned", True),
+            "scope_answers": row.get("scope_answers"),
+            "shopping_answers": row.get("shopping_answers"),
+            "shopping_mode_rate": _rate(row.get("shopping_mode_rate")),
+            "brands": [
+                {"name": brand.get("name"), "role": brand.get("role"),
+                 "shopping_visibility": _rate(brand.get("shopping_visibility")),
+                 "average_card_position": _rate(brand.get("average_card_position")),
+                 "official_link_coverage": _rate(brand.get("official_link_coverage"))}
+                for brand in row.get("brands") or [] if brand.get("role") in ("target", "competitor")
+            ],
+            "target_skus": [
+                {"name": item.get("name"),
+                 "shopping_visibility": _rate(item.get("shopping_visibility")),
+                 "average_card_position": _rate(item.get("average_card_position")),
+                 "official_link_coverage": _rate(item.get("official_link_coverage"))}
+                for item in row.get("target_skus") or []
+            ],
+        }
+    return {"by_platform": out}
+
+
+def shopping_switch(data: dict) -> dict:
+    """商品卡面板开不开。meta.shopping_cards 写了开 / 关就照办（选词 config.shopping_cards 的结论）；
+    没写时按数据判：最宽切片里任一平台商品卡触发率到 5% 才开，软件、服务、多数工业品类达不到。"""
+    meta = data.get("meta") or {}
+    declared = str(meta.get("shopping_cards") or "").strip()
+    slices = data.get("slices") or {}
+    widest = slices.get("||") or next(iter(slices.values()), {})
+    # 本次采集里一条商品字段都没返回的平台（按全量切片判，单个主题切片里没有不算）
+    no_field = sorted(p for p, row in ((widest.get("shopping") or {}).get("by_platform") or {}).items()
+                      if row.get("product_field_returned") is False)
+    best = 0.0
+    for row in ((widest.get("shopping") or {}).get("by_platform") or {}).values():
+        rate = row.get("shopping_mode_rate") or {}
+        if rate.get("denominator"):
+            best = max(best, (rate.get("numerator") or 0) / rate["denominator"])
+    if declared in ("开", "on"):
+        return {"enabled": True, "basis": "选词判定：开", "no_field_platforms": no_field}
+    if declared in ("关", "off"):
+        return {"enabled": False, "basis": "选词判定：关", "no_field_platforms": no_field}
+    enabled = best >= SHOPPING_MIN_TRIGGER
+    return {"enabled": enabled, "basis": f"按数据判：最高平台商品卡触发率 {best:.0%}，门槛 5%",
+            "no_field_platforms": no_field}
 
 
 def build_html(data: dict) -> str:
@@ -328,7 +420,8 @@ def build_html(data: dict) -> str:
     title = f'{meta.get("brand", "")} · 海外 GEO 售前诊断报告'
     css = (ASSETS / "report.css").read_text(encoding="utf-8")
     css_extra = (ASSETS / "report-extra.css").read_text(encoding="utf-8")
-    js = (ASSETS / "report.js").read_text(encoding="utf-8")
+    # 计算引擎与主脚本放同一个 <script>（监测基线报告按「数据段 → 主脚本」切 HTML，不能多一段 script）
+    js = (ASSETS / "report-engine.js").read_text(encoding="utf-8") + "\n" + (ASSETS / "report.js").read_text(encoding="utf-8")
     check_javascript(js, ASSETS / "report.js")
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 

@@ -3,7 +3,7 @@ name: geo-monitoring
 description: Use when running or reporting GEO answer monitoring on a locked Prompt set or its candidate trial — the quality trial (3 runs per Prompt on each monitored platform) and judging which Prompts pass, helping the brand party pick and lock the formal set and later retire formal Prompts, the formal Before baseline (7 runs per query × platform × country × language), periodic collection, collection cadence and re-run triggers, the baseline HTML report, and handing located gaps to the content team. Do not use for researching, writing, adding or merging Prompts (geo-prompt-selection-builder), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers (geo-presales-report-editor core).
 metadata:
   author: Overseas GEO Project
-  version: "1.8.2"
+  version: "1.8.4"
 ---
 
 # GEO Monitoring（监测）

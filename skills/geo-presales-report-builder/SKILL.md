@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, V4.0 prototype styling) directly from Scrapeless crawler collection data plus a Case record, covering visibility, citations, sentiment, content planning and per-question detail with country / platform / topic filtering. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.3.2"
+  version: "2.7.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
@@ -157,6 +157,14 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    退出码非 0 不得交付。校验会独立复算每个切片并与产物对账，同时跑突变测试确认能发现错误。
 
+   情感、译文回填之后，再对账页面计算引擎（数据筛选多选时由它现算，见「切片与交互」）：
+
+   ```bash
+   node scripts/check_engine_parity.js <输出>/report-data.json
+   ```
+
+   退出码非 0 不得交付：说明 `assets/report-engine.js` 与 Python 侧某处口径分叉了，两侧对齐后重跑。
+
 8. **渲染**：
 
    ```bash
@@ -175,20 +183,20 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 | 指标 | 口径 |
 |---|---|
-| 提及率 | 目标品牌出现的回答数 ÷ 该切片全部 Discovery 可用回答数 |
+| 提及率 | 目标品牌出现的回答数 ÷ 提及类样本的有效回答数。售前 HTML 的提及类样本是发现＋替代（筛选下只剩问题解决题时是问题解决，点名品牌的类型写「—」）；core 缺省（上传 CSV）仍只看 Discovery |
 | 提及率排名 | 按提及率在全部纳入品牌中的位置 |
 | 声量份额 | 目标品牌提及量 ÷ **全部纳入品牌**提及量之和 |
 | 平均提及位置 | 被提及时在全部纳入品牌中的首次出现次序均值 |
 | 引用次数 | **只计正文 pill（`([来源名][N])`）的出现次数**，同一编号出现 N 次计 N 次，不做回答内去重；正文没有 pill 即 0 次，不拿供应商字段的来源清单充数 |
 | 引用份额 | 指向官网的引用次数 ÷ 全部引用次数。**四个层级都保留**：单条回答（抽屉）、单题（明细表）、单平台（平台切片）、多回答多平台（全量切片）。官网、来源类别、域名、页面四处份额同一口径：分子、分母都是**未去重引用次数**；去重（到回答 / 到 URL）只用于 `citation_units.unique_sources` 这类「有多少个不同来源」的计数，不进任何份额的分子分母，也不参与榜单挑选和排序 |
-| 官网引用率 | 正文至少引用一次目标品牌官网的 Discovery 回答数 ÷ 该切片 Discovery 有效回答数；按回答计票，一条回答引用多次也只算一次，分子分母随值给出（`official_citation_counts`）。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算，也不得把后两者叫「官网引用率」。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
+| 引用率（官网引用率） | 正文至少引用一次目标品牌官网的回答数 ÷ 有效回答数；按回答计票，一条回答引用多次也只算一次。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算。**样本随模块走（2026-11-07 Suda）**：核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代，与提及率同一批回答（点名品牌的题会把本品官网拉进引用，混进来就没法和提及率比）；03 引用模块、问题明细统计全部意图类型，按筛选收窄 |
 | 带官网的提及率 | 目标品牌被提及的 Discovery 回答中，正文至少引用一次其官网的回答数 ÷ 目标品牌被提及的 Discovery 回答数；分子分母随值给出（`linked_mention_counts`）。偏低 = 被提到了但 AI 没拿官网作依据。与引用份额分母不同，不互相换算；跨平台看平台切片。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
-| 购物层（Shopping GEO） | 商品卡触发率、品牌商品卡入选率、商品曝光、商家份额、平均商品卡位置，按平台分开算，全部平台切片也不合池。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 只在 `load_samples` 用 `extract_product_cards` 挂卡、把 `metrics["shopping"]` 原样放进切片。**只进 report-data.json，不在售前 HTML 展示**（render 时剥掉） |
+| 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；只统计发现、替代两类题。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
 | 正向情感占比 | 正向 Claim 信号 ÷（正向 + 负向 Claim 信号），**排除中性**（句级降级路径按句数计） |
 
 **引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-presales-crawl-integrity` 的数据分层契约与缺陷 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
 
-**正式可见度只用 Discovery 意图**，Evaluation / Competitor / Category Awareness 不进可见度分母。
+**可见度只用发现＋替代**（只剩问题解决时用问题解决），对比、评估、验证、交易、售后题面点名品牌，不进可见度分母。
 
 ### 品牌集合与展示规则
 
@@ -202,18 +210,22 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 ## 切片与交互
 
-切片键为 `<region>|<platform>|<topic>`，`""` 表示该维度不筛选，因此每个市场有 `(平台数+1) × (主题数+1)` 个切片，另需一组 `region=""` 的合并国家切片。
+数据筛选在页面顶部、吸顶，四个**多选**下拉：地区、平台、意图类型、主题（2026-11-07 Suda）。不选 = 全部；主题选项按选中的意图类型收窄；整份报告只有一个取值的维度不出。筛选对全页生效，问题明细不再单独设筛选。
 
-前端三层 tab：国家（首个选项为「全部国家」）→ 平台 → 主题。国家与平台是单选，主题可再次点击取消。
+**两层数据**：
+- `slices`：预算切片，键 `<region>|<platform>|<topic>`（topic 位写主题名，或「类型:发现」这类意图类型切片），只覆盖单选组合。供 `verify_report_data.py` 独立复算、上传 CSV 与下游读取。
+- `facts`：逐条有效回答的原始事实（提到哪些品牌、第几位、每条引用的官网归属 / 域名 / 来源类型 / 页面、商品卡）＋ `attach_sentiment.py` 补进的 Claim。页面用 `assets/report-engine.js` 按多选筛选把回答挑出来，用与 Python 同一套公式现算出与切片同结构的数据，各模块的渲染代码不分两套。
+
+有 `facts` 时 HTML 不嵌预算切片（Bbrand 12.9MB → 3.9MB）。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎，KPI、可见度榜与矩阵、引用模块、情感、商品卡、问题明细逐项比对，必须全部一致；改任何一侧的口径都要两侧一起改。监测基线报告（`geo-monitoring/build_baseline_html.py`）改写了切片口径，渲染前去掉 `facts`，仍是单选读预算切片。
 
 ## 交付门槛
 
 - **源码真相在本 skill,客户 HTML 只是产物**:任何修订都改 `scripts/` 与 `assets/` 后完整重跑数据层链路(build → attach_sentiment → attach_translations → verify → render),不得手改已渲染的单页 HTML——手改产物会在下次重渲染时被静默覆盖,且让产物与 `report-data.json` 脱钩。若修改了抽取器/清洗器或替换已交付报告,必须先在隔离输出目录重跑并按 [重跑与产物卫生](references/rerun-and-artifact-hygiene.md) 迁移 labels、对账旧新指标,通过后才替换正式文件。
 - `verify_report_data.py` 退出码为 0，且突变测试全部检出。
-- 在浏览器里逐层切过 tab，确认没有空白模块或错位。
+- 在浏览器里切过筛选（含多选组合），确认没有空白模块或错位。
 - **正文不得带平台残留文案**:逐条扫 `Go to product viewer dialog for this item.`(明细与情感证据两处都要,详见 [渲染规范](references/render-spec.md))。
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
-- 报告里出现的每个数字都能在 `report-data.json` 里定位到，不得有前端临时计算的指标。
+- 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
 - `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Abrand 实例)。
 - 情感板块若尚无判读数据，必须在 `meta.sentiment_claims_status` 标 `pending`，不允许用占位数字冒充。
 - 产物归档到 `10-售前诊断报告/评测数据/<品牌名>/` 对应任务目录，与可见度统计并列。

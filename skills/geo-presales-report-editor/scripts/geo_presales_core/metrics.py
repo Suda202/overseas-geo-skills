@@ -133,9 +133,31 @@ def _opportunity_sort_key(item: dict):
     return (intent, item["report_rank"] or 999, item["generation_sequence"])
 
 
+def _visibility_answers(config: dict, valid_answers: list[dict]) -> list[dict]:
+    """提及类指标（提及率、排名、声量份额、平均提及位置、问题机会）的样本。
+
+    缺省只用 Discovery（后端与上传 CSV 口径）。``config["visibility_intent_groups"]`` 给出按顺序回退的
+    意图组，取第一组有样本的：售前 HTML 报告传 ``[["discovery", "alternatives"], ["information"]]``——
+    默认看发现＋替代，只剩问题解决题的切片（筛到这一类时）才算问题解决的提及率（Suda 2026-11-07）。
+    """
+    groups = config.get("visibility_intent_groups")
+    if not groups:
+        return [item for item in valid_answers if _is_formal_visibility_answer(item)]
+    for group in groups:
+        wanted = {str(value) for value in group}
+        picked = [item for item in valid_answers if _diagnostic_intents(item) & wanted]
+        if picked:
+            return picked
+    return []
+
+
 def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dict:
     valid_answers = _valid_answers(answers_doc)
-    discovery = [item for item in valid_answers if _is_formal_visibility_answer(item)]
+    discovery = _visibility_answers(config, valid_answers)
+    # 引用的样本：缺省同提及类样本（上传 CSV 是 Discovery；售前 HTML 报告是发现＋替代，Suda 2026-11-07
+    # 定核心洞察的引用也只看发现、替代，和提及率同一批回答才好比）；config["citation_scope"] == "all"
+    # 时用全部有效回答。售前 HTML 的引用模块（全部意图类型）由 build_sources 自己算，不读这里。
+    cite_answers = valid_answers if config.get("citation_scope") == "all" else discovery
     sentiment_answers = [item for item in valid_answers if _is_sentiment_answer(item)]
     target_id = config["target_object_id"]
 
@@ -199,7 +221,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
         for label in ("positive", "neutral", "negative")
     }
 
-    raw_citations = [citation for answer in discovery for citation in answer["citations"]]
+    raw_citations = [citation for answer in cite_answers for citation in answer["citations"]]
     official_raw = [citation for citation in raw_citations if citation.get("matched_official_object_id") == target_id]
     official_share = _percent(len(official_raw), len(raw_citations))
     official_share["included_citation_ids"] = [item["raw_citation_id"] for item in official_raw]
@@ -209,10 +231,10 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
     # Discovery 回答数。按回答计票，一条回答引用多次也只算一次；与引用份额（按次数计票）、
     # 带官网的提及率（分母是被提及的回答）是三个不同的数，不得互相换算或混名。
     official_cited = [
-        answer for answer in discovery
+        answer for answer in cite_answers
         if any(citation.get("matched_official_object_id") == target_id for citation in answer["citations"])
     ]
-    official_citation_rate = _percent(len(official_cited), len(discovery))
+    official_citation_rate = _percent(len(official_cited), len(cite_answers))
     official_citation_rate["included_answer_ids"] = [item["answer_id"] for item in official_cited]
 
     # 来源类别份额与官网引用份额同口径：未去重引用次数 ÷ 未去重引用总数（2026-10-20）。
@@ -227,7 +249,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
     }
 
     deduped = {}
-    for answer in discovery:
+    for answer in cite_answers:
         for citation in answer["citations"]:
             canonical = citation.get("canonical_url")
             if canonical:
@@ -419,7 +441,8 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "share_of_voice_denominator": "有效 Discovery 回答中各已配置对象提及次数之和",
             "sentiment_scope": "all analysis_type=sentiment records; no diagnostic_intent filter (legacy explicit sentiment scopes only when analysis_type is absent)",
             "positive_sentiment_denominator": "有效 Sentiment 回答中已完成判断的目标品牌正向与负向评价之和；排除中性",
-            "citation_scope": "diagnostic_intent=discovery",
+            "citation_scope": "all valid answers" if config.get("citation_scope") == "all" else "same answers as visibility metrics",
+            "visibility_intent_groups": config.get("visibility_intent_groups") or [["discovery"]],
             "official_citation_denominator": "有效 Discovery 回答产生的原始引用记录",
             "official_citation_rate_denominator": "有效 Discovery 回答；分子为其中正文至少引用一次目标官网的回答",
             "linked_mention_denominator": "提及该对象的有效 Discovery 回答；分子为其中正文至少引用一次该对象官网的回答",

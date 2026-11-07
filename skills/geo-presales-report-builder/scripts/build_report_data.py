@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import time
 import os
 import re
 import shutil
@@ -64,7 +65,7 @@ from geo_presales_core.config import all_objects
 from geo_presales_core.deterministic import prepare_answers  # noqa: E402
 from geo_presales_core.crawler import answer_validity
 from geo_presales_core.metrics import compute_metrics  # noqa: E402
-from geo_presales_core.shopping import extract_product_cards  # noqa: E402
+from geo_presales_core.shopping import extract_product_cards, product_field_returned  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     normalize_host,
     normalize_text,
@@ -136,6 +137,8 @@ def discover_platforms(collect_dir: Path) -> list[tuple[str, str]]:
             found.append((name, KNOWN_PLATFORM_LABELS.get(name, name)))
     if not found:
         raise SystemExit(f"采集目录里没有任何 scraper.<平台> 子目录：{collect_dir}")
+    # ChatGPT 排第一（最重要的平台，Suda 2026-11-07），其余按目录名
+    found.sort(key=lambda item: (item[0] != "chatgpt", item[0]))
     return found
 
 
@@ -284,6 +287,9 @@ def readable_tags(raw_tags):
         if not tag:
             continue
         if tag.startswith("Prompt Type:"):
+            continue
+        # 上传 CSV 的 tags 第一个是意图类型中文名，已单独成列，不重复当标签（2026-11-07）
+        if tag in INTENT_LABEL.values():
             continue
         if tag.startswith("Brand Scope:"):
             scope = tag.split(":", 1)[1].strip().casefold()
@@ -598,6 +604,11 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
         "supplemental_context": "",
         "avoid_expressions": [],
         "objects": objects,
+        # 售前 HTML 报告口径（Suda 2026-11-07）：核心洞察与可见度的提及类、引用类指标都看发现＋替代，
+        # 只剩问题解决题的切片才算问题解决；引用模块（sources）统计全部意图类型，由 build_sources 自己算。
+        # core 缺省仍是只看 Discovery（上传 CSV 口径）。
+        "visibility_intent_groups": VISIBILITY_INTENT_GROUPS,
+        "citation_scope": "visibility",
         "target_object_id": "target",
         "quotas": {"total": 0},
         "sample_policy": "first_valid_per_question",
@@ -1083,7 +1094,8 @@ def load_samples(collect_dir: Path, region: str, platform: str,
             "error_code": invalid_code,
             "error_message": None,
             "provenance": {"source_shape": "platform_json", "source_file": str(path),
-                           "platform": platform, "region": region},
+                           "platform": platform, "region": region,
+                           "product_field_returned": product_field_returned(platform, task_result)},
         })
     return samples, issues, order_issues
 
@@ -1119,7 +1131,7 @@ def collect_answers(index: dict, region: str, platform: str, topic: str,
     for name in platforms:
         for market in markets:
             for answer in index[(market, name)]["answers"]:
-                if topic and answer.get("topic_id") != topic:
+                if not in_topic(answer, topic):
                     continue
                 out.append(answer)
     return out
@@ -1148,6 +1160,30 @@ def is_discovery(answer: dict) -> bool:
     return answer.get("diagnostic_intent") == "discovery"
 
 
+# 提及类指标的样本：按顺序取第一组有回答的意图（与 core metrics._visibility_answers 同口径）
+VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives"], ["information"]]
+# 意图类型切片：放在 topic 位上，键写成「类型:发现」，前端选了意图类型、没选主题时用它
+TYPE_TOPIC_PREFIX = "类型:"
+
+
+def visibility_scope(answers: list[dict]) -> list[dict]:
+    valid = [a for a in answers if is_valid(a)]
+    for group in VISIBILITY_INTENT_GROUPS:
+        picked = [a for a in valid if a.get("diagnostic_intent") in group]
+        if picked:
+            return picked
+    return []
+
+
+def in_topic(item: dict, topic: str) -> bool:
+    """题或回答是否属于这个切片的 topic 位：空 = 全部；「类型:X」= 意图类型 X；其余 = 主题。"""
+    if not topic:
+        return True
+    if topic.startswith(TYPE_TOPIC_PREFIX):
+        return INTENT_LABEL.get(item.get("diagnostic_intent"), "") == topic[len(TYPE_TOPIC_PREFIX):]
+    return item.get("topic_id") == topic
+
+
 def is_sentiment_question(answer: dict) -> bool:
     """情绪样本 = analysis_type 含 sentiment 的题（口径：canonical-intent-mapping）。"""
     return "sentiment" in str(answer.get("analysis_type") or "").casefold()
@@ -1158,8 +1194,8 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
                 source_limit: int = DEFAULT_SOURCE_LIMIT) -> dict:
     answers = collect_answers(index, region, platform, topic, regions)
     metrics = compute_metrics(config, bank, answers_doc(answers))
-    # 引用口径与 compute_metrics 一致：只用 Discovery 有效答案的引用记录
-    citation_scope = [a for a in answers if is_valid(a) and is_discovery(a)]
+    # 品牌引用份额（可见度矩阵）与核心洞察同口径：提及类样本（发现＋替代）
+    citation_scope = visibility_scope(answers)
 
     rows = []
     for obj in config["objects"]:
@@ -1283,7 +1319,81 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
             "answers": len(answers),
             "valid_answers": sum(1 for a in answers if is_valid(a)),
             "discovery_answers": sum(1 for a in answers if is_valid(a) and is_discovery(a)),
+            "visibility_answers": len(visibility_scope(answers)),
         },
+    }
+
+
+def build_facts(index: dict, config: dict, regions: list[str]) -> dict:
+    """逐条有效回答的事实表，供报告页面按多选筛选现算指标（2026-11-07，Suda 要数据筛选多选）。
+
+    预算切片只覆盖单选组合；多选（几个平台、几种意图类型、几个主题合在一起）在页面里把
+    选中的回答筛出来，按与 build_slice 同一套公式算。只存可加的原始事实，不存百分比：
+      answers[i] = {r 市场, p 平台显示名, q 题号, n 第几次, m [[对象下标, 位置]], c [[官网归属对象下标|-1,
+                    域名下标, 来源类型下标, 页面下标|-1, 是否表格行]], s 商品卡|null}
+      s = {f 本条是否带商品字段（1/0/null）, t 卡数, k [[对象下标|-1, 卡位, 是否官网链接, SKU 下标|-1]]}
+    顺序与 collect_answers 一致（平台 → 市场 → 回答），页面按这个顺序遍历，页面类别取首次出现、
+    域名类别并列取先出现的，结果才和预算切片一致。assets/report-engine.js 是消费方，
+    scripts/check_engine_parity.js 逐切片对账。
+    """
+    from geo_presales_core.shopping import UNMATCHED_SKU, sku_of
+    objects = all_objects(config)
+    obj_index = {obj["object_id"]: i for i, obj in enumerate(objects)}
+    sku_map = config.get("sku_map") or []
+    sku_names = [rule["name"] for rule in sku_map] + ([UNMATCHED_SKU] if sku_map else [])
+    domains: dict[str, int] = {}
+    urls: dict[str, int] = {}
+    stypes: dict[str, int] = {}
+
+    def slot(table: dict, key: str) -> int:
+        if key not in table:
+            table[key] = len(table)
+        return table[key]
+
+    out = []
+    for name in PLATFORM_DIRS:
+        for market in regions:
+            for answer in index[(market, name)]["answers"]:
+                if not is_valid(answer):
+                    continue
+                mentions = [[obj_index[o["object_id"]], o.get("report_rank")]
+                            for o in answer["objects"] if o["mentioned"] and o["object_id"] in obj_index]
+                cites = []
+                for c in answer["citations"]:
+                    owner = c.get("matched_official_object_id")
+                    domain = c.get("registrable_domain") or c.get("host") or ""
+                    canonical = c.get("canonical_url")
+                    cites.append([obj_index.get(owner, -1) if owner else -1,
+                                  slot(domains, domain), slot(stypes, c.get("source_type") or "other"),
+                                  slot(urls, canonical) if canonical else -1,
+                                  1 if c.get("in_table_row") else 0])
+                shop = None
+                cards = answer.get("product_cards")
+                if cards is not None:
+                    flag = (answer.get("provenance") or {}).get("product_field_returned")
+                    shop = {"f": None if flag is None else (1 if flag else 0), "t": len(cards), "k": [
+                        [obj_index.get(card.get("object_id"), -1) if card.get("object_id") else -1,
+                         card["position"],
+                         1 if any(o.get("channel") == "official" for o in card.get("offers") or []) else 0,
+                         sku_names.index(sku_of(card, sku_map)) if sku_map and card.get("object_id") == "target" else -1]
+                        for card in cards]}
+                out.append({"r": market, "p": DIR_TO_LABEL[name], "q": int(answer["question_id"]),
+                            "n": answer.get("repeat_index") or 1, "m": mentions, "c": cites, "s": shop})
+    return {
+        "schema": "geo-presales-report-facts/v1",
+        "objects": [{"name": o["canonical_name"], "role": o["role"],
+                     "domain": (o.get("official_domains") or [""])[0]} for o in objects],
+        "domains": list(domains),
+        "urls": list(urls),
+        "source_types": [{"key": k, "bucket": SOURCE_BUCKET.get(k, ("其他", ""))[0]} for k in stypes],
+        "bucket_order": SOURCE_BUCKET_ORDER,
+        "bucket_fill": {name: fill for name, fill in SOURCE_BUCKET.values()},
+        "competition_fills": COMPETITION_FILLS,
+        "visibility_groups": [[INTENT_LABEL[k] for k in group] for group in VISIBILITY_INTENT_GROUPS],
+        "shopping_scope": [INTENT_LABEL[k] for k in ("discovery", "alternatives")],
+        "sku_names": sku_names,
+        "source_limit": None,   # main 里填
+        "answers": out,
     }
 
 
@@ -1320,12 +1430,15 @@ def _top(ranked: list, limit: int) -> list:
 
 def build_sources(metrics: dict, answers: list[dict],
                   source_limit: int = DEFAULT_SOURCE_LIMIT) -> dict:
-    """引用来源结构。页/域名统计只取 Discovery 有效答案，与 compute_metrics 口径一致。
+    """引用来源结构：统计全部意图类型的有效回答（Suda 2026-11-07），按筛选收窄。
+
+    核心洞察的引用份额、引用率只看发现＋替代（compute_metrics），这里的总数、引用份额、引用率
+    全部从全部有效回答自己算，不读 metrics["citations"]。
 
     域名、页面、官网页面三张榜按 source_limit 截取：售前默认 Top 20，售后传 0 出全量
     （Suda 2026-10-19）。渲染层分页展示，不在数据层再截。
     """
-    discovery = [a for a in answers if is_valid(a) and is_discovery(a)]
+    discovery = [a for a in answers if is_valid(a)]  # 变量名沿用；2026-11-07 起是全部有效回答
     page_answers: dict[str, set] = defaultdict(set)
     page_meta: dict[str, dict] = {}
     domain_types: dict[str, Counter] = defaultdict(Counter)
@@ -1348,7 +1461,11 @@ def build_sources(metrics: dict, answers: list[dict],
             if citation.get("matched_official_object_id") == "target":
                 official_page_counts[canonical] += 1
 
-    raw_total = metrics["citations"]["raw_count"]
+    raw_total = sum(len(answer["citations"]) for answer in discovery)
+    official_raw = sum(1 for answer in discovery for c in answer["citations"]
+                       if c.get("matched_official_object_id") == "target")
+    official_cited = sum(1 for answer in discovery
+                         if any(c.get("matched_official_object_id") == "target" for c in answer["citations"]))
 
     # 引用一律按「实际引用次数」统计：同一 URL 在一篇里被引两次就算两次。份额、挑选、
     # 排序全部按未去重次数；去重（到回答 / 到 URL）只用于 citation_units.unique_sources
@@ -1426,9 +1543,33 @@ def build_sources(metrics: dict, answers: list[dict],
             if canonical:
                 unique_sources.add(canonical)
 
+    # 引用率：至少引用一次该来源的回答 ÷ 有效回答（按回答计，与按次数计的引用份额并列；参照 Hbrand 基线报告）
+    answers_n = len(discovery)
+    domain_answers: dict[str, set] = defaultdict(set)
+    type_answers: dict[str, set] = defaultdict(set)
+    for answer in discovery:
+        for citation in answer["citations"]:
+            domain = citation.get("registrable_domain") or citation.get("host") or ""
+            if domain:
+                domain_answers[domain].add(answer["answer_id"])
+            bucket = SOURCE_BUCKET.get(citation.get("source_type") or "other", ("其他", ""))[0]
+            type_answers[bucket].add(answer["answer_id"])
+
+    def rate(ids) -> str:
+        return fmt_pct(len(ids) / answers_n) if answers_n else "—"
+
+    rates = {
+        "types": {row[0]: rate(type_answers.get(row[0], ())) for row in types_rows},
+        "domains": {row[0]: rate(domain_answers.get(row[0], ())) for row in domain_rows},
+        "pages": {row[0]: rate(page_answers.get(row[0], ()))
+                  for row in page_rows + official_rows},
+    }
+
     return {
         "total_citations": raw_total,
-        "official_share": fmt_pct(metrics["citations"]["official_share"]["raw"]),
+        "official_share": fmt_pct(official_raw / raw_total) if raw_total else "—",
+        "official_citation_rate": fmt_pct(official_cited / len(discovery)) if discovery else "—",
+        "rates": rates,
         "types": types_rows,
         "domains": domain_rows,
         "third_party_domains": third_party_rows,
@@ -1478,7 +1619,7 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
         by_question[answer["question_id"]].append(answer)
     records = []
     for question in questions:
-        if topic and question.get("topic_id") != topic:
+        if not in_topic(question, topic):
             continue
         qid = question["question_id"]
         valid = [a for a in by_question.get(qid, []) if is_valid(a)]
@@ -1488,11 +1629,14 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             "zh": question.get("question_zh") or "",
             "topic": question.get("topic_id"),
             "intent": INTENT_LABEL.get(question.get("diagnostic_intent"), ""),
-            "tag": "、".join(readable_tags(question["source"].get("tags") or [])) or "—",
+            "tag": "、".join(readable_tags(question["source"].get("tags") or [])),
             "mention_rate": "—",
             "rank": "—",
+            "mention_rank": "—",
+            "position": "—",
             "share": "—",
             "citation_share": "—",
+            "citation_rate": "—",
             "sentiment": None,
             # 内容规划取「目标品牌本该出现却没进回答」的题去补官网内容。判据是
             # 该题的目标品牌是否为被期待对象：题面不点名任何品牌（发现题），或
@@ -1515,10 +1659,15 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             row["mention_rate"] = fmt_pct(len(mentions) / len(valid))
             row["share"] = fmt_pct(len(mentions) / total_mentions) if total_mentions else "—"
             row["citation_share"] = fmt_pct(citation_own / citation_total) if citation_total else "—"
+            # 引用率：正文至少引用一次官网的回答 ÷ 有效回答（按回答计，与引用份额按次数计不同）
+            row["citation_rate"] = fmt_pct(sum(
+                1 for a in valid if any(c.get("matched_official_object_id") == "target" for c in a["citations"])
+            ) / len(valid))
             row["mentioned"] = bool(mentions)
             if mentions:
                 average = sum(target_of(a)["report_rank"] for a in mentions) / len(mentions)
                 row["rank"] = fmt_num(average)
+                row["position"] = fmt_num(average)
             else:
                 # 排名只有分母为 0 才显示「—」，未提及按末位计。
                 row["rank"] = str(object_count)
@@ -1528,6 +1677,17 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             counts = Counter()
             rank_sum = defaultdict(float)
             rank_n = Counter()
+            own_cites = Counter()       # 指向该品牌官网的引用次数
+            cited_answers = Counter()   # 正文至少引用一次该品牌官网的回答数
+            for answer in valid:
+                owners = set()
+                for citation in answer["citations"]:
+                    owner = citation.get("matched_official_object_id")
+                    if owner:
+                        own_cites[owner] += 1
+                        owners.add(owner)
+                for owner in owners:
+                    cited_answers[owner] += 1
             for answer in valid:
                 for obj in answer["objects"]:
                     if obj["mentioned"]:
@@ -1546,9 +1706,14 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
                                        if total_mentions else None),
                     "average_rank": (rank_sum[obj["object_id"]] / rank_n[obj["object_id"]]
                                      if rank_n[obj["object_id"]] else None),
+                    "citation_share": (own_cites[obj["object_id"]] / citation_total if citation_total else None),
+                    "citation_rate": cited_answers[obj["object_id"]] / len(valid),
                 }
                 for obj in objects
             ]
+            # 本题的提及率排名：按提及回答数在全部纳入对象里排并列名次（1,2,2,4）；本品没被提到记「—」
+            if counts["target"]:
+                row["mention_rank"] = str(1 + sum(1 for o in objects if counts[o["object_id"]] > counts["target"]))
         records.append(row)
     return records
 
@@ -1573,6 +1738,12 @@ def parse_args(argv=None):
     parser.add_argument("--brand-suffixes", default="",
                         help="逗号分隔的品类/产品线后缀，渲染时从品牌展示名剥掉（如 LED,Display）；"
                              "留空则渲染层用内置净水器词表兜底")
+    parser.add_argument("--sku-map", type=Path,
+                        help="本品 SKU 归并表 JSON：[{\"name\": \"H1 四路\", \"pattern\": \"H1.*4[- ]?(camera|channel)\"}]，"
+                             "按顺序第一条命中卡标题的胜出；不传就不出 SKU 级")
+    parser.add_argument("--shopping-cards", choices=["开", "关", ""], default="",
+                        help="这条产品线统计不统计商品卡（选词 config.shopping_cards 的结论）；"
+                             "留空时 HTML 按数据判（任一平台商品卡触发率到 5%% 才显示）")
     parser.add_argument("--topic-labels", default="",
                         help="题库主题 → 报告展示名的映射，逗号分隔的 原主题=展示名，"
                              "如 'แพลตฟอร์ม...=华语视频平台'。多语言市场题库主题是当地语言时必填；"
@@ -2037,6 +2208,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
     目标品牌；排序按「目标品牌优先，其余按正文首次出现位置」。
     """
     from geo_presales_core.util import domain_matches, find_alias_spans, normalize_url
+    from geo_presales_core.shopping import attribute_cards
 
     # 正文品牌高亮只标 5 个核心品牌（目标 + 3 配置竞品 + 提及率最高开放品牌），
     # 与可见度主榜口径一致；词表全量仅用于「品牌提及」识别，不用于高亮。
@@ -2066,7 +2238,11 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
             if not folder.is_dir():
                 continue
             for path in sorted(folder.glob("*.json")):
+                # 一题多次运行：文件名 0003.json 是第 1 次，0003-r2.json 是第 2 次（合成多轮采集目录的约定）。
+                # 键仍按文件（US|ChatGPT|0003-r2），情感、译文回填都按文件对；抽屉按题号把多次运行归到一起。
                 qid = path.stem
+                run_tag = qid.partition("-r")[2]
+                run_no = int(run_tag) if run_tag.isdigit() else 1
                 result = (json.loads(path.read_text(encoding="utf-8")).get("task_result") or {})
                 answer = str(result.get(ANSWER_FIELD.get(platform_dir, "result_text")) or "").strip()
                 if not answer:
@@ -2157,8 +2333,17 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                         if url:
                             search_results.append({"url": url})
 
+                fanout, related = query_suggestions(result)
                 details[f"{market}|{label}|{qid}"] = {
-                    "question_zh": question_zh.get(qid, ""),
+                    # 回答里出现的商品卡（平台结构化字段），抽屉单次回答里按卡片渲染
+                    "product_cards": detail_product_cards(platform_dir, result, display_objects, attribute_cards),
+                    "question_zh": question_zh.get(qid.partition("-r")[0], ""),
+                    "run": run_no,
+                    "time": time.strftime("%m-%d %H:%M", time.localtime(path.stat().st_mtime)),
+                    # ChatGPT search_model_queries、Grok web_search 检索词是 AI 自己生成的检索词；
+                    # Gemini related_queries、Grok follow_up_suggestions 是推荐用户下一步问的问题，分开放
+                    "fanout": fanout,
+                    "related": related,
                     # 品牌高亮只覆盖目标 + 配置竞品 + 提及率最高开放品牌这 5 个核心品牌；
                     # 品牌识别（上方 brands）用全集，但正文高亮全量会让泛词（Sans/PUR/Vort）
                     # 误伤成斑点，干扰阅读。
@@ -2173,6 +2358,58 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                                        if effective else "—"),
                 }
     return details
+
+
+def detail_product_cards(platform_dir: str, result: dict, objects: list[dict], attribute_cards) -> list[dict]:
+    """单次回答的商品卡，按平台字段顺序：标题、价格、评分、前 3 个商家、图片、是否本品、本品是否带官网链接。"""
+    cards = attribute_cards(extract_product_cards(platform_dir, result), objects) or []
+    raw = ([x for x in result.get("source") or [] if isinstance(x, dict) and str(x.get("type") or "").casefold() == "product"]
+           if platform_dir == "overview" else [x for x in result.get("products") or [] if isinstance(x, dict)])
+    images = {}
+    for item in raw:
+        title = str(item.get("title") or "").strip()
+        pics = item.get("image_urls") or item.get("thumbnails") or [item.get("thumbnail")]
+        pic = next((str(u) for u in pics or [] if isinstance(u, str) and u.startswith("http")), "")
+        if title and pic:
+            images.setdefault(title, pic)
+    out = []
+    for card in cards:
+        merchants = [o.get("merchant") for o in card.get("offers") or [] if o.get("merchant")]
+        out.append({
+            "title": card.get("title"),
+            "price": card.get("price"),
+            "rating": card.get("rating") if card.get("rating") not in (None, "", "0", 0) else None,
+            "merchants": list(dict.fromkeys(merchants))[:3],
+            "image": images.get(card.get("title") or "", ""),
+            "target": card.get("object_id") == "target",
+            "official": any(o.get("channel") == "official" for o in card.get("offers") or []),
+        })
+    return out
+
+
+def query_suggestions(result: dict) -> tuple[list[str], list[str]]:
+    """(检索词, 延伸问题)。口径同 geo-monitoring 基线报告（2026-11-04）。"""
+    fanout, related = [], []
+
+    def add(out, value):
+        value = value.get("query") if isinstance(value, dict) else value
+        if isinstance(value, str) and value.strip() and value.strip() not in out:
+            out.append(value.strip())
+
+    for field, out in (("search_model_queries", fanout), ("related_queries", related)):
+        value = result.get(field)
+        value = value.get("queries") if isinstance(value, dict) else value
+        for item in value or []:
+            add(out, item)
+    for usage in result.get("tool_usages") or []:  # Grok：web_search 的检索词在 tool_args 里
+        if isinstance(usage, dict) and usage.get("tool_name") == "web_search":
+            try:
+                add(fanout, (json.loads(usage.get("tool_args") or "{}") or {}).get("query"))
+            except (ValueError, AttributeError):
+                pass
+    for item in result.get("follow_up_suggestions") or []:
+        add(related, item)
+    return fanout, related
 
 
 
@@ -2244,6 +2481,8 @@ def main(argv=None) -> int:
             print(f"题库主题与 Case 主题不同，按题库主题出报告：{topics}（Case 写的是 {case_topics}）")
 
     config = build_config(case, topics, lexicon_entries, load_domain_cache(args.domain_cache))
+    if args.sku_map:
+        config["sku_map"] = json.loads(Path(args.sku_map).read_text(encoding="utf-8"))
     bank = build_question_bank(rows, config, topics)
 
     run_root = Path(tempfile.mkdtemp(prefix="georeport-"))
@@ -2252,16 +2491,21 @@ def main(argv=None) -> int:
             args.collect, config, bank, run_root, regions)
 
         slices: dict[str, dict] = {}
+        # 意图类型切片（topic 位写「类型:发现」）：前端选了意图类型、没选主题时用。只有一种类型时不出。
+        type_labels = list(dict.fromkeys(
+            INTENT_LABEL[key] for key in INTENT_ORDER
+            if any(q.get("diagnostic_intent") == key for q in bank["questions"])))
+        type_topics = [TYPE_TOPIC_PREFIX + label for label in type_labels] if len(type_labels) > 1 else []
         # region 为 "" 的合并国家切片：把各市场样本合池，口径不变
         for region in regions + [""]:
             per_platform = {}
             for platform_label in PLATFORM_LABELS:
-                for topic in [""] + topics:
+                for topic in [""] + topics + type_topics:
                     per_platform[(region, platform_label, topic)] = build_slice(
                         region, platform_label, topic, config, bank, index, {}, regions,
                         args.source_limit)
             for platform_label in [""] + PLATFORM_LABELS:
-                for topic in [""] + topics:
+                for topic in [""] + topics + type_topics:
                     result = build_slice(region, platform_label, topic, config, bank,
                                          index, per_platform, regions, args.source_limit)
                     result.pop("_rows", None)
@@ -2276,9 +2520,20 @@ def main(argv=None) -> int:
         # 任何可识别品牌在正文出现都计入（Suda 2026-09-18：回答详情品牌提及识别全量）。
         # 可见度板块的 5 品牌展示口径不变，那是切片层逻辑，不经过这里。
         meta["scope_notes"] = build_scope_notes(slices, list(PLATFORM_LABELS))
+        # 意图类型 → 主题（一个主题只有一种类型），前端主题下拉按选中的类型收窄
+        meta["intent_topics"] = {
+            label: [t for t in topics if any(
+                q.get("topic_id") == t and INTENT_LABEL.get(q.get("diagnostic_intent")) == label
+                for q in bank["questions"])]
+            for label in type_labels}
+        meta["type_topic_prefix"] = TYPE_TOPIC_PREFIX
+        if args.shopping_cards:
+            meta["shopping_cards"] = args.shopping_cards
         details = build_details(args.collect, config, regions, bank, all_objects(config))
+        facts = build_facts(index, config, regions)
+        facts["source_limit"] = args.source_limit
         write_json(args.out, {"schema": SCHEMA, "meta": meta, "slices": slices,
-                              "details": details})
+                              "details": details, "facts": facts})
     finally:
         shutil.rmtree(run_root, ignore_errors=True)
 

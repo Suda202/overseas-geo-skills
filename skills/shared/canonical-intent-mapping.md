@@ -24,7 +24,7 @@
 
 **统计指标由意图类型决定，不另设字段。** 每道题统计什么只看上表「统计指标」列，提示词库和题库都不另设分析维度字段。另有两条对所有类型都适用：
 
-- **引用所有类型都统计**（引用份额、官网被引用率、引用来源），按意图类型分开看。「全部类型」汇总的引用只合并题面不点名品牌的类型，因为题面点名品牌会把它的官网拉进引用（口径见 `geo-monitoring/references/baseline-report.md`、`geo-monitoring/scripts/build_baseline_html.py`）。
+- **引用所有类型都统计**（引用份额、引用率、引用来源），按意图类型分开看。售前 HTML 报告的引用模块默认合并全部意图类型，核心洞察的引用份额、引用率只看发现＋替代、和提及率同一批题（2026-11-07）；监测基线 HTML 的「全部类型」仍只合并题面不点名品牌的类型（2026-10-22，`geo-monitoring/scripts/build_baseline_html.py`）。两处口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「样本范围」。
 - **提及只数正文里的品牌**：先去掉引用标记（「([RivalH1][5])」这类脚注、引用卡片标题）再识别，口径同 `geo-presales-report-audit/scripts/de_cite_crawl.py` 的 `strip_citations`。正文里写出来的品牌都算提及，包括被当作数据来源点名的（「Source: SRX Property Index」「According to rival-h2.example」）；提及不等于推荐。
 
 **上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本按 `diagnosis_intent` 自动填（发现 `visibility,sentiment`，对比、评估 `sentiment`），不手填。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，然后从上传模板删掉这一列。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。
@@ -45,7 +45,7 @@
 
 情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他意图类型而删除；它仍不得进入正式 Visibility。
 
-购物层（Shopping GEO）只在有商品卡展示机会的产品线上统计（开不开由我们按商品属性推理，消费类实体商品开、软件和服务关、工业类试跑后定），和提及率分开报：发现、替代、对比、交易四类题都进汇总（商品卡触发率、品牌商品卡入选率等），支持按意图类型筛选；其他类型照常采集、不进汇总。口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+购物层（Shopping GEO）只在有商品卡展示机会的产品线上统计（开不开由我们按商品属性推理，消费类实体商品开、软件和服务关、工业类试跑后定），和正文提及率分开报：只统计发现、替代两类题；其他类型照常采集、不进汇总。指标是商品卡触发率、商品卡提及率、商品卡平均位置，口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
 
 > **迁移说明**：`Prompt Type: Discovery`、`Prompt Type: Competitor` 等意图类型 Tag 当前作为默认枚举使用，计划迁移为项目自定义 Tags（不再是固定枚举）。迁移完成前，仍以本表为默认对照；迁移后，统计指标和 `formal_visibility_eligible` 的推导规则须在自定义 Tag 的定义文件中重新声明，不得依赖本表题库标签列自动推导。
 

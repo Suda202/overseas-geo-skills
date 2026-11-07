@@ -13,6 +13,13 @@
 | 评价/情绪 | 完整 `analysis_type=sentiment` 数据 | `analysis_type` 不是 `sentiment` 的记录 | 不再按 `diagnostic_intent`、Discovery/Evaluation、通用题/品牌题或其他意图二次筛选 |
 | 竞品胜负 | 后端确认的 Competitor 样本 | 一般情绪、Discovery 提及率和品牌常识 | 只进入 M02 的决胜结果与正面对比证据，不进入正式可见度或情绪比例 |
 
+**售前 HTML 报告的口径（2026-11-07 Suda 定）与上表不同，只用于我们自己出的 HTML 报告，不改上传 CSV 和后端：**
+
+- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）默认统计发现＋替代；筛到只剩问题解决题时统计问题解决；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
+- 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Bbrand H1 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
+- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"], ["information"]]`、`citation_scope = "visibility"`（引用与提及类同一批回答），core `compute_metrics` 读这两个键；`build_sources` 自己从全部有效回答算引用模块。不写时（上传 CSV、编辑侧）仍是只看 Discovery。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
+- 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）仍按 2026-10-22 的口径：选词阶段所有题都计入提及率，「全部类型」的引用只合并发现和品类认知。
+
 执行两条独立判定，不使用互斥的“先按意图选一类”逻辑：
 
 1. 判断记录是否属于 Discovery；只有是，才允许进入正式可见度和主要引用生态。
@@ -38,64 +45,53 @@
 
 ## 购物层指标（Shopping GEO）
 
-对标 Profound Shopping Analysis 的 Brands / Products / Merchants 三层。实现只在 `scripts/geo_presales_core/shopping.py`（`metrics["shopping"]`）；当前只做统计输出，不进入 `action_directions`、M01–M10 模块与上传 CSV，售前 HTML 也不展示。客户文案要用这些数之前，先在本节补模块归属。
+对标 Profound Shopping Analysis（Shopping Mode Rate、Shopping Visibility Score）。实现只在 `scripts/geo_presales_core/shopping.py`（`metrics["shopping"]`）；不进入 `action_directions`、M01–M10 模块与上传 CSV。售前 HTML 有独立的「购物商品卡」模块（`geo-presales-report-builder/references/render-spec.md`「购物商品卡模块」），核心洞察另放一个商品卡提及率。和正文提及率分开报，不混算：正文提及率的分母是全部有效回答，商品卡提及率的分母是出现商品卡的回答，两个百分比不能直接比。目前是实验性监测模块，不进客户考核。
 
 ### 哪些产品线、哪些题统计
 
-商品卡指标是部分产品线才有的专项指标，和正式可见度（提及率）分开报，不混算。
-
 - **产品线开不开由我们推理决定，不让品牌方填**：消费类实体商品（3C、家电、个护、宠物用品、服饰等）开；软件、SaaS、服务、房地产关；工业、工程类实体商品先记「试跑后定」，试跑里这条产品线的回答出卡比例到 5% 就开，不到就关。售前没有试跑，工业类记关。判断和理由记在题库 `config.shopping_cards`（选词 output-contract.md）。关掉的产品线照常采集商品字段，但不汇总、不报，也不写 0%。
-- **题的范围**：发现、替代、对比、交易四类都进商品卡指标的汇总，支持按意图类型筛选。评估、验证、问题解决、售后照常采集商品卡字段，不进汇总。售前只有发现题。
-- **主次**：见下方「指标清单」。商品卡触发率和品牌商品卡入选率是主指标，两个一起出现；品牌商品卡出现率可选；其余是后续迭代项，现在只放内部字段。
+- **题的范围**：只统计发现、替代两类（2026-11-07 Suda 定，原为发现、替代、对比、交易四类）。这两类题面不点名本品，卡里是 AI 自己挑的候选，才能看出本品进没进、和竞品比；对比、交易题题面点名本品，出卡和进卡都是题面带出来的。其余类型照常采集商品卡字段，不进汇总。
+- **原始数据都在采集目录里**：商品卡、商品名、品牌、位置、商家、购买链接都在各平台原始响应里，以后要加 SKU、商家、渠道分析不用重新采集。
 
-### 三层数据、三个计数单位
+### 来源字段
 
 | 层 | 计数单位 | 来源字段 |
 |---|---|---|
 | 回答是否触发购物 | 回答 | 至少一张商品卡即算触发 |
 | 商品卡（Product Card） | 卡 | ChatGPT / AI Mode / Gemini：`products[]`；AIO：`source[]` 中 `type=product` |
-| 购买选项（Offer） | offer | ChatGPT：`offers[]`；Google 系：`stores[]` |
 
-一张卡对应多个 offer，商品曝光和商家份额不能互相换算。AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的商品定义在 `source[]`（「products inside ai overview」），`products` 定义为「Google wale sponsored products」；实测 `products` 379 项里 371 项不在同一回答的 AI 概览商品中，`section_title` 是 People also ask、Popular products、Deals 等页面区块名。文档另一处说 `products` 带商品簇的商家报价，两处不一致，待供应商确认。空占位卡（无标题）和广告卡（`ads product`、`ads`）不计。
+AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的商品定义在 `source[]`（「products inside ai overview」），`products` 定义为「Google wale sponsored products」；实测 `products` 379 项里 371 项不在同一回答的 AI 概览商品中，`section_title` 是 People also ask、Popular products、Deals 等页面区块名。空占位卡（无标题）和广告卡（`ads product`、`ads`）不计。
 
-### 指标清单
+### 指标
 
 都按平台分开算，「回答」都指有效回答，同一回答里本品有几张卡都只算一次。
 
-**对客指标（第一期）**
-
-| 中文名称 | 对标 Profound | 公式 | 用哪些题 | 内部字段 |
-|---|---|---|---|---|
-| 商品卡触发率 | Shopping Mode Rate | 至少出现一张商品卡的回答数 ÷ 有效回答数 | 发现、替代、对比、交易，支持按意图类型筛选 | `shopping_mode_rate` |
-| 品牌商品卡入选率 | Shopping Visibility Score | 至少有一张本品牌商品卡的回答数 ÷ 出现商品卡的回答数 | 同上；竞品用同一公式算，可以并排比 | `brands[].shopping_visibility` |
-| 品牌商品卡出现率 | 无对应 | 至少有一张本品牌商品卡的回答数 ÷ 有效回答数（等于商品卡触发率 × 品牌商品卡入选率） | 同上；可选 | `brands[].shopping_exposure_rate` |
-
-例：100 条有效回答，60 条出了商品卡，其中 20 条有本品的卡：商品卡触发率 60%，品牌商品卡入选率 33%（20 ÷ 60），品牌商品卡出现率 20%（20 ÷ 100）。
-
-**内部指标（后续迭代，不进客户文案）**
-
-| 中文名称 | 公式 | 用哪些题 | 内部字段 |
+| 中文名称 | 对标 | 公式 | 内部字段 |
 |---|---|---|---|
-| 商品曝光率 | 出现该商品（SKU）的回答数 ÷ 出现商品卡的回答数 | 发现、替代、对比、交易 | `products[].exposure_rate` |
-| 平均商品卡位置 | 品牌或商品在每条回答里首张卡的位置之和 ÷ 出现该品牌或商品的回答数 | 同上 | 内部字段 |
-| 商家份额 | 该商家的 offer 数 ÷ 全部 offer 数（同一回答内「商家 + 链接」相同只计一次） | 四类题里出现商品卡的回答 | `merchants[].merchant_share` |
-| 商家内品牌份额 | 该商家 offer 中属于本品牌卡的 offer 数 ÷ 该商家的 offer 数 | 同上 | 内部字段 |
-| 官方店入口占比 | 本品牌卡中官方店 offer 数 ÷ 本品牌卡的全部 offer 数 | 同上 | 内部字段 |
+| 商品卡触发率 | Profound Shopping Mode Rate | 出现商品卡的回答数 ÷ 有效回答数 | `shopping_mode_rate` |
+| 商品卡提及率 | Profound Shopping Visibility Score | 至少有一张本品牌商品卡的回答数 ÷ 出现商品卡的回答数。只数商品卡里的品牌，不含正文提及 | `brands[].shopping_visibility` |
+| 商品卡平均位置 | Average Position | 每条出现本品牌卡的回答里，本品牌最靠前那张卡的位置，取平均 | `brands[].average_card_position` |
+| 官网购买链接覆盖率 | Writesonic Direct Purchase Link（按回答计） | 出现本品牌商品卡的回答里，这些卡至少带一个官网购买链接的回答占比。官网 = 链接域名是品牌官网，或商家名带品牌名（「Bbrand」「RivalB1 Official」） | `brands[].official_link_coverage` |
 
-- **按平台分开计算，不跨平台合并。** Gemini 每条回答 12–19 张卡，ChatGPT 1–6 张，合池后的排名没有意义；全部平台切片只给 `by_platform`。
-- 没有商品字段的平台（Perplexity）不计，显示 `—`，不写 0%。Gemini 与 AI Mode 只在有商品时才交付 `products` 键，缺键按未触发处理；供应商改版后需重新核验。
-- 品牌商品卡入选率必须和商品卡触发率一起出现：触发率 20% 时的 50% 入选率，只覆盖同范围全部回答的 10%。
-- 实现现状：`shopping.py` 的品牌商品卡入选率和商家层按 Discovery 取样，触发率按全部意图拆开算，还没按产品线开关和四类题过滤；售前只有发现题、通常一条产品线，读数不受影响。监测报告接入替代、对比、交易题的商品卡时，把这三类加进取样范围并做按类型筛选。
+例：100 条 ChatGPT 回答，60 条出了商品卡，其中 18 条有本品的卡、入选时平均在第 2.5 位：商品卡触发率 60%，商品卡提及率 30%（18 ÷ 60），商品卡平均位置 2.5。
+
+**品牌级、SKU 级分开算**：上表是品牌级（本品任意一张卡都算）。SKU 级只看本品，同样三项——SKU 商品卡提及率（出现该 SKU 卡的回答 ÷ 出现商品卡的回答，分母和品牌级相同）、SKU 商品卡平均位置（该 SKU 在每条回答里最靠前那张卡的位置取平均）、SKU 官网购买链接覆盖率（出现该 SKU 卡的回答里带官网购买链接的占比），内部字段 `target_skus[]`。覆盖率用回答计，不用 offer 份额：份额会被第三方商家数量稀释（Bbrand ChatGPT 本品 offer 里官网只占 40%，但每条出现 Bbrand 卡的回答都带官网链接，覆盖率 100%）。同一款产品 AI 会写成好几种标题，所以先按归并表（`build_report_data.py --sku-map`，每条是「SKU 名 + 正则」，按顺序第一条命中卡标题的胜出）归到型号再数；配件单列；都不中的记「未识别型号」——Google 系（AIO、AI Mode）的卡标题常不带型号（「Bbrand Dash Cam Car Security Camera」），这一行会比较大。各 SKU 的提及率相加可以超过品牌级，因为一条回答可能同时出现两个 SKU。归并表按客户写，放在客户的评测目录（Bbrand：`10-售前诊断报告/评测数据/brand-b/售后/选词-20261106/report-h1/sku-map.json`）。
+
+`brands[].shopping_exposure_rate`（有本品卡的回答 ÷ 有效回答，等于触发率 × 提及率）只留在数据里，不展示。
+
+**不做（2026-11-07 Suda 定）**：商品卡份额（本品卡数 ÷ 全部卡数）、商品卡首位率、官网购买链接份额（按 offer 计）、商家份额，计算和展示都删了。理由：品牌是否进卡、排第几已经由提及率和平均位置回答，份额和首位率只是同一件事换个分母；官网入口用覆盖率看，不看份额。以后要用可以从原始响应补算。商品卡情感、属性准确率、价格准确率也不做。
+
+- **按平台分开计算，不跨平台合并。** Gemini 每条回答 12–19 张卡，ChatGPT 1–6 张，卡位和排名合池没有意义；全部平台切片只给 `by_platform`。例外：核心洞察的商品卡提及率在「全部平台」时把返回了商品字段的平台合计（分子、分母各自相加），因为它按回答计。
+- **接口未返回**：平台本身不返回商品字段（Perplexity），或本次采集里该平台一条回答都没带商品字段（`product_field_returned = false`；2026-10 中起 Scrapeless 的 Gemini 1,700 多条回答都没有 `products`，2026-11-07 用 3 道 ChatGPT 出卡的发现题复测仍没有），整列写「接口未返回」，不写 0%，也不进核心洞察的合计。AI Mode 只在出卡时才带 `products` 键，缺键按未触发处理。
+- 实现：`shopping.py` 的 `SHOPPING_SCOPE_INTENTS` 定发现、替代两类；按意图类型筛选靠报告的意图类型 / 主题切片。产品线开关：`build_report_data.py --shopping-cards 开|关` 写进 `meta.shopping_cards`，没传时按数据判（任一平台触发率到 5%），见 render-spec.md。
 - 卡片品牌归属顺序：平台 `brand` 字段 → 卡标题最早出现的别名 → offer 的 `product_name` → 商家名（全部可识别商家指向同一品牌时）。都不中的卡记为未归属，单独计数。
-- 官方店：offer 域名命中该品牌官网域名，或商家名命中该品牌别名。Google 系 `stores` 链接常是跳转串，只能靠商家名判断。判定依赖品牌词表的官网域名：词表没登记官网域名、商家名又是域名写法（如 `rival-b4.example`）时会记成第三方；平台店铺名带品牌名（如 `Walmart - RivalB4 Official`）记为官方。
-- 卡位按平台字段顺序编号。ChatGPT 实测与正文商品表顺序约 5% 不一致，平均商品卡位置只放内部字段，不进客户文案。
+- 卡位按平台字段顺序编号。ChatGPT 实测与正文商品表顺序约 5% 不一致，平均位置是近似值。
 
 ### 客户指标命名
 
 | 客户名称 | 内部字段 | 不得混淆为 |
 |---|---|---|
-| 商品卡触发率 | `shopping_mode_rate` | 品牌商品卡入选率、品类适合度结论 |
-| 品牌商品卡入选率 | `brands[].shopping_visibility` | 正式可见度（提及率）、品牌商品卡出现率 |
-| 品牌商品卡出现率 | `brands[].shopping_exposure_rate` | 品牌商品卡入选率 |
-| 商品曝光率 | `products[].exposure_rate` | 品牌商品卡入选率 |
-| 商家份额 | `merchants[].merchant_share` | 销量份额、流量份额 |
+| 商品卡触发率 | `shopping_mode_rate` | 商品卡提及率、品类适合度结论 |
+| 商品卡提及率 | `brands[].shopping_visibility` | 正文提及率 |
+| 商品卡平均位置 | `brands[].average_card_position` | 平均提及位置（正文） |
+| 官网购买链接覆盖率 | `brands[].official_link_coverage` | 官网引用率（正文引用官网）、官网购买链接份额 |

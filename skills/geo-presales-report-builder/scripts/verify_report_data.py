@@ -123,11 +123,16 @@ PLATFORM_INTERNAL_HOSTS = {
     "copilot.microsoft.com", "bingapis.com", "grok.com",
 }
 DISCOVERY_LABEL = "发现"
+# 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics._visibility_answers 同口径，按中文标签独立写一份）
+VISIBILITY_LABEL_GROUPS = [{"发现", "替代"}, {"问题解决"}]
+TYPE_TOPIC_PREFIX = "类型:"
 
 TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
 
 # 有商品卡字段的平台目录（与 core shopping.PLATFORM_PRODUCT_FIELDS 同集合，刻意不 import）
 SHOPPING_PLATFORMS = {"chatgpt", "overview", "aimode", "gemini"}
+# 进商品卡汇总的意图类型（与 core shopping.SHOPPING_SCOPE_INTENTS 同集合，按中文标签独立写一份）
+SHOPPING_SCOPE_LABELS = {"发现", "替代"}
 
 
 # ------------------------------------------------------------------ 复算
@@ -350,7 +355,19 @@ class Recomputer:
     def slice_questions(self, topic: str) -> list[dict]:
         if not topic:
             return list(self.questions)
+        if topic.startswith(TYPE_TOPIC_PREFIX):
+            return [q for q in self.questions if q["intent"] == topic[len(TYPE_TOPIC_PREFIX):]]
         return [q for q in self.questions if q["topic"] == topic]
+
+    def visibility_ids(self, region: str, platform: str, topic: str) -> list[int]:
+        questions = self.slice_questions(topic)
+        for group in VISIBILITY_LABEL_GROUPS:
+            ids = [q["qid"] for q in questions if q["intent"] in group]
+            if any(self.answer_text(m, self.platform_dirs[p], qid, r).strip()
+                   for p in self.slice_platforms(platform) for m in self.slice_regions(region)
+                   for qid in ids for r in range(1, self.repeat_count(m, self.platform_dirs[p], qid) + 1)):
+                return ids
+        return []
 
     def slice_platforms(self, platform: str) -> list[str]:
         return [platform] if platform else list(self.platforms)
@@ -369,10 +386,14 @@ class Recomputer:
 
     def _recompute(self, region: str, platform: str, topic: str) -> dict:
         question_ids = [q["qid"] for q in self.slice_questions(topic)]
-        discovery_ids = [q["qid"] for q in self.slice_questions(topic)
-                         if q["intent"] == DISCOVERY_LABEL]
+        # 变量名沿用 discovery：2026-11-07 起是提及类样本（发现＋替代，只剩问题解决时才是问题解决）
+        discovery_ids = self.visibility_ids(region, platform, topic)
 
-        discovery_answers = 0          # 有效 discovery 回答数（分母）
+        discovery_answers = 0          # 有效提及类回答数（提及类分母）
+        cite_answers = 0               # 有效提及类回答数（核心洞察引用分母：发现＋替代，同提及类）
+        all_answers = 0                # 全部有效回答数（引用模块分母：全部意图类型）
+        all_raw = 0                    # 引用模块：全部有效回答的引用次数
+        all_target = 0                 # 引用模块：其中指向目标官网的次数
         mention_counts: Counter = Counter()
         target_ranks: list[int] = []
         raw_citations = 0
@@ -407,10 +428,17 @@ class Recomputer:
                                 target_ranks.append(
                                     self._rank_of(market, platform_dir, qid,
                                                   target["object_id"], repeat))
+                        # 引用模块（sources）统计全部有效回答；核心洞察与可见度矩阵的引用只计提及类样本
+                        if True:
+                            all_answers += 1
+                            if is_discovery:
+                                cite_answers += 1
                             seen_in_answer = set()
                             cited_owners = set()
                             for citation in self.citations(market, platform_dir, qid, repeat):
-                                raw_citations += 1
+                                all_raw += 1
+                                if is_discovery:
+                                    raw_citations += 1
                                 if citation.get("in_table_row"):
                                     table_row_markers += 1
                                 # 解析不出 URL 的 pill 仍计入次数，但不进「去重来源」
@@ -420,15 +448,19 @@ class Recomputer:
                                 owner = self._official_owner(citation["host"])
                                 if owner:
                                     cited_owners.add(owner)
-                                    own_citations[owner] += 1
                                     if owner == "target":
-                                        target_citations += 1
+                                        all_target += 1
+                                    if is_discovery:
+                                        own_citations[owner] += 1
+                                        if owner == "target":
+                                            target_citations += 1
                             answer_unique_total += len(seen_in_answer)
-                            if "target" in cited_owners:
+                            if "target" in cited_owners and is_discovery:
                                 target_cited_answers += 1
-                            for object_id in mentioned:
-                                if object_id in cited_owners:
-                                    linked_answers[object_id] += 1
+                            if is_discovery:
+                                for object_id in mentioned:
+                                    if object_id in cited_owners:
+                                        linked_answers[object_id] += 1
 
         total_mentions = sum(mention_counts.values())
         target_mentions = mention_counts.get("target", 0)
@@ -485,9 +517,11 @@ class Recomputer:
             "mention_rate": _pct(target_mentions / discovery_answers) if discovery_answers else "—",
             "share_of_voice": _pct(target_mentions / total_mentions) if total_mentions else "—",
             "official_share": _pct(target_citations / raw_citations) if raw_citations else "—",
-            "official_citation_rate": (_pct(target_cited_answers / discovery_answers)
-                                       if discovery_answers else "—"),
-            "official_citation_counts": f"{target_cited_answers}/{discovery_answers}",
+            "official_citation_rate": (_pct(target_cited_answers / cite_answers)
+                                       if cite_answers else "—"),
+            "official_citation_counts": f"{target_cited_answers}/{cite_answers}",
+            # 引用模块：全部意图类型
+            "sources_official_share": _pct(all_target / all_raw) if all_raw else "—",
             "linked_mention_rate": (_pct(linked_answers.get("target", 0) / target_mentions)
                                     if target_mentions else "—"),
             "linked_mention_counts": f"{linked_answers.get('target', 0)}/{target_mentions}",
@@ -498,7 +532,7 @@ class Recomputer:
             "discovery_answers": discovery_answers,
             "object_stats": object_stats,
             "citation_units": {
-                "occurrences": raw_citations,
+                "occurrences": all_raw,
                 "unique_sources": len(unique_citation_urls),
                 "occurrences_in_table_rows": table_row_markers,
             },
@@ -552,14 +586,14 @@ class Recomputer:
         return owners.pop() if len(owners) == 1 else None
 
     def shopping(self, region: str, platform: str, topic: str) -> dict:
-        """逐平台：有效回答数、触发数、Discovery 触发数、目标品牌出现的 Discovery 触发回答数。"""
+        """逐平台：有效回答数、发现与替代题回答数、触发数、目标品牌出现的触发回答数。"""
         out = {}
         questions = self.slice_questions(topic)
         for platform_label in self.slice_platforms(platform):
             platform_dir = self.platform_dirs[platform_label]
             if platform_dir not in SHOPPING_PLATFORMS:
                 continue
-            row = {"valid": 0, "shopping": 0, "discovery": 0, "discovery_shopping": 0, "target": 0}
+            row = {"valid": 0, "scope": 0, "scope_shopping": 0, "target": 0}
             for market in self.slice_regions(region):
                 for q in questions:
                     qid = q["qid"]
@@ -568,12 +602,11 @@ class Recomputer:
                             continue
                         cards = self._cards(market, platform_dir, qid, repeat)
                         row["valid"] += 1
-                        row["shopping"] += bool(cards)
-                        if q["intent"] != DISCOVERY_LABEL:
+                        if q["intent"] not in SHOPPING_SCOPE_LABELS:
                             continue
-                        row["discovery"] += 1
+                        row["scope"] += 1
                         if cards:
-                            row["discovery_shopping"] += 1
+                            row["scope_shopping"] += 1
                             row["target"] += any(self._card_owner(c) == "target" for c in cards)
             out[platform_dir] = row
         return out
@@ -690,10 +723,14 @@ def run_checks(report: dict, collect: Path) -> list[str]:
     recomputer = Recomputer(collect, report)
     slices = report.get("slices") or {}
 
+    # 意图类型切片：题库里有两种以上意图类型时，每种类型一个（topic 位写「类型:发现」）
+    type_labels = list(dict.fromkeys(q.get("intent") for q in meta.get("questions") or [] if q.get("intent")))
+    slice_topics = [""] + meta["topics"] + (
+        [TYPE_TOPIC_PREFIX + label for label in type_labels] if len(type_labels) > 1 else [])
     expected_keys = set()
     for region in [""] + list(meta["regions"]):
         for platform in [""] + meta["platforms"]:
-            for topic in [""] + meta["topics"]:
+            for topic in slice_topics:
                 expected_keys.add(f"{region}|{platform}|{topic}")
     missing = expected_keys - set(slices)
     extra = set(slices) - expected_keys
@@ -704,7 +741,7 @@ def run_checks(report: dict, collect: Path) -> list[str]:
 
     for region in [""] + list(meta["regions"]):
         for platform in [""] + meta["platforms"]:
-            for topic in [""] + meta["topics"]:
+            for topic in slice_topics:
                 key = f"{region}|{platform}|{topic}"
                 slc = slices.get(key)
                 if slc is None:
@@ -865,11 +902,11 @@ def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[st
             if units.get(field) != expected_units.get(field):
                 out.append(f"{key}: sources.citation_units.{field} "
                            f"{units.get(field)!r} != 复算 {expected_units.get(field)!r}")
-    if not _close(sources.get("official_share"), expected["official_share"]):
+    if not _close(sources.get("official_share"), expected["sources_official_share"]):
         out.append(f"{key}: sources.official_share {sources.get('official_share')!r} "
-                   f"!= 复算 {expected['official_share']!r}")
+                   f"!= 复算 {expected['sources_official_share']!r}")
 
-    # 购物层：按平台对账触发数与目标品牌品牌商品卡入选率（分子分母都对）。
+    # 购物层：按平台对账触发数与目标商品卡提及率（分子分母都对）。
     shopping = slc.get("shopping")
     if shopping is None:
         out.append(f"{key}: 缺少 shopping 块")
@@ -885,16 +922,14 @@ def _check_slice(key, slc, recomputer, region, platform, topic, meta) -> list[st
                 continue
             pairs = (
                 ("valid_answers", got.get("valid_answers"), row["valid"]),
-                ("shopping_answers", got.get("shopping_answers"), row["shopping"]),
-                ("discovery_answers", got.get("discovery_answers"), row["discovery"]),
-                ("discovery_shopping_answers", got.get("discovery_shopping_answers"),
-                 row["discovery_shopping"]),
+                ("scope_answers", got.get("scope_answers"), row["scope"]),
+                ("shopping_answers", got.get("shopping_answers"), row["scope_shopping"]),
                 ("target.shopping_visibility.numerator",
                  ((got.get("target") or {}).get("shopping_visibility") or {}).get("numerator"),
                  row["target"]),
                 ("target.shopping_visibility.denominator",
                  ((got.get("target") or {}).get("shopping_visibility") or {}).get("denominator"),
-                 row["discovery_shopping"]),
+                 row["scope_shopping"]),
             )
             for field, actual, wanted in pairs:
                 if actual != wanted:
@@ -1066,7 +1101,7 @@ def _shopping_mutations(mutate, slices):
         mutate(f"把 {key} 的 {platform_dir} 购物触发数加 3",
                ["slices", key, "shopping", "by_platform", platform_dir],
                lambda n: n.__setitem__("shopping_answers", n["shopping_answers"] + 3)),
-        mutate(f"把 {key} 的 {platform_dir} 目标品牌品牌商品卡入选率分子加 1",
+        mutate(f"把 {key} 的 {platform_dir} 目标商品卡提及率分子加 1",
                ["slices", key, "shopping", "by_platform", platform_dir, "target", "shopping_visibility"],
                lambda n: n.__setitem__("numerator", n["numerator"] + 1)),
         mutate(f"删掉 {key} 的 {platform_dir} 购物统计",
@@ -1139,9 +1174,9 @@ def main(argv=None) -> int:
         for platform_dir, row in recomputer.shopping(region, "", "").items():
             got = ((slices.get(key, {}).get("shopping") or {}).get("by_platform") or {}).get(platform_dir) or {}
             vis = (got.get("target") or {}).get("shopping_visibility") or {}
-            print(f"            购物[{platform_dir}] 触发 {got.get('shopping_answers')}/{got.get('valid_answers')}"
-                  f"（复算 {row['shopping']}/{row['valid']}）  目标品牌商品卡入选率 "
-                  f"{vis.get('numerator')}/{vis.get('denominator')}（复算 {row['target']}/{row['discovery_shopping']}）")
+            print(f"            购物[{platform_dir}] 触发 {got.get('shopping_answers')}/{got.get('scope_answers')}"
+                  f"（复算 {row['scope_shopping']}/{row['scope']}）  目标商品卡提及率 "
+                  f"{vis.get('numerator')}/{vis.get('denominator')}（复算 {row['target']}/{row['scope_shopping']}）")
     if failures:
         print(f"\n校验失败 {len(failures)} 项：", file=sys.stderr)
         for item in failures[:40]:

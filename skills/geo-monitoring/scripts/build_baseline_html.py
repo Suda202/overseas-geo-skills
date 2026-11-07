@@ -441,6 +441,14 @@ def patch_report_data(path: Path, cfg, questions, intent, crate_stats):
                            for b in tm.get("brands") or [])]
             tm["themes"] = keep
             tm["matrix"] = {t: tm["matrix"][t] for t in keep if t in tm["matrix"]}
+    # 售前渲染层自带「问题概览 → 回答记录 → 单次回答」抽屉（2026-11-07），按文件一条读 details：
+    # 键「意图|平台|0003」是第 1 次，「意图|平台|0003-r2」是第 2 次，条目带 run / time。这里摊平回去。
+    flat = {}
+    for key, s in data["details"].items():
+        for r in s["runs"]:
+            run = int(r.get("run") or 1)
+            flat[key if run == 1 else f"{key}-r{run}"] = dict(r, question_zh=s.get("question_zh", ""), run=run)
+    data["details"] = flat
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
@@ -953,6 +961,8 @@ RECORDS_JS = r'''  var RECORD_HEAD = "<thead><tr>" +
 
 '''
 EXTRA_CSS = (".kpis{grid-template-columns:repeat(6,minmax(0,1fr))}"
+             # 售前报告的「统计范围」按发现＋替代写，基线报告所有类型都计入提及率，不显示这两处（2026-11-07）
+             ".kpi-scope,.section-scope{display:none!important}"
              # 引用 pill 显示完整来源名和编号（售前样式把宽度截在 120–180px，长来源名连编号一起被吃掉，Suda 2026-10-21）
              ".cite-pill{max-width:100%!important;overflow:visible;text-overflow:clip;white-space:normal;flex-wrap:wrap}"
              ".cite-pill-num{flex:0 0 auto}"
@@ -989,6 +999,9 @@ def render(cfg, data_path: Path, out: Path):
 
     rr.slim_for_html = slim
     data = json.loads(data_path.read_text(encoding="utf-8"))
+    # 售前报告 2026-11-07 起带逐条回答事实（facts）、页面多选现算；基线报告的引用口径与明细都是这里改写的切片，
+    # 仍走单选读预算切片，所以不带 facts
+    data.pop("facts", None)
     # 有数据的模块展示，没数据的整块隐藏（Suda 2026-10-22）：情感没接入就不出 04 和回答详情里的情感，一条引用都没有就不出 03
     has_sent = data["meta"].get("sentiment_claims_status") == "complete"
     has_cites = any((s.get("sources") or {}).get("total_citations") for s in data["slices"].values())
@@ -999,18 +1012,8 @@ def render(cfg, data_path: Path, out: Path):
         ('"全部地区"', '"全部类型"'),
         ('shown.push("地区")', 'shown.push("意图类型")'),
         ('aria-label="地区筛选"', 'aria-label="意图类型筛选"'),
-        ('["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。"]',
-         '["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。全部类型时只统计发现与品类认知题（题面点名品牌会把它的官网拉进引用），选中某一类型时按该类型统计。"],\n'
-         '      ["引用率", k.official_citation_rate, "正文至少引用一次监测对象官网的回答 ÷ 有效回答。按回答计，一条回答引用多次只算一次。统计范围同引用份额。"]'),
-        ('"官网引用份额 " + esc(sources.official_share || "—") + "。",',
-         '"官网引用份额 " + esc(sources.official_share || "—") + "，引用率 " + esc(k.official_citation_rate || "—") + '
-         '"（至少引用一次官网的回答占比）。",'),
-        # 抽屉：先列每次运行，点某一次再看那次的回答（Suda 2026-10-21）
-        ('    var ranking = (entry.brands || []).map(function (row) {', drawer_js + '    var ranking = (entry.brands || []).map(function (row) {'),
-        ('\'<div class="detail-meta-cell"><span>标签</span><strong>\' + esc(record ? record.tag : "—")',
-         '\'<div class="detail-meta-cell"><span>平台 · 采集时间</span><strong>\' + esc(entry.__hbRunLabel || (record ? record.tag : "—"))'),
-        # 情感只给合计口径（正向信号之和 ÷ 正负信号之和），不展示跨平台等权值和附注（Suda 2026-10-21）
-        ('      if (crossRate && crossRate !== "—" && signalPlatforms) {', '      if (false) {'),
+        ('["引用份额", k.official_share, "指向监测对象官网的引用次数 ÷ 全部引用次数。"]',
+         '["引用份额", k.official_share, "指向监测对象官网的引用记录数 ÷ 全部引用记录数。全部类型时只统计发现与品类认知题（题面点名品牌会把它的官网拉进引用），选中某一类型时按该类型统计。"]'),
         # 平台 × 品牌矩阵的品牌列加 logo，域名取同切片可见度榜
         ('<td class="brand-cell">\' + esc(displayBrand(row.name)) + "</td>"',
          '<td class="brand-cell"><span style="display:inline-flex;align-items:center;gap:8px">\' + '
@@ -1026,37 +1029,9 @@ def render(cfg, data_path: Path, out: Path):
         # 品牌提及识别的是全部同类平台与竞品，不只是配置品牌
         ("该回答未提及已配置品牌", "这次回答没有提到任何同类平台或竞品"),
         ('return "<td>" + Number(value).toFixed(1) + "%</td>";', 'return "<td>" + (Number(value) === 0 ? "0%" : Number(value).toFixed(1) + "%") + "</td>";'),
-        # 售前模板里写死的视频流媒体品类话术，换品类会说错，去掉
-        ("。官网被引用的多是应用下载页与首页，缺少可被 AI 直接引用的<strong>内容型页面</strong>（剧集与题材介绍、功能与价格说明、常见问题），第三方因此占据了事实定义权。", "。"),
-        ("把可核验的事实（内容库、字幕语言、价格）说清楚", "把可核验的事实说清楚"),
-        # 指标解释不提「可见度问题」：售后所有题都计入，范围由筛选决定（Suda 2026-10-21）
-        ('"可见度问题中，监测对象被 AI 提及的比例。越高说明监测对象越容易进入相关回答。"',
-         '"提到监测对象的回答占有效回答的比例。越高说明监测对象越容易进入相关回答。"'),
-        # 筛选挪到核心洞察前面，作用于全部模块
-        ('同时作用于 02 / 03 / 04 / 05 模块', '同时作用于下方全部模块'),
-        # 问题明细加平台下拉，与上方平台筛选同步（改它等于点上方平台 tab）
-        ('<option value="">全部类型</option></select>', '<option value="">全部类型</option></select>'
-         '<select class="records-intent-select" id="recordPlatformFilter" aria-label="按平台筛选"></select>'),
-        ('    el.innerHTML = html;\n  }\n\n  /* ---------- 事件 ---------- */',
-         '    el.innerHTML = html;\n'
-         '    var pf = document.getElementById("recordPlatformFilter");\n'
-         '    if (pf) {\n'
-         '      pf.innerHTML = \'<option value="">全部平台</option>\' + (META.platforms || []).map(function (p) {\n'
-         '        return \'<option value="\' + esc(p) + \'"\' + (state.platform === p ? " selected" : "") + ">" + esc(p) + "</option>";\n'
-         '      }).join("");\n'
-         '    }\n'
-         '  }\n\n  /* ---------- 事件 ---------- */'),
-        ('    var intentSelect = document.getElementById("recordIntentFilter");\n    if (intentSelect) {',
-         '    var platformSelect = document.getElementById("recordPlatformFilter");\n'
-         '    if (platformSelect) {\n'
-         '      platformSelect.addEventListener("change", function () {\n'
-         '        state.platform = platformSelect.value;\n'
-         '        state.page = 1;\n'
-         '        state.sourcePage = { domains: 1, pages: 1, official: 1 };\n'
-         '        renderAll();\n'
-         '      });\n'
-         '    }\n'
-         '    var intentSelect = document.getElementById("recordIntentFilter");\n    if (intentSelect) {'),
+        # 售后所有题都计入提及率（选词阶段，Suda 2026-10-20），指标解释不写「默认统计发现、替代」
+        ('"提到监测对象的回答 ÷ 有效回答。对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计。"',
+         '"提到监测对象的回答 ÷ 有效回答。所有意图类型都计入，范围由筛选决定。"'),
         ("海外 AI 搜索可见度售前诊断", cfg.get("title") or "AI 搜索可见度 · 候选基线"),
         ("海外 GEO 售前诊断报告", "海外 GEO 候选基线报告"),
         ("GEO Presales Diagnosis", "GEO Candidate Baseline"),
@@ -1072,7 +1047,7 @@ def render(cfg, data_path: Path, out: Path):
         raise SystemExit("售前渲染模板变了，找不到引用模块代码段")
     html = html[:s0] + SOURCES_JS + html[s1:]
     html = html.replace("</style>", SOURCES_CSS + "\n</style>", 1)
-    start, end = html.find("  var RECORD_HEAD = "), html.find("  function renderPagination(")
+    start, end = html.find("  function recordHead() {"), html.find("  function renderPagination(")
     if start < 0 or end < start:
         raise SystemExit("售前渲染模板变了，找不到明细表代码段")
     html = html[:start] + RECORDS_JS + html[end:]
@@ -1099,14 +1074,6 @@ def render(cfg, data_path: Path, out: Path):
                   r'<span class="section-no">([^<]*)</span>', renumber, html)
     # 「官网引用份额 / 官网引用率」统一叫「引用份额 / 引用率」（Suda 2026-10-21）
     html = html.replace("官网引用份额", "引用份额").replace("官网引用率", "引用率")
-    # 数据筛选挪到核心洞察前面（Suda 2026-10-21）
-    f0 = html.find('<div class="shared-filter" id="sharedFilter"')
-    f1 = html.find('<section class="section" id="competition">', f0)
-    o0 = html.find('<section class="section" id="overview">')
-    if min(f0, f1, o0) < 0 or o0 > f0:
-        raise SystemExit("售前渲染模板变了，找不到筛选面板或核心洞察段")
-    block = html[f0:f1]
-    html = html[:o0] + block + html[o0:f0] + html[f1:]
     rr.check_javascript(html[html.rfind("<script>") + 8:html.rfind("</script>")], out)
     # 整份数据 gzip 后内嵌，浏览器解压完再启动主脚本（主脚本自己按 readyState 启动）。
     # 5 次运行的回答原文都放进来后，明文 JSON 约 15 MB，侧边栏打不开（Suda 2026-10-21）。

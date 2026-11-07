@@ -489,3 +489,115 @@
   color: var(--quiet);
   margin-top: 1px;
 }
+
+/* 数据筛选：意图类型、主题下拉（2026-11-07） */
+.filter-selects{display:flex;gap:10px;flex-wrap:wrap}
+.filter-selects select{min-width:150px}
+.kpi-scope{margin:10px 2px 0;font:400 12px/1.6 var(--sans);color:var(--quiet)}
+.kpi .kpi-sub{display:block;margin-top:4px;font:400 11px/1.3 var(--sans);color:var(--quiet)}
+
+/* 购物商品卡模块 */
+#shopping .matrix td.brand-cell .info{margin-left:6px}
+#shopping .matrix th .info{margin-left:6px}
+#shopping .shop-platform{font:700 11px/1.4 var(--sans);color:var(--quiet);letter-spacing:0}
+#shopping .shop-table td,#shopping .shop-table th{padding:10px 8px}
+#shopping .shop-title{max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#shopping .shop-official{display:flex;align-items:baseline;gap:8px;margin:0 0 14px;font:500 13px/1.4 var(--sans);color:var(--ink-2)}
+#shopping .shop-official b{font:700 22px/1 var(--serif);color:var(--gold-deep)}
+#shopping .shop-official small{color:var(--quiet);font:12px var(--mono)}
+
+/* 问题详情：问题概览与回答记录（参照 Housebell 基线报告，2026-11-07） */
+.drawer-overview{padding:26px 32px 40px;height:100%;overflow-y:auto;box-sizing:border-box}
+.drawer-overview-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.drawer-plat{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+.drawer-tags{margin-top:8px;display:flex;gap:8px}
+.drawer-tags span{padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}
+.drawer-sec{margin:22px 0 0;font:600 14px/1.4 var(--sans);color:var(--ink)}
+.drawer-sec-note{font-weight:400;font-size:12px;color:var(--quiet);margin-left:6px}
+.drawer-table{width:100%;margin-top:12px;border-collapse:collapse;font-size:13px}
+.drawer-table.runs{table-layout:fixed}
+.drawer-table th,.drawer-table td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:top}
+.drawer-table th{color:var(--quiet);font-weight:600;font-size:12px}
+.drawer-table tr.self td{font-weight:700;color:var(--gold-deep)}
+.drawer-table .hit{color:var(--gold-deep);font-weight:700}
+.drawer-table .miss{color:var(--quiet)}
+.run-nav{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:12px;color:var(--quiet)}
+
+/* 指标说明浮层（2026-11-07）：替代 .info::after，避免被表格外框裁掉 */
+.info:hover::after,.info:focus-visible::after,.info.open::after{content:none!important;display:none!important}
+.float-tip{position:fixed;z-index:200;max-width:280px;padding:10px 12px;background:var(--ink);color:var(--paper);border-radius:10px;font:12px/1.6 var(--sans);letter-spacing:0;text-align:left;white-space:normal;box-shadow:0 10px 26px rgba(30,27,23,.28);pointer-events:none}
+
+/* 引用模块：引用份额 + 引用率（参照 Housebell 基线报告，2026-11-07） */
+.hb-src{display:grid;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.hb-src:last-child{border-bottom:0}
+.hb-src-head{padding:0 0 8px;border-bottom:1px solid var(--line);color:var(--quiet);font:800 10px/1.4 var(--mono);letter-spacing:.08em}
+.hb-src-head span:not(:first-child){text-align:right}
+.hb-src-type{grid-template-columns:96px minmax(0,1fr) 54px 54px}
+.hb-src-type .track{height:8px}
+.hb-src-domain{grid-template-columns:minmax(0,1fr) 72px 56px 56px}
+.hb-src-page{grid-template-columns:minmax(0,1fr) 78px 64px 56px 56px}
+.hb-src-official{grid-template-columns:minmax(0,1fr) 56px 56px}
+.hb-src .hb-num{text-align:right;font:12px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:400}
+.hb-src .domain-name{display:flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere}
+.hb-src .cat-tag{justify-self:end}
+.hb-src .page-mention{text-align:right}
+.hb-src .page-title-with-logo{min-width:0}
+.hb-src small.page-url{display:block;min-width:0;font:12px/1.45 var(--mono);color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+#sources .source-head.with-cat{display:none}
+.hb-scope{display:block;margin-top:4px;font-size:12px;font-weight:400;color:var(--quiet)}
+
+
+/* 数据筛选吸顶：往下看各模块时随时能换筛选（2026-11-07） */
+.shared-filter{position:sticky;top:58px;z-index:45;margin-top:18px;padding:12px 18px}
+.shared-filter .shared-filter-head{display:none}
+.shared-filter > div{display:flex!important;flex-wrap:wrap;align-items:center;gap:10px 14px!important}
+.shared-filter .filter-tabs{margin:0}
+.shared-filter .filter-tabs + .filter-tabs{margin-top:0}
+.shared-filter .filter-selects select{min-height:32px;padding-top:6px;padding-bottom:6px}
+.records-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.records-toolbar .records-search{flex:1 1 280px}
+.records-toolbar select{min-width:160px}
+
+/* 模块统计范围（2026-11-07） */
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.section-scope{font:600 12px/1.4 var(--sans);color:var(--quiet);white-space:nowrap}
+
+/* 购物商品卡：触发率指标卡（2026-11-07） */
+#shopping .shop-kpis{grid-template-columns:minmax(0,260px)!important;display:grid;width:max-content;min-width:260px}
+
+/* 指标切换按钮里的 i 提示（2026-11-07）：i 跟在各指标名旁边 */
+.matrix-switch button .info{margin-left:6px;vertical-align:middle;color:inherit;border-color:currentColor;opacity:.6}
+.matrix-switch button.active .info{opacity:.8}
+
+/* 品牌对比、SKU 两张表列宽一致，平台列上下对齐（2026-11-07） */
+
+/* 购物商品卡：三个指标表 + 品牌 / SKU 切换（2026-11-07） */
+#shopping .shop-top{display:flex;flex-direction:column;align-items:flex-start;gap:20px}
+#shopping .shop-top + .shop-metric{margin-top:14px!important}
+#shopping .shop-table{table-layout:fixed;width:100%}
+#shopping .shop-table th:first-child{width:28%}
+#shopping .shop-metric h3 .info{margin-left:8px;vertical-align:middle}
+
+/* 单次回答里的商品卡（2026-11-07） */
+.answer-cards{margin:4px 0 18px}
+.answer-card-row{display:flex;gap:12px;overflow-x:auto;padding:10px 2px 6px}
+.answer-card{position:relative;flex:0 0 200px;padding:12px;border:1px solid var(--line-2);border-radius:10px;background:var(--paper);font-size:12.5px}
+.answer-card.is-target{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.answer-card-pos{position:absolute;top:8px;left:8px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ink);color:var(--paper);font:700 10px/18px var(--mono);text-align:center}
+.answer-card-img{height:96px;margin:-2px 0 8px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:8px;overflow:hidden}
+.answer-card-img img{max-width:100%;max-height:100%;object-fit:contain}
+.answer-card-title{font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.answer-card-meta{color:var(--ink-2);margin-bottom:4px}
+.answer-card-merchant{color:var(--quiet);font-size:11.5px;line-height:1.4}
+.answer-card-flag{margin-top:6px;color:var(--gold-deep);font-weight:600;font-size:11.5px}
+.drawer-sec-count{font-weight:400;font-size:12px;color:var(--quiet);margin-left:4px}
+.records-table .detail-btn{white-space:nowrap}
+
+/* 数据筛选多选（2026-11-07）：沿用原型 .multi-select 样式，放在筛选栏里左对齐、宽度随内容 */
+.shared-filter .multi-select{min-width:150px;max-width:240px}
+.shared-filter .multi-select-button{min-height:32px;padding-top:6px;padding-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shared-filter .multi-select-button.has-value{border-color:var(--gold);color:var(--gold-deep)}
+.shared-filter .multi-select-menu{left:0;right:auto;max-height:340px}
+.shared-filter .multi-select-option input{margin:0;accent-color:var(--gold)}
+.shared-filter .msel-all{border:0;background:none;text-align:left;width:100%;font-weight:600}
+.shared-filter .msel-all.on{color:var(--gold-deep)}

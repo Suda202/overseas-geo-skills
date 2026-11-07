@@ -9,9 +9,26 @@
   "schema": "geo-presales-report-data/v1",
   "meta": { ... },
   "slices": { "<region>|<platform>|<topic>": { ... } },
-  "details": { "<region>|<platform>|<NNNN>": { ... } }
+  "details": { "<region>|<platform>|<NNNN>": { ... } },
+  "facts": { ... }
 }
 ```
+
+## facts（页面多选筛选用的逐条回答事实，2026-11-07）
+
+预算切片只覆盖单选组合；数据筛选多选时，页面用 `assets/report-engine.js` 从 `facts` 现算。只存可加的原始事实，不存百分比。`build_report_data.build_facts` 写主体，`attach_sentiment.py` 补 `claims` 与 `sentiment`。
+
+| 字段 | 内容 |
+|---|---|
+| `objects` | 全部纳入品牌（目标、配置竞品、开放品牌），顺序同 `all_objects(config)`；下文的对象下标指这里 |
+| `domains` / `urls` / `source_types` | 引用的域名、页面、来源类型字典；`source_types[i].bucket` 是 7 类展示类别 |
+| `answers[]` | 每条有效回答：`r` 市场、`p` 平台显示名、`q` 题号、`n` 第几次、`m` 提到的品牌 `[对象下标, 位置]`、`c` 每条引用 `[官网归属对象下标或 -1, 域名下标, 来源类型下标, 页面下标或 -1, 是否表格行]`、`s` 商品卡（平台不支持为 null）`{f 本条是否带商品字段, t 卡数, k [[对象下标或 -1, 卡位, 是否官网链接, SKU 下标或 -1]]}` |
+| `visibility_groups` / `shopping_scope` | 提及类样本的意图组（发现＋替代 → 问题解决）、商品卡统计的意图类型 |
+| `sku_names` / `source_limit` / `bucket_order` / `bucket_fill` / `competition_fills` | 与 Python 侧同值的常量 |
+| `claims[]` | 每条 Claim：`r` `p`（平台内部名）`k`（回答键）`q` `b` 品牌 `t` 归一后的 claim 文本 `d` 方向 `a` Attribute `h` Theme，目标品牌带 `e` 证据句 |
+| `sentiment` | 展示品牌、目标品牌、明细情感列适用的题号、平台显示名 → 内部名 |
+
+`answers` 的顺序与 `collect_answers` 一致（平台 → 市场 → 回答）：页面类别取首次出现、域名类别并列取先出现，顺序不同结果就会不同。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎并逐项比对，是这一节的门禁。渲染时有 `facts` 就不把 `slices` 嵌进 HTML。
 
 ## details（抽屉明细）
 
@@ -115,10 +132,10 @@
     "schema_version": "geo-presales-shopping/v1",
     "by_platform": {
       "chatgpt": {
-        "valid_answers": 100, "shopping_answers": 32,
-        "shopping_mode_rate": {"numerator": 32, "denominator": 100, "raw": 0.32, "display": "32%"},
+        "valid_answers": 100, "scope_answers": 68, "shopping_answers": 25,
+        "shopping_mode_rate": {"numerator": 25, "denominator": 68, "raw": 0.368, "display": "37%"},
         "shopping_mode_rate_by_intent": {"discovery": {"…": "…"}},
-        "discovery_answers": 68, "discovery_shopping_answers": 25,
+        "all_intent_shopping_answers": 32,
         "target": {"name": "Abrand", "shopping_visibility": {"numerator": 2, "denominator": 25, "…": "…"},
                    "shopping_exposure_rate": {"…": "…"}, "average_card_position": {"…": "…"}, "card_count": 3},
         "brands": [], "products": [], "target_products": [],
@@ -188,13 +205,20 @@
 - `by_platform` 键是平台目录名（`chatgpt` / `overview` / `aimode` / `gemini`）。全部平台切片也只给逐平台结果，不合池。没有商品字段的平台进 `unsupported_platforms`，不出现在 `by_platform` 里。
 - 比率字段都是 core 的 `{numerator, denominator, raw, display}` 结构，分子分母随值携带；分母为 0 时 `raw=null`、`display="—"`。
 - `products` / `competitor_products_where_target_absent` / `merchants` 各截前 20 行；`target_products` 全量。
-- 只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。`verify_report_data.py` 独立复算每平台的有效回答数、触发数、Discovery 触发数和目标品牌品牌商品卡入选率分子分母。
+- 每个平台另有 `product_field_returned`(本切片里有没有回答带商品字段)。2026-11-07 起不再算商品、商家、商品卡份额和首位率（`products`、`target_products`、`merchants`、`target_offer_channel` 等字段已删）。
+- `scope_answers` 是发现、替代、对比、交易四类题的有效回答，商品卡触发率和商品卡提及率都在这四类里算；`shopping_mode_rate_by_intent` 另给全部意图类型各自的触发率，`all_intent_shopping_answers` 是全部意图里出卡的回答数，两者只作诊断。
+- 进 HTML 时 `render_report.slim_for_html` 只保留购物商品卡模块要用的：每平台的触发数与触发率、目标品牌和配置竞品的商品卡提及率与平均位置；逐题下钻剥掉。另写 `meta.shopping = {enabled, basis, no_field_platforms}`（见 render-spec.md「购物商品卡模块」）。`sources` 另有 `official_citation_rate` 和 `rates`（类别、域名、页面的引用率），见 render-spec.md「引用模块」。
+
+**意图类型切片**
+
+- 题库有两种以上意图类型时，每个地区 × 平台再出一组「类型:X」切片（topic 位写 `类型:发现`），前端选了意图类型、没选主题时用。`meta.intent_topics` 给每类意图下的主题，`meta.type_topic_prefix` 是前缀。
 
 **records**
 
 - 每题一行。
 - `discovery` 是布尔，取该题的诊断意图是否为 `discovery`；`target_in_question` 是布尔，取题面是否点名目标品牌（用与正文识别同一套别名匹配）；`mentioned` 是布尔，取目标品牌在该题的有效回答里是否出现过；该题在本切片无有效答案时 `mentioned` 为 `null`（与 `rank` 的 `—` 同步）。
-- 前三者是内容规划「官网阵地」清单的取数判据：**`(discovery || target_in_question) && !mentioned`** 才是内容缺口。理由是该题的目标品牌为被期待对象——发现题里用户没点名品牌，品牌本该争夺一席；题面点名目标品牌时，AI 说不出它的话就是缺口；而题面只点名竞品的评价题、以及只问品类选择标准的品类认知题不算。**不要**让渲染层去比 `intent` 的中文标签或 `mention_rate` 的百分比字符串。
+- `mention_rank`（本题的提及率排名，按提及回答数在全部纳入对象里排并列名次，本品没被提到为 `—`）、`position`（本品被提到时的平均提及位置）、`citation_rate`（正文至少引用一次官网的回答 ÷ 有效回答）给问题明细用；`rank` 是旧字段（本品平均位置，没提到时写对象总数），保留兼容。
+- 前三者原是内容规划「官网阵地」清单的取数判据（内容规划模块 2026-11-07 已从 HTML 删掉，字段保留）：**`(discovery || target_in_question) && !mentioned`** 才是内容缺口。理由是该题的目标品牌为被期待对象——发现题里用户没点名品牌，品牌本该争夺一席；题面点名目标品牌时，AI 说不出它的话就是缺口；而题面只点名竞品的评价题、以及只问品类选择标准的品类认知题不算。**不要**让渲染层去比 `intent` 的中文标签或 `mention_rate` 的百分比字符串。
 - `sentiment` 仅情绪题有值，其余为 `null`。**该列是目标品牌口径**（目标品牌在该题该切片判读句子的正向情感占比）；`—` 表示目标品牌在该切片无正负句，属正常空值，不是回填缺陷——发现题的回答常只罗列品牌（中性提及），评价题问竞品时目标品牌可能不在答案里（Abrand 实测：有值 126 条，其余 `—` 全部核实为真实无正负句）。抽屉内「每个回答的逐品牌情感」是另一个功能（`details[key].sentiment`），两者定位不同。
 - **`details[key].sentiment` 有提及门禁**：只列该回答里**真的被判出过句子**的品牌（`build_answer_sentiment` 按 `(question_id, region, platform)` 匹配判读结果），没提到的品牌不出现。聚合板块（主题矩阵、品牌占比条）是全批次统计，换展示品牌可整体替换；逐回答**不得硬塞**——客户中途换竞品的完整规则见 [客户中途换竞品](competitor-swap.md)。
 - `mention_rate`/`share`/`citation_share` 是该题在该切片下的值。

@@ -17,8 +17,9 @@ report-builder 都引用它，不各自解析平台字段——平台字段分�
 口径（Suda 2026-10-14 裁定）：
 - 四个平台（ChatGPT / AIO / AI Mode / Gemini）分开算，不跨平台合并——各平台每条回答的
   卡数量级不同（Gemini 12–19 张，ChatGPT 1–6 张），合池后排名没有意义。
-- 商品卡触发率用全部有效回答，按诊断意图拆开报；品牌商品卡入选率、商品、商家、卡位只用 Discovery，
-  与正式可见度同口径（题面带品牌的题会必然抬高本品牌）。
+- 发现、替代两类题（SHOPPING_SCOPE_INTENTS，2026-11-07 Suda 收窄）进汇总：商品卡触发率、商品卡提及率、
+  卡位都只用这两类；按意图类型筛选靠报告切片，这里另给全部意图的触发率拆分
+  （shopping_mode_rate_by_intent）作诊断。Suda 2026-11-06 定，口径见 metric-scope-and-copy-contract.md。
 - 没有商品字段的平台（Perplexity）返回 None，显示「—」，不按 0% 计。
 """
 
@@ -49,6 +50,38 @@ PLATFORM_PRODUCT_FIELDS = {
     "aimode": "products",
     "gemini": "products",
 }
+
+
+# 进商品卡汇总的意图类型（后端 diagnostic_intent 内部值）。评估、验证、问题解决、售后照常抽卡，不进汇总。
+SHOPPING_SCOPE_INTENTS = ("discovery", "alternatives")
+
+
+def product_field_returned(platform: str | None, task_result: dict | None) -> bool | None:
+    """这条回答的平台响应里有没有商品字段（有字段、哪怕是空列表也算返回了）。
+
+    用来区分「平台没出商品卡」和「采集接口没返回商品字段」：2026-10 中起 Scrapeless 的 Gemini
+    1,700 多条回答一条都不带 ``products``，AI Mode 出卡时才带。整个平台在本次采集里一条都不带时，
+    报告写「接口未返回」，不按 0% 计。平台不支持购物字段时返回 None。
+    """
+    name = str(platform or "").casefold()
+    if name not in PLATFORM_PRODUCT_FIELDS:
+        return None
+    result = task_result if isinstance(task_result, dict) else {}
+    return ("source" if name == "overview" else "products") in result
+
+
+UNMATCHED_SKU = "未识别型号"
+
+
+def sku_of(card: dict, sku_map: list[dict]) -> str:
+    """本品商品卡归到哪个 SKU：按 ``config["sku_map"]`` 的顺序，第一条正则命中卡标题（或 offer 里的
+    product_name）的胜出；都不中记「未识别型号」。同一款产品 AI 会写成好几种标题（「H1 4-Camera
+    Multi-Channel」「H1 4-Channel Multi-Camera」），所以按型号 + 路数归并，不按标题原样数（2026-11-07）。"""
+    text = " ".join(filter(None, [_text(card.get("title")), _text(card.get("offer_product_name"))]))
+    for rule in sku_map or []:
+        if re.search(rule["pattern"], text, re.I):
+            return rule["name"]
+    return UNMATCHED_SKU
 
 
 def shopping_supported(platform: str | None) -> bool:
@@ -255,16 +288,22 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
             for intent, items in sorted(intents.items())
         }
 
-        discovery = [a for a in answers if is_discovery(a)]
-        shopping = [a for a in discovery if a["product_cards"]]
+        scoped = [a for a in answers if is_discovery(a)
+                  or str(a.get("diagnostic_intent") or "").casefold() in SHOPPING_SCOPE_INTENTS]
+        shopping = [a for a in scoped if a["product_cards"]]
+        flags = [(a.get("provenance") or {}).get("product_field_returned") for a in answers]
+        # 旧数据没有这个标记（None）时按返回过处理，不误报
+        field_returned = any(f is not False for f in flags)
 
         # ---- Brands：回答级去重
         present: dict[str, list[dict]] = defaultdict(list)   # object_id -> answers
         first_pos: dict[str, list[int]] = defaultdict(list)
         card_counts: Counter = Counter()
         unattributed = 0
+        official_link: dict[str, int] = Counter()   # 本品牌的卡里带官网购买链接的回答数
         for answer in shopping:
             seen = {}
+            linked = set()
             for card in answer["product_cards"]:
                 oid = card.get("object_id")
                 if not oid:
@@ -272,9 +311,13 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
                     continue
                 card_counts[oid] += 1
                 seen.setdefault(oid, card["position"])
+                if any(offer.get("channel") == "official" for offer in card.get("offers") or []):
+                    linked.add(oid)
             for oid, pos in seen.items():
                 present[oid].append(answer)
                 first_pos[oid].append(pos)
+            for oid in linked:
+                official_link[oid] += 1
         brand_ids = [oid for oid, obj in objects.items() if obj["role"] in ("target", "competitor")]
         brand_ids += sorted((oid for oid in present if oid not in brand_ids),
                             key=lambda oid: (-len(present[oid]), objects[oid]["canonical_name"]))
@@ -284,92 +327,46 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
                 **obj_meta(oid),
                 "shopping_visibility": {**percent(len(present[oid]), len(shopping)),
                                         "included_answer_ids": [a["answer_id"] for a in present[oid]]},
-                "shopping_exposure_rate": percent(len(present[oid]), len(discovery)),
+                "shopping_exposure_rate": percent(len(present[oid]), len(scoped)),
                 "average_card_position": average(first_pos[oid]),
+                # 官网购买链接覆盖率：本品牌的卡里至少一张带官网购买链接的回答 ÷ 出现本品牌卡的回答
+                "official_link_coverage": percent(official_link[oid], len(present[oid])),
                 "card_count": card_counts[oid],
             })
         brands.sort(key=lambda row: (-(row["shopping_visibility"]["raw"] or 0),
                                      row["role"] != "target", row["name"] or ""))
 
-        # ---- Products：卡级
-        products: dict[tuple, dict] = {}
+        # ---- SKU 级（只看本品）：分母同品牌级，是出现商品卡的回答；同一回答里同一 SKU 只算一次，
+        # 位置取该 SKU 在这条回答里最靠前的那张卡。没配 sku_map 时只有「未识别型号」一行，不展示。
+        sku_map = config.get("sku_map") or []
+        sku_answers: dict[str, list[int]] = defaultdict(list)
+        sku_linked: Counter = Counter()
         for answer in shopping:
-            target_absent = not any(c.get("object_id") == target_id for c in answer["product_cards"])
+            seen_sku: dict[str, int] = {}
+            linked_sku = set()
             for card in answer["product_cards"]:
-                key = (card.get("object_id") or _text(card.get("brand_hint")).casefold() or None,
-                       _title_key(card["title"]))
-                item = products.setdefault(key, {
-                    "title": card["title"], "object_id": card.get("object_id"),
-                    "brand_hint": card.get("brand_hint"), "answers": {}, "merchants": Counter(),
-                    "questions": set(), "target_absent_answers": set(),
-                })
-                item["answers"].setdefault(answer["answer_id"], card["position"])
-                item["questions"].add(answer["question_id"])
-                if target_absent:
-                    item["target_absent_answers"].add(answer["answer_id"])
-                for offer in card["offers"]:
-                    if offer.get("merchant"):
-                        item["merchants"][offer["merchant"]] += 1
-
-        def product_row(item):
-            meta = obj_meta(item["object_id"]) if item["object_id"] else {
-                "object_id": None, "name": item["brand_hint"], "role": None}
-            return {
-                "title": item["title"], **meta,
-                "answer_count": len(item["answers"]),
-                "exposure_rate": percent(len(item["answers"]), len(shopping)),
-                "average_card_position": average(list(item["answers"].values())),
-                "question_ids": sorted(item["questions"]),
-                "merchants": [name for name, _ in item["merchants"].most_common(5)],
-            }
-
-        ranked = sorted(products.values(), key=lambda it: (-len(it["answers"]), it["title"].casefold()))
-        target_absent_ids = {a["answer_id"] for a in shopping
-                             if not any(c.get("object_id") == target_id for c in a["product_cards"])}
-        gap_items = sorted(
-            (it for it in products.values()
-             if it["target_absent_answers"] and (objects.get(it["object_id"]) or {}).get("role") == "competitor"),
-            key=lambda it: (-len(it["target_absent_answers"]), it["title"].casefold()),
-        )
-
-        # ---- Merchants：offer 级。同一回答内「商家 + 链接」相同的 offer 只计一次——
-        # Gemini 会把同一商品列成两张卡、卡内还重复同一变体链接（Bbrand US 0001 实测），
-        # 不去重会把该商家份额按重复次数放大。无链接时退回「商家 + 卡标题」。
-        offers = []
-        for answer in shopping:
-            seen_offers = set()
-            for card in answer["product_cards"]:
-                for offer in card["offers"]:
-                    key = (_merchant_key(offer.get("merchant")),
-                           offer.get("url") or _title_key(card["title"]))
-                    if key in seen_offers:
-                        continue
-                    seen_offers.add(key)
-                    offers.append((card, offer))
-        merchant_rows: dict[str, dict] = {}
-        for card, offer in offers:
-            key = _merchant_key(offer.get("merchant")) or f"(无商家名) {normalize_host(offer.get('url') or '')}"
-            row = merchant_rows.setdefault(key, {"merchant": offer.get("merchant") or key,
-                                                 "offers": 0, "target_offers": 0, "official_offers": 0})
-            row["offers"] += 1
-            row["target_offers"] += card.get("object_id") == target_id
-            row["official_offers"] += offer.get("channel") == "official"
-        merchants = [
-            {
-                "merchant": row["merchant"],
-                "offer_count": row["offers"],
-                "merchant_share": percent(row["offers"], len(offers)),
-                "target_brand_share": percent(row["target_offers"], row["offers"]),
-                "official_offer_count": row["official_offers"],
-            }
-            for row in sorted(merchant_rows.values(), key=lambda r: (-r["offers"], r["merchant"].casefold()))
-        ]
-        target_offers = [offer for card, offer in offers if card.get("object_id") == target_id]
-        channel_counts = Counter(offer.get("channel") for offer in target_offers)
+                if card.get("object_id") != target_id:
+                    continue
+                name = sku_of(card, sku_map)
+                seen_sku.setdefault(name, card["position"])
+                if any(offer.get("channel") == "official" for offer in card.get("offers") or []):
+                    linked_sku.add(name)
+            for name, pos in seen_sku.items():
+                sku_answers[name].append(pos)
+            for name in linked_sku:
+                sku_linked[name] += 1
+        order = [rule["name"] for rule in sku_map] + [UNMATCHED_SKU]
+        target_skus = [
+            {"name": name,
+             "shopping_visibility": percent(len(sku_answers[name]), len(shopping)),
+             "average_card_position": average(sku_answers[name]),
+             "official_link_coverage": percent(sku_linked[name], len(sku_answers[name]))}
+            for name in dict.fromkeys(order) if name in sku_answers
+        ] if sku_map else []
 
         # ---- Prompt 级下钻
         by_question: dict[str, dict] = {}
-        for answer in discovery:
+        for answer in scoped:
             row = by_question.setdefault(answer["question_id"], {
                 "valid_answers": 0, "shopping_answers": 0, "target_present_answers": 0, "brands": Counter()})
             row["valid_answers"] += 1
@@ -387,49 +384,39 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
 
         result[platform] = {
             "valid_answers": len(answers),
-            "shopping_answers": len(triggered),
-            "shopping_mode_rate": percent(len(triggered), len(answers)),
+            "product_field_returned": field_returned,
+            "scope_answers": len(scoped),
+            "shopping_answers": len(shopping),
+            "shopping_mode_rate": percent(len(shopping), len(scoped)),
             "shopping_mode_rate_by_intent": by_intent,
-            "discovery_answers": len(discovery),
-            "discovery_shopping_answers": len(shopping),
-            "discovery_shopping_mode_rate": percent(len(shopping), len(discovery)),
+            "all_intent_shopping_answers": len(triggered),
             "card_count": sum(len(a["product_cards"]) for a in shopping),
             "unattributed_card_count": unattributed,
             "cards_without_offers": sum(1 for a in shopping for c in a["product_cards"] if not c["offers"]),
             "brands": brands,
             "target": next(row for row in brands if row["object_id"] == target_id),
-            "products": [product_row(it) for it in ranked[:top_n]],
-            "target_products": [product_row(it) for it in ranked if it["object_id"] == target_id],
-            "target_absent_shopping_answers": len(target_absent_ids),
-            "competitor_products_where_target_absent": [
-                {**product_row(it), "target_absent_answer_count": len(it["target_absent_answers"])}
-                for it in gap_items[:top_n]
-            ],
-            "offer_count": len(offers),
-            "merchants": merchants[:top_n],
-            "target_offer_channel": {
-                "offer_count": len(target_offers),
-                "official": percent(channel_counts["official"], len(target_offers)),
-                "third_party": percent(channel_counts["third_party"], len(target_offers)),
-            },
+            "target_skus": target_skus,
             "by_question": by_question,
         }
 
     return {
         "schema_version": "geo-presales-shopping/v1",
+        "scope_intents": list(SHOPPING_SCOPE_INTENTS),
         "by_platform": result,
         "unsupported_platforms": sorted(unsupported - set(result)),
         "methodology": {
             "platform_scope": "按平台分开计算，不跨平台合并；无商品字段的平台不计（显示 —）",
             "card_source": {k: v for k, v in PLATFORM_PRODUCT_FIELDS.items()},
-            "shopping_mode_rate_denominator": "该平台全部有效回答；分子为至少有一张商品卡的回答；按诊断意图另拆",
-            "shopping_visibility_denominator": "该平台触发购物的有效 Discovery 回答；分子为至少有一张该品牌商品卡的回答（回答级去重）",
-            "shopping_exposure_rate_denominator": "该平台全部有效 Discovery 回答（推导指标 = 品牌商品卡入选率 × Discovery 触发率）",
-            "product_exposure_denominator": "该平台触发购物的有效 Discovery 回答；同一商品在一条回答内只计一次",
-            "average_card_position": "品牌/商品在回答内首张卡的位置（平台字段顺序，1 起）取平均；仅内部字段",
-            "merchant_share_denominator": "该平台触发购物的 Discovery 回答中全部购买选项（offer）；同一回答内商家+链接相同只计一次",
-            "target_brand_share_by_merchant": "某商家的 offer 中属于目标品牌商品卡的比例",
-            "official_channel_rule": "offer 域名命中品牌官网域名，或商家名命中该品牌别名",
+            "intent_scope": "发现、替代两类题进汇总；shopping_mode_rate_by_intent 另给全部意图的触发率",
+            "shopping_mode_rate_denominator": "该平台发现、替代题的有效回答；分子为其中至少有一张商品卡的回答",
+            "shopping_visibility_denominator": "该平台发现、替代题里出现商品卡的有效回答；分子为至少有一张该品牌商品卡的回答（回答级去重）",
+            "shopping_exposure_rate_denominator": "该平台发现、替代题的有效回答（推导指标 = 商品卡提及率 × 商品卡触发率）",
+
+            "average_card_position": "品牌/商品在回答内首张卡的位置（平台字段顺序，1 起）取平均",
+            "product_field_returned": "本次采集里该平台有没有任何一条回答带商品字段；没有时报告写「接口未返回」",
+            "official_link_coverage": "出现该品牌（或 SKU）商品卡的回答里，这些卡至少带一个官网购买链接的占比；官网 = 链接域名是品牌官网，或商家名带品牌名",
+            "target_skus": "本品 SKU 级：按 config.sku_map 把卡标题归到型号；商品卡提及率分母同品牌级（出现商品卡的回答），位置取该 SKU 最靠前的卡",
+
             "card_attribution": "平台 brand 字段 → 卡标题最早别名 → offer product_name；都不中记未归属",
             "excluded": "空占位卡、广告卡、AIO products 字段（文档定义为 sponsored products，非 AI 概览内商品）、无效回答",
         },

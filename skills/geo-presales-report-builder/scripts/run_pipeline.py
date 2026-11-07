@@ -127,6 +127,10 @@ def stage_build(args, out: Path) -> None:
         cmd += ["--regions", args.regions]
     if args.brand_suffixes:
         cmd += ["--brand-suffixes", args.brand_suffixes]
+    if args.shopping_cards:
+        cmd += ["--shopping-cards", args.shopping_cards]
+    if args.sku_map:
+        cmd += ["--sku-map", args.sku_map]
     if args.source_limit is not None:
         cmd += ["--source-limit", str(args.source_limit)]
     run(cmd, args.dry_run, "2 数据生成")
@@ -249,6 +253,9 @@ def main() -> int:
     parser.add_argument("--target", help="目标品牌标准名")
     parser.add_argument("--theme-keywords", type=Path,
                         help="主题关键词表 JSON;换品类必传,否则主题矩阵落空")
+    parser.add_argument("--sku-map", help="本品 SKU 归并表 JSON（见 build_report_data --sku-map）")
+    parser.add_argument("--shopping-cards", choices=["开", "关", ""], default="",
+                        help="这条产品线统计不统计商品卡（选词 config.shopping_cards）；留空按数据判")
     parser.add_argument("--brand-suffixes",
                         help="逗号分隔的品类/产品线后缀,展示时从品牌名剥掉(如 LED,Display);"
                              "留空用内置净水器词表兜底")

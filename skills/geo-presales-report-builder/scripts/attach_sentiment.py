@@ -21,7 +21,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 # 兄弟 skill 按相对位置定位：本脚本在 <skills>/<skill>/scripts/ 下。
@@ -665,6 +665,9 @@ def main() -> int:
 
     # question_id → 主题；units 里的 question_id 是补零字符串，meta.questions 用整数
     topic_of = {f"{int(q['qid']):04d}": q.get("topic") for q in meta.get("questions", [])}
+    # 意图类型切片（topic 位写「类型:发现」）按题的意图类型过滤（2026-11-07 修：之前按主题名比对，类型切片情感全空）
+    type_prefix = meta.get("type_topic_prefix") or "类型:"
+    label_of = {f"{int(q['qid']):04d}": q.get("intent") for q in meta.get("questions", [])}
     # question_id → 后端 diagnostic_intent；情感列只回写「sentiment 适用范围」的题
     # （口径 shared/canonical-intent-mapping.md：discovery / competitor / sentiment，
     # 对应中文 发现 / 竞品 / 评价），验证 / 准确性 / 品类认知题显示「—」。
@@ -707,7 +710,11 @@ def main() -> int:
                 return False
             if internal and unit.get("platform") != internal:
                 return False
-            if topic and topic_of.get(str(unit.get("question_id"))) != topic:
+            qid = str(unit.get("question_id"))
+            if topic.startswith(type_prefix):
+                if label_of.get(qid) != topic[len(type_prefix):]:
+                    return False
+            elif topic and topic_of.get(qid) != topic:
                 return False
             return True
         return predicate
@@ -816,6 +823,28 @@ def main() -> int:
                 bump_signal(u.get("region", ""), u.get("platform", ""),
                             str(u.get("question_id", "")).zfill(4), direction)
 
+    # 抽屉「品牌对比」用：逐题、逐品牌（展示品牌）的正向情感占比，口径同目标品牌（Claim 信号，回答内去重）
+    brand_tables: dict[str, dict] = {}
+    if claims:
+        seen_brand: set[tuple] = set()
+        for c in claims:
+            brand = c.get("brand")
+            direction = c.get("sentiment")
+            if brand not in brands or direction not in ("positive", "negative"):
+                continue
+            key = (brand, c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
+                   _norm_claim_text(c.get("claim")))
+            if key in seen_brand:
+                continue
+            seen_brand.add(key)
+            t = brand_tables.setdefault(brand, {"rpq": Counter(), "rpq_n": Counter(), "q": Counter(), "q_n": Counter(),
+                                                "rq": Counter(), "rq_n": Counter(), "pq": Counter(), "pq_n": Counter()})
+            r_, p_, q_ = c.get("region", ""), c.get("platform", ""), str(c.get("question_id") or "").zfill(4)
+            pos = direction == "positive"
+            for name, k in (("rpq", (r_, p_, q_)), ("q", q_), ("rq", (r_, q_)), ("pq", (p_, q_))):
+                t[name][k] += pos
+                t[name + "_n"][k] += 1
+
     filled_records = 0
     for slice_key, slice_value in report["slices"].items():
         region, platform_display, _ = (slice_key.split("|") + ["", "", ""])[:3]
@@ -838,6 +867,19 @@ def main() -> int:
                 filled_records += 1
             else:
                 rec["sentiment"] = None
+            if brand_tables:
+                if region and internal:
+                    name, k = "rpq", (region, internal, qid_str)
+                elif region:
+                    name, k = "rq", (region, qid_str)
+                elif internal:
+                    name, k = "pq", (internal, qid_str)
+                else:
+                    name, k = "q", qid_str
+                rec["brand_sentiment"] = {
+                    brand: f"{t[name][k] * 100 / t[name + '_n'][k]:.1f}%"
+                    for brand, t in brand_tables.items() if t[name + "_n"][k]
+                }
 
     # 抽屉「品牌情感」面板：按单条回答（region|平台显示名|qid）挂每个品牌的
     # 正/负观点与依据句。句级路径读 judged-sentences；Claim 路径直接从 claims 取
@@ -889,6 +931,23 @@ def main() -> int:
             for region, platform_display, qid in [(detail_key.split("|") + ["", "", ""])[:3]]
             if region and platform_display and qid
             and PLATFORM_INTERNAL.get(platform_display)})
+
+    # 页面多选筛选用的 Claim 事实（report-engine.js 按与 build_claims_sentiment / 明细列同一套规则现算）
+    if claims and isinstance(report.get("facts"), dict):
+        report["facts"]["claims"] = [{
+            "r": c.get("region", ""), "p": c.get("platform", ""),
+            "k": f"{c.get('idx')}|{c.get('repeat')}",
+            "q": int(str(c.get("question_id") or "0") or 0),
+            "b": c.get("brand"), "t": _norm_claim_text(c.get("claim")),
+            "d": c.get("sentiment") or "", "a": c.get("attribute") or "", "h": c.get("theme") or "",
+            **({"e": str(c.get("evidence_text") or "").strip()}
+               if c.get("brand") == args.target and str(c.get("evidence_text") or "").strip() else {}),
+        } for c in claims]
+        report["facts"]["sentiment"] = {
+            "brands": brands, "target": args.target,
+            "record_qids": [int(q) for q, intent in intent_of.items() if intent in SENTIMENT_INTENTS],
+            "platform_internal": PLATFORM_INTERNAL,
+        }
 
     meta["sentiment_claims_status"] = "complete"
     meta["sentiment_brands"] = brands
