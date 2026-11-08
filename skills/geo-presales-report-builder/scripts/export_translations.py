@@ -28,8 +28,10 @@ def parse_args(argv=None):
     parser.add_argument("--collect", type=Path, required=True)
     parser.add_argument("--regions", default="MY,SG")
     parser.add_argument("--batch-size", type=int, default=40)
-    parser.add_argument("--max-chars", type=int, default=4000,
-                        help="单条回答截断长度，与数据层保持一致")
+    # 数据层抽屉原文取前 6000 字（build_report_data.build_details 的 answer[:6000]）。这里原先默认 4000，
+    # 长回答的译文比原文少一截（Bbrand 2026-11-08 发现：ChatGPT 回答约一半超 4000 字）
+    parser.add_argument("--max-chars", type=int, default=6000,
+                        help="单条回答截断长度，与数据层保持一致（6000）")
     parser.add_argument("--out-dir", type=Path, required=True)
     return parser.parse_args(argv)
 

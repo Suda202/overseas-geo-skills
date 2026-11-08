@@ -601,3 +601,9 @@
 .shared-filter .multi-select-option input{margin:0;accent-color:var(--gold)}
 .shared-filter .msel-all{border:0;background:none;text-align:left;width:100%;font-weight:600}
 .shared-filter .msel-all.on{color:var(--gold-deep)}
+
+/* 核心洞察指标行（2026-11-08）：宽屏一行放下全部指标；1080 以下按 report.css 断点 3 列 / 2 列 / 1 列换行，数字不折行 */
+@media(min-width:1081px){#overviewKpis{grid-template-columns:repeat(var(--kpi-n,6),minmax(0,1fr))}}
+#overviewKpis .value{white-space:nowrap;font-size:clamp(28px,2.6vw,38px)}
+#overviewKpis .label{white-space:nowrap}
+@media(max-width:1080px) and (min-width:881px){#overviewKpis .kpi:nth-child(3n+1){border-left:0;padding-left:0}#overviewKpis .kpi:nth-child(n+4){border-top:1px solid var(--line-2);padding-top:14px}}

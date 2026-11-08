@@ -1,16 +1,18 @@
 ---
 name: geo-presales-report-builder
-description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, V4.0 prototype styling) directly from Scrapeless crawler collection data plus a Case record, covering visibility, citations, sentiment, content planning and per-question detail with country / platform / topic filtering. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
+description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Bbrand H1 template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.7.0"
+  version: "2.8.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
 
 ## 负责什么
 
-把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 售前诊断报告，视觉与信息结构对齐 `售前报告V4.0原型`。
+把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 售前诊断报告。
+
+**所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Bbrand H1 预览（`10-售前诊断报告/评测数据/brand-b/售后/选词-20261106/report-h1/购物面板预览/Bbrand-H1-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
 
 负责：读取 Scrapeless 采集 JSON、按国家/平台/主题切分、复用后端指标管线算全部指标、渲染 HTML。
 
@@ -227,7 +229,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
 - 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
 - `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Abrand 实例)。
-- 情感板块若尚无判读数据，必须在 `meta.sentiment_claims_status` 标 `pending`，不允许用占位数字冒充。
+- 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。商品卡同理（`--shopping-cards 关`，或本次采集一张商品卡都没有）。
 - 产物归档到 `10-售前诊断报告/评测数据/<品牌名>/` 对应任务目录，与可见度统计并列。
 
 ## 已知边界

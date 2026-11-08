@@ -90,6 +90,8 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 采集前设 `no_proxy=api.scrapeless.com`，否则本机代理会掐断 HTTPS 握手。声量份额和提及率排名的分母是全部纳入品牌（目标 + 3 个配置竞品 + 开放词表命中），所以必须带 `--lexicon`。
 
+报告是单文件 HTML，所有客户共用同一个模板：数据筛选（地区、平台、意图类型、主题，多选）→ 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。没有商品卡数据（选词判定关，或整份采集一张卡都没有）、没有情感数据（没判读完，或一条正负信号都没有）时，对应模块连同散在各处的 KPI、明细列、回答详情一起隐藏，后面的模块顺延编号。页面上的数由内嵌的计算引擎按筛选现算，和离线预算的切片逐项对账，不一致就停下（`check_engine_parity.js`）。
+
 ### ④ 修改已交付报告
 
 先用 `geo-presales-report-audit` 把品牌提及识别和首现排序改对，再用 `geo-presales-report-editor` 改客户结论、出上传 CSV。
@@ -121,10 +123,10 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 | 指标 | 谁算 | 口径 |
 | --- | --- | --- |
-| 提及率、提及率排名、声量份额、平均提及位置、可见度 | report-builder | 只统计发现题 |
+| 提及率、提及率排名、声量份额、平均提及位置 | report-builder | 报告默认统计发现、替代两类（只剩问题解决题时算问题解决）；上传 CSV 与后端仍只看发现 |
 | 引用次数、引用份额、引用率 | report-builder | 只数正文里带编号的引用标记；份额按未去重次数算 |
 | 正向情感占比 | sentiment-judge 判读，report-builder 按切片汇总 | 正向 ÷（正向 + 负向），不设中性档 |
-| 商品卡触发率、品牌商品卡入选率、品牌商品卡出现率 | report-builder（实现在 core `shopping.py`） | 只在有商品卡展示机会的产品线上统计，按平台分开算，和提及率分开报；公式见 `skills/geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」 |
+| 商品卡触发率、商品卡提及率、商品卡平均位置、官网购买链接覆盖率 | report-builder（实现在 core `shopping.py`） | 只统计发现、替代两类题，按平台分开算，和提及率分开报；商品卡提及率再分品牌级与 SKU 级；公式见 `skills/geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」 |
 
 每种意图类型统计哪些指标（提及率、情感、胜负、准确性）由类型决定，引用所有类型都统计，对照和后端字段见 `skills/shared/canonical-intent-mapping.md`。上传时填的 `diagnosis_intent` 和后端内部存的值是两层，评估题上传填 `evaluation`。
 

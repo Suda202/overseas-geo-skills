@@ -3,7 +3,7 @@ name: geo-presales-pipeline
 description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-presales-crawl-integrity, geo-presales-report-builder, geo-presales-sentiment-judge) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
 metadata:
   author: 海外 GEO 项目
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # 售前全链路编排：Case → 生词 → 采集 → HTML 报告
@@ -65,7 +65,7 @@ python3 scripts/run_pipeline.py \
 - `--case` 可以直接传 v8 题库 JSON，脚本会取其中的 `config.case_fields` 写成 `<输出目录>/case.json`。
 - 阶段 -1 会验收采集目录：没采齐时以退出码 3 暂停，并打印 `collect_answers.py` 的采集命令。驾驶脚本只检查、不代跑付费采集。
 - **退出码 3 = 暂停点**，会打印缺什么文件。按下表补齐后**重跑同一命令**续跑。暂停点产物（词表、claims、聚类映射、译文）重跑时不会被覆盖；要重做，先删掉对应文件。
-- 不带 `--brands`/`--target` 会跳过情感环节，报告情感板块显示 pending。这只用于中途查看，正式交付不允许。
+- 不带 `--brands`/`--target` 会跳过情感环节，报告不出情感模块（问题明细与抽屉也不出情感）。情感没卖给客户时就这样交付；卖了的必须跑完情感再交。商品卡同理：`--shopping-cards 关` 或采集里一张商品卡都没有时不出购物商品卡模块。所有报告是同一个模板（Bbrand H1 预览），缺哪块数据就隐藏哪块，规则见 report-builder render-spec「模块显隐」。
 - `--lexicon` 必填：声量份额与提及率排名的分母必须是全部纳入品牌（目标品牌 + 3 个配置竞品 + 开放词表命中），否则算出来的数不成立。换品类时还要传 `--theme-keywords` 与 `--brand-suffixes`，否则主题矩阵落空，品牌名会带品类后缀。
 
 ## 暂停点指挥表
@@ -88,7 +88,7 @@ python3 scripts/run_pipeline.py \
 
 ## 完成与出口
 
-- 完成标准：HTML 渲染成功，`verify_report_data.py` 通过，浏览器逐切片检查无空白、无变形。命令跑完不算完成。
+- 完成标准：HTML 渲染成功，`verify_report_data.py` 与 `check_engine_parity.js`（阶段 5b，页面多选计算引擎与预算切片对账）都通过，浏览器检查筛选（含多选组合）无空白、无变形。命令跑完不算完成。
 - 报告数字有疑点（品牌识别错、排名不对）→ `geo-presales-report-audit`，改完从阶段 2 重跑。
 - 要交上传 CSV 和客户结论 → `geo-presales-report-editor`，输入是本链产出的已确认数据。
 - 替换已交付报告，或修复抽取器后重跑 → 先读 report-builder 的《重跑与产物卫生》，隔离重跑，不许原地覆盖。

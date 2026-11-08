@@ -28,13 +28,21 @@ SECTION_ORDER = [
 ]
 
 
+def sentiment_enabled(meta: dict) -> bool:
+    """情感模块开不开：判读完成（sentiment_claims_status = complete）且整份报告至少有一条正负信号。
+    slim_for_html 会按数据算好写进 meta.sentiment_enabled；没算过时退回只看状态。"""
+    if "sentiment_enabled" in meta:
+        return bool(meta["sentiment_enabled"])
+    return meta.get("sentiment_claims_status") == "complete"
+
+
 def sections_for(meta: dict) -> list[tuple[str, str, str, str]]:
     """(编号, id, 标题, 导航名)。"""
     shown = []
     for section_id, title, nav in SECTION_ORDER:
         if section_id == "shopping" and not (meta.get("shopping") or {}).get("enabled"):
             continue
-        if section_id == "distribution" and meta.get("sentiment_claims_status") != "complete":
+        if section_id == "distribution" and not sentiment_enabled(meta):
             continue
         shown.append((section_id, title, nav))
     out, n = [], 0
@@ -347,7 +355,28 @@ def slim_for_html(data: dict) -> dict:
         # 购物层只留「AI 购物商品卡」面板要用的数：每平台触发率，目标品牌与配置竞品的入选率。
         # 商品、商家、卡位和逐题下钻是内部字段，不进 HTML（Suda 2026-11-06）。
         slice_value["shopping"] = slim_shopping(slice_value.get("shopping"))
-    slim.setdefault("meta", {})["shopping"] = shopping_switch(slim)
+    meta = slim.setdefault("meta", {})
+    meta["shopping"] = shopping_switch(slim)
+    meta["sentiment_enabled"] = sentiment_switch(slim)
+    # 模块不出时，对应的数据也不进 HTML（Suda 2026-11-08：没有商品卡、情感数据就隐藏相应模块和数据）
+    if not meta["shopping"]["enabled"]:
+        for entry in (slim.get("details") or {}).values():
+            entry.pop("product_cards", None)
+        for answer in ((slim.get("facts") or {}).get("answers") or []):
+            answer["s"] = None
+        for slice_value in slim.get("slices", {}).values():
+            slice_value["shopping"] = {"by_platform": {}}
+    if not meta["sentiment_enabled"]:
+        for entry in (slim.get("details") or {}).values():
+            entry.pop("sentiment", None)
+        if slim.get("facts"):
+            slim["facts"].pop("claims", None)
+            slim["facts"].pop("sentiment", None)
+        for slice_value in slim.get("slices", {}).values():
+            slice_value.pop("sentiment", None)
+            for record in slice_value.get("records", []):
+                record["sentiment"] = None
+                record.pop("brand_sentiment", None)
     # 有逐条回答事实时，页面按筛选现算（report-engine.js），预算切片不进 HTML；
     # 切片仍留在 report-data.json 里供 verify / 对账 / 下游读取
     if slim.get("facts"):
@@ -390,6 +419,23 @@ def slim_shopping(block) -> dict:
     return {"by_platform": out}
 
 
+def sentiment_switch(data: dict) -> bool:
+    """情感模块开不开：判读完成，且最宽切片里任一展示品牌有正负信号（全是 0 的情感模块只有一排「—」）。"""
+    meta = data.get("meta") or {}
+    if meta.get("sentiment_claims_status") != "complete":
+        return False
+    slices = data.get("slices") or {}
+    widest = slices.get("||") or next(iter(slices.values()), {})
+    sentiment = widest.get("sentiment") or {}
+    summary = sentiment.get("summary") or {}
+    if summary.get("total"):
+        return True
+    for row in (sentiment.get("by_brand") or {}).values():
+        if row.get("signal_total") or row.get("positive") or row.get("negative"):
+            return True
+    return bool((data.get("facts") or {}).get("claims"))
+
+
 def shopping_switch(data: dict) -> dict:
     """商品卡面板开不开。meta.shopping_cards 写了开 / 关就照办（选词 config.shopping_cards 的结论）；
     没写时按数据判：最宽切片里任一平台商品卡触发率到 5% 才开，软件、服务、多数工业品类达不到。"""
@@ -405,6 +451,13 @@ def shopping_switch(data: dict) -> dict:
         rate = row.get("shopping_mode_rate") or {}
         if rate.get("denominator"):
             best = max(best, (rate.get("numerator") or 0) / rate["denominator"])
+    # 本次采集里一张商品卡都没有（品类不出卡、平台都不返回商品字段、或筛不出发现 / 替代题）：模块不出，
+    # 写了「开」也一样——只剩一排 0% 和「接口未返回」的模块没有信息量
+    total_cards = sum(int(row.get("shopping_answers") or 0)
+                      for row in ((widest.get("shopping") or {}).get("by_platform") or {}).values())
+    if total_cards == 0:
+        return {"enabled": False, "basis": f"本次采集没有商品卡（选词判定：{declared or '未写'}）",
+                "no_field_platforms": no_field}
     if declared in ("开", "on"):
         return {"enabled": True, "basis": "选词判定：开", "no_field_platforms": no_field}
     if declared in ("关", "off"):

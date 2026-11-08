@@ -20,7 +20,9 @@
     sel: { regions: [], platforms: [], intents: [], topics: [] }, openMsel: null,
     sourcePage: { domains: 1, pages: 1, official: 1 } };
   var TYPE_PREFIX = META.type_topic_prefix || "类型:";
-  var HAS_SENTIMENT = META.sentiment_claims_status === "complete";
+  // 情感、商品卡没有数据时整块不出，问题明细列、抽屉里的对应内容也不出（render_report.py 按数据写好开关）
+  var HAS_SENTIMENT = META.sentiment_enabled !== undefined ? !!META.sentiment_enabled : META.sentiment_claims_status === "complete";
+  var HAS_SHOPPING = !!(META.shopping || {}).enabled;
   // 切片 topic 位：选了主题用主题（一个主题只有一种意图类型）；只选了意图类型用「类型:X」切片
   function topicKey() {
     return state.topic || (state.intent ? TYPE_PREFIX + state.intent : "");
@@ -294,7 +296,9 @@
         "出现商品卡的回答里，有监测对象商品卡的回答占比（" + shop.counts + "）；只数商品卡，不含正文提及。同范围商品卡触发率 " + shop.mode + "。",
         shop.note]);
     }
-    el.style.gridTemplateColumns = "repeat(" + items.length + ",minmax(0,1fr))";
+    // 列数交给 CSS：宽屏一行放下全部指标，窄屏按 report.css 的断点换行（不写行内 grid，否则断点失效、数字挤在一起）
+    el.style.removeProperty("grid-template-columns");
+    el.style.setProperty("--kpi-n", items.length);
     el.innerHTML = items.map(function (row) {
       return '<div class="kpi"><span class="label">' + esc(row[0]) +
         '<button type="button" class="info" aria-label="查看' + esc(row[0]) + '含义" data-tip="' + esc(row[2]) + '">i</button>' +
@@ -872,7 +876,7 @@
   }
 
   function productCardsBlock(cards) {
-    if (!cards.length) return "";
+    if (!HAS_SHOPPING || !cards.length) return "";
     return '<section class="answer-cards"><h4 class="drawer-sec">商品卡 <span class="drawer-sec-count">' + cards.length + " 张</span></h4>" +
       '<div class="answer-card-row">' + cards.map(function (c, i) {
         return '<div class="answer-card' + (c.target ? " is-target" : "") + '">' +
@@ -1028,7 +1032,7 @@
     }
 
     // 品牌情感：展示该回答中识别到品牌的正/负向 claim 标签
-    var sentimentBrands = ((entry.sentiment || {}).brands) || [];
+    var sentimentBrands = HAS_SENTIMENT ? (((entry.sentiment || {}).brands) || []) : [];
     var sentimentSection = "";
     if (sentimentBrands.length) {
       var targetName = META.brand || "";

@@ -15,7 +15,9 @@
         [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 
 采集目录不存在时停在阶段 -1,打印 collect_answers.py 的采集命令(付费,不代跑)。
-不带 --brands/--target 时跳过情感环节(报告情感板块为 pending)。
+不带 --brands/--target 时跳过情感环节:报告不出情感模块,问题明细与抽屉也不出情感列。
+商品卡同理:--shopping-cards 关、或本次采集一张商品卡都没有时,不出购物商品卡模块、核心洞察的
+商品卡提及率和回答详情里的商品卡(render_report.py 按数据判,见 render-spec「模块显隐」)。
 翻译环节按 translation-batches 目录是否就绪自动接入,缺席不阻塞主链。
 """
 
@@ -138,7 +140,7 @@ def stage_build(args, out: Path) -> None:
 
 def stage_sentiment(args, out: Path) -> None:
     if not (args.brands and args.target):
-        print("○ [3 情感] 未提供 --brands/--target,跳过(报告情感板块为 pending)")
+        print("○ [3 情感] 未提供 --brands/--target,跳过(报告不出情感模块)")
         return
     units = out / "sentiment-units.json"
 
@@ -236,6 +238,8 @@ def stage_verify_render(args, out: Path) -> None:
     run([sys.executable, HERE / "verify_report_data.py",
          "--report", out / "report-data.json", "--collect", args.collect],
         args.dry_run, "5 独立校验")
+    # 页面多选筛选由 report-engine.js 从 facts 现算；每个预算切片对应的单选组合必须与引擎逐项一致
+    run(["node", HERE / "check_engine_parity.js", out / "report-data.json"], args.dry_run, "5b 引擎对账")
     html = out / f"{args.brand_name or 'report'}-售前诊断报告.html"
     run([sys.executable, HERE / "render_report.py",
          "--data", out / "report-data.json", "--out", html], args.dry_run, "6 渲染")
