@@ -86,7 +86,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
-- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
+- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> --country {market}`，被拦的页面不要再试 `render`；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
 - 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
 - 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 online-runner.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
 - 调研过程文件都放 `research/`。只在本工作目录里读写，不要访问工作目录以外的路径。

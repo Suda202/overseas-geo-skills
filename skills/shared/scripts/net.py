@@ -5,9 +5,11 @@
 360 网关对 Claude 5 系列（opus/sonnet 槽）一律拒收（错误码 10137）。
 
   python3 net.py search "<query>" [--gl sg --hl en]    Google 搜索（Scrapeless，付费，每次 1 调用；同一查询有缓存）
-  python3 net.py fetch <url> [--raw] [--country SG] [--proxy]
-                                                        取页面正文；直连 403/挑战页时改走 Scrapeless 目标国代理（付费），再不行退到 Wayback；
-                                                        --proxy 跳过直连直接走代理（Facebook 公开群帖子要这样取，直连返回 400 登录页）
+  python3 net.py fetch <url> [--raw] [--country SG] [--proxy] [--fresh]
+                                                        取页面正文；直连（15 秒超时）403/挑战页时改走 Scrapeless 目标国代理（付费，不开 JS，1 次），
+                                                        再不行退到 Wayback；--country 填目标市场（默认 SG，节点不对常取不到）；
+                                                        --proxy 跳过直连直接走代理（Facebook 公开群帖子要这样取，直连返回 400 登录页）；
+                                                        成功结果按 URL 缓存，--fresh 跳过缓存重取
   python3 net.py render <url> [--raw] [--wait 8000]     JS 渲染页：独立无头 Chrome（临时 profile，免费，不占 Suda 的浏览器）
   python3 net.py reddit <url|query> [--sub X] [--t all|year|month] [--limit 25]
                                                         Reddit 走 RSS 直连（免费）：版块/帖子 URL 取帖子与评论，否则当搜索词；
@@ -16,7 +18,7 @@
 缓存目录 /tmp/hb_net_cache。Scrapeless key 先读环境变量 SCRAPELESS_API_KEY（服务器上用），没有再读 macOS 钥匙串同名项。
 render 用的 Chrome 默认是 macOS 路径，服务器上用环境变量 CHROME_PATH 指定。
 """
-import hashlib, html, json, os, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
+import hashlib, html, json, os, re, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 CACHE = Path("/tmp/hb_net_cache"); CACHE.mkdir(exist_ok=True)
@@ -110,29 +112,118 @@ def blocked(s, b):
     return s in (0, 403, 429, 503) or b"cf-chl" in b[:20000] or b"Just a moment" in b[:20000]
 
 
-def fetch(url, raw=False, country="SG", proxy=False):
-    s, b, _ = (0, b"", url) if proxy else http(url)
-    src = f"直连 HTTP {s}"
-    if proxy or blocked(s, b):
+DIRECT_TIMEOUT = 15  # 直连超时的站不必等满 60 秒再进代理
+BLOCK_FILE = CACHE / "blocked_domains.json"  # 直连被拦过的域名 → 时间戳；BLOCK_DAYS 天内同域名跳过直连
+BLOCK_DAYS = 7
+# 本机直连必然不通的站（community-channels.md 2026-10-27 实测：直连超时或返回登录页），直接走代理
+KNOWN_BLOCKED = ("facebook.com", "x.com", "twitter.com", "instagram.com", "threads.net", "threads.com",
+                 "hardwarezone.com.sg")
+_block_lock = threading.Lock()
+
+
+def host(url):
+    h = (urllib.parse.urlsplit(url).hostname or "").lower()
+    return h[4:] if h.startswith("www.") else h
+
+
+def known_blocked(h):
+    """命中默认名单或 BLOCK_DAYS 天内直连被拦过时，返回原因；否则 None。"""
+    if any(h == d or h.endswith("." + d) for d in KNOWN_BLOCKED):
+        return "默认名单"
+    try:
+        t = json.loads(BLOCK_FILE.read_text()).get(h)
+    except Exception:  # noqa: BLE001
+        t = None
+    if t and time.time() - t < BLOCK_DAYS * 86400:
+        return f"{time.strftime('%m-%d', time.localtime(t))} 直连被拦过"
+    return None
+
+
+def remember_blocked(h):
+    with _block_lock:
+        try:
+            d = json.loads(BLOCK_FILE.read_text())
+        except Exception:  # noqa: BLE001
+            d = {}
+        d[h] = time.time()
+        tmp = BLOCK_FILE.with_name(f"{BLOCK_FILE.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+        tmp.write_text(json.dumps(d)); os.replace(tmp, BLOCK_FILE)
+
+
+def get(url, country="SG", proxy=False, fresh=False):
+    """取一个页面，返回 (说明行, 正文字节或 None)，不打印，便于并发。
+
+    顺序：缓存 → 直连（15 秒；默认名单和 7 天内被拦过的域名跳过）→ Scrapeless 代理（不开 JS，1 次付费）→ Wayback。
+    2026-11-09 实测被拦页面：直连约 1 秒；代理不开 JS 13–46 秒能取到；代理开 JS 没有一次比不开好，已去掉；
+    无头渲染在被拦页面上 3/3 超时（68 秒），所以不在这条链里，只用于直连 200 但正文是 JS 空壳的页面。
+    --fresh 跳过缓存，也不看被拦域名记录、重新试直连。
+    """
+    f = CACHE / ("fetch_" + hashlib.md5(url.encode()).hexdigest() + ".json")
+    if not fresh and f.exists():
+        try:
+            c = json.loads(f.read_text())
+            return f"[来源] {url} —— {c['src']}（缓存 {c['at']}）", c["body"].encode()
+        except Exception:  # noqa: BLE001
+            f.unlink(missing_ok=True)
+    h = host(url)
+    skip = None if (proxy or fresh) else known_blocked(h)
+    if proxy or skip:
+        s, b = 0, b""
+        direct = "按 --proxy 跳过直连" if proxy else f"跳过直连（{skip}）"
+    else:
+        s, b, _ = http(url, timeout=DIRECT_TIMEOUT)
+        direct = f"直连 HTTP {s}"
+    src = direct
+    if proxy or skip or blocked(s, b):
+        if not (proxy or skip):
+            remember_blocked(h)
         hdr = {"x-api-token": key(), "Content-Type": "application/json"}
-        for js in (False, True):
-            s3, b3, _ = http(API + "/api/v1/unlocker/request", {"actor": "unlocker.webunlocker", "proxy": {"country": country},
-                             "input": {"url": url, "method": "GET", "redirect": True, "js_render": js}}, hdr, timeout=150)
-            try:
-                body = json.loads(b3).get("data") or ""
-            except Exception:  # noqa: BLE001
-                body = ""
-            if s3 == 200 and len(body) > 2000 and not blocked(200, body.encode()):
-                print(f"[来源] {url} —— 直连被拦，经 Scrapeless {country} 代理取得（js_render={js}）\n")
-                print(body if raw else to_text(body.encode())); return
-        s2, b2, final = http("https://web.archive.org/web/2026id_/" + url, timeout=90)
-        m = re.search(r"/web/(\d{8})", final)
-        if s2 == 200 and not blocked(s2, b2):
-            s, b, src = s2, b2, f"直连被拦，改用 Wayback 快照 {m.group(1) if m else '日期未知'}（{final}）"
+        s3, b3, _ = http(API + "/api/v1/unlocker/request", {"actor": "unlocker.webunlocker", "proxy": {"country": country},
+                         "input": {"url": url, "method": "GET", "redirect": True, "js_render": False}}, hdr, timeout=150)
+        try:
+            body = json.loads(b3).get("data") or ""
+        except Exception:  # noqa: BLE001
+            body = ""
+        if s3 == 200 and len(body) > 2000 and not blocked(200, body.encode()):
+            s, b, src = 200, body.encode(), f"{direct}，经 Scrapeless {country} 代理取得"
         else:
-            print(f"读不到：直连 HTTP {s}，Wayback HTTP {s2}"); return
-    print(f"[来源] {url} —— {src}\n")
-    print(b.decode("utf-8", "replace") if raw else to_text(b))
+            s2, b2, final = http("https://web.archive.org/web/2026id_/" + url, timeout=90)
+            m = re.search(r"/web/(\d{8})", final)
+            if s2 == 200 and not blocked(s2, b2):
+                s, b, src = s2, b2, f"{direct}，改用 Wayback 快照 {m.group(1) if m else '日期未知'}（{final}）"
+            else:
+                return (f"读不到：{url} —— {direct}，Scrapeless {country} 代理 HTTP {s3}（正文 {len(body)} 字符），"
+                        f"Wayback HTTP {s2}"), None
+    if s == 200 and src.startswith("直连") and len(to_text(b)) < 500:
+        return (f"[提示] 直连只取到 {len(to_text(b))} 字符，可能是 JS 渲染页，改用 net.py render {url}\n"
+                f"[来源] {url} —— {src}"), b
+    if s == 200:
+        f.write_text(json.dumps({"src": src, "at": time.strftime("%Y-%m-%d %H:%M"), "body": b.decode("utf-8", "replace")},
+                                ensure_ascii=False))
+    return f"[来源] {url} —— {src}", b
+
+
+def fetch(urls, raw=False, country="SG", proxy=False, fresh=False, jobs=5):
+    """一个或多个 URL；多个时并发取（默认 5 路），按输入顺序输出。"""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(u):
+        try:
+            return get(u, country, proxy, fresh)
+        except Exception as e:  # noqa: BLE001
+            return f"读不到：{u} —— {type(e).__name__}: {e}", None
+
+    with ThreadPoolExecutor(max(1, min(jobs, len(urls)))) as ex:
+        results = list(ex.map(one, urls))
+    for i, (u, (head, b)) in enumerate(zip(urls, results), 1):
+        if len(urls) > 1:
+            print(f"\n===== {i}/{len(urls)} {u}")
+        print(head)
+        if b is not None:
+            print()
+            print(b.decode("utf-8", "replace") if raw else to_text(b))
+    if len(urls) > 1:
+        print(f"\n===== 共 {len(urls)} 个，取到 {sum(b is not None for _, b in results)} 个")
 
 
 def render(url, raw=False, wait=8000):
@@ -168,10 +259,29 @@ def reddit_rss_url(arg, sub=None, t="all", limit=25):
     return f"https://www.reddit.com/search.rss?{urllib.parse.urlencode(q)}"
 
 
+def reddit_budget_ok():
+    """线上限量：设了 NET_REDDIT_MAX 时，计数文件 NET_REDDIT_COUNTER（默认缓存目录下）里的联网请求数到上限就不再发。
+    缓存命中不计数。本地不设就不限。"""
+    mx = os.environ.get("NET_REDDIT_MAX", "").strip()
+    if not mx:
+        return True
+    cf = Path(os.environ.get("NET_REDDIT_COUNTER") or CACHE / "reddit_calls")
+    try:
+        n = int(cf.read_text() or 0)
+    except Exception:  # noqa: BLE001
+        n = 0
+    if n >= int(mx):
+        return False
+    cf.write_text(str(n + 1)); return True
+
+
 def reddit_get(url, tries=4):
     f = CACHE / ("reddit_" + hashlib.md5(url.encode()).hexdigest() + ".xml")
     if f.exists():
         return f.read_bytes()
+    if not reddit_budget_ok():
+        print(f"读不到：本次 Reddit 请求已达上限 {os.environ['NET_REDDIT_MAX']} 次（NET_REDDIT_MAX），"
+              f"不再请求，这个来源记进未覆盖来源"); return None
     for _ in range(tries):
         if REDDIT_GATE.exists():
             wait = float(REDDIT_GATE.read_text() or 0) - time.time()
@@ -227,4 +337,14 @@ if __name__ == "__main__":
     elif cmd == "render":
         render(arg, "--raw" in sys.argv, int(opt("--wait", "8000")))
     else:
-        fetch(arg, "--raw" in sys.argv, opt("--country", "SG"), "--proxy" in sys.argv)
+        valued = {"--country", "--jobs", "--urls-file"}
+        urls, rest = [], sys.argv[2:]
+        for i, x in enumerate(rest):
+            if not x.startswith("--") and (i == 0 or rest[i - 1] not in valued):
+                urls.append(x)
+        if "--urls-file" in sys.argv:
+            urls += [ln.strip() for ln in Path(opt("--urls-file", "")).read_text().splitlines()
+                     if ln.strip() and not ln.strip().startswith("#")]
+        urls = list(dict.fromkeys(urls))
+        fetch(urls, "--raw" in sys.argv, opt("--country", "SG"), "--proxy" in sys.argv, "--fresh" in sys.argv,
+              int(opt("--jobs", "5")))

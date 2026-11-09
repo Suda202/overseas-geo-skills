@@ -161,7 +161,7 @@ GSC、Bing 查询词和 Google Ads 搜索词报告按下表分开用。目前只
 
 ## 调研子代理怎么取数
 
-派子代理做调研时，统一走 `shared/scripts/net.py`：`search` 用 Scrapeless 跑 Google 搜索（付费，同一查询有缓存），`fetch` 取页面正文，遇到 403 或挑战页改走目标国代理，再不行退到 Wayback。不要让子代理先试 WebSearch / WebFetch：经 360 网关在 opus、sonnet 槽会报 400，Hbrand 两轮人群调研都先在这上面耗了时间（2026-10-20）。
+派子代理做调研时，统一走 `shared/scripts/net.py`：`search` 用 Scrapeless 跑 Google 搜索（付费，同一查询有缓存）；`fetch` 取页面正文，顺序是直连（15 秒超时）→ Scrapeless 目标国代理（不开 JS，1 次付费）→ Wayback，`--country` 填目标市场，成功结果按 URL 缓存；`render` 无头 Chrome 只用在直连 200 但正文是 JS 空壳的页面，被拦的页面不用它（2026-11-09 实测 3 个被拦站 3 个都 68 秒超时，代理 13–46 秒取到）。不要让子代理先试 WebSearch / WebFetch：经 360 网关在 opus、sonnet 槽会报 400，Hbrand 两轮人群调研都先在这上面耗了时间（2026-10-20）。
 
 brief 必须写明三项：
 
