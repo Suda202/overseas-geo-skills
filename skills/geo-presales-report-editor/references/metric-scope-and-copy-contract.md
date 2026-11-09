@@ -73,6 +73,7 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 | 商品卡平均位置 | Average Position | 每条出现本品牌卡的回答里，本品牌最靠前那张卡的位置，取平均 | `brands[].average_card_position` |
 | 官网购买链接覆盖率 | Writesonic Direct Purchase Link（按回答计） | 出现本品牌商品卡的回答里，这些卡至少带一个官网购买链接的回答占比。官网 = 链接域名是品牌官网，或商家名带品牌名（「Bbrand」「RivalB1 Official」） | `brands[].official_link_coverage` |
 
+百分比一律保留 1 位小数，和报告其他指标同一精度（core 调用 `percent(n, d, 1)`，前端 `report-engine.js` 的 `corePercent` 同式）；整数时不写小数点（72% 不写 72.0%）。2026-11-09 Suda 发现核心洞察 8.5% 与模块表格 8% 对不上，就是这里原来取整到整数造成的。
 例：100 条 ChatGPT 回答，60 条出了商品卡，其中 18 条有本品的卡、入选时平均在第 2.5 位：商品卡触发率 60%，商品卡提及率 30%（18 ÷ 60），商品卡平均位置 2.5。
 
 **品牌级、SKU 级分开算**：上表是品牌级（本品任意一张卡都算）。SKU 级只看本品，同样三项——SKU 商品卡提及率（出现该 SKU 卡的回答 ÷ 出现商品卡的回答，分母和品牌级相同）、SKU 商品卡平均位置（该 SKU 在每条回答里最靠前那张卡的位置取平均）、SKU 官网购买链接覆盖率（出现该 SKU 卡的回答里带官网购买链接的占比），内部字段 `target_skus[]`。覆盖率用回答计，不用 offer 份额：份额会被第三方商家数量稀释（Bbrand ChatGPT 本品 offer 里官网只占 40%，但每条出现 Bbrand 卡的回答都带官网链接，覆盖率 100%）。同一款产品 AI 会写成好几种标题，所以先按归并表（`build_report_data.py --sku-map`，每条是「SKU 名 + 正则」，按顺序第一条命中卡标题的胜出）归到型号再数；配件单列；都不中的记「未识别型号」——Google 系（AIO、AI Mode）的卡标题常不带型号（「Bbrand Dash Cam Car Security Camera」），这一行会比较大。各 SKU 的提及率相加可以超过品牌级，因为一条回答可能同时出现两个 SKU。归并表按客户写，放在客户的评测目录（Bbrand：`10-售前诊断报告/评测数据/brand-b/售后/选词-20261106/report-h1/sku-map.json`）。

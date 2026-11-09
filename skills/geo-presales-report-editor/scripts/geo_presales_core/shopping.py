@@ -325,12 +325,12 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
         for oid in brand_ids:
             brands.append({
                 **obj_meta(oid),
-                "shopping_visibility": {**percent(len(present[oid]), len(shopping)),
+                "shopping_visibility": {**percent(len(present[oid]), len(shopping), 1),
                                         "included_answer_ids": [a["answer_id"] for a in present[oid]]},
-                "shopping_exposure_rate": percent(len(present[oid]), len(scoped)),
+                "shopping_exposure_rate": percent(len(present[oid]), len(scoped), 1),
                 "average_card_position": average(first_pos[oid]),
                 # 官网购买链接覆盖率：本品牌的卡里至少一张带官网购买链接的回答 ÷ 出现本品牌卡的回答
-                "official_link_coverage": percent(official_link[oid], len(present[oid])),
+                "official_link_coverage": percent(official_link[oid], len(present[oid]), 1),
                 "card_count": card_counts[oid],
             })
         brands.sort(key=lambda row: (-(row["shopping_visibility"]["raw"] or 0),
@@ -358,9 +358,9 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
         order = [rule["name"] for rule in sku_map] + [UNMATCHED_SKU]
         target_skus = [
             {"name": name,
-             "shopping_visibility": percent(len(sku_answers[name]), len(shopping)),
+             "shopping_visibility": percent(len(sku_answers[name]), len(shopping), 1),
              "average_card_position": average(sku_answers[name]),
-             "official_link_coverage": percent(sku_linked[name], len(sku_answers[name]))}
+             "official_link_coverage": percent(sku_linked[name], len(sku_answers[name]), 1)}
             for name in dict.fromkeys(order) if name in sku_answers
         ] if sku_map else []
 
@@ -376,7 +376,7 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
                 row["target_present_answers"] += target_id in ids
                 row["brands"].update(objects[oid]["canonical_name"] for oid in ids)
         for row in by_question.values():
-            row["shopping_mode_rate"] = percent(row["shopping_answers"], row["valid_answers"])
+            row["shopping_mode_rate"] = percent(row["shopping_answers"], row["valid_answers"], 1)
             # ids 是 set，Counter 的插入顺序随哈希种子变，同数时 most_common 会每次跑出不同顺序；
             # 同数按品牌名排，保证同一份数据两次运行结果一致。
             row["brands"] = [name for name, _ in sorted(row["brands"].items(),
@@ -387,7 +387,7 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
             "product_field_returned": field_returned,
             "scope_answers": len(scoped),
             "shopping_answers": len(shopping),
-            "shopping_mode_rate": percent(len(shopping), len(scoped)),
+            "shopping_mode_rate": percent(len(shopping), len(scoped), 1),
             "shopping_mode_rate_by_intent": by_intent,
             "all_intent_shopping_answers": len(triggered),
             "card_count": sum(len(a["product_cards"]) for a in shopping),

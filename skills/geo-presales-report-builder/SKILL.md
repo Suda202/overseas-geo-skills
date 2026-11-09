@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Bbrand H1 template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.8.0"
+  version: "2.8.1"
 ---
 
 # 海外 GEO 售前诊断报告生成

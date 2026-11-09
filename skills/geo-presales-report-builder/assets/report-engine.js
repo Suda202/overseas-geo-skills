@@ -38,10 +38,13 @@
     var pct = value / max * 100;
     return pct >= 99.95 ? "100%" : pyFixed(pct, 1) + "%";
   }
-  // core _percent(digits=0) / _average(digits=1)：十进制精确值四舍五入（ROUND_HALF_UP）
+  // core _percent(digits=1) / _average(digits=1)：十进制精确值四舍五入（ROUND_HALF_UP），整数百分比去掉小数点
+  //（8.45% → "8.5%"，8.0% → "8%"）。商品卡指标一律 1 位小数，与核心洞察的百分比同一精度。
   function corePercent(num, den) {
     if (!den) return { numerator: num, denominator: den, display: "—", raw: null };
-    return { numerator: num, denominator: den, display: Math.floor((200 * num + den) / (2 * den)) + "%", raw: num / den };
+    var tenths = Math.floor((2000 * num + den) / (2 * den));
+    var text = (tenths / 10).toFixed(1).replace(/\.0$/, "");
+    return { numerator: num, denominator: den, display: text + "%", raw: num / den };
   }
   function coreAverage(values) {
     if (!values.length) return { numerator: 0, denominator: 0, display: "—", raw: null };
