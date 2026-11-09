@@ -147,6 +147,10 @@ def main():
                    for t in (bank.get("config") or {}).get("topics") or [] if isinstance(t, dict)}
     config = bank.get("config") or {}
     derived, tag_problems, _ = tag_plan(config, bank["questions"])
+    # 60 条上限按市场 × 产品线算（Suda 2026-11-09）：产品线从题所在矩阵行读
+    slice_line = {str(r.get("slice_id") or "").strip(): str(r.get("product_line") or "").strip()
+                  for r in config.get("slices") or [] if isinstance(r, dict)}
+    bank_line = str(bank.get("product_line") or "").strip()
     by_region, skipped, held = {}, [], []
     for q in bank["questions"]:
         status = str(q.get("status") or "").strip()
@@ -161,7 +165,8 @@ def main():
             continue
         intent = INTENT[typ]
         topic = topic_names.get(str(q.get("topic_id") or "").strip(), "")
-        by_region.setdefault(str(q.get("region") or "未填市场").strip(), []).append({
+        line = slice_line.get(str(q.get("slice_ref") or "").strip()) or bank_line
+        by_region.setdefault((str(q.get("region") or "未填市场").strip(), line), []).append({
             "query": str(q.get("user_question") or "").strip(),
             "question_zh": str(q.get("zh_translation") or "").strip(),
             "topic": labels.get(topic, topic),
@@ -173,8 +178,16 @@ def main():
     check = check_upload_rows
     a.out.mkdir(parents=True, exist_ok=True)
     failed = False
-    for region, rows in by_region.items():
-        path = a.out / f"{a.bank.stem}.{region}.upload.csv"
+    lines_per_region = Counter(region for region, _ in by_region)
+    line_no: dict[tuple, int] = {}
+    for region, line in by_region:
+        line_no[(region, line)] = sum(1 for r, _ in line_no if r == region) + 1
+    for (region, line), rows in by_region.items():
+        # 一个市场只有一条产品线时文件名不变；多条时按产品线拆，文件名带序号
+        suffix = f".{region}" if lines_per_region[region] == 1 else f".{region}.line{line_no[(region, line)]}"
+        path = a.out / f"{a.bank.stem}{suffix}.upload.csv"
+        if lines_per_region[region] > 1:
+            print(f"{path.name} ← 产品线：{line or '未填产品线'}")
         with path.open("w", encoding="utf-8-sig", newline="") as f:
             w = csv.DictWriter(f, HEADERS)
             w.writeheader()

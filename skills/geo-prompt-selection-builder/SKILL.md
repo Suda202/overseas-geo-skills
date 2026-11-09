@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or a Case (online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one Case unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "2.53.0"
+  version: "2.56.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -17,7 +17,7 @@ metadata:
 | 步 | 做什么 | 按什么判断 | 产出 |
 |-|-|-|-|
 | 1 | 确认业务范围 | 品牌方先填，我们核对（线上用 Case 代替，见 online-runner.md）；目前只做发现型可见度 | 业务范围表 |
-| 2 | 调研 | 先预跑品类认知和品牌、竞品评估，再收四类需求信号，看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案、品牌能力清单 |
+| 2 | 调研 | 先预跑品类认知（品牌、竞品评估按需补跑），再收四类需求信号，看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案、品牌能力清单 |
 | 3 | 约束条件 | 收得宽、统一粒度；不判重要性和相对竞品，只记品牌可核实的明显劣势；写题前确认硬条件 | 三张表共用的「约束条件」选项、品牌明显劣势记录 |
 | 4 | 目标客户与使用场景 | 按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 业务范围里的目标客户行和使用场景行，品牌方确认后冻结 |
 | 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每行判一次业务优先级，这是全流程唯一的档位判断 | 提示词矩阵表 |
@@ -34,7 +34,7 @@ metadata:
 题库 JSON 是唯一底稿（字段和门禁见 [references/output-contract.md](references/output-contract.md)），从它导出，两种可以都要：
 
 1. 对客确认表（飞书多维表格）：要品牌方看和改时用，表和字段见 [references/client-facing-base.md](references/client-facing-base.md)。
-2. 上传 CSV / 接口行：`python3 -I scripts/export_upload_csv.py <bank.json> --out <dir>`，九列模板，一个市场一个文件；线上一条命令跑（`scripts/run_selection_mode.py`）只交这一种。
+2. 上传 CSV / 接口行：`python3 -I scripts/export_upload_csv.py <bank.json> --out <dir>`，九列模板，一个市场 × 一条产品线一个文件，每个文件最多 60 条；线上一条命令跑（`scripts/run_selection_mode.py`）只交这一种。
 
 附 validator 结论一行和告警处理记录（`config.warning_decisions`）。
 

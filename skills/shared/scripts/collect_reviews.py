@@ -23,6 +23,8 @@
 凭据、预算、缓存与 collect_keyword_data.py 相同：钥匙串或环境变量 DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD；
 累计花费超 --budget-usd（默认 1 美元）即停；<out>/raw/ 有同一请求的结果就复用；提交了任务但没等到结果时，
 任务号存进 raw/*.pending.json，下次运行直接取结果，不重复付费。
+按人记账也相同：要给 --who（或环境变量 DATAFORSEO_WHO），--case 可选；每个付费任务提交时记一行流水，
+和关键词脚本记在同一份，用 collect_keyword_data.py ledger 汇总。
 
 产物（<out>/）：
   raw/                  每个任务的原始返回
@@ -80,6 +82,8 @@ class Runner:
         self.out = Path(args.out)
         self.raw = self.out / "raw"
         self.raw.mkdir(parents=True, exist_ok=True)
+        args.who_resolved = "" if args.cache_only else kd.caller(args)
+        self.tag = kd.call_tag(args.who_resolved, args.case)
         self.auth = None if args.cache_only else kd.auth_header()
         self.paid_calls, self.cost, self.failed, self.stopped = 0, 0.0, [], ""
 
@@ -102,12 +106,14 @@ class Runner:
         else:
             if self.stopped:
                 raise LookupError(self.stopped)
-            posted = kd.first_task(kd.call(kd.LIVE, post_path, self.auth, [task]))
+            posted = kd.first_task(kd.call(kd.LIVE, post_path, self.auth, [{**task, "tag": self.tag}]))
             if posted.get("status_code") not in (20100,) + PENDING:
                 raise LookupError(f"提交失败 {posted.get('status_code')} {posted.get('status_message')}")
             self.paid_calls += 1
             self.cost += float(posted.get("cost") or 0)
             task_id = posted["id"]
+            kd.record_spend(self.args, "collect_reviews", post_path, posted.get("cost"), task_id,
+                            posted.get("status_code"))
             pending.write_text(json.dumps({"id": task_id, "post_path": post_path, "task": task,
                                            "posted": datetime.datetime.now().isoformat(timespec="seconds")},
                                           ensure_ascii=False, indent=2), encoding="utf-8")
@@ -317,6 +323,8 @@ def main() -> int:
         p.add_argument("--brand", default="", help="评价对象的品牌，写在出处第二段")
         p.add_argument("--id-prefix", default="R", help="输入编号前缀，避免与已有需求信号撞号")
         p.add_argument("--budget-usd", type=float, default=1.0, help="本次累计花费上限，默认 1 美元")
+        p.add_argument("--who", default="", help="调用人，记账用；不给就读环境变量 DATAFORSEO_WHO")
+        p.add_argument("--case", default="", help="客户或 Case 名，记账用，可不填")
         p.add_argument("--wait", type=int, default=600, help="每个任务最多等几秒")
         p.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")
         p.add_argument("--cache-only", action="store_true", help="只用 raw/ 缓存，不发付费调用")

@@ -8,7 +8,7 @@
 
 | 类别 | 去哪收 | 用来判断什么 |
 |---|---|---|
-| 搜索数据 | People Also Ask、相关搜索和自动补全：跑 `shared/scripts/collect_serp_signals.py`（每个种子词 1 次 Scrapeless 付费调用，产物直接是需求信号表的行；种子词除品类词外，再加 2–3 个相邻搜索词，如场景词、竞品品类词，因为核心词下面的 PAA 常常很少，相关问题会挂在相邻词下面，只收和本品类直接相关的问题；再给业务范围里每个竞品加一个 `<竞品名> alternative`、给本品加一个 `<本品名>` 种子词，品牌名种子词下面 PAA 常常是空的，有用的是相关搜索和自动补全里的「X alternative reddit」「alternative to X」「Is X legit」「X review」这类说法，竞品那批作替代题证据，本品那批看买家有没有在问可不可信）；Google Trends（只比相对热度和季节性，跑 `shared/scripts/collect_keyword_data.py trends`，用法见下表）；AlsoAsked、AnswerThePublic；月搜索量和长尾词跑 `shared/scripts/collect_keyword_data.py`（DataForSEO API，见下表关键词工具行）；有账号时也可用 Semrush、Ahrefs 或 Similarweb 看非品牌词 | 需求是否存在、买家怎么问 |
+| 搜索数据 | People Also Ask、相关搜索和自动补全：跑 `shared/scripts/collect_serp_signals.py`（每个种子词 1 次 Scrapeless 付费调用，产物直接是需求信号表的行；种子词除品类词外，再加 2–3 个相邻搜索词，如场景词、竞品品类词，因为核心词下面的 PAA 常常很少，相关问题会挂在相邻词下面，只收和本品类直接相关的问题；再给业务范围里每个竞品加一个 `<竞品名> alternative`、给本品加一个 `<本品名>` 种子词，品牌名种子词下面 PAA 常常是空的，有用的是相关搜索和自动补全里的「X alternative reddit」「alternative to X」「Is X legit」「X review」这类说法，竞品那批作替代题证据，本品那批看买家有没有在问可不可信）；Google Trends（只比相对热度和季节性，跑 `shared/scripts/collect_keyword_data.py trends`，用法见下表）；AlsoAsked、AnswerThePublic；月搜索量和长尾词跑 `shared/scripts/collect_keyword_data.py`（DataForSEO API，见下表关键词工具行），竞品的非品牌说法跑同一脚本的 `ranked`（查业务范围里的竞品域名）；有账号时也可用 Semrush、Ahrefs 或 Similarweb 看非品牌词 | 需求是否存在、买家怎么问 |
 | 品牌官网 | 卖什么、卖给谁、在哪卖、能做到什么；官网上买家写的评价、问答 | 看什么、整理成品牌能力清单见 selection-rules.md → 2「品牌官网」；买家写的内容记评价或社区；品牌写的线索记「品牌官网」，只开假设级候选 |
 | 竞品官网 | 服务谁、强调哪些选择条件、FAQ 和指南里的买家问题 | 三个问题见 selection-rules.md → 2「竞品官网」；记「竞品官网」，只开假设级候选，要找到买家信号才算支撑 |
 | 已采集的 AI 回答 | 售前诊断、试跑与正式基线的答案 | 当前差距 |
@@ -104,11 +104,12 @@
 |-|-|-|-|
 | PAA、相关搜索、自动补全（`collect_serp_signals.py`） | 是，搜索联想 | 需求和问法线索、竞品替代说法 | 不填 |
 | 关键词工具（DataForSEO、Keyword Planner、Naver） | 是，按工具选 DataForSEO / Keyword Planner / Naver | 主题父关键词的量、长尾词 | 填 |
+| 竞品排名词（`collect_keyword_data.py ranked`） | 是，DataForSEO | 只查业务范围里的竞品域名，不查本品牌域名（本品牌看 GSC）：补种子词扩不出来的同品类说法，用法同 GSC 非品牌查询；含竞品名的按竞品词用。排名位置不进选词，脚本不输出 | 填 |
 | Google Trends | 否 | 相对热度和季节性，写进主题优先级依据和任务记录 | — |
 | 评价（`collect_reviews.py`） | 是，评价 | 约束条件、题面具体条件；哪家的写在出处 | 不填 |
 | 社区（Reddit 等） | 是，社区 | 约束条件、目标客户和使用场景依据、题面措辞和具体条件 | 不填 |
 | 品牌官网、竞品官网上品牌写的内容 | 是，品牌官网 / 竞品官网 | 目标客户、使用场景、约束条件候选，只开假设级候选，不算矩阵行的信号支撑 | 不填 |
-| 预跑答案（品类认知、品牌评估） | 否 | 约束条件候选（AI 的选购标准和比较各家时用的条件）、品牌事实核查；各家强弱的线索留到基线后判相对竞品时用 | — |
+| 预跑答案（品类认知；品牌评估按需补跑） | 否 | 约束条件候选（AI 的选购标准和比较选项时用的条件）、品牌事实核查 | — |
 | 试跑和基线答案的子查询（ChatGPT `search_model_queries`、Grok `tool_usages` 的检索词）；GSC 里 AI 发出的检索（见下「GSC 与搜索词报告怎么用」） | 是，query fan-outs（GSC 来的出处写 GSC） | 提示漏掉的约束条件和使用场景，只开假设级候选：试跑的子查询由我们的题生成，GSC 里的分不清背后是真实用户问 AI 还是监测工具在跑题，都要在真实来源里找到对应说法才算证据；它们是 AI 回答时实际去搜的词，基线后对照站内内容查覆盖（geo-monitoring → gap-cause-action-table.md） | 不填 |
 | 答案末尾 AI 反问的条件 | 是，AI 追问 | 查约束条件有没有漏，只开假设级候选（见下「AI 回答末尾的追问」）；ChatGPT 读 `follow_up_form`，其他平台从答案正文末尾读 | 不填 |
 | 平台推荐的延伸问题（Gemini `related_queries`、Grok `follow_up_suggestions`、Perplexity 相关问题）、让模型列的买家顾虑和搜索词 | 是，模型建议问题 | 提示漏掉的属性和候选题，只开假设级候选 | 不填 |
@@ -147,7 +148,7 @@ GSC、Bing 查询词和 Google Ads 搜索词报告按下表分开用。目前只
 | Google Ads 搜索词报告 | 同 GSC 查询：需求存在的证据、改写成题面的种子；补 GSC 看不到的、官网没有自然排名的需求 | 不经改写直接当题面；按查询次数判断品类需求大小 | 只覆盖品牌出价的词；广泛匹配会混进不相关的查询，入表前逐条判断是否与产品相关；Google 只列出有一定搜索量的查询，低频长尾不在报告里 |
 | 自动补全、People Also Ask、相关搜索 | 需求存在的证据；看新出现的问法；补出 GSC 里看不到的扩展查询；改写成题面的种子 | 估主题规模（不带搜索量，量看关键词工具）；不经改写直接当题面 | 反映 Google 的搜索习惯，对 AI 提问方式是滞后信号 |
 | Google Trends（品类有两种以上常见叫法，或季节性明显时才查；跑 `shared/scripts/collect_keyword_data.py trends`，一组叫法最多 5 个、必须一次给齐，只有同一次请求里的词能互相比较；`--queries` 另取相关查询，每个词多 1 次付费调用） | 比较同一品类几种叫法在目标市场的相对热度，定发现题用哪个品类词；看季节性，基线和重跑避开旺季；从「飙升」相关查询里找候选新叫法，要在评价或社区里确认买家也这么说才进题面。查完留痕：选定的叫法与对比写进主题优先级依据（如「Trends 美国近 12 个月，automatic litter box 高于 self cleaning litter box」，脚本 `summary.json` 的 note 直接给出这句和热度最高的三个月）；旺季月份写进任务记录，排基线时照着避开；新叫法先记为候选，确认前不进题面 | 估绝对需求（量级看关键词工具）；决定题面措辞 | 只有相对值；小品类、小市场数据稀疏，B2B 软件常看不出东西（脚本把没有足够数据的词列在 `no_data`） |
-| 关键词工具（DataForSEO API；客户有订阅时也可用 Semrush、Ahrefs、Similarweb 关键词报告、Keyword Planner） | 估主题搜索量：跑 `shared/scripts/collect_keyword_data.py`，`volume` 给一批词查 Google Ads 月搜索量（一次最多 1000 个词，按请求计费），`suggest` 给种子词取带搜索量的长尾词（每个种子词 1 次付费调用）；`balance` 免费查余额，每次付费调用读回实际花费、超 `--budget-usd`（默认 1 美元）即停，产物 `signals.csv` 直接是需求信号表的行，`volumes.csv` 留逐月量。凭据读环境变量或钥匙串 `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`，不写进文件。量级填进需求信号表的「月搜索量」分档（四档：超过 1 万 / 超过 1000 / 超过 100 / 低于 100），只填真实搜索量，DataForSEO、品牌方给的 Semrush / Ahrefs / Similarweb、Keyword Planner 哪家有填哪家，来源类型选对应的工具；GSC、Bing、Google Ads 的展示量和站内搜索次数不是搜索量，PAA、相关搜索、自动补全不带量，都留空。说主题规模时取父关键词的量：同一需求的几种说法搜的是同一批人，不把各词搜索量相加，取其中量最大的那个词的档位。韩国以 Naver 为主，谷歌量偏低：量级用 Naver 搜索广告的关键词工具（PC 与移动月搜索量相加）再套同一四档，来源类型选 Naver | 生成题面 | 一个关键词背后可能是几种不同的提问：`best optician copenhagen` 可能是要配渐进镜片，也可能是要找下班后还营业的店 |
+| 关键词工具（DataForSEO API；客户有订阅时也可用 Semrush、Ahrefs、Similarweb 关键词报告、Keyword Planner） | 估主题搜索量：跑 `shared/scripts/collect_keyword_data.py`，`volume` 给一批词查 Google Ads 月搜索量（一次最多 1000 个词，按请求计费），`suggest` 给种子词取带搜索量的长尾词（每个种子词 1 次付费调用），`ranked` 给竞品域名取它有自然排名的词（每个域名 1 次付费调用，默认按搜索量取前 300 条，`--brand-terms` 给本品和竞品的名字与别名，含品牌名的行在出处标出；品牌方给了 Semrush 类导出时竞品缺口已在里面，不用再跑）；`balance` 免费查余额，每次付费调用读回实际花费、超 `--budget-usd`（默认 1 美元）即停，产物 `signals.csv` 直接是需求信号表的行，`volumes.csv` 留逐月量。凭据读环境变量或钥匙串 `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`，不写进文件；每次调用要给 `--who`（或环境变量 `DATAFORSEO_WHO`），`--case` 写客户名，花费按人记进流水，`ledger` 子命令汇总。量级填进需求信号表的「月搜索量」分档（四档：超过 1 万 / 超过 1000 / 超过 100 / 低于 100），只填真实搜索量，DataForSEO、品牌方给的 Semrush / Ahrefs / Similarweb、Keyword Planner 哪家有填哪家，来源类型选对应的工具；GSC、Bing、Google Ads 的展示量和站内搜索次数不是搜索量，PAA、相关搜索、自动补全不带量，都留空。说主题规模时取父关键词的量：同一需求的几种说法搜的是同一批人，不把各词搜索量相加，取其中量最大的那个词的档位。韩国以 Naver 为主，谷歌量偏低：量级用 Naver 搜索广告的关键词工具（PC 与移动月搜索量相加）再套同一四档，来源类型选 Naver | 生成题面 | 一个关键词背后可能是几种不同的提问：`best optician copenhagen` 可能是要配渐进镜片，也可能是要找下班后还营业的店 |
 | 品牌官网 | 列产品线、目标人群、服务、价格档位和市场范围，决定覆盖什么；产品能力用来判硬条件和品牌明显劣势 | 决定题面措辞；当买家需求证据 | 官网用品牌的说法（"preventive vision care"），买家说的是 "eye test" |
 | 竞品官网 | 补漏掉的人群、使用场景和决策条件 | 决定题面措辞；判断买家是否在意这一条；当成开行的买家证据 | 竞品强调的是它的卖点，买家是否在意要用评价、社区、搜索数据核对 |
 | 品牌方访谈、ICP 与人设文档、客户给的题目初稿 | 定业务边界、核事实；出完题后检查是否漏了产品线、人群或市场 | 决定题面措辞 | 偏向品牌想卖什么；措辞过于工整；漏掉买家的口语说法和品牌没意识到的约束 |

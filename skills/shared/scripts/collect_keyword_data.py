@@ -1,12 +1,15 @@
 """用 DataForSEO API 取 Google 关键词数据：月搜索量、长尾关键词建议、Google Trends、账户余额。
 
 售前选词工具和售后选词共用；销售通过选词工具调用，不需要 Semrush / Ahrefs 账号。
-四个子命令：
+五个子命令：
   balance   查账户余额（免费），也用来确认凭据可用。
   volume    给一批关键词查月搜索量（Google Ads 数据）。一次请求最多 1000 个词，按请求计费，
             不按词数计费；Google Ads 接口每分钟最多 12 次请求。
   suggest   给种子词取包含它的长尾关键词（DataForSEO Labs 关键词库），带月搜索量与搜索意图；
             每个种子词 1 次付费调用。
+  ranked    给竞品域名取它有 Google 自然排名的关键词（DataForSEO Labs Ranked Keywords，第三方估算），
+            按月搜索量降序；每个域名 1 次付费调用。用来找不含我们种子词的同品类说法和竞品词。
+            只查竞品域名：品牌自己的需求看 GSC；排名位置不进选词，产物里不输出。
   trends    比较同一品类 2–5 种叫法在目标市场的 Google Trends 相对热度，并按日历月看季节性；
             一次请求最多 5 个词，按请求计费。只有同一次请求里的词能互相比较（Trends 按请求内最高值
             归一到 100），所以一组叫法必须一次给齐。--queries 另给每个词各取一次相关查询（热门与飙升），
@@ -15,10 +18,21 @@
     python3 -I collect_keyword_data.py balance
     python3 -I collect_keyword_data.py volume "automatic litter box" "self cleaning litter box" --country us --lang en --out <目录>
     python3 -I collect_keyword_data.py suggest --seeds-file seeds.txt --country us --lang en --limit 50 --out <目录>
+    python3 -I collect_keyword_data.py ranked litter-robot.com whisker.com --brand-terms "litter-robot,whisker" --country us --lang en --out <目录>
     python3 -I collect_keyword_data.py trends "automatic litter box" "self cleaning litter box" --country us --lang en --queries --out <目录>
 
 凭据依次读：环境变量 DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD；macOS 钥匙串（服务名同上）。
 凭据不写进任何文件。--sandbox 走 DataForSEO 沙盒（免费，返回假数据），只用来验证流程。
+
+按人记账（全公司共用一个 DataForSEO 账户，账户本身不分人）：
+  每次调用都要说明调用人：--who 张三，或环境变量 DATAFORSEO_WHO；没给就不发调用。--case 可选，写客户或
+  Case 名（也可用环境变量 DATAFORSEO_CASE）。
+  每次付费调用往流水文件追加一行（时间、调用人、Case、接口、花费、任务号），同时把调用人和 Case 写进请求的
+  tag 字段，DataForSEO 后台的调用明细里也能对上。流水默认在 ~/.dataforseo/ledger.jsonl，环境变量
+  DATAFORSEO_LEDGER 可改；宿主系统上所有人共用服务端这一份。collect_reviews.py 记到同一份流水。
+    python3 -I collect_keyword_data.py ledger                       按调用人汇总（不含沙盒）
+    python3 -I collect_keyword_data.py ledger --by who --by month   按调用人 × 月份
+    python3 -I collect_keyword_data.py ledger --by case --since 2026-11
 
 花费控制：每次付费调用后读返回的 cost 累加，累计超过 --budget-usd（默认 1 美元）就停止后续调用。
 <out>/raw/ 已有同一请求的返回时直接复用，不重复付费；--refresh 强制重采，--cache-only 不发付费调用。
@@ -43,6 +57,7 @@ import argparse
 import base64
 import csv
 import datetime
+import fcntl
 import hashlib
 import json
 import os
@@ -57,6 +72,7 @@ LIVE = "https://api.dataforseo.com/v3/"
 SANDBOX = "https://sandbox.dataforseo.com/v3/"
 VOLUME_PATH = "keywords_data/google_ads/search_volume/live"
 SUGGEST_PATH = "dataforseo_labs/google/keyword_suggestions/live"
+RANKED_PATH = "dataforseo_labs/google/ranked_keywords/live"
 TRENDS_PATH = "keywords_data/google_trends/explore/live"
 TRENDS_FIELDS = ["keyword", "average", "rank", "peak_months", "weeks", "series"]
 TRENDS_QUERY_FIELDS = ["keyword", "kind", "query", "value"]
@@ -95,6 +111,78 @@ def auth_header() -> str:
     if not login or not password:
         raise Fatal("缺少 DataForSEO 凭据：设环境变量 DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD，或存进钥匙串（服务名同名）")
     return "Basic " + base64.b64encode(f"{login}:{password}".encode()).decode()
+
+
+def ledger_path() -> Path:
+    return Path(os.environ.get("DATAFORSEO_LEDGER", "").strip() or Path.home() / ".dataforseo" / "ledger.jsonl")
+
+
+def caller(args) -> str:
+    """调用人：--who 优先，其次环境变量 DATAFORSEO_WHO；都没有就不发调用，免得花费记不到人头上。
+    Case 同理：--case 优先，其次 DATAFORSEO_CASE（线上选词由 run_selection_mode.py 按品牌 × 市场填）。"""
+    args.case = (getattr(args, "case", "") or os.environ.get("DATAFORSEO_CASE", "")).strip()
+    who = (getattr(args, "who", "") or os.environ.get("DATAFORSEO_WHO", "")).strip()
+    if not who:
+        raise Fatal("缺调用人：加 --who <姓名>，或设环境变量 DATAFORSEO_WHO；按人记账要用")
+    return who
+
+
+def call_tag(who: str, case: str) -> str:
+    # tag 进 DataForSEO 后台的调用明细，上限 255 字符；不进缓存键，加了 tag 旧缓存照样命中
+    return f"who={who};case={case}"[:255]
+
+
+def record_spend(args, script: str, path: str, cost: float, task_id: str = "", status=None):
+    """每次付费调用后追加一行流水；多个进程同时写时加文件锁。"""
+    f = ledger_path()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps({"time": datetime.datetime.now().isoformat(timespec="seconds"), "who": args.who_resolved,
+                       "case": getattr(args, "case", "") or "", "script": script, "command": args.command,
+                       "endpoint": path, "cost_usd": round(float(cost or 0), 6), "task_id": task_id,
+                       "status_code": status, "sandbox": bool(getattr(args, "sandbox", False)),
+                       "out": str(Path(args.out).resolve()) if getattr(args, "out", "") else ""},
+                      ensure_ascii=False)
+    with f.open("a", encoding="utf-8") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        fh.write(line + "\n")
+        fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def show_ledger(args) -> int:
+    f = ledger_path()
+    if not f.exists():
+        print(f"还没有流水：{f}")
+        return 0
+    groups, total, bad = {}, [0, 0.0], 0
+    names = {"who": "调用人", "case": "Case", "month": "月份", "script": "脚本", "command": "子命令"}
+    by = args.by or ["who"]
+    for line in f.read_text(encoding="utf-8").splitlines():
+        try:
+            e = json.loads(line)
+        except ValueError:
+            bad += 1
+            continue
+        if e.get("sandbox") and not args.include_sandbox:
+            continue
+        if args.since and e.get("time", "") < args.since:
+            continue
+        if args.who and e.get("who") != args.who:
+            continue
+        e["month"] = e.get("time", "")[:7]
+        key = tuple(e.get(k) or "（未填）" for k in by)
+        g = groups.setdefault(key, [0, 0.0])
+        g[0] += 1
+        g[1] += float(e.get("cost_usd") or 0)
+        total[0] += 1
+        total[1] += float(e.get("cost_usd") or 0)
+    rows = sorted(groups.items(), key=lambda kv: -kv[1][1])
+    print("\t".join([names.get(k, k) for k in by] + ["调用次数", "花费（美元）"]))
+    for key, (n, cost) in rows:
+        print("\t".join(list(key) + [str(n), f"{cost:.4f}"]))
+    print("\t".join(["合计"] + [""] * (len(by) - 1) + [str(total[0]), f"{total[1]:.4f}"]))
+    print(f"流水：{f}" + ("（含沙盒）" if args.include_sandbox else "（不含沙盒）")
+          + (f"；{bad} 行读不了，已跳过" if bad else ""))
+    return 0
 
 
 def call(base: str, path: str, auth: str, payload=None, timeout=120):
@@ -162,6 +250,8 @@ class Runner:
         self.raw = self.out / "raw"
         self.raw.mkdir(parents=True, exist_ok=True)
         self.base = SANDBOX if args.sandbox else LIVE
+        args.who_resolved = "" if args.cache_only else caller(args)
+        self.tag = call_tag(args.who_resolved, args.case)
         self.auth = None if args.cache_only else auth_header()
         self.paid_calls, self.cost, self.failed, self.stopped = 0, 0.0, [], ""
 
@@ -183,10 +273,12 @@ class Runner:
             raise LookupError("无缓存，--cache-only 未采集")
         if self.stopped:
             raise LookupError(self.stopped)
-        data = call(self.base, path, self.auth, [task])
+        data = call(self.base, path, self.auth, [{**task, "tag": self.tag}])
         self.paid_calls += 1
         self.cost += float(data.get("cost") or 0)
-        if ((data.get("tasks") or [{}])[0] or {}).get("status_code") == 20000:  # 失败的返回不缓存，下次重采
+        t0 = (data.get("tasks") or [{}])[0] or {}
+        record_spend(self.args, "collect_keyword_data", path, data.get("cost"), t0.get("id", ""), t0.get("status_code"))
+        if t0.get("status_code") == 20000:  # 失败的返回不缓存，下次重采
             f.write_text(json.dumps({"request": {"path": path, "task": task, "sandbox": self.args.sandbox},
                                      "collected": datetime.date.today().isoformat(), "response": data},
                                     ensure_ascii=False, indent=2), encoding="utf-8")
@@ -276,6 +368,53 @@ def run_suggest(r: Runner, seeds: list[str]):
     return rows
 
 
+def clean_domain(target: str) -> str:
+    # Ranked Keywords 要求整站域名不带 https:// 和 www.；带了会被当成单个网页，只返回那一页的词
+    d = target.strip().lower()
+    for prefix in ("https://", "http://", "www."):
+        if d.startswith(prefix):
+            d = d[len(prefix):]
+    return d.split("/")[0]
+
+
+def run_ranked(r: Runner, targets: list[str]):
+    loc = r.location()
+    brands = [b.strip().lower() for b in r.args.brand_terms.split(",") if b.strip()]
+    rows = []
+    for target in targets:
+        domain = clean_domain(target)
+        task_in = {"target": domain, **loc, "item_types": ["organic"], "limit": r.args.limit,
+                   "order_by": ["keyword_data.keyword_info.search_volume,desc"],
+                   "filters": [["keyword_data.keyword_info.search_volume", ">=", r.args.min_volume]]}
+        try:
+            data, cached = r.request("ranked", RANKED_PATH, task_in)
+        except LookupError as e:
+            r.failed.append({"term": domain, "error": str(e)})
+            continue
+        task = first_task(data)
+        if task.get("status_code") != 20000:
+            r.failed.append({"term": domain, "error": f"{task.get('status_code')} {task.get('status_message')}"})
+            continue
+        result = (task.get("result") or [{}])[0] or {}
+        items = result.get("items") or []
+        for item in items:
+            kd = item.get("keyword_data") or {}
+            info = kd.get("keyword_info") or {}
+            vol = info.get("search_volume")
+            kw = kd.get("keyword") or ""
+            if not kw:
+                continue
+            rows.append({"keyword": kw, "search_volume": vol if vol is not None else "", "tier": tier(vol),
+                         "monthly": monthly(info.get("monthly_searches")),
+                         "competition": info.get("competition_level") or "",
+                         "cpc": info.get("cpc") if info.get("cpc") is not None else "",
+                         "main_intent": (kd.get("search_intent_info") or {}).get("main_intent") or "",
+                         "seed": domain, "source": "DataForSEO 竞品排名词",
+                         "brand": next((b for b in brands if b in kw.lower()), "")})
+        print(f"{domain}: {len(items)} 个关键词（库内共 {result.get('total_count', '?')} 个）")
+    return rows
+
+
 def write_outputs(r: Runner, rows: list[dict], command: str):
     args, today = r.args, datetime.date.today().isoformat()
     seen, signal_rows = set(), []
@@ -286,7 +425,9 @@ def write_outputs(r: Runner, rows: list[dict], command: str):
         seen.add(k)
         note = f"{row['source']}｜{args.country or args.location_code} {args.lang}"
         if row["seed"]:
-            note += f"｜种子词：{row['seed']}"
+            note += f"｜{'竞品' if command == 'ranked' else '种子词'}：{row['seed']}"
+        if row.get("brand"):
+            note += f"｜含品牌词：{row['brand']}"
         if row["search_volume"] == "":
             note += "｜无数据"
         s = dict.fromkeys(FIELDS, "")
@@ -300,7 +441,7 @@ def write_outputs(r: Runner, rows: list[dict], command: str):
         w.writeheader()
         w.writerows(signal_rows)
     with (r.out / "volumes.csv").open("w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=VOLUME_FIELDS)
+        w = csv.DictWriter(f, fieldnames=VOLUME_FIELDS, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
     summary = {"command": command, "market": {"country": args.country, "location_code": args.location_code,
@@ -416,7 +557,14 @@ def main() -> int:
     sub = ap.add_subparsers(dest="command", required=True)
     bal = sub.add_parser("balance", help="查账户余额（免费）")
     bal.add_argument("--sandbox", action="store_true")
+    led = sub.add_parser("ledger", help="按调用人、Case、月份汇总花费流水（免费，不调接口）")
+    led.add_argument("--by", action="append", choices=["who", "case", "month", "script", "command"],
+                     help="分组维度，可给多次，如 --by who --by month；默认按调用人")
+    led.add_argument("--since", default="", help="只看这个时间之后的，如 2026-11 或 2026-11-01")
+    led.add_argument("--who", default="", help="只看这个人")
+    led.add_argument("--include-sandbox", action="store_true", help="把沙盒调用也算进来")
     for name, help_text in (("volume", "查关键词月搜索量"), ("suggest", "取种子词的长尾关键词"),
+                            ("ranked", "取竞品域名有自然排名的关键词"),
                             ("trends", "比较几种叫法的 Google Trends 相对热度与季节性")):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("terms", nargs="*", help="关键词或种子词，可与 --file 合用")
@@ -428,12 +576,18 @@ def main() -> int:
         p.add_argument("--product-line", default="", help="写入 产品线 列")
         p.add_argument("--id-prefix", default="K", help="输入编号前缀，避免与已有需求信号撞号")
         p.add_argument("--budget-usd", type=float, default=1.0, help="本次累计花费上限，默认 1 美元")
+        p.add_argument("--who", default="", help="调用人，记账用；不给就读环境变量 DATAFORSEO_WHO")
+        p.add_argument("--case", default="", help="客户或 Case 名，记账用，可不填")
         p.add_argument("--sandbox", action="store_true", help="走沙盒（免费，假数据），验证流程用")
         p.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")
         p.add_argument("--cache-only", action="store_true", help="只用 raw/ 缓存，不发付费调用")
-        if name == "suggest":
-            p.add_argument("--limit", type=int, default=50, help="每个种子词最多返回几个词，最大 1000")
+        if name in ("suggest", "ranked"):
+            p.add_argument("--limit", type=int, default=50 if name == "suggest" else 300,
+                           help="每个种子词或域名最多返回几个词，最大 1000")
             p.add_argument("--min-volume", type=int, default=10, help="只要月搜索量不低于这个值的词")
+        if name == "ranked":
+            p.add_argument("--brand-terms", default="",
+                           help="逗号分隔的品牌名与别名（本品和竞品）；含这些词的行在出处标「含品牌词」，归竞品词或本品牌词")
         if name == "trends":
             p.add_argument("--time-range", choices=TRENDS_RANGES, default="past_12_months",
                            help="时间范围，默认近 12 个月；看季节性更稳可用 past_5_years")
@@ -441,6 +595,8 @@ def main() -> int:
     args = ap.parse_args()
 
     try:
+        if args.command == "ledger":
+            return show_ledger(args)
         if args.command == "balance":
             data = call(SANDBOX if args.sandbox else LIVE, USER_PATH, auth_header())
             result = (first_task(data).get("result") or [{}])[0] or {}
@@ -459,7 +615,7 @@ def main() -> int:
                 ap.error("trends 一次最多 5 个词：只有同一次请求里的词能互相比较，请分组后各跑一次")
             write_trends_outputs(r, *run_trends(r, terms))
             return 1 if r.stopped else 0
-        rows = run_volume(r, terms) if args.command == "volume" else run_suggest(r, terms)
+        rows = {"volume": run_volume, "suggest": run_suggest, "ranked": run_ranked}[args.command](r, terms)
         write_outputs(r, rows, args.command)
         return 1 if r.stopped else 0
     except (Fatal, LookupError) as e:

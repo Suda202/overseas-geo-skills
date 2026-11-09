@@ -27,6 +27,9 @@ agent 两种接法：
   --agent-cmd "…"   宿主自己的 harness：在工作目录里用 shell 执行，环境变量 WORKSPACE、
                     TASK_FILE 指向工作目录和任务说明；命令结束后应已写出 out/bank.json。
 调研要用的密钥照常放环境变量：SCRAPELESS_API_KEY、DATAFORSEO_LOGIN、DATAFORSEO_PASSWORD。
+DataForSEO 按人记账：宿主把发起这次选词的同事姓名放进 DATAFORSEO_WHO；没传时记成「线上选词（未传调用人）」。
+DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.dataforseo/ledger.jsonl（DATAFORSEO_LEDGER 可改），
+用 shared/scripts/collect_keyword_data.py ledger 汇总。
 
 产物（都在工作目录里）：
   out/bank.json        题库 JSON（内部底稿）
@@ -79,7 +82,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
-- 题型：只出发现题。Case 的「核心目标客户与购买场景」按业务优先级排先后，它和「业务目标」都只当业务优先级的线索。
+- 题型：只出发现题。Case 的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
@@ -364,6 +367,11 @@ def main() -> int:
                                              "errors": [{"code": "missing_env", "message": "缺少 SCRAPELESS_API_KEY"}]})
         print("缺少 SCRAPELESS_API_KEY，未启动 agent", file=sys.stderr)
         return 2
+    # DataForSEO 脚本没有调用人就不发调用；线上没传时给一个可见的占位，不让调研静默缺数据
+    os.environ.setdefault("DATAFORSEO_WHO", "线上选词（未传调用人）")
+    if not os.environ.get("DATAFORSEO_CASE", "").strip():
+        brand = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]["brand_name"]
+        os.environ["DATAFORSEO_CASE"] = f"{brand} {a.market.strip()}".strip()
     record = run_agent(ws, a.agent, a.agent_cmd, a.timeout)
     code = finalize(ws, record, repair_rounds=0)
     rounds = 0

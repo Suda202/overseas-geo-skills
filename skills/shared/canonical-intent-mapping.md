@@ -6,18 +6,18 @@
 
 ## 完整映射
 
-选词的意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后，定义见选词 selection-rules.md → 5「意图类型：八类」。下表另含历史数据兼容映射：Verification（旧的 yes/no 能力核查）和 Accuracy 的旧值仅用于读取历史数据；能力核查现归评估，准确性题在题库之外，不生成上传行。
+选词的意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后，定义见选词 selection-rules.md → 5「意图类型：八类」。八类售前、售后都能用：线上售前诊断目前默认只出发现题，线下跑售前诊断或做售后时按需出其他类型（2026-11-09）。下表另含历史数据兼容映射：Verification（旧的 yes/no 能力核查）和 Accuracy 的旧值仅用于读取历史数据；能力核查现归评估，准确性题在题库之外，不生成上传行。
 
 | 题库标签 | 后端 diagnostic_intent | 中文客户标签 | 统计指标 | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
 | `Prompt Type: Discovery` | `discovery` | 发现 | 提及率、情感 | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
-| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持；接入前按 `competitor` 上传，`tags` 第一个写「替代」） | 替代 | 提及率、情感 | `false` | **仅售后**：点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
+| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持；接入前按 `competitor` 上传，`tags` 第一个写「替代」） | 替代 | 提及率、情感 | `false` | 点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
 | `Prompt Type: Competitor` | `competitor` | 对比 | 胜负、情感 | `false` | M02 竞品表现（决胜与情感） |
 | `Prompt Type: Evaluation` | `sentiment` | 评估（问本品适不适合、有没有某能力） | 情感 | `false` | M04 品牌表达 |
-| `Prompt Type: Trust` | 后端尚未支持 | 验证（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | **仅售后选词**；本期不出，不导出上传 CSV |
-| `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 提及率 | `false` | **仅售后**：AI 多给步骤和建议，多数回答不提品牌，提及率基数小；品牌出现在解决步骤里（「用 X 查」）是这类题里最有价值的位置。售前不使用 |
-| `Prompt Type: Transactional` | 后端尚未支持 | 交易（点名本品问哪里买、价格、库存） | 准确性 | `false` | **仅售后选词**；本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
-| `Prompt Type: Support` | 后端尚未支持 | 售后（点名本品问安装、使用、故障、维修、退换） | 准确性 | `false` | **仅售后选词**；本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
+| `Prompt Type: Trust` | `trust`（后端尚未支持） | 验证（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | 本期不出，不导出上传 CSV |
+| `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 提及率 | `false` | AI 多给步骤和建议，多数回答不提品牌，提及率基数小；品牌出现在解决步骤里（「用 X 查」）是这类题里最有价值的位置 |
+| `Prompt Type: Transactional` | `transactional`（后端尚未支持） | 交易（点名本品问哪里买、价格、库存） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
+| `Prompt Type: Support` | `support`（后端尚未支持） | 售后（点名本品问安装、使用、故障、维修、退换） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
 | `Prompt Type: Category Awareness` | `market_perception` | 品类认知 | —（M08 自有读法） | `true` | M08 购买框架（品类认知 / Market Perception）；只用于调研预跑，不进选词题库 |
 | `Prompt Type: Accuracy` | `accuracy` | 准确性 | 准确性 | `false` | 无独立模块；作为准确性输入 M05 品牌进入。默认不出，有必要时才出，在题库之外，不上传 |
 | `Prompt Type: Verification` | `validation` | 能力核查（旧） | — | `false` | 历史数据兼容；现在问「有没有某能力」归 Evaluation。不要和新的验证类型 Trust 混用 |
@@ -27,7 +27,7 @@
 - **引用所有类型都统计**（引用份额、引用率、引用来源），按意图类型分开看。售前 HTML 报告的引用模块默认合并全部意图类型，核心洞察的引用份额、引用率只看发现＋替代、和提及率同一批题（2026-11-07）；监测基线 HTML 的「全部类型」仍只合并题面不点名品牌的类型（2026-10-22，`geo-monitoring/scripts/build_baseline_html.py`）。两处口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「样本范围」。
 - **提及只数正文里的品牌**：先去掉引用标记（「([RivalH1][5])」这类脚注、引用卡片标题）再识别，口径同 `geo-presales-report-audit/scripts/de_cite_crawl.py` 的 `strip_citations`。正文里写出来的品牌都算提及，包括被当作数据来源点名的（「Source: SRX Property Index」「According to rival-h2.example」）；提及不等于推荐。
 
-**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本按 `diagnosis_intent` 自动填（发现 `visibility,sentiment`，对比、评估 `sentiment`），不手填。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，然后从上传模板删掉这一列。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。
+**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本按 `diagnosis_intent` 自动填（发现 `visibility,sentiment`，对比、评估 `sentiment`），不手填。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，然后从上传模板删掉这一列。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。这五个英文值（`alternatives`、`trust`、`information`、`transactional`、`support`）和售后数据看板的「意图类型」筛选已写进研发需求《售前诊断：线上生词改用选词 skill，研发需要改的地方》第 4 节（2026-11-09）。
 
 **准确性怎么判。** 交易、售后和准确性题读的是 AI 说的事实对不对。
 

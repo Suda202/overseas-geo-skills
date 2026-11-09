@@ -23,7 +23,7 @@
 | `question_types` | 由 `diagnosis_intent` 定：发现 `visibility,sentiment`。过渡字段，后端改为按意图类型决定统计什么之后删掉（shared/canonical-intent-mapping.md） |
 | `purchase_intent`、`persona_name`、`scene_name` | 留空 |
 
-每个市场单独出一份，一份不超过 60 条（导出脚本查）。
+每个市场 × 产品线单独出一份，一份不超过 60 条（导出脚本查）。线上一个 Case 只有一条产品线，所以就是每个市场一份；本地题库一个市场有几条产品线时，文件名带 `.line<n>`，导出时打印每份对应哪条产品线。
 
 ## 怎么跑
 
@@ -50,9 +50,9 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 | 步 | 线上怎么做 |
 |---|---|
 | 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的 Case 代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 照选词写 `{selected: ["发现型可见度"], information_named: false}`；Case 的「业务目标」只当第 5 步的业务重点线索。品类名 `config.category_label` 从「本期产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
-| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题不跑，本地选词接手时要用再补。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节，没有「客户提供什么」这一节 |
+| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节，没有「客户提供什么」这一节 |
 | 4. 目标客户与使用场景 | 目标客户从 Case 的「核心目标客户与购买场景」起步（排在前面的业务优先级高），按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
-| 5. 业务优先级 | 业务重点从 Case 的核心目标客户与购买场景（按填写顺序）、差异化优势和业务目标取，依据里写明出处；这几项都空时，主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「Case 无业务重点，按主要目标客户的核心使用场景定」。没开的行和原因写进 `notes.md`「没开的格子」 |
+| 5. 业务优先级 | 业务重点从 Case 的核心目标客户与购买场景（按填写顺序）和差异化优势取，依据里写明出处；这几项都空时，主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「Case 无业务重点，按主要目标客户的核心使用场景定」。没开的行和原因写进 `notes.md`「没开的格子」 |
 | 6. 主题 | 和选词一样聚，个数不限。拿不准候选类别时按推理的候选类别归类，在主题的 `priority_basis` 里写「候选类别为推理，待验证」。能满足、但回答里基本不会出现品牌这一类的行照开、本期不出 |
 | 7. 写题 | 和选词一样，本期只出发现题。`changeability` 写 `待试跑` |
 | 8. 校验与导出 | 依次跑 `scripts/validate_after_sales_set.py <bank.json>`、`scripts/export_upload_csv.py <bank.json> --out <目录>`，都退出码 0 才算完成。不写对客确认表 |
@@ -63,7 +63,7 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 
 ## 交给本地选词接着做
 
-本地选词接手线上题库时：需求信号、约束条件、矩阵行、主题照收；用品牌方填的业务范围重判业务优先级，用品牌方数据复核约束条件；`notes.md`「预跑答案」里的答案直接用，不重跑，品牌和竞品评估预跑题要用时补跑；「未覆盖来源」补采。
+本地选词接手线上题库时：需求信号、约束条件、矩阵行、主题照收；用品牌方填的业务范围重判业务优先级，用品牌方数据复核约束条件；`notes.md`「预跑答案」里的答案直接用，不重跑；「未覆盖来源」补采。
 
 ## 验收
 

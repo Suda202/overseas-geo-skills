@@ -2,18 +2,79 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.56.0（2026-11-09）评估预跑默认不跑、按需补跑；能力不明确的照常开行
+
+Suda 定：本地选词和线上出词要一致，评估预跑在本地也删掉，按需判断要不要跑。推翻 2026-10-29（1.81.9）的「品牌和业务范围竞品各一道评估预跑」。原因：它当时的三个用途里，判属性池相对竞品已随属性池删除（相对竞品挪到基线后），品牌事实核查随品牌呈现暂停，只剩补约束条件候选，品类认知题和需求信号已覆盖；品牌劣势的类型（说错、各家都一样、没公开、能力缺口）基线后看具体题的答案判更准，选词阶段只按官网规格判能力缺口。外部调研（`30-选Topic与生词/方案/研究与评审/brand-weakness-prompt-inclusion-research-20261109.md`）确认没有一家主张因品牌弱排除题。
+
+- selection-rules 第 2 步：默认只跑品类认知题；评估预跑题有具体需要时按需补跑，问法不变。删「各家强弱的线索留到基线后用」两处。
+- 第 3 步「写题前确认硬条件」补一句：品牌能不能做到不明确的（官网没写、品牌方没确认）不算做不到，照常开行，等品牌方确认。
+- 同步：SKILL.md 步骤表、signal-sources 预跑答案一行、online-runner 第 2 步与本地接手、type-branches 评估验证一条、geo-monitoring SKILL.md 调研预跑一条。脚本不改（线上 runner 本来只跑品类认知）。改前快照 `.snapshots/eval-prerun-ondemand-*/`。
+
+## 2.55.0（2026-11-09）DataForSEO 按人记账
+
+DataForSEO 一个账户只有一组 API 凭据（官方认证文档：登录名 + 自动生成的 API 密码，只支持 Basic Auth），不能按人发多个 key。Suda 定按人分开记账：
+- `collect_keyword_data.py`、`collect_reviews.py` 每次调用要给 `--who`（或环境变量 `DATAFORSEO_WHO`），没给就不发调用；`--case`（或 `DATAFORSEO_CASE`）可选。`--cache-only` 不需要。
+- 每次付费调用往 `~/.dataforseo/ledger.jsonl`（`DATAFORSEO_LEDGER` 可改）追加一行：时间、调用人、Case、接口、花费、任务号；同时把 `who=…;case=…` 写进请求的 `tag`，DataForSEO 后台明细里能对上。tag 不进缓存键，旧缓存照样命中。
+- `collect_keyword_data.py ledger` 免费汇总，`--by who/case/month` 可叠加，默认不含沙盒。
+- `run_selection_mode.py`：宿主把发起人姓名放进 `DATAFORSEO_WHO`；没传时记成「线上选词（未传调用人）」，`DATAFORSEO_CASE` 没传时填「品牌 市场」。
+- 实测：沙盒四种情况（缺调用人报错、环境变量与参数两种给法、缓存命中不记账、`--cache-only` 不要调用人）；正式接口 Trends 一次 0.011 美元、Google 地图评价一次 0.00075 美元，返回里都带回了 tag，流水金额与返回 cost 一致。
+- 流水只覆盖这两个脚本；DataForSEO MCP 和其他代码直接调接口不进流水。
+- 同日研发文档《售前诊断：线上生词改用选词 skill》（rev 188）第 1 节运行环境加 `DATAFORSEO_WHO` 等三项、怎样算做对加一条记账验收，「我方的进度」加一项；本地源 `10-售前诊断报告/PRD/售前诊断-选词模式生词研发改造需求-20261029.md` 同步。
+
+改动：`shared/scripts/collect_keyword_data.py`、`shared/scripts/collect_reviews.py`、`scripts/run_selection_mode.py`、signal-sources「关键词工具」行。改前快照 `shared/scripts/.snapshots/*.20261109-145108.bak`、项目根 `.snapshots/*.20261109-145531.bak`。
+
+## 2.54.2（2026-11-09）文档对齐：语言登记、外部文档同步
+
+- input-contract.md 的 `locale` 已登记语言改为 `en`、`th`、`ru`（`locale-templates.json` 早已有 `ru`，文档漏改）。
+- CHANGELOG 里重复的 2.52.1 改为「2.52.0 同日补记」。
+- 外部文档按 2.52–2.54 同步：研发需求《售前诊断：线上生词改用选词 skill》（rev 185：删「业务目标」、语言加 `ru`、运行环境要装 `lingua-language-detector`、外部服务加 `ranked_keywords`、上传文件按市场 × 产品线一份）；PRD《售前选词工具》（删业务目标、语言加俄语）；飞书《生词规则》同事版（rev 766：硬条件改「服务路径」、语言按品牌方指定、业务范围行名改「目标客户与使用场景（n）」并按产品线分块、售前竞品与报告补足的分工），本地副本已覆盖。规则不变。
+
+## 2.54.1（2026-11-09）硬条件的「服务路径」改成跨行业定义
+
+Suda 指出「替代型号、桥梁课程、定向名额」是 UNI_A 招生案的例子，换行业对不上。selection-rules 第 3 步改为按作用定义：品牌用别的产品、服务或方案仍能让买家达成目的，按品牌实际业务判断。「补救通道」统一叫「服务路径」（client-facing-base 同步）；geo-monitoring gap-cause-action-table「判劣势前先找服务路径」改为引用这一处定义，不再自列例子。第 2 步资料用途表里残留的「写完题查适配度」（2.26 降档版叫法）改为「品牌明显劣势的提示」。规则不变，脚本不改；改前快照 `.snapshots/*.20261109-141628.bak`。
+
+## 2.54.0（2026-11-09）关键词脚本加 `ranked`：查竞品域名的自然排名词
+
+Suda 拿到一份「DataForSEO 接 4+2 个接口」的方案，让按选词逻辑取舍。只加一个：`collect_keyword_data.py ranked`（Labs Ranked Keywords，`item_types: ["organic"]`、按月搜索量降序、默认前 300 条），只查业务范围里的竞品域名。用处是补种子词扩不出来的同品类说法和竞品词；售前拿不到 GSC 时它是唯一能看到竞品那边真实搜索说法的来源。排名位置、排名页面不进选词，脚本不输出。`--brand-terms` 给出处标「含品牌词」，方便按竞品词、本品牌词分开用。沙盒跑通（域名清洗、品牌词标注、缓存复用）；正式接口未实测：账户余额 -0.03 美元，充值前所有付费子命令都调不了。
+
+不接的接口和原因（不写进正文，免得被当成待办）：
+- Ranked Keywords 查本品牌：和 GSC 重复，排名不进选词。
+- Domain Intersection：缺口里的词都在竞品的排名词里；「品牌没排名」这层标签不作为出题或排优先级的理由，交内容计划。
+- Keyword Ideas、Keywords For Site：按品类相关性匹配，返回很发散，和站点本身无关；扩词已有种子词、相邻词和竞品 alternative。
+- Competitors Domain：我们的竞品按产品线 × 市场从 AI 回答里取，口径不同。
+- Related Keywords：`collect_serp_signals.py` 已采相关搜索。
+- Keyword Overview：查量用 `volume`。
+- AI Keyword Data：由 PAA 建模的估算，不是 AI 提问量，不用来定优先级。
+
+改动：`shared/scripts/collect_keyword_data.py`；signal-sources「搜索数据」行、「我方收集的数据」表、「关键词工具」用法行。改前快照 `.snapshots/*.20261109-125744.bak`。
+
+## 报告侧（2026-11-09）商品卡回到回答正文原位（report-builder 2.9.0）
+
+Suda 问「商品卡是不是得放在正文里，现在为什么是分开的」。查下来位置信息一直在：ChatGPT 每条带商品卡的回答，正文里都有对应的卡区块（图 + 徽标 + 编号标题 + 价格 + 评分 + 卖点 + Shop 链接），是清洗阶段 `_HTML_IMG` 把图全删了，卡片位置一起丢了（当初为防 AIO 的 base64 内嵌图撑爆表格）。
+
+- 清洗改为先把「http 图 + 非空 title」转成占位符留在原位，再删其余图；`markdown_to_html` 遇到占位行渲染成卡片（`product-card-inline`）。Bbrand：552 张正文图全部还原成卡片，131 条回答中英文都有。
+- 判定不看 title 就算卡：必须带价格、「x/5」评分，或编号标题 + 卖点/描述，否则按文章配图处理（0034 的「360 Logo」差点被当成卡）。
+- 顺带修一个一直存在的 bug：兜底正则 `_HTML_LEFT` 会把 `[Shop RivalB2](<https://…>)` 里的 `<url>` 当标签删掉，报告里这类链接此前全是空括号。改成跳过 `http`/`https` 开头，再把 `&lt;/&gt;/&amp;` 还原。
+- AI Mode、Gemini 正文无卡片位置，AIO 只有 8 张 base64 图，这三个平台仍按平台顺序把卡排在正文上方。
+
 ## 报告侧（2026-11-09）商品卡百分比统一一位小数（report-editor 2.9.1、report-builder 2.8.1）
 
 Suda 发现核心洞察「商品卡提及率 8.5%」与购物模块表格「8%」对不上：两处都是 6/71，但 core `_percent` 默认 `digits=0` 取整到整数。商品卡的触发率、提及率、平均位置、官网购买链接覆盖率改为一律 1 位小数（`percent(n, d, 1)`），前端 `report-engine.js` 的 `corePercent` 同式；整数时不写小数（72% 不写 72.0%）。口径契约「购物层指标」补精度规则。本地报告重建、引擎对账通过、重新部署 Netlify。
 
-## 2.53.1（2026-11-09）业务范围行名对齐《品牌资料收集》文档；「使用场景」去掉「（我方填）」
+## 2.53.1（2026-11-09）业务范围对齐《品牌资料收集》、按产品线分块；目标客户和使用场景合成一行；删「业务目标」
 
-Suda 定：业务范围里品牌方填的行按《AI 搜索监测｜品牌资料收集》第一部分的字段写；使用场景没有品牌方填的对应行，「（我方填）」区分不了任何东西。主要目标客户仍带后缀，用来和品牌方填的核心目标客户与购买场景分开。
+Suda 定：业务范围里品牌方填的行按《AI 搜索监测｜品牌资料收集》第一部分的字段写；同一条产品线的行放在一起，不然看不懂；收集表里目标客户和购买场景填在一块，不同产品线的目标客户和使用场景不一样，业务范围也合成一行、按产品线写；行名不写「（我方填）」「（本期）」；资料收集文档删了「业务目标」，模板、skill 和 Case 输入都不收。
 
-- client-facing-base.md 业务范围：「市场与语言」拆成「市场」「语言」两行；加「业务目标」行（照品牌方填的写，只当业务优先级的线索，不解锁其他题型；Case 输入合同 2.52.0 已收这个字段）；删「不收目标选项」。「使用场景（n）」不带后缀（selection-rules.md 第 4 步同步）。
-- 飞书模板《AI 搜索监测确认表（模板）》业务范围：「【示例】核心优势（1）」改「差异化优势（1）」（2.25.1 已改名，模板漏改）；「市场与语言」拆两行；加「业务目标」示例行；两行使用场景示例去掉后缀。INSIZE 对客 Base 同步。改前快照在项目根 `.snapshots/tpl-scene-rename-20261109/`。
-- check_skill_terms.py 加扫「市场与语言」作业务范围行名的写法。
-- 已建的其他客户 Base（Bbrand、某车载品牌、360、Hbrand）不回改。
+- client-facing-base.md 业务范围：
+  - 「市场与语言」拆成「市场」「语言」两行；表头加「产品线」（多选）。
+  - 「主要目标客户（n）」「使用场景（n）」合成「目标客户与使用场景（n）」，写成「目标客户：A、B；使用场景：……」，放进所属产品线的块里；提示词矩阵仍分「目标客户」「使用场景」两列，选项从这几行取（目标客户跨场景、跨产品线复用，需求信号只标目标客户）。
+  - 行序：共用的行在前（品牌方填的按文档顺序，再是我们填的品类、平台、社区平台与信源服务），然后每条产品线一块（产品线、竞品、只属于这条线的核心目标客户与购买场景和差异化优势、目标客户与使用场景）。
+  - 行名不加「（我方填）」；产品线行只写编号，后续期的产品线在内容里注明「后续」。
+  - selection-rules.md 第 1、2、4 步同步行名。
+- 业务目标：Case 输入合同（input-contract.md、normalize_case.py）删掉选填字段 `业务目标`，传进来报 `retired_field`；两份 input-examples、shared/publish-templates 两份示例、online-runner.md、run_selection_mode.py 的提示词、e2e_input_contract.py 同步。
+- 飞书模板《AI 搜索监测确认表（模板）》业务范围：加「产品线」字段；「【示例】核心优势（1）」改「差异化优势（1）」（2.25.1 已改名，模板漏改）；按上面规则改写并重建为 18 行示例；「项目」、需求信号「目标客户」、提示词矩阵「使用场景」三个字段说明同步。Ubrand 对客 Base 同步（76 行）。业务范围不被其他表关联，删了重建不断链，每次重建后逐行回读核对；改前快照在项目根 `.snapshots/tpl-scene-rename-20261109/`，Case 相关文件快照在 `.snapshots/case-goal-removal-20261109/`。重排脚本 `10-售前诊断报告/评测数据/Ubrand/选词-UK/regroup_scope.py`、`merge_scope.py`。
+- check_skill_terms.py 加扫「市场与语言」作行名、「（我方填）」「主要目标客户（n）」「使用场景（n）」「（本期）」的写法。
+- 验证：check_skill_terms 通过；validator 测试 58 passed；verify_workflow 65/65；e2e_input_contract、e2e_repair_loop 通过；模板与 Ubrand 的 check_client_base 通过。
 
 ## 2.53.0（2026-11-09）语种检查改用通用识别库 lingua
 
@@ -40,6 +101,14 @@ Suda 审同事版 4.4 节时提出：模型生成的联想写清来源类型就�
 - **GSC 里 AI 发出的检索**：不再跳过，按一条需求信号登记，来源类型记 query fan-outs、出处写 GSC，只开假设级（分不清背后是真实用户、监测工具，还是我们自己试跑的子查询）；同时交内容计划对照站内页面。只有提示词模板碎片仍跳过。signal-sources 信号表 query fan-outs 行、client-facing-base 来源类型说明同步。
 - **用大模型做意图调研**：标为选做；结果按「模型建议问题」登记，不逐条核；只有要改记成社区、评价来支撑矩阵行的那几条，登记前打开原帖核对原话（Hbrand 那次 Gemini 有 3 条挂错帖子）。
 - `check_skill_terms.py` 加退役说法。改前快照在项目根 `.snapshots/signal-model-generated-*/`。
+
+## 2.52.0 同日补记（2026-11-09）60 条上限按市场 × 产品线算；八类意图类型售前也能用
+
+两个会话同时从 2.52.0 往上升了一版，这条原来也记作 2.52.1；版本号让给上面「模型生成的线索」那条。
+
+- Suda 定：每个市场每条产品线的题加起来不超过 60 条。`export_upload_csv.py` 改为按「市场 × 产品线」分文件（产品线从题所在矩阵行读），每份查 60 条；一个市场只有一条产品线时文件名不变，多条时带 `.line<n>` 并打印对应产品线。Ubrand 英国 17 条产品线 101 题导出成 17 份，Bbrand 单产品线文件名不变。
+- Suda 定：八类意图类型售前、售后都能用，线上售前诊断只是默认只出发现题。shared/canonical-intent-mapping 删掉「仅售后」「售前不使用」，补上后端新增值 `trust`、`transactional`、`support`（研发需求第 4 节，含售后数据看板的意图类型筛选）。
+- 同步 online-runner、shared/prompt-generation-principles、SKILL 交付一节。验证：validator 测试 58 passed、`verify_workflow.py` 65/65、返修循环 7/7、输入合同 40/40、退役说法 0 命中。
 
 ## 2.52.0（2026-11-09）Case 输入合同 v2：字段同《品牌资料收集》第一部分
 

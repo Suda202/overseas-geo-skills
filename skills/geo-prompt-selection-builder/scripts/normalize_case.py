@@ -30,13 +30,13 @@ LOCALE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "references" / "loc
 # 与《品牌资料收集》第一部分一一对应（市场、语言是采集配置：市场走 --market，语言走 options.locale）。
 SCALAR_REQUIRED = ("品牌", "本期产品线")
 DOMAIN_KEY = "官方域名"
-SCALAR_OPTIONAL = ("适用边界", "业务目标")
+SCALAR_OPTIONAL = ("适用边界",)
 # 多值字段，按 `字段 n` 展开；顺序原样保留（核心目标客户与购买场景按业务优先级排，最优先的在前）。
 NUMBERED_LISTS = ("品牌别名", "核心目标客户与购买场景", "差异化优势")
 SUGGESTED_MAX = {"核心目标客户与购买场景": 5, "差异化优势": 5}
 COMPETITOR_KEY = "竞品"
 CASE_KEYS = set(SCALAR_REQUIRED + (DOMAIN_KEY,) + SCALAR_OPTIONAL + NUMBERED_LISTS + (COMPETITOR_KEY,))
-# v1 字段（2026-11-09 退役）：报 retired_field，说明并到了哪里。
+# v1 字段和 v2 的「业务目标」（都在 2026-11-09 退役）：报 retired_field，说明并到了哪里。
 RETIRED_FIELDS = {
     "公司名": "删除；易混淆的公司或品牌名写进「品牌别名」",
     "品牌名称": "改名「品牌」",
@@ -50,7 +50,8 @@ RETIRED_FIELDS = {
     "使用场景": "并入「核心目标客户与购买场景」",
     "产品特性": "删除；选词调研时读官网",
     "补充内容": "删除",
-    "希望解决的问题": "改用「业务目标」",
+    "希望解决的问题": "删除",
+    "业务目标": "删除（2026-11-09，《品牌资料收集》已删这个字段）",
     "主题": "删除；主题由选词从矩阵行聚出",
     "购买标准": "删除",
     "集成与兼容": "删除",
