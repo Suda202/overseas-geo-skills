@@ -66,20 +66,29 @@ LANGUAGE_SCRIPTS = {
     "ar": "arabic", "arabic": "arabic",
     "ru": "cyrillic", "russian": "cyrillic",
 }
-LATIN_LANGUAGE_NAMES = {
-    "en": "English", "english": "English", "es": "Spanish", "spanish": "Spanish",
-    "fr": "French", "french": "French", "de": "German", "german": "German",
-    "pt": "Portuguese", "portuguese": "Portuguese", "it": "Italian", "italian": "Italian",
+# Which language a Prompt is written in (Suda 2026-11-09): markets and languages follow the brand party
+# and are not enumerable, so this uses the general detector lingua (75 languages, offline) instead of
+# per-language word lists. A collection language lingua does not know, or a machine without lingua,
+# skips this check with one warning; the script-share check above still runs.
+try:
+    from lingua import IsoCode639_1, Language, LanguageDetectorBuilder
+except ImportError:  # pragma: no cover - depends on the machine
+    LanguageDetectorBuilder = None
+_LANGUAGE_DETECTOR = None
+LANGUAGE_NAME_ALIASES = {
+    "bahasa indonesia": "id", "bahasa melayu": "ms", "bahasa malaysia": "ms", "filipino": "tl",
+    "fil": "tl", "norwegian": "nb", "no": "nb", "farsi": "fa", "persian": "fa", "chinese": "zh",
+    "mandarin": "zh", "cantonese": "zh", "greek": "el", "hebrew": "he", "iw": "he",
 }
-# Function words per language; two or more hits with a clear lead identify the language.
-LATIN_STOPWORDS = {
-    "English": set("the and for what which best how is to with of that are can my".split()),
-    "Spanish": set("el la los las para que qué cual cuál mejor cómo como con de en y es una un mi".split()),
-    "French": set("le la les pour quel quelle meilleur comment avec des et est une un mon du".split()),
-    "German": set("der die das für welche beste wie mit und ist ein eine mein den".split()),
-    "Portuguese": set("o os para qual melhor como com de e é uma um meu do da".split()),
-    "Italian": set("il lo gli per quale migliore come con di e è una un mio del".split()),
-}
+# Closely related languages a short Prompt cannot tell apart; a hit inside the group counts as a match.
+CLOSE_LANGUAGES = [{"id", "ms"}, {"nb", "nn", "da"}, {"hr", "sr", "bs"}, {"nl", "af"}, {"cs", "sk"}]
+# When lingua tops a Prompt with another language, the expected language's own confidence decides:
+# under 0.05 is an error, under 0.10 a warning. Prompts written in the wrong language score 0.00–0.04 for
+# the expected one, with the detected language at 0.18 or more (evals/e2e_language_check.py). A line that
+# is mostly product names and jargon gets no clear winner: real English Prompts lingua tops with German or
+# Spanish, such as a client's "Best fast charger for a Samsung tablet", top out at 0.07–0.13, so a top
+# language under 0.15 is not judged.
+LANGUAGE_ERROR_CONFIDENCE, LANGUAGE_WARN_CONFIDENCE, LANGUAGE_MIN_TOP = 0.05, 0.10, 0.15
 CONTENT_STOPWORDS = set(
     "a an the of for to in on with and or is are be can i my me we our what which how do does "
     "should best good top who where when why vs versus that this it if at by from as any".split()
@@ -170,17 +179,56 @@ def latin_words(text: str) -> list[str]:
     return re.findall(r"[a-z0-9£$€%]+", folded)
 
 
-def detect_latin_language(text: str) -> str | None:
-    tokens = re.findall(r"[a-zà-ÿ]+", str(text).casefold())
-    if len(tokens) < 4:
+def lingua_code(value: object) -> str | None:
+    """ISO 639-1 code lingua knows for a collection language ("id", "pt-BR", "Indonesian", "Bahasa Indonesia")."""
+    if LanguageDetectorBuilder is None:
         return None
-    scores = sorted(
-        ((name, sum(token in words for token in tokens)) for name, words in LATIN_STOPWORDS.items()),
-        key=lambda item: item[1],
-        reverse=True,
-    )
-    (best, top), (_, second) = scores[0], scores[1]
-    return best if top >= 2 and top - second >= 2 else None
+    raw = str(value or "").strip().casefold()
+    if not raw:
+        return None
+    candidates = [raw, re.split(r"[-_ /(]", raw, maxsplit=1)[0]]
+    for cand in candidates:
+        cand = LANGUAGE_NAME_ALIASES.get(cand, cand)
+        try:
+            return Language.from_iso_code_639_1(getattr(IsoCode639_1, cand.upper())).iso_code_639_1.name.lower()
+        except (AttributeError, ValueError):
+            pass
+        language = getattr(Language, cand.upper().replace(" ", "_"), None)
+        if isinstance(language, Language):
+            return language.iso_code_639_1.name.lower()
+    return None
+
+
+def close_languages(a: str, b: str) -> bool:
+    return a == b or any(a in group and b in group for group in CLOSE_LANGUAGES)
+
+
+def detect_language(text: str, ignore: list[str] = ()) -> tuple[str, float, dict[str, float]] | None:
+    """(top language, its confidence, confidence by code); None when the text is too short to judge.
+    Brand, competitor and category names are removed first: they are not written in the buyer's language."""
+    global _LANGUAGE_DETECTOR
+    if LanguageDetectorBuilder is None:
+        return None
+    cleaned = str(text)
+    for term in sorted((t for t in ignore if t and len(t) >= 3), key=len, reverse=True):
+        pattern = rf"(?<![^\W_]){re.escape(term)}(?![^\W_])" if term.isascii() else re.escape(term)
+        cleaned = re.sub(pattern, " ", cleaned, flags=re.I)
+    # Too short to judge: under 12 letters, or under 5 words where the language separates words with spaces
+    # (real English "Best open-ear earbuds" reads 0.38 English vs Norwegian). Thai, Chinese and Japanese
+    # run words together, so "words" there average far more than 12 letters and the word count is not used.
+    words = cleaned.split()
+    letters = sum(ch.isalpha() for ch in cleaned)
+    spaced = bool(words) and letters / len(words) <= 12
+    if letters < 12 or (spaced and len(words) < 5):
+        return None
+    if _LANGUAGE_DETECTOR is None:
+        _LANGUAGE_DETECTOR = LanguageDetectorBuilder.from_all_languages().build()
+    values = _LANGUAGE_DETECTOR.compute_language_confidence_values(cleaned)
+    if not values:
+        return None
+    by_code = {v.language.iso_code_639_1.name.lower(): v.value for v in values}
+    top = values[0]
+    return top.language.iso_code_639_1.name.lower(), top.value, by_code
 
 
 def similarity_units(text: str, script: str) -> set[str]:
@@ -242,10 +290,17 @@ def wording_checks(
     warnings: list[str],
 ) -> None:
     collection = config.get("collection_config") or {}
-    lang = language_key(collection.get("language") or config.get("language"))
+    raw_language = collection.get("language") or config.get("language")
+    lang = language_key(raw_language)
     script = LANGUAGE_SCRIPTS.get(lang, "")
-    latin_name = LATIN_LANGUAGE_NAMES.get(lang)
+    expected = lingua_code(raw_language)
     terms = entity_terms(config)
+    ignore = terms + [str(config.get("category_label") or ""), str(collection.get("market") or "")] + [
+        str(a) for a in config.get("category_aliases") or [] if isinstance(a, str)]
+    if raw_language and expected is None:
+        reason = "lingua is not installed (pip install lingua-language-detector)" if LanguageDetectorBuilder is None \
+            else f"collection language {raw_language!r} is not one of lingua's 75 languages"
+        warnings.append(f"[W32] language check skipped: {reason}; check by hand that Prompts are in the market language")
 
     def allowed_currencies(region: str) -> set[str] | None:
         allowed: set[str] = set()
@@ -259,14 +314,18 @@ def wording_checks(
         text = str(row.get("user_question") or "").strip()
         if not text:
             continue
+        detected = detect_language(text, ignore)
         if intents.get(id(row)) == "Discovery":
             named = [term for term in terms if mentions_entity(text, term)]
             if named:
                 fail(f"{qid}: Discovery Prompt names a brand or competitor {named}", errors)
-            detected = detect_latin_language(text)
             # A query written in another language (a wording slip the language check
             # reports separately) is not judged by the English candidate gate.
-            english = (latin_name == "English" and detected in (None, "English")) or (not lang and detected == "English")
+            reads_english = detected[0] == "en" if detected else None
+            if raw_language:
+                english = (expected == "en" or lang in ("en", "english")) and reads_english is not False
+            else:
+                english = reads_english is True
             if english and not _prompt_gates.requests_candidates(text):
                 fail(f"{qid}: Discovery Prompt asks no candidate question (which / best / "
                      f"recommend / where to buy ...); AI answers it with advice, not a brand list", errors)
@@ -275,10 +334,15 @@ def wording_checks(
             if share is not None and share < 0.5:
                 fail(f"{qid}: query is not written in the collection language {lang!r} "
                      f"({share:.0%} of letters in the expected script)", errors)
-        if latin_name:
-            detected = detect_latin_language(text)
-            if detected and detected != latin_name:
-                warnings.append(f"[W32] {qid}: reads as {detected}, but the collection language is {latin_name}")
+        if expected and detected and detected[1] >= LANGUAGE_MIN_TOP and not close_languages(detected[0], expected):
+            top, top_conf, by_code = detected
+            own = by_code.get(expected, 0.0)
+            if own < LANGUAGE_ERROR_CONFIDENCE:
+                fail(f"{qid}: query reads as {top!r}, not the collection language {expected!r} "
+                     f"(confidence {top_conf:.2f} vs {own:.2f})", errors)
+            elif own < LANGUAGE_WARN_CONFIDENCE:
+                warnings.append(f"[W32] {qid}: reads more like {top!r} than the collection language {expected!r}; "
+                                f"check it is in the buyer's language (mixed-language wording is fine if buyers ask that way)")
         if script == "latin":
             words = latin_words(text)
             has_mark = "?" in text or "？" in text

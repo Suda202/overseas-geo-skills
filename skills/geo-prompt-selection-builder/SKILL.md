@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or a Case (online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one Case unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "2.52.1"
+  version: "2.53.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -71,4 +71,4 @@ metadata:
 
 ## 维护本 skill
 
-动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了 Case 输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py` 和 `python3 evals/e2e_repair_loop.py`。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。
+动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了 Case 输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py` 和 `python3 evals/e2e_repair_loop.py`；动了语种检查的，再跑 `python3 evals/e2e_language_check.py`。validator 的语种检查依赖 `pip install lingua-language-detector`，没装时跳过并给 W32 警告。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。
