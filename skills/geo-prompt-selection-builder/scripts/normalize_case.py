@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Normalize a presales Case input into the v8 question-bank config fragments.
 
-Two entry points share one set of rules:
+``normalize(payload)`` takes the canonical payload defined in
+``references/input-contract.md`` (``input_version = presales-case-input/v2``).
+The Case fields are the first part of the Feishu doc《AI 搜索监测｜品牌资料收集》
+(Suda 2026-11-09): the online diagnosis form and the after-sales intake collect
+the same fields. v1 payloads (公司名 / 业务模式 / 品类 / 痛点 …) are rejected.
 
-* ``normalize(payload)`` takes the canonical API payload defined in
-  ``references/input-contract.md`` (``input_version = presales-case-input/v1``).
-* ``from_base_record(record)`` adapts a Feishu Base record (merged fields joined
-  with "，", flat 竞品 n columns, markdown-wrapped URLs) into that payload first.
-
-Output is deterministic: ``case_fields`` with numbered fields expanded, Topic
-source mapping, the client's competitors (not frozen), locale and handoff. Fields that
-need model judgment (English ``topic`` / ``category_label``, ``brand_object_type``,
-``attribute_plan``) are left to the skill.
+Output is deterministic: ``case_fields`` with numbered fields expanded, the
+client's competitors (not frozen), locale and handoff. Things that need model
+judgment (category name ``category_label``, Topics, matrix rows, Prompts) are
+left to the skill; ``category_label`` is derived from 本期产品线 and the site.
 
 Exit codes: 0 valid, 1 input errors, 2 unreadable input.
 """
@@ -20,52 +19,48 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-INPUT_VERSION = "presales-case-input/v1"
+INPUT_VERSION = "presales-case-input/v2"
+RETIRED_VERSIONS = ("presales-case-input/v1",)
 LOCALE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "references" / "locale-templates.json"
 
-BUSINESS_MODES = ("B2B", "B2C", "B2B / B2C")
-# 与线上表单对齐：只有这几项必填，业务描述字段全部选填。
-SCALAR_REQUIRED = ("公司名", "品牌名称", "业务模式", "品类", "官方域名")
-SCALAR_OPTIONAL = ("业务 / 产品名称", "适用边界")
-# 多值字段，按 `目标企业画像 n` 展开；B2B 选填，纯 B2C 必须省略。
-B2B_LIST = "目标企业画像"
-# B2B 选填：查不到就省略，不填「待人工确认」。
-B2B_JOINABLE = ("购买标准", "集成与兼容", "信任与合规")
-OPTIONAL_JOINABLE = ("差异化优势", "地理与市场")
-NUMBERED_LISTS = ("目标客户", "痛点", "使用场景", "产品特性")
-# 建议数量；超出只告警，不阻断。
-SUGGESTED_COUNTS = {"目标企业画像": (1, 5), "目标客户": (1, 5), "痛点": (2, 5), "使用场景": (2, 5), "产品特性": (2, 5)}
-TOPIC_KEY = "主题"
+# 与《品牌资料收集》第一部分一一对应（市场、语言是采集配置：市场走 --market，语言走 options.locale）。
+SCALAR_REQUIRED = ("品牌", "本期产品线")
+DOMAIN_KEY = "官方域名"
+SCALAR_OPTIONAL = ("适用边界", "业务目标")
+# 多值字段，按 `字段 n` 展开；顺序原样保留（核心目标客户与购买场景按业务优先级排，最优先的在前）。
+NUMBERED_LISTS = ("品牌别名", "核心目标客户与购买场景", "差异化优势")
+SUGGESTED_MAX = {"核心目标客户与购买场景": 5, "差异化优势": 5}
 COMPETITOR_KEY = "竞品"
-NOTE_KEY = "补充内容"
-# 需求收集「最希望改善的 AI 搜索表现」（Suda 2026-11-02），选项名与选词 selection-rules.md 第 1 步一致。
-GOAL_KEY = "希望解决的问题"
-GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
-# 只记进 case_fields 当业务重点线索；本期只出发现题，选了什么都不解锁其他类型（2026-11-06，与选词一致）
-CASE_KEYS = set(
-    SCALAR_REQUIRED + SCALAR_OPTIONAL + (B2B_LIST,) + B2B_JOINABLE + OPTIONAL_JOINABLE
-    + NUMBERED_LISTS + (TOPIC_KEY, COMPETITOR_KEY, NOTE_KEY, GOAL_KEY)
-)
+CASE_KEYS = set(SCALAR_REQUIRED + (DOMAIN_KEY,) + SCALAR_OPTIONAL + NUMBERED_LISTS + (COMPETITOR_KEY,))
+# v1 字段（2026-11-09 退役）：报 retired_field，说明并到了哪里。
+RETIRED_FIELDS = {
+    "公司名": "删除；易混淆的公司或品牌名写进「品牌别名」",
+    "品牌名称": "改名「品牌」",
+    "业务 / 产品名称": "改用「本期产品线」",
+    "业务模式": "删除；B2B / B2C 从「核心目标客户与购买场景」判断",
+    "品类": "删除；品类由选词从「本期产品线」和官网推出",
+    "目标企业画像": "并入「核心目标客户与购买场景」",
+    "垂直行业": "并入「核心目标客户与购买场景」",
+    "目标客户": "并入「核心目标客户与购买场景」",
+    "痛点": "并入「核心目标客户与购买场景」",
+    "使用场景": "并入「核心目标客户与购买场景」",
+    "产品特性": "删除；选词调研时读官网",
+    "补充内容": "删除",
+    "希望解决的问题": "改用「业务目标」",
+    "主题": "删除；主题由选词从矩阵行聚出",
+    "购买标准": "删除",
+    "集成与兼容": "删除",
+    "信任与合规": "删除",
+    "地理与市场": "删除；市场走 --market",
+}
 COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
-# 旧选项照收不报错，但不再生效：题型按选词规则定（本期只出发现题），阶段一律是选词（2026-11-06）
-DEPRECATED_OPTIONS = ("generation_stage", "extra_prompt_types")
-JOIN_SEPARATOR = "，"
-
-# Base 里不承载业务含义的管理列，适配时直接丢弃。
-BASE_ADMIN_COLUMNS = {"record_id", "Case序号"}
-BASE_RENAMED_COLUMNS = {"垂直行业": "目标企业画像"}
-# 接口字段别名：线上表单叫「垂直行业」，直接映射，不要求调用方改名。
-CASE_KEY_ALIASES = {"垂直行业": "目标企业画像"}
-MARKDOWN_LINK = re.compile(r"^\[(?P<text>[^\]]*)\]\((?P<url>[^)\s]+)\)$")
-BASE_COMPETITOR_NAME = re.compile(r"^竞品\s*(\d+)$")
-BASE_COMPETITOR_DOMAIN = re.compile(r"^竞品\s*(\d+)\s*官网域名$")
-BASE_NUMBERED = re.compile(r"^(目标企业画像|目标客户|痛点|使用场景|产品特性|主题)\s*(\d+)(?:（(?:宽泛|细分)）)?$")
+# 《品牌资料收集》：暂不确定的填「待补充」，按没填处理；不适用的填「无」，原样记录。
+PENDING_VALUES = ("待补充", "待人工确认")
 
 
 class Report:
@@ -93,13 +88,24 @@ def _clean(value) -> str:
 
 
 def _is_blank(value) -> bool:
-    return value is None or (isinstance(value, str) and not value.strip())
+    return value is None or value == [] or (isinstance(value, str) and not value.strip())
+
+
+def _is_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 
 def _check_url(value: str, field: str, report: Report) -> None:
-    parsed = urlparse(value)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    if not _is_url(value):
         report.error("invalid_url", field, f"{field} 必须是 http(s) 开头的完整网址，收到 {value!r}")
+
+
+def _pending(value: str, field: str, report: Report) -> bool:
+    if value in PENDING_VALUES:
+        report.warn("pending_value", field, f"{field} 为「{value}」，已按未填写处理")
+        return True
+    return False
 
 
 def _scalar(case: dict, field: str, report: Report, required: bool) -> str | None:
@@ -111,24 +117,18 @@ def _scalar(case: dict, field: str, report: Report, required: bool) -> str | Non
     if not isinstance(value, str):
         report.error("invalid_type", field, f"{field} 必须是字符串")
         return None
-    return _clean(value)
-
-
-def _joinable(case: dict, field: str, report: Report, required: bool) -> str | None:
-    """字符串原样保留；数组按「，」合并，与 Base 的合并字段写法一致。"""
-    value = case.get(field)
-    if isinstance(value, list):
-        items = [_clean(item) for item in value if isinstance(item, str) and item.strip()]
-        if len(items) != len(value):
-            report.error("invalid_item", field, f"{field} 的数组元素必须是非空字符串")
-        value = JOIN_SEPARATOR.join(items)
-    return _scalar({field: value}, field, report, required)
+    text = _clean(value)
+    if _pending(text, field, report):
+        if required:
+            report.error("missing_field", field, f"必填字段 {field} 不能是「{text}」")
+        return None
+    return text
 
 
 def _string_list(case: dict, field: str, report: Report, required: bool = False) -> list[str]:
-    """数组逐项接收；字符串（线上表单的单个文本框）整段按一项接收，不按逗号拆，避免拆错。"""
+    """数组逐项接收；字符串（单个文本框）整段按一项接收，不按逗号拆，避免拆错。"""
     value = case.get(field)
-    if _is_blank(value) or value == []:
+    if _is_blank(value):
         if required:
             report.error("missing_field", field, f"缺少必填字段 {field}，至少需要 1 项")
         return []
@@ -138,20 +138,28 @@ def _string_list(case: dict, field: str, report: Report, required: bool = False)
         report.error("invalid_type", field, f"{field} 必须是字符串或字符串数组")
         return []
     items: list[str] = []
+    errors_before = len(report.errors)
     for index, item in enumerate(value, start=1):
         if not isinstance(item, str) or not item.strip():
             report.error("invalid_item", f"{field}[{index}]", f"{field} 第 {index} 项必须是非空字符串")
             continue
         text = _clean(item)
+        if _pending(text, f"{field}[{index}]", report):
+            continue
         if text in items:
             report.error("duplicate_item", f"{field}[{index}]", f"{field} 第 {index} 项与前面重复：{text}")
             continue
-        if "，" in text:
-            report.warn(
-                "comma_in_item", f"{field}[{index}]",
-                f"{field} 第 {index} 项含中文逗号；写回飞书合并字段后再拆分会被拆成多项",
-            )
         items.append(text)
+    if required and not items and len(report.errors) == errors_before:
+        report.error("missing_field", field, f"缺少必填字段 {field}，至少需要 1 项")
+    return items
+
+
+def _domains(case: dict, report: Report) -> list[str]:
+    """官方域名：一个网址或网址数组，第一个是品牌主站；子域名、市场独立站往后写。"""
+    items = _string_list(case, DOMAIN_KEY, report, required=True)
+    for index, item in enumerate(items, start=1):
+        _check_url(item, DOMAIN_KEY if len(items) == 1 else f"{DOMAIN_KEY}[{index}]", report)
     return items
 
 
@@ -185,12 +193,11 @@ def _competitors(case: dict, report: Report) -> list[dict]:
             if key in seen:
                 report.error("duplicate_item", f"{field}.名称", f"竞品名称重复：{name}")
             seen.add(key)
-        entry = {
+        result.append({
             "name": name or "",
             "official_domain": domain or "",
             "source_fields": [f"竞品 {index}", f"竞品 {index} 官网域名"],
-        }
-        result.append(entry)
+        })
     return result
 
 
@@ -239,22 +246,22 @@ def normalize(payload: dict) -> dict:
     unknown_root = sorted(set(payload) - {"input_version", "case", "options", "handoff"})
     if unknown_root:
         report.error("unknown_field", "$", f"顶层含未定义字段 {unknown_root}")
-    if payload.get("input_version") != INPUT_VERSION:
+    version = payload.get("input_version")
+    if version in RETIRED_VERSIONS:
+        report.error(
+            "unsupported_version", "input_version",
+            f"{version} 已于 2026-11-09 停用，请按 {INPUT_VERSION} 传《品牌资料收集》第一部分的字段",
+        )
+        return _result(report, None)
+    if version != INPUT_VERSION:
         report.error("invalid_enum", "input_version", f"input_version 必须等于 {INPUT_VERSION}")
     case = payload.get("case")
     if not isinstance(case, dict):
         report.error("missing_field", "case", "缺少 case 对象")
         return _result(report, None)
-    case = dict(case)
-    for alias, target in CASE_KEY_ALIASES.items():
-        if alias not in case:
-            continue
-        value = case.pop(alias)
-        if _is_blank(case.get(target)) or case.get(target) == []:
-            case[target] = value
-        elif not (_is_blank(value) or value == []):
-            report.warn("alias_ignored", alias, f"同时传了 {alias} 和 {target}，按 {target} 取值")
-    unknown = sorted(set(case) - CASE_KEYS)
+    for key in sorted(set(case) & set(RETIRED_FIELDS)):
+        report.error("retired_field", key, f"{key} 已停用（2026-11-09）：{RETIRED_FIELDS[key]}")
+    unknown = sorted(set(case) - CASE_KEYS - set(RETIRED_FIELDS))
     if unknown:
         report.error("unknown_field", "case", f"case 含未定义字段 {unknown}")
 
@@ -263,109 +270,53 @@ def normalize(payload: dict) -> dict:
         value = _scalar(case, field, report, required=True)
         if value is not None:
             fields[field] = value
-    mode = fields.get("业务模式")
-    if mode is not None and mode not in BUSINESS_MODES:
-        report.error("invalid_enum", "业务模式", f"业务模式只接受 {list(BUSINESS_MODES)}，收到 {mode!r}")
-    if "官方域名" in fields:
-        _check_url(fields["官方域名"], "官方域名", report)
+    domains = _domains(case, report)
+    if domains:
+        fields[DOMAIN_KEY] = domains[0]
+        for index, extra in enumerate(domains[1:], start=2):
+            fields[f"{DOMAIN_KEY} {index}"] = extra
     for field in SCALAR_OPTIONAL:
         value = _scalar(case, field, report, required=False)
         if value is not None:
             fields[field] = value
-
-    is_b2c = mode == "B2C"
-    for field in (B2B_LIST,) + B2B_JOINABLE:
-        if is_b2c:
-            if not _is_blank(case.get(field)) and case.get(field) != []:
-                report.error("forbidden_for_b2c", field, f"纯 B2C Case 不填 {field}，请省略该字段")
-            continue
-        if field == B2B_LIST:
-            items = _string_list(case, field, report)
-            low, high = SUGGESTED_COUNTS[field]
-            if items and not low <= len(items) <= high:
-                report.warn("count_suggestion", field, f"{field} 建议 {low}–{high} 项，收到 {len(items)} 项")
-            if "待人工确认" in items:
-                report.warn("pending_value", field, f"{field} 仍为「待人工确认」，需上游补齐")
-            for index, item in enumerate(items, start=1):
-                fields[f"{field} {index}"] = item
-            continue
-        value = _joinable(case, field, report, required=False)
-        if value is None:
-            continue
-        if value == "待人工确认":
-            report.warn("pending_value", field, f"{field} 为「待人工确认」，已按未填写处理")
-            continue
-        fields[field] = value
-    for field in OPTIONAL_JOINABLE:
-        value = _joinable(case, field, report, required=False)
-        if value is not None:
-            fields[field] = value
-
+    lists: dict[str, list[str]] = {}
     for field in NUMBERED_LISTS:
         items = _string_list(case, field, report)
-        low, high = SUGGESTED_COUNTS[field]
-        if items and not low <= len(items) <= high:
-            report.warn("count_suggestion", field, f"{field} 建议 {low}–{high} 项，收到 {len(items)} 项")
+        high = SUGGESTED_MAX.get(field)
+        if high and len(items) > high:
+            report.warn("count_suggestion", field, f"{field} 建议不超过 {high} 条，收到 {len(items)} 条")
+        lists[field] = items
         for index, item in enumerate(items, start=1):
             fields[f"{field} {index}"] = item
 
-    # 主题选填（Suda 2026-10-29）：线上表单去掉了监测主题，生词时从矩阵行聚出主题。
-    # 填了只当业务重点线索，个数不限（2026-11-06）；结果里 topic_source 区分两种情况。
-    topics = _string_list(case, TOPIC_KEY, report)
-    topic_entries = []
-    for index, topic in enumerate(topics, start=1):
-        # 列名沿用旧写法（第一个记「宽泛」），飞书读回时按同一正则认。
-        source_field = f"主题 {index}（{'宽泛' if index == 1 else '细分'}）"
-        fields[source_field] = topic
-        topic_entries.append({"topic_id": f"topic_{index}", "source_field": source_field, "source_value": topic})
-
-    # 竞品不带主题边界（2026-10-29 删去「适用主题」：线上表单没有这一项）。
     competitors = _competitors(case, report)
     for index, competitor in enumerate(competitors, start=1):
         fields[f"竞品 {index}"] = competitor["name"]
         fields[f"竞品 {index} 官网域名"] = competitor["official_domain"]
 
-    # 按重要性排先后写，最在意的写在最前面；保留品牌方给的顺序
-    goals = list(dict.fromkeys(_string_list(case, GOAL_KEY, report)))
-    bad_goals = [g for g in goals if g not in GOALS]
-    if bad_goals:
-        report.error("invalid_enum", GOAL_KEY, f"{GOAL_KEY} 只接受 {list(GOALS)}，收到 {bad_goals}")
-    goals = [g for g in goals if g in GOALS]
-    if goals:
-        fields[GOAL_KEY] = JOIN_SEPARATOR.join(goals)
-
-    note = case.get(NOTE_KEY)
-    if note is not None and not isinstance(note, str):
-        report.error("invalid_type", NOTE_KEY, "补充内容必须是字符串")
-        note = ""
-    fields[NOTE_KEY] = _clean(note or "")
-
     options = payload.get("options") or {}
     if not isinstance(options, dict):
         report.error("invalid_type", "options", "options 必须是对象")
         options = {}
-    unknown_options = sorted(set(options) - {"locale", *DEPRECATED_OPTIONS})
+    unknown_options = sorted(set(options) - {"locale"})
     if unknown_options:
         report.error("unknown_field", "options", f"options 含未定义字段 {unknown_options}")
     locale = str(options.get("locale") or "en").strip().casefold()
     locales = _registered_locales()
     if locale not in locales:
         report.error("invalid_enum", "options.locale", f"locale 只接受已登记语言 {sorted(locales)}")
-    for key in DEPRECATED_OPTIONS:
-        if key in options:
-            report.warn("deprecated_option", f"options.{key}",
-                        f"{key} 已停用，照收不生效：本期只出发现题，阶段一律按选词处理")
 
     handoff = _handoff(payload, report)
     normalized = {
         "case_fields": fields,
-        "brand_name": fields.get("品牌名称", ""),
-        "official_domain": fields.get("官方域名", ""),
-        "derived_field_sources": {"brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名"},
-        "topics": topic_entries,
-        # case = 调用方填了主题；to_derive = 没填，生词时从矩阵行聚出
-        "topic_source": "case" if topic_entries else "to_derive",
-        # 竞品取客户填的，不冻结；试跑后按答案补哪几家归监测（2026-11-06）
+        "brand_name": fields.get("品牌", ""),
+        "brand_aliases": [a for a in lists.get("品牌别名", []) if a != "无"],
+        "official_domain": domains[0] if domains else "",
+        "official_domains": domains,
+        "product_line": fields.get("本期产品线", ""),
+        # 品类名由选词从本期产品线和官网推出，写进题库 config.category_label
+        "derived_field_sources": {"brand_name": "品牌", "official_domain": "官方域名", "category_label": "本期产品线（推断）"},
+        # 竞品取客户填的，不冻结；报告侧按提及率补足归线上与监测（2026-11-06 / 11-09）
         "competitor_selection": {"status": "client_input", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
         "handoff": handoff,
@@ -381,87 +332,17 @@ def _result(report: Report, normalized: dict | None) -> dict:
     return result
 
 
-def _base_value(value):
-    if value is None:
-        return None
-    if isinstance(value, list):
-        # 富文本单元格可能是 [{"text": ...}] 片段数组。
-        value = "".join(part.get("text", "") if isinstance(part, dict) else str(part) for part in value)
-    text = _clean(value)
-    match = MARKDOWN_LINK.fullmatch(text)
-    return match.group("url") if match else text
-
-
-def from_base_record(record: dict) -> tuple[dict, list[dict]]:
-    """Adapt one Feishu Base record into the canonical payload plus adapter warnings."""
-    warnings: list[dict] = []
-    case: dict = {}
-    numbered: dict[str, dict[int, str]] = {}
-    competitors: dict[int, dict] = {}
-    for raw_key, raw_value in record.items():
-        key = _clean(raw_key)
-        if key in BASE_ADMIN_COLUMNS:
-            continue
-        value = _base_value(raw_value)
-        if _is_blank(value):
-            continue
-        if key in BASE_RENAMED_COLUMNS:
-            target = BASE_RENAMED_COLUMNS[key]
-            if target not in record or _is_blank(record.get(target)):
-                case[target] = (
-                    [part.strip() for part in value.split(JOIN_SEPARATOR) if part.strip()]
-                    if target == B2B_LIST else value
-                )
-                warnings.append({
-                    "code": "renamed_column", "field": key,
-                    "message": f"旧列 {key} 已按 {target} 读取",
-                })
-            continue
-        if m := BASE_COMPETITOR_DOMAIN.fullmatch(key):
-            competitors.setdefault(int(m.group(1)), {})["官网域名"] = value
-        elif m := BASE_COMPETITOR_NAME.fullmatch(key):
-            competitors.setdefault(int(m.group(1)), {})["名称"] = value
-        elif m := BASE_NUMBERED.fullmatch(key):
-            numbered.setdefault(m.group(1), {})[int(m.group(2))] = value
-        elif key in NUMBERED_LISTS or key in (TOPIC_KEY, B2B_LIST, GOAL_KEY):
-            case[key] = [part.strip() for part in value.split(JOIN_SEPARATOR) if part.strip()]
-        elif key in CASE_KEYS:
-            case[key] = value
-        else:
-            warnings.append({"code": "ignored_column", "field": key, "message": f"未识别的 Base 列 {key} 已忽略"})
-    for key, by_index in numbered.items():
-        case[key] = [by_index[i] for i in sorted(by_index)]
-    if competitors:
-        case[COMPETITOR_KEY] = [competitors[i] for i in sorted(competitors)]
-    return {"input_version": INPUT_VERSION, "case": case}, warnings
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("input", type=Path, help="canonical payload JSON, or a Base record (JSON / single-line NDJSON)")
-    parser.add_argument("--from-base-record", action="store_true", help="treat input as a Feishu Base record")
+    parser.add_argument("input", type=Path, help=f"{INPUT_VERSION} payload JSON")
     parser.add_argument("-o", "--output", type=Path, help="write the result JSON here as well as stdout")
     args = parser.parse_args()
     try:
-        text = args.input.read_text(encoding="utf-8").strip()
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            if not args.from_base_record:
-                raise
-            # lark-cli 读回的是 NDJSON，一行一条 Record；只取第一条。
-            data = json.loads(text.splitlines()[0])
-    except (OSError, json.JSONDecodeError, IndexError) as exc:
+        data = json.loads(args.input.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
         print(json.dumps({"ok": False, "errors": [{"code": "unreadable_input", "field": "$", "message": str(exc)}]}, ensure_ascii=False, indent=2))
         return 2
-    adapter_warnings: list[dict] = []
-    if args.from_base_record:
-        if not isinstance(data, dict):
-            print(json.dumps({"ok": False, "errors": [{"code": "invalid_type", "field": "$", "message": "Base record 必须是 JSON 对象"}]}, ensure_ascii=False, indent=2))
-            return 2
-        data, adapter_warnings = from_base_record(data)
     result = normalize(data)
-    result["warnings"] = adapter_warnings + result["warnings"]
     output = json.dumps(result, ensure_ascii=False, indent=2)
     print(output)
     if args.output:

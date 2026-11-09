@@ -76,9 +76,13 @@ def stage_collect(args) -> None:
 def resolve_case(args) -> None:
     """--case 可以直接给 v8 题库 JSON：取其中 config.case_fields 作为报告用 Case。"""
     raw = json.loads(args.case.read_text(encoding="utf-8"))
-    fields = (raw.get("config") or {}).get("case_fields") if isinstance(raw, dict) else None
+    config = (raw.get("config") or {}) if isinstance(raw, dict) else {}
+    fields = config.get("case_fields")
     if not fields:
         return
+    # Case 输入合同 v2 不收品类，选词把推出来的品类名写在 config.category_label
+    if config.get("category_label") and not fields.get("品类"):
+        fields = {**fields, "category_label": config["category_label"]}
     derived = args.out_dir / "case.json"
     derived.write_text(json.dumps(fields, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"✓ [Case] 从 v8 题库取 config.case_fields → {derived}")

@@ -1,6 +1,8 @@
-# Case 输入合同（presales-case-input/v1）
+# Case 输入合同（presales-case-input/v2）
 
-给接入方用：线上表单收集的数据、本地的一个 Case 文件（JSON），或本地飞书读取的记录。调用方按本文组好一个 JSON，先过 `scripts/normalize_case.py` 校验和归一化，通过后再交给选词生成题库（线上一条命令入口见 [online-runner.md](online-runner.md)）。接入方不需要读 skill 的其他文件。版本号沿用 `presales-case-input/v1`，已接入的调用方不用改。
+给接入方用：线上诊断表单收集的数据，或本地的一个 Case 文件（JSON）。调用方按本文组好一个 JSON，先过 `scripts/normalize_case.py` 校验和归一化，通过后再交给选词生成题库（线上一条命令入口见 [online-runner.md](online-runner.md)）。接入方不需要读 skill 的其他文件。
+
+Case 字段就是飞书《AI 搜索监测｜品牌资料收集》第一部分：线上诊断表单和售后向品牌方收资料用同一套字段，改字段时两处一起改。v1（公司名、业务模式、品类、痛点等字段）2026-11-09 起停用，传进来整份拒收。
 
 ## 1. 调用流程
 
@@ -18,7 +20,7 @@
 
 ```json
 {
-  "input_version": "presales-case-input/v1",
+  "input_version": "presales-case-input/v2",
   "case": { "...": "见第 3 节" },
   "options": { "locale": "en" },
   "handoff": { "...": "见第 5 节，可省略" }
@@ -27,7 +29,7 @@
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `input_version` | 是 | 固定为 `presales-case-input/v1` |
+| `input_version` | 是 | 固定为 `presales-case-input/v2` |
 | `case` | 是 | 品牌业务字段，见第 3 节 |
 | `options` | 否 | 见第 4 节 |
 | `handoff` | 否 | 来源与客户确认状态，见第 5 节 |
@@ -36,44 +38,25 @@
 
 ## 3. `case` 业务字段
 
-字段名用中文。所有字符串会去掉首尾空白；`null` 和空字符串视为没填。必填项与线上「配置海外诊断参数」表单的星号一致，业务描述字段全部选填。
+字段名用中文。所有字符串会去掉首尾空白；`null`、空字符串和空数组视为没填。填「待补充」按没填处理并告警；填「无」原样记录。
 
-| 字段 | 线上表单 | 类型 | 必填 | 规则 |
-|---|---|---|---|---|
-| `公司名` | 公司名（英文） | string | 是 | 公开英文主体名 |
-| `业务 / 产品名称` | 业务/产品名称（英文） | string | 否 | 一条 Case 只写一条产品线 |
-| `品牌名称` | 品牌名称（英文） | string | 是 | |
-| `业务模式` | 业务模式 | string | 是 | 只接受 `B2B`、`B2C`、`B2B / B2C` |
-| `品类` | 品类 | string | 是 | |
-| `目标企业画像`（也可传 `垂直行业`） | 垂直行业 | string 或 string[] | 否 | 仅 `B2B` 和 `B2B / B2C` 可填，纯 `B2C` 必须省略。接口直接传 `垂直行业` 即可，skill 映射为 `目标企业画像`；两个都传时以 `目标企业画像` 为准并告警 |
-| `目标客户` | 目标客户 | string 或 string[] | 否 | |
-| `痛点` | 痛点 | string 或 string[] | 否 | |
-| `使用场景` | 使用场景 | string 或 string[] | 否 | |
-| `产品特性` | 产品特性 | string 或 string[] | 否 | |
-| `差异化优势` | 差异化优势 | string 或 string[] | 否 | 数组会按「，」合并成一个字符串 |
-| `适用边界` | 适用边界 | string | 否 | |
-| `主题` | 无（2026-10-29 起线上表单去掉监测主题） | string 或 string[] | 否 | 生词时主题从矩阵行聚出；填了只当矩阵行业务优先级的线索，不当主题名单，个数不限；不传时归一化结果的 `topic_source` 为 `to_derive` |
-| `官方域名` | 官方域名 | string | 是 | 以 `http://` 或 `https://` 开头的完整网址 |
-| `竞品` | 竞品（添加竞品） | object[] | 是 | 1–3 个，见下表。取客户填的，不冻结 |
-| `补充内容` | 补充内容 | string | 否 | 省略时按空字符串处理 |
-| `希望解决的问题` | 最希望改善的 AI 搜索表现 | string 或 string[] | 否 | 只接受下表 4 个选项名，按重要性排先后，最在意的写在最前面，顺序原样保留。只记进 `case_fields`，当矩阵行业务优先级的线索；本期只出发现题，选了什么都不解锁其他题型（和选词一致）。客户见过 AI 答错、推荐了竞品的例子写进 `补充内容` |
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `品牌` | string | 是 | 对外使用的正式品牌名。一家公司多个品牌的，每个品牌一个 Case |
+| `品牌别名` | string 或 string[] | 否 | 简称、旧名、本地语言名、常见拼写和空格变体、买家常直接叫的产品系列名；易混淆、不能算作本品牌的名称也写在这里并注明。报告的提及识别靠它 |
+| `官方域名` | string 或 string[] | 是 | `http://` 或 `https://` 开头的完整网址。可填多个，第一个是品牌主站，子域名、市场独立站往后写 |
+| `本期产品线` | string | 是 | 本期监测的产品或服务。品类名由选词从这里和官网推出，不单独收 |
+| `适用边界` | string | 否 | 本期不覆盖的产品、渠道、客群或服务；边界外的问法不出题 |
+| `竞品` | object[] | 是 | 1–3 个，见下表。取客户填的，不冻结 |
+| `核心目标客户与购买场景` | string 或 string[] | 否 | 按业务优先级排，最重要的写第 1 条。每条写目标客户（B2C 写客户人群；B2B 写企业类型、规模及决策或使用角色）和购买场景与需求（要解决什么问题、购买时关注什么）。建议不超过 5 条 |
+| `差异化优势` | string 或 string[] | 否 | 相比主要竞品、买家能感知到的不同；只对特定客户或场景成立的注明。建议不超过 5 条 |
+| `业务目标` | string | 否 | 例如增加曝光、询盘线索。只当矩阵行业务优先级的线索；本期只出发现题，写什么都不解锁其他题型 |
 
-`希望解决的问题` 的选项（与选词 `selection-rules.md` 第 1 步一致）：
+**多值字段传字符串还是数组**：`品牌别名`、`官方域名`、`核心目标客户与购买场景`、`差异化优势` 两种都收。传数组时逐项展开成 `核心目标客户与购买场景 1`、`核心目标客户与购买场景 2`……，顺序原样保留；传字符串（表单的单个文本框）时整段作为一项，不按逗号拆。能拿到分项时优先传数组。
 
-| 选项名 | 表单说明 |
-|---|---|
-| 发现型可见度 | 希望用户寻找产品、服务或供应商时，AI 的回答里提到我们的品牌 |
-| 竞争定位 | 希望用户比较竞品、寻找替代方案时，把我们列入考虑范围 |
-| 品牌呈现 | 希望 AI 正确描述品牌、产品能力和适用场景 |
-| 声誉与信任 | 希望了解 AI 如何评价我们的可靠性、口碑及购买风险 |
-| `购买标准`、`集成与兼容`、`信任与合规` | 无 | string 或 string[] | 否 | 线上表单没有这三项，只有飞书 Case 会带。仅 `B2B` 和 `B2B / B2C` 可填，纯 `B2C` 必须省略 |
-| `地理与市场` | 无（见 `options` 的国家/地区） | string 或 string[] | 否 | |
+**选填字段留空会怎样**：不报错。字段越少，题目越依赖本期产品线和公开调研。
 
-**多值字段传字符串还是数组**：`目标企业画像`、`目标客户`、`痛点`、`使用场景`、`产品特性`、`主题` 两种都收。传数组时逐项展开成 `痛点 1`、`痛点 2`……；传字符串（表单的单个文本框）时整段作为一项，不按逗号拆，因为值本身也可能含逗号（例如「输出电压和功率，同时控制安全风险」），拆分结果不可靠。能拿到分项时优先传数组。
-
-**业务字段留空会怎样**：不报错。字段越少，题目越依赖品类、主题和补充内容，诊断能覆盖的买家关注点也越少。`购买标准`、`集成与兼容`、`信任与合规` 传了 `待人工确认` 会按未填写处理并告警。
-
-**线上表单里不属于本合同的项**：AI 平台、国家/地区等采集配置不传给 Case；其中「语言」映射到 `options.locale`，「AI 平台」传给入口脚本的 `--platforms`。手动上传题目时不调用生词 skill。
+**线上表单里不属于本合同的项**：「市场」传给入口脚本的 `--market`；「语言」映射到 `options.locale`；「AI 平台」传给 `--platforms`。手动上传题目时不调用生词 skill。
 
 `竞品` 每一项：
 
@@ -82,22 +65,22 @@
 | `名称` | string | 是 | 英文规范名称；竞品之间不能重名 |
 | `官网域名` | string | 是 | 完整网址 |
 
-竞品只收这两项，传别的字段报 `unknown_field`。竞品不分主题。
+竞品只收这两项，传别的字段报 `unknown_field`。竞品不分主题。线上报告的竞品名单按提及率补足，归线上报告逻辑，不在本合同里。
+
+**v1 字段**：`公司名`、`品牌名称`、`业务 / 产品名称`、`业务模式`、`品类`、`目标企业画像`（`垂直行业`）、`目标客户`、`痛点`、`使用场景`、`产品特性`、`补充内容`、`希望解决的问题`、`主题`、`购买标准`、`集成与兼容`、`信任与合规`、`地理与市场` 传进来报 `retired_field`，报错里写明并到了哪个新字段。
 
 ## 4. `options`
 
 | 字段 | 默认 | 可选值 |
 |---|---|---|
-| `locale` | `en` | 题面语言，对应线上表单的「语言」；必须是 `references/locale-templates.json` 已登记的键（当前为 `en`、`th`） |
-
-旧选项 `extra_prompt_types`、`generation_stage` 照收不报错，但不再生效，归一化时给 `deprecated_option` 告警（2026-11-06）：题型按选词规则定，本期只出发现题。
+| `locale` | `en` | 题面语言，对应表单的「语言」；必须是 `references/locale-templates.json` 已登记的键（当前为 `en`、`th`） |
 
 ## 5. `handoff`（可省略）
 
 ```json
 {
   "confirmation_status": "partial",
-  "confirmed_fields": ["主题", "竞品"],
+  "confirmed_fields": ["竞品"],
   "sources": [{ "url": "https://www.example-biz.example", "summary": "官网产品与服务页" }]
 }
 ```
@@ -108,7 +91,7 @@
 | `confirmed_fields` | 客户已确认的字段名，必须是第 3 节里的字段 |
 | `sources` | 研究来源，每条至少有 `url` |
 
-省略 `handoff` 时，按「客户未确认」生成题库，产出会标为待客户确认的 V1。
+省略 `handoff` 时，按「客户未确认」生成题库。
 
 ## 6. 返回结构
 
@@ -118,14 +101,15 @@
 {
   "ok": true,
   "errors": [],
-  "warnings": [{ "code": "pending_value", "field": "购买标准", "message": "购买标准 为「待人工确认」，已按未填写处理" }],
+  "warnings": [{ "code": "pending_value", "field": "适用边界", "message": "适用边界 为「待补充」，已按未填写处理" }],
   "normalized": {
-    "case_fields": { "痛点 1": "...", "主题 1（宽泛）": "...", "竞品 1": "...", "...": "..." },
+    "case_fields": { "品牌": "...", "本期产品线": "...", "核心目标客户与购买场景 1": "...", "竞品 1": "...", "...": "..." },
     "brand_name": "...",
+    "brand_aliases": ["..."],
     "official_domain": "...",
-    "derived_field_sources": { "brand_name": "品牌名称", "category_label": "品类", "official_domain": "官方域名" },
-    "topics": [{ "topic_id": "topic_1", "source_field": "主题 1（宽泛）", "source_value": "..." }],
-    "topic_source": "case",
+    "official_domains": ["..."],
+    "product_line": "...",
+    "derived_field_sources": { "brand_name": "品牌", "official_domain": "官方域名", "category_label": "本期产品线（推断）" },
     "competitor_selection": { "status": "client_input", "selection_count": 3, "formal_competitors": [ "..." ] },
     "locale": "en",
     "handoff": { "confirmation_status": "none", "confirmed_fields": [], "sources": [] }
@@ -133,70 +117,53 @@
 }
 ```
 
-失败时 `ok = false`，没有 `normalized`，`errors` 列出全部问题（不在第一个错误处停下）：
+失败时 `ok = false`，没有 `normalized`，`errors` 列出全部问题（不在第一个错误处停下；v1 payload 只报一条 `unsupported_version`）：
 
 ```json
 {
   "ok": false,
-  "errors": [{ "code": "missing_field", "field": "品牌名称", "message": "缺少必填字段 品牌名称" }],
+  "errors": [{ "code": "missing_field", "field": "品牌", "message": "缺少必填字段 品牌" }],
   "warnings": []
 }
 ```
 
-`field` 指向出错位置，数组元素用 `痛点[2]`、`竞品[1].官网域名` 这种写法，序号从 1 开始。
+`field` 指向出错位置，数组元素用 `核心目标客户与购买场景[2]`、`竞品[1].官网域名` 这种写法，序号从 1 开始。
 
 错误码（阻断）：
 
 | code | 含义 |
 |---|---|
-| `missing_field` | 必填字段缺失或为空 |
+| `missing_field` | 必填字段缺失、为空或填了「待补充」 |
 | `invalid_type` | 类型不对，例如竞品不是对象数组 |
 | `invalid_item` | 数组里有空值或非字符串 |
 | `duplicate_item` | 列表项重复、竞品重名 |
-| `invalid_enum` | 枚举值不在允许范围（业务模式、locale、input_version、确认状态、希望解决的问题） |
+| `invalid_enum` | 枚举值不在允许范围（locale、input_version、确认状态） |
 | `invalid_url` | 网址不是完整的 http(s) 地址 |
 | `count_out_of_range` | 竞品不是 1–3 个 |
 | `invalid_reference` | confirmed_fields 引用了不存在的字段 |
-| `forbidden_for_b2c` | 纯 B2C Case 填了 B2B 专属字段 |
+| `unsupported_version` | 传的是已停用的 `presales-case-input/v1` |
+| `retired_field` | 传了已停用的 v1 字段 |
 | `unknown_field` | 出现未定义字段 |
 
 告警码（不阻断）：
 
 | code | 含义 |
 |---|---|
-| `pending_value` | B2B 字段是「待人工确认」；三个选填字段会被当作未填写丢弃 |
-| `count_suggestion` | 列表项数量超出建议范围 |
-| `comma_in_item` | 列表项里含中文逗号；接口按一项接收没问题，但写回飞书合并列后再读会被拆错 |
-| `deprecated_option` | 传了已停用的 `extra_prompt_types` 或 `generation_stage`，照收不生效 |
+| `pending_value` | 选填项填了「待补充」，按没填处理 |
+| `count_suggestion` | 核心目标客户与购买场景、差异化优势超过 5 条 |
 | `confirmation_without_fields` | 状态是 `confirmed` 但没列已确认字段 |
-| `alias_ignored` | 同时传了 `垂直行业` 和 `目标企业画像`，已按后者取值 |
-| `renamed_column`、`ignored_column` | 仅飞书适配：旧列名已转换、管理列已忽略 |
 
 ## 7. skill 拿到 `normalized` 之后做什么
 
-`case_fields`、`topics` 的来源映射、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：主题、品类名 `category_label`、`brand_object_type`、`attribute_plan`、矩阵行、全部题目（见 [online-runner.md](online-runner.md)）。
+`case_fields`、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：品类名 `category_label`（从本期产品线和官网推出）、`brand_object_type`、目标客户与使用场景、矩阵行、主题、全部题目（见 [online-runner.md](online-runner.md)）。
 
-## 8. 飞书来源（本地用）
-
-本地从飞书多维表格读到的 Record 走适配器，转成同一个 payload：
-
-```bash
-python3 scripts/normalize_case.py readback.ndjson --from-base-record
-```
-
-适配规则：合并列（`目标企业画像`、`目标客户`、`痛点`、`使用场景`、`产品特性`、`主题`）按「，」拆成数组；`竞品 n` / `竞品 n 官网域名` 平铺列合成 `竞品` 数组；`[url](url)` 形式的网址去掉 markdown 包裹；旧列 `垂直行业` 按 `目标企业画像` 读取；`record_id`、`Case序号` 忽略。主题局部竞品边界写在 `补充内容`，由 skill 解析。
-
-已知限制：飞书合并列里某个值本身含「，」时会被多拆一项。接口用数组传值没有这个问题。
-
-## 9. 验收
-
-下面的端到端校验依赖项目内部的评测数据，只在项目内运行，不随公开仓库发布；接入方可以用第 2–6 节的规则和两份示例 payload 自行对账。
+## 8. 验收
 
 ```bash
 python3 evals/e2e_input_contract.py
 ```
 
-检查内容：两份示例 payload 归一化后和现有题库的 `case_fields` 逐字段相等；同一 Case 走飞书路径和接口路径的归一化结果一致；三条真实飞书 Record 的处理结果符合预期；13 类错误输入都返回对应错误码；只填必填项、1 个竞品、文本框字符串都能通过。结果写入 `reports/input-contract-e2e.md`。接口层自行实现校验时，用同一批示例和错误输入对账。
+检查内容：合同字段和《品牌资料收集》第一部分一致；两份示例和两份公开模板归一化无错误；只填必填项、1 个竞品能通过；v1 payload 和 v1 字段被拒；「待补充」「无」、多个官方域名、文本框字符串的处理；12 类错误输入返回对应错误码。结果写入 `reports/input-contract-e2e.md`。接口层自行实现校验时，用同一批示例和错误输入对账。
 
 示例 payload：
 

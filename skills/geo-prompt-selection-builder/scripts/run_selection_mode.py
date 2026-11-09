@@ -78,8 +78,8 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 任务：给这个品牌生成一批提示词。先读 `.agents/skills/geo-prompt-selection-builder/references/online-runner.md`（线上和本地不一样的地方），再按 `.agents/skills/geo-prompt-selection-builder/references/selection-rules.md` 第 1–8 步逐步做。只做到校验与导出，不试跑、不写对客确认表。
 
 输入：
-- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限；Case 填了主题（`topic_source` 为 `case`）时，它只当业务重点线索。
-- 题型：只出发现题。Case 的「希望解决的问题」按重要性排先后，只当业务优先级的线索；`补充内容` 里客户给的 AI 答错例子是出题依据之一。
+- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
+- 题型：只出发现题。Case 的「核心目标客户与购买场景」按业务优先级排先后，它和「业务目标」都只当业务优先级的线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
@@ -332,7 +332,7 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("run", "prepare"):
         p = sub.add_parser(name)
-        p.add_argument("--case", type=Path, required=True, help="presales-case-input/v1 JSON（见 references/input-contract.md）")
+        p.add_argument("--case", type=Path, required=True, help="presales-case-input/v2 JSON（见 references/input-contract.md）")
         p.add_argument("--market", required=True, help="市场代码，与采集的 --regions 一致，如 US")
         p.add_argument("--platforms", required=True,
                        help="表单「AI 平台」选中的平台，逗号分隔，如 chatgpt,gemini；研究预跑只跑这些")

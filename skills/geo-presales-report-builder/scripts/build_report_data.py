@@ -363,14 +363,16 @@ def load_case(path: Path) -> dict:
                 return value.strip()
         return None
 
-    brand, domain, category = pick("品牌名称"), pick("官方域名"), pick("品类")
+    # Case 输入合同 v2（2026-11-09）叫「品牌」「本期产品线」；旧 Case 文件、v8 题库 case_fields 仍是「品牌名称」「品类」
+    brand, domain = pick("品牌", "品牌名称"), pick("官方域名")
+    category = pick("品类", "category_label", "本期产品线")
     competitors = []
     for index in (1, 2, 3):
         name, comp_domain = pick(f"竞品 {index}"), pick(f"竞品 {index} 官网域名")
         if name and comp_domain:
             competitors.append({"name": name, "domain": comp_domain})
     if not brand or not domain:
-        raise SystemExit("Case JSON 缺少品牌名称或官方域名")
+        raise SystemExit("Case JSON 缺少品牌（或品牌名称）或官方域名")
     # 主题映射（可选）：题库主题 → 报告展示名。多语言市场里题库主题是当地语言
     # （如泰文），Case 的主题是中文，需要这层映射才能对上；单语市场留空即可。
     labels_raw = raw.get("主题映射") or raw.get("topic_labels") or {}

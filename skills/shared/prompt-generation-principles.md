@@ -58,12 +58,7 @@ Profound AEO Guide 提出了“当前关联”和“目标属性”，并建议�
 
 ## 主题的两种来源
 
-每道题都归属一个主题。主题在生词时由要出题的矩阵行按候选类别聚合（见 selection-rules.md 第 6 节，线上同样适用），Case 不再预先定主题。主题的来源因此只有两种，交接时记录用的是哪一种：
-
-1. **Case 或调用方给了主题**（`topic_source: case`）：只当业务重点线索，写进矩阵行的业务优先级依据；主题仍从矩阵行聚，不把它当主题名单原样采用。
-2. **没给主题**（`topic_source: to_derive`）：直接从矩阵行聚。
-
-Case 只记录手动给出的主题，不再按属性优先级推导主题。10-29 之前的旧题库，主题是生词前定好的（手动输入，或按重要性 × 可改变性梳理出 1 个 Coverage 加 1–2 个 Depth），规则随原售前生词 skill 归档在 `90-历史归档/旧版与过程稿/退役skill/geo-presales-prompt-builder/references/legacy/default-mode-SKILL.md`，只用于读懂旧题库。
+每道题都归属一个主题。主题在生词时由要出题的矩阵行按候选类别聚合（见 selection-rules.md 第 6 节，线上同样适用）。Case 不收主题（输入合同 v2，2026-11-09），主题只有这一种来源。10-29 之前的旧题库，主题是生词前定好的（手动输入，或按重要性 × 可改变性梳理出 1 个 Coverage 加 1–2 个 Depth），规则随原售前生词 skill 归档在 `90-历史归档/旧版与过程稿/退役skill/geo-presales-prompt-builder/references/legacy/default-mode-SKILL.md`，只用于读懂旧题库。
 
 **售前做完售后调研里公开的那一半，成交后售后接着用，不重做**（Suda 2026-10-16；交接物 2026-10-29 改为售前题库）。售前范围：[用户原话去哪收](../geo-prompt-selection-builder/references/signal-sources.md) 里不需要客户数据的三节（所有行业都做、按行业收评价和社区、按目标市场换成当地平台）；约束条件；矩阵行与优先级；主题。「客户提供什么」一节要客户数据，留给售后。售前交给售后的是每个市场一份 `bank.json` 和 `notes.md`（线上跑在 `run_selection_mode.py` 的工作目录 `out/` 下），售后从里面继承：
 

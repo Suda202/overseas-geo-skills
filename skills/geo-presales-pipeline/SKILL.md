@@ -21,7 +21,7 @@ metadata:
 | 手里有什么 | 从哪步开始 |
 | --- | --- |
 | 只有品牌信息，没有 Case | 按 `geo-prompt-selection-builder/references/input-contract.md` 整理成 Case 文件（线上表单数据或本地 JSON 都行），再回到第 1 步 |
-| Case（`presales-case-input/v1` payload 或飞书 Record） | 第 1 步 |
+| Case（`presales-case-input/v2` payload） | 第 1 步 |
 | 已导出的 9 字段题（上传 CSV） | 第 3 步 |
 | 采集目录 `<collect>/scraper.<平台>/<REGION>/*.json` | 第 4 步（旧采集目录没有 manifest，第 4 步会跳过采集检查） |
 
