@@ -2,6 +2,15 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.57.0（2026-11-09）撤回 `ranked`：DataForSEO 只用 volume、suggest、trends 和评价
+
+Suda 让先调研生词到底需要哪些搜索数据，再定 DataForSEO 怎么用。结论和证据在项目 `30-选Topic与生词/方案/研究与评审/geo生词搜索数据与DataForSEO接口取舍-20261109.md`。
+
+- 生词要搜索数据回答的只有三件事：需求在不在、买家怎么叫这个东西、同档主题谁先。`volume`、`suggest`（加 `collect_serp_signals.py` 的 PAA）已经覆盖。外部证据：Semrush 比对 ChatGPT 点击流，65%–85% 的提问对不上任何搜索关键词；15 家从业方没有一家直接拿 Google 量当提示词量；DataForSEO 的 AI 搜索量由 PAA 推算。
+- 2.54.0 加的 `ranked` 撤回。正式接口实测：一个美国宠物用品竞品域名前 300 条非品牌词只有 32 条和本品类有关（其余是博客流量）；两个非洲小市场手机品牌域名 423 条里 2 条和本品类有关；加品类词过滤后再和 4 个种子词的 `suggest` 比，新增的购买说法只有两个竞品词。竞品付费词 4 个域名共 5 条、全是「品牌 + 国家」；竞品的 AI Overview 引用词同样以博客、型号词为主。实测花费约 0.95 美元，产物在同目录 `dataforseo-ranked-实测-20261109/`；脚本外直接调接口的几次已补记进 `~/.dataforseo/ledger.jsonl`（Case「ranked-test 补记」）。
+- signal-sources：删「搜索数据」行和「我方收集的数据」表里的 `ranked`、关键词工具用法行里的 `ranked`；关键词工具行「不能用来做什么」补「估 AI 提问量」「查竞品域名的排名词」两条及依据。
+- `collect_keyword_data.py`：删 `ranked` 子命令、`--brand-terms`、`clean_domain`，恢复成四个子命令。沙盒跑通 `suggest`、`volume`，`ranked` 报未知命令，`collect_reviews.py` 照常导入。改前快照项目根 `.snapshots/*.20261109-153113.bak`。
+
 ## 2.56.1（2026-11-09）主题表「月搜索量」改成数字字段
 
 Suda 定：父关键词的精确月搜索量直接填进「月搜索量」，不另设「父关键词月搜索」字段，模板也这样改。

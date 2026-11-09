@@ -1,15 +1,12 @@
 """用 DataForSEO API 取 Google 关键词数据：月搜索量、长尾关键词建议、Google Trends、账户余额。
 
 售前选词工具和售后选词共用；销售通过选词工具调用，不需要 Semrush / Ahrefs 账号。
-五个子命令：
+四个子命令：
   balance   查账户余额（免费），也用来确认凭据可用。
   volume    给一批关键词查月搜索量（Google Ads 数据）。一次请求最多 1000 个词，按请求计费，
             不按词数计费；Google Ads 接口每分钟最多 12 次请求。
   suggest   给种子词取包含它的长尾关键词（DataForSEO Labs 关键词库），带月搜索量与搜索意图；
             每个种子词 1 次付费调用。
-  ranked    给竞品域名取它有 Google 自然排名的关键词（DataForSEO Labs Ranked Keywords，第三方估算），
-            按月搜索量降序；每个域名 1 次付费调用。用来找不含我们种子词的同品类说法和竞品词。
-            只查竞品域名：品牌自己的需求看 GSC；排名位置不进选词，产物里不输出。
   trends    比较同一品类 2–5 种叫法在目标市场的 Google Trends 相对热度，并按日历月看季节性；
             一次请求最多 5 个词，按请求计费。只有同一次请求里的词能互相比较（Trends 按请求内最高值
             归一到 100），所以一组叫法必须一次给齐。--queries 另给每个词各取一次相关查询（热门与飙升），
@@ -18,7 +15,6 @@
     python3 -I collect_keyword_data.py balance
     python3 -I collect_keyword_data.py volume "automatic litter box" "self cleaning litter box" --country us --lang en --out <目录>
     python3 -I collect_keyword_data.py suggest --seeds-file seeds.txt --country us --lang en --limit 50 --out <目录>
-    python3 -I collect_keyword_data.py ranked litter-robot.com whisker.com --brand-terms "litter-robot,whisker" --country us --lang en --out <目录>
     python3 -I collect_keyword_data.py trends "automatic litter box" "self cleaning litter box" --country us --lang en --queries --out <目录>
 
 凭据依次读：环境变量 DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD；macOS 钥匙串（服务名同上）。
@@ -72,7 +68,6 @@ LIVE = "https://api.dataforseo.com/v3/"
 SANDBOX = "https://sandbox.dataforseo.com/v3/"
 VOLUME_PATH = "keywords_data/google_ads/search_volume/live"
 SUGGEST_PATH = "dataforseo_labs/google/keyword_suggestions/live"
-RANKED_PATH = "dataforseo_labs/google/ranked_keywords/live"
 TRENDS_PATH = "keywords_data/google_trends/explore/live"
 TRENDS_FIELDS = ["keyword", "average", "rank", "peak_months", "weeks", "series"]
 TRENDS_QUERY_FIELDS = ["keyword", "kind", "query", "value"]
@@ -368,53 +363,6 @@ def run_suggest(r: Runner, seeds: list[str]):
     return rows
 
 
-def clean_domain(target: str) -> str:
-    # Ranked Keywords 要求整站域名不带 https:// 和 www.；带了会被当成单个网页，只返回那一页的词
-    d = target.strip().lower()
-    for prefix in ("https://", "http://", "www."):
-        if d.startswith(prefix):
-            d = d[len(prefix):]
-    return d.split("/")[0]
-
-
-def run_ranked(r: Runner, targets: list[str]):
-    loc = r.location()
-    brands = [b.strip().lower() for b in r.args.brand_terms.split(",") if b.strip()]
-    rows = []
-    for target in targets:
-        domain = clean_domain(target)
-        task_in = {"target": domain, **loc, "item_types": ["organic"], "limit": r.args.limit,
-                   "order_by": ["keyword_data.keyword_info.search_volume,desc"],
-                   "filters": [["keyword_data.keyword_info.search_volume", ">=", r.args.min_volume]]}
-        try:
-            data, cached = r.request("ranked", RANKED_PATH, task_in)
-        except LookupError as e:
-            r.failed.append({"term": domain, "error": str(e)})
-            continue
-        task = first_task(data)
-        if task.get("status_code") != 20000:
-            r.failed.append({"term": domain, "error": f"{task.get('status_code')} {task.get('status_message')}"})
-            continue
-        result = (task.get("result") or [{}])[0] or {}
-        items = result.get("items") or []
-        for item in items:
-            kd = item.get("keyword_data") or {}
-            info = kd.get("keyword_info") or {}
-            vol = info.get("search_volume")
-            kw = kd.get("keyword") or ""
-            if not kw:
-                continue
-            rows.append({"keyword": kw, "search_volume": vol if vol is not None else "", "tier": tier(vol),
-                         "monthly": monthly(info.get("monthly_searches")),
-                         "competition": info.get("competition_level") or "",
-                         "cpc": info.get("cpc") if info.get("cpc") is not None else "",
-                         "main_intent": (kd.get("search_intent_info") or {}).get("main_intent") or "",
-                         "seed": domain, "source": "DataForSEO 竞品排名词",
-                         "brand": next((b for b in brands if b in kw.lower()), "")})
-        print(f"{domain}: {len(items)} 个关键词（库内共 {result.get('total_count', '?')} 个）")
-    return rows
-
-
 def write_outputs(r: Runner, rows: list[dict], command: str):
     args, today = r.args, datetime.date.today().isoformat()
     seen, signal_rows = set(), []
@@ -425,9 +373,7 @@ def write_outputs(r: Runner, rows: list[dict], command: str):
         seen.add(k)
         note = f"{row['source']}｜{args.country or args.location_code} {args.lang}"
         if row["seed"]:
-            note += f"｜{'竞品' if command == 'ranked' else '种子词'}：{row['seed']}"
-        if row.get("brand"):
-            note += f"｜含品牌词：{row['brand']}"
+            note += f"｜种子词：{row['seed']}"
         if row["search_volume"] == "":
             note += "｜无数据"
         s = dict.fromkeys(FIELDS, "")
@@ -441,7 +387,7 @@ def write_outputs(r: Runner, rows: list[dict], command: str):
         w.writeheader()
         w.writerows(signal_rows)
     with (r.out / "volumes.csv").open("w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=VOLUME_FIELDS, extrasaction="ignore")
+        w = csv.DictWriter(f, fieldnames=VOLUME_FIELDS)
         w.writeheader()
         w.writerows(rows)
     summary = {"command": command, "market": {"country": args.country, "location_code": args.location_code,
@@ -564,7 +510,6 @@ def main() -> int:
     led.add_argument("--who", default="", help="只看这个人")
     led.add_argument("--include-sandbox", action="store_true", help="把沙盒调用也算进来")
     for name, help_text in (("volume", "查关键词月搜索量"), ("suggest", "取种子词的长尾关键词"),
-                            ("ranked", "取竞品域名有自然排名的关键词"),
                             ("trends", "比较几种叫法的 Google Trends 相对热度与季节性")):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("terms", nargs="*", help="关键词或种子词，可与 --file 合用")
@@ -581,13 +526,9 @@ def main() -> int:
         p.add_argument("--sandbox", action="store_true", help="走沙盒（免费，假数据），验证流程用")
         p.add_argument("--refresh", action="store_true", help="忽略缓存，重新付费采集")
         p.add_argument("--cache-only", action="store_true", help="只用 raw/ 缓存，不发付费调用")
-        if name in ("suggest", "ranked"):
-            p.add_argument("--limit", type=int, default=50 if name == "suggest" else 300,
-                           help="每个种子词或域名最多返回几个词，最大 1000")
+        if name == "suggest":
+            p.add_argument("--limit", type=int, default=50, help="每个种子词最多返回几个词，最大 1000")
             p.add_argument("--min-volume", type=int, default=10, help="只要月搜索量不低于这个值的词")
-        if name == "ranked":
-            p.add_argument("--brand-terms", default="",
-                           help="逗号分隔的品牌名与别名（本品和竞品）；含这些词的行在出处标「含品牌词」，归竞品词或本品牌词")
         if name == "trends":
             p.add_argument("--time-range", choices=TRENDS_RANGES, default="past_12_months",
                            help="时间范围，默认近 12 个月；看季节性更稳可用 past_5_years")
@@ -615,7 +556,7 @@ def main() -> int:
                 ap.error("trends 一次最多 5 个词：只有同一次请求里的词能互相比较，请分组后各跑一次")
             write_trends_outputs(r, *run_trends(r, terms))
             return 1 if r.stopped else 0
-        rows = {"volume": run_volume, "suggest": run_suggest, "ranked": run_ranked}[args.command](r, terms)
+        rows = run_volume(r, terms) if args.command == "volume" else run_suggest(r, terms)
         write_outputs(r, rows, args.command)
         return 1 if r.stopped else 0
     except (Fatal, LookupError) as e:
