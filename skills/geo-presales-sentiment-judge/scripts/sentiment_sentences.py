@@ -593,6 +593,97 @@ def cmd_claims_assemble(args: argparse.Namespace) -> None:
     print(f"写入 {args.output}")
 
 
+def _common_substrings(a: str, b: str, min_len: int = 2) -> set[str]:
+    """两个主题名共有的 ≥min_len 字片段，用来发现语义重叠（如「智能与安全功能」与「数据隐私与安全」都含「安全」）。"""
+    hits: set[str] = set()
+    for i in range(len(a)):
+        for j in range(i + min_len, len(a) + 1):
+            piece = a[i:j]
+            if piece in b and not piece.isspace():
+                hits.add(piece)
+    # 只留最长的片段，短的重叠都是它的子串
+    return {h for h in hits if not any(h != other and h in other for other in hits)}
+
+
+def cmd_claims_theme_audit(args: argparse.Namespace) -> None:
+    """检查主题层是否语义独立：一个主题只回答一个买家会横向比较的问题，主题之间不重复、不重叠。
+
+    三条判据见 claim-layer-contract.md「Theme 是什么」第 4 条。这个命令只报问题，
+    不替人判断该并到哪一行——语义归并仍由人做。
+
+    报错（退出码 1）：
+      * 同一个 attribute 挂在两个主题下（聚类 2 不是一对一）；
+      * 两个主题名完全相同，或一个是另一个的子串（后者是前者的子集）。
+    提示（不阻断）：
+      * 两个主题名共享 ≥2 字的片段，可能语义重叠，例如都含「安全」「画质」；
+      * 某个 attribute 的措辞里出现另一个主题的全名（说法串到了别的维度）；
+      * 主题里全部 attribute 都是「整体 / 综合 / 总体」这类不成维度的说法。
+    """
+    payload = json.loads(Path(args.claims).read_text(encoding="utf-8"))
+    records = payload.get("claims") if isinstance(payload, dict) else payload
+    if not isinstance(records, list):
+        raise SystemExit(f"{args.claims} 应为数组或 {{\"claims\": [...]}}")
+
+    attr_themes: dict[str, set[str]] = collections.defaultdict(set)
+    theme_attrs: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        attribute = str(rec.get("attribute") or "").strip()
+        theme = str(rec.get("theme") or "").strip()
+        if not attribute or not theme:
+            continue
+        attr_themes[attribute].add(theme)
+        theme_attrs[theme][attribute] += 1
+
+    errors: list[str] = []
+    reviews: list[str] = []
+    themes = sorted(theme_attrs)
+
+    for attribute, owners in sorted(attr_themes.items()):
+        if len(owners) > 1:
+            errors.append(f"attribute「{attribute}」同时挂在 {len(owners)} 个主题下：{'、'.join(sorted(owners))}")
+
+    for i, a in enumerate(themes):
+        for b in themes[i + 1:]:
+            if a == b:
+                errors.append(f"主题名重复：{a}")
+            elif a in b or b in a:
+                big, small = (b, a) if a in b else (a, b)
+                errors.append(f"主题「{small}」是「{big}」的子集，两者应并为一行")
+            else:
+                shared = _common_substrings(a, b)
+                if shared:
+                    reviews.append(f"主题「{a}」与「{b}」共享「{'」「'.join(sorted(shared))}」，确认不是同一维度")
+
+    for theme in themes:
+        for attribute in theme_attrs[theme]:
+            for other in themes:
+                if other == theme:
+                    continue
+                if other in attribute:
+                    reviews.append(f"attribute「{attribute}」（主题「{theme}」）里出现另一个主题名「{other}」，确认归属")
+        if all(any(w in a for w in ("整体", "综合", "总体")) for a in theme_attrs[theme]):
+            reviews.append(f"主题「{theme}」下的 attribute 全是「整体 / 综合」这类说法，不成比较维度")
+
+    summary = {
+        "themes": len(themes),
+        "attributes": len(attr_themes),
+        "errors": errors,
+        "reviews": reviews,
+        "theme_attributes": {t: [a for a, _n in theme_attrs[t].most_common()] for t in themes},
+    }
+    if args.out:
+        Path(args.out).write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    for line in errors:
+        print("不合规:", line, file=sys.stderr)
+    for line in reviews:
+        print("请复核:", line)
+    print(f"{len(themes)} 个主题 / {len(attr_themes)} 个 attribute：不合规 {len(errors)} 项，待复核 {len(reviews)} 项")
+    if errors:
+        raise SystemExit(f"主题语义检查未通过（{len(errors)} 项）")
+
+
 def cmd_claims_cluster_list(args: argparse.Namespace) -> None:
     """产出待聚类的去重清单，供两趟聚类用。
 
@@ -761,6 +852,11 @@ def main() -> None:
     p_cl.add_argument("--key", required=True, help="取值字段：第一趟 claim，第二趟 attribute")
     p_cl.add_argument("--output", required=True)
 
+    p_ta = sub.add_parser("claims-theme-audit",
+                          help="检查主题是否语义独立（一对一、不重复、不互为子集），只报不改")
+    p_ta.add_argument("--claims", required=True, help="claims-assemble 产出的 claims JSON")
+    p_ta.add_argument("--out", default=None, help="把主题与 attribute 对照写进 JSON")
+
     p_cm = sub.add_parser("claims-metrics", help="按 Claim 信号口径统计正负与跨平台等权占比")
     p_cm.add_argument("--claims", required=True, help="claims-assemble 产出的 claims JSON")
     p_cm.add_argument("--brands", default=None, help="逗号分隔的品牌；缺省取 claim 里出现的全部品牌")
@@ -776,6 +872,8 @@ def main() -> None:
         cmd_claims_assemble(args)
     elif args.command == "claims-cluster-list":
         cmd_claims_cluster_list(args)
+    elif args.command == "claims-theme-audit":
+        cmd_claims_theme_audit(args)
     else:
         cmd_claims_metrics(args)
 

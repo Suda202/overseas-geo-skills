@@ -3,7 +3,7 @@ name: geo-presales-sentiment-judge
 description: This skill should be used when computing brand sentiment from overseas GEO presales crawler answers — extracting atomic Claims with evidence, normalising them into Attribute dimensions and neutral Themes, and computing positive-share and cross-platform metrics for a target brand or a whole brand lexicon (target + configured/open competitors), against the v8 question bank sentiment sample scope. It does not modify backend JSON sentiment fields, judge competitor win rates, or compute visibility metrics.
 metadata:
   author: 海外 GEO 项目
-  version: "3.0.0"
+  version: "3.3.0"
 ---
 
 # GEO 售前品牌情感判读(Claim → Attribute → Theme)
@@ -75,7 +75,10 @@ metadata:
    python3 scripts/sentiment_sentences.py claims-cluster-list \
      --input claim-attributes.json --key attribute --output cluster-attributes.json
    # → 读该清单,把 attribute 再聚成高层中性主题,写 attribute-themes.json
-   #   例:价格偏高 与 定价不透明 → "价格";theme 必须中性
+   #   例:价格偏高 与 定价不透明 → "价格";theme 必须中性(三条判据见 claim-layer-contract.md「Theme 是什么」)
+   #   theme 要同时满足三条:买家会拿它比强弱;能和品类选购标准对齐;正负两种说法都在这一行(定义见 claim-layer-contract.md「Theme 是什么」)
+   #   推荐结果(被推荐、上榜、整体推荐度高)和评价行为(说得好、好评)不是 theme
+   #   主题之间语义独立:一对一挂靠、不重名、不互为子集;写完跑 claims-theme-audit 自检(定义见 claim-layer-contract.md 第 4 条)
    ```
 
    **为什么要分开做**:聚类的判断对象是「这个说法属于哪一类」,与它出现在哪条回答无关。逐条顺带赋值会让同一条 claim 被重复判几十次、同一个 attribute 被各回答各起一个名字(实测出现过「服务与售后」与「服务与覆盖」并存、同一 attribute 挂两个 theme)。

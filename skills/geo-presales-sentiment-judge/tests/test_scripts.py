@@ -503,6 +503,30 @@ class ClaimLayerTests(unittest.TestCase):
         self.assertEqual(3, m["by_brand"]["A"]["positive_signals"])
         self.assertEqual(1, m["by_brand"]["A"]["negative_signals"])
 
+    def test_theme_audit_flags_overlap_and_subset(self):
+        claims = os.path.join(self.tmp, "claims-audit.json")
+        with open(claims, "w") as f:
+            json.dump({"claims": [
+                {"brand": "A", "claim": "x", "attribute": "价格偏高", "theme": "价格", "sentiment": "negative"},
+                {"brand": "A", "claim": "y", "attribute": "售后响应慢", "theme": "客服与售后", "sentiment": "negative"},
+                {"brand": "A", "claim": "z", "attribute": "售后响应慢", "theme": "售后", "sentiment": "negative"},
+            ]}, f, ensure_ascii=False)
+        proc = self.run_cmd("claims-theme-audit", "--claims", claims)
+        self.assertNotEqual(0, proc.returncode)  # 同一 attribute 挂两个主题 + 「售后」是「客服与售后」的子集
+        self.assertIn("同时挂在", proc.stderr)
+        self.assertIn("子集", proc.stderr)
+
+    def test_theme_audit_passes_a_clean_tree(self):
+        claims = os.path.join(self.tmp, "claims-clean.json")
+        with open(claims, "w") as f:
+            json.dump({"claims": [
+                {"brand": "A", "claim": "x", "attribute": "价格偏高", "theme": "价格", "sentiment": "negative"},
+                {"brand": "B", "claim": "y", "attribute": "夜拍清晰", "theme": "夜间与低光表现", "sentiment": "positive"},
+            ]}, f, ensure_ascii=False)
+        proc = self.run_cmd("claims-theme-audit", "--claims", claims)
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        self.assertIn("不合规 0 项", proc.stdout)
+
     def test_cross_platform_equal_weight_ignores_platforms_without_signal(self):
         units = self.write_units(self.tmp, [
             {"platform": "chatgpt", "region": "MY", "idx": 1, "question_id": "0001",
