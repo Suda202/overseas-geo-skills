@@ -324,7 +324,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         topic["priority_basis"] = "核心目标客户与购买场景（1）落在本主题"
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
         topic["priority"] = "中"
-        self.assertIn("most of its rows are 高", validate(data).stdout)
+        self.assertIn("its highest row is 高", validate(data).stdout)
         topic["priority"] = "急"
         self.assertEqual(validate(data).returncode, 1)
 

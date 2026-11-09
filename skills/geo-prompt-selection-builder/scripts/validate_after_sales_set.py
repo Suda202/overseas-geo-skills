@@ -1021,8 +1021,8 @@ class BankValidator:
                                  "10-Prompt unit with Prompts from other Topics (mixed selection); record the decision.")
 
     def check_topic_priority(self, topics: list[dict]) -> None:
-        """Topic priority is summarised, not judged again (Suda 2026-11-05): by default the tier most of its rows carry;
-        a tie has no default and needs a human call. Tier differences are never a reason to split a Topic."""
+        """Topic priority is not judged again (Suda 2026-11-09, 2.62.0): it takes the highest 业务优先级 among its rows,
+        since a 高 row means a buyer situation the brand party named. Tier differences are never a reason to split a Topic."""
         row_tiers: dict = {}
         for r in slice_index(self.config).values():
             idx = TIER_INDEX.get(str(r.get("priority") or "").strip())
@@ -1037,15 +1037,10 @@ class BankValidator:
             elif is_blank(t.get("priority_basis")):
                 fail(f"topic {tid}: priority_basis is empty — a priority with no written basis is not made", self.errors)
             elif row_tiers.get(tid):
-                counts = Counter(row_tiers[tid])
-                top = max(counts.values())
-                leaders = [i for i, n in counts.items() if n == top]
-                if len(leaders) > 1:
-                    self.warnings.append(f"[W46] topic {tid}: rows split evenly across tiers, no majority; decide 主题优先级 by hand "
-                                         "and record the reason")
-                elif level != ("高", "中", "低")[leaders[0]]:
-                    self.warnings.append(f"[W46] topic {tid}: priority {level} but most of its rows are {('高', '中', '低')[leaders[0]]}; "
-                                         "主题优先级 defaults to the tier most of its rows carry — record the reason if overridden")
+                best = ("高", "中", "低")[min(row_tiers[tid])]
+                if level != best:
+                    self.warnings.append(f"[W46] topic {tid}: priority {level} but its highest row is {best}; "
+                                         "主题优先级 takes the highest 业务优先级 in the Topic (2.62.0) — change the rows, not the Topic")
 
     # ---------- goals and slice tags (W49–W52, W62, W63) ----------
 
