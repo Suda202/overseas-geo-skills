@@ -37,14 +37,14 @@ Such a basis is written per Prompt in `condition_basis` ({condition: basis}, or
 a list of {"condition", "basis"}); a condition with a written basis is not
 reported and counts as decision-changing in gate 2.
 
-Since 2026-11-04 (Suda) the client Base no longer records 约束 on 需求信号 and
-the attribute pool is gone: a Prompt's concrete conditions (budget, home type,
-district) are taken from the buyer quotes it cites. When no quote in the bank
-carries a 约束 cell, gate 1 checks that every declared condition rests on at
-least one cited quote or a written `condition_basis`, and that every number in
-the query appears in a cited quote or a basis; whether the quote really says it
-is read by the reviewer, who sees the quote linked on the Prompt. Banks whose
-quotes still carry 约束 keep the keyword check above.
+The column is called 约束条件 everywhere — the client Base 需求信号 sheet
+(client-facing-base.md), the collectors' signals.csv and the bank. Older banks
+written before 2.65.0 used the short key 约束 and are still read. When no quote
+in the bank carries a 约束条件 cell, gate 1 checks that every declared condition
+rests on at least one cited quote or a written `condition_basis`, and that every
+number in the query appears in a cited quote or a basis; whether the quote
+really says it is read by the reviewer, who sees the quote linked on the
+Prompt. Banks whose quotes do carry 约束条件 keep the keyword check above.
 """
 from __future__ import annotations
 
@@ -141,7 +141,12 @@ def keyword_supported(keyword: str, evidence: list[str]) -> bool:
 
 
 def quote_index(config: dict) -> tuple[dict[str, str], dict[str, str]]:
-    """config.buyer_quotes -> ({输入编号: 约束}, {输入编号: 原话}). Accepts Chinese or English keys."""
+    """config.buyer_quotes -> ({输入编号: 约束条件}, {输入编号: 原话}). Accepts Chinese or English keys.
+
+    The column is 约束条件 everywhere — the client Base 需求信号 sheet, the
+    collectors' signals.csv and the bank. `constraint` is the English alias;
+    the old short key `约束` is still read for banks written before 2.65.0.
+    """
     constraints: dict[str, str] = {}
     texts: dict[str, str] = {}
     for entry in config.get("buyer_quotes") or []:
@@ -150,7 +155,8 @@ def quote_index(config: dict) -> tuple[dict[str, str], dict[str, str]]:
         qid = str(entry.get("输入编号") or entry.get("input_id") or "").strip()
         if not qid:
             continue
-        constraints[qid] = str(entry.get("约束") or entry.get("constraint") or "")
+        constraints[qid] = str(entry.get("约束条件") or entry.get("constraint")
+                                or entry.get("约束") or "")
         texts[qid] = str(entry.get("原话") or entry.get("quote") or "")
     return constraints, texts
 

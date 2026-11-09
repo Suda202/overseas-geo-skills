@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or a Case (online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one Case unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "2.62.0"
+  version: "2.65.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -50,9 +50,10 @@ metadata:
 |-|-|
 | [references/selection-rules.md](references/selection-rules.md) | 每一步 |
 | [references/type-branches.md](references/type-branches.md) | 发现以外七类：开行条件、对应目标、业务优先级上限（第 5 步判这些行的档位时读）、出几道、题面写法 |
-| [references/client-facing-base.md](references/client-facing-base.md) | 建或改对客确认表 |
+| [references/client-facing-base.md](references/client-facing-base.md) | 建或改对客确认表；线上不建表，不用读 |
 | [references/output-contract.md](references/output-contract.md) | 写题库 JSON、跑 validator |
-| [references/signal-sources.md](references/signal-sources.md) | 第 1、2 步：向品牌方要什么数据、自己去哪收 |
+| [references/signal-sources.md](references/signal-sources.md) | 第 1、2 步：我方自己去哪收搜索数据、评价和社区 |
+| [references/demand-side-signals.md](references/demand-side-signals.md) | 第 1、2 步：向品牌方要什么数据、拿到后怎么用；线上没有品牌方资料，不用读 |
 | [references/community-channels.md](references/community-channels.md) | 第 2 步：每个站点用什么通道取数 |
 | [references/online-runner.md](references/online-runner.md) | 线上无人值守跑一个 Case：和本地不一样的几步、没有浏览器怎么办 |
 | [references/input-contract.md](references/input-contract.md) | Case 输入合同：字段、必填、错误码（给接入方） |

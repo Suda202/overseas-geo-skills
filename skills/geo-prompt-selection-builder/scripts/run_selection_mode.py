@@ -72,8 +72,11 @@ SKILLS = SKILL.parent
 # 监测（选词文档里有指向它的链接）。
 SKILL_DIRS = ("geo-prompt-selection-builder", "shared", "geo-presales-report-builder", "geo-monitoring")
 # legacy = 已归档的旧规则，不给 agent 看，免得混用两套口径
+# client-facing-base.md = 只用来建对客确认表，线上不写这张表，不拷贝（省 ~31KB 上下文）
+# demand-side-signals.md = signal-sources.md 里「客户提供什么」等品牌方数据小节，线上没有客户数据
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
-                                "*.local.json", "build", "legacy")
+                                "*.local.json", "build", "legacy",
+                                "client-facing-base.md", "demand-side-signals.md")
 DEFAULT_TIMEOUT = 120 * 60
 # 与 geo-presales-report-builder/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
 KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa"}
@@ -87,6 +90,13 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 题型：只出发现题。Case 的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
+需求信号（必填）：
+- 调研收到的买家原话（评价、社区）、搜索词和 AI 检索词里，**只登记撑起某道题的那几条**，写进 `config.buyer_quotes`，一条一个对象：`{{"输入编号": "<市场前缀>-R001", "原话": "<买家原话原文，不要翻译>", "目标客户": "<谁在问，看不出留空>", "约束条件": "<这条信号能证明题面哪些条件，关键词写法>"}}`。
+- 约束那一列的键名就是 `约束条件`，和对客 Base 列名、`signals.csv` 一致。
+- 题的 `evidence_refs` 填它引用的信号编号（如 `["US-R003"]`），不要填别的题的题号。题面带条件却挂不上任何原话时，在 `condition_basis` 里写 `{{"<条件>": "<依据>"}}`，不许留空。
+- 一条原话可以撑多道题；撑不上的原话不要登记。没有条件、也没有标题面的题可以不引用。
+- 线上没有品牌方提供的资料（销售、客服、GSC、关键词工具），只收公开层（评价、社区、搜索联想）。
+
 联网：
 - 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> [<url> ...] --country {market}`，要读的页面攒成一批一次传（脚本并发取），被拦的页面不要再试 `render`；Reddit 本次最多 {reddit_max} 次联网请求（`net.py reddit` 到上限会提示），先挑最相关的版块和帖子，读不到的记进未覆盖来源；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
 - 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
@@ -95,7 +105,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 交付（只写这两个路径）：
 1. `out/bank.json`：题库 JSON，字段按 `.agents/skills/geo-prompt-selection-builder/references/output-contract.md` 和 online-runner.md。
-2. `out/notes.md`：简短记录，分这几节：「预跑答案」（研究预跑的答案目录和每个平台是否采到）、「目标客户」、「使用场景候选」（每个场景推理的解决方案类型、品牌能否满足、回答里会不会出现品牌这一类）、「约束条件」、「没开的格子」（矩阵里没开的格子和原因）、「主题」（每个主题为什么成立）、「假设」、「未覆盖来源」、「validator 告警」。
+2. `out/notes.md`：简短记录，分这几节：「预跑答案」（研究预跑的答案目录和每个平台是否采到）、「目标客户」、「使用场景候选」（每个场景推理的解决方案类型、品牌能否满足、回答里会不会出现品牌这一类）、「约束条件」、「需求信号」（`config.buyer_quotes` 登记了几条、各是什么来源类型、哪些题引用了它们、哪些题的条件只靠 `condition_basis`）、「没开的格子」（矩阵里没开的格子和原因）、「主题」（每个主题为什么成立）、「假设」、「未覆盖来源」、「validator 告警」。
 
 结束前依次运行，两条都要退出码 0；有错就改题库再跑：
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`

@@ -52,7 +52,7 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 | 步 | 线上怎么做 |
 |---|---|
 | 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的 Case 代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 照选词写 `{selected: ["发现型可见度"], information_named: false}`；Case 的「业务目标」只当第 5 步的业务重点线索。品类名 `config.category_label` 从「本期产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
-| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节，没有「客户提供什么」这一节 |
+| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节；没有品牌方提供的资料，`demand-side-signals.md`（客户提供什么）不读，工作目录里也没有这个文件 |
 | 4. 目标客户与使用场景 | 目标客户从 Case 的「核心目标客户与购买场景」起步（排在前面的业务优先级高），按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
 | 5. 业务优先级 | 业务重点从 Case 的核心目标客户与购买场景（按填写顺序）和差异化优势取，依据里写明出处；这几项都空时，主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「Case 无业务重点，按主要目标客户的核心使用场景定」。没开的行和原因写进 `notes.md`「没开的格子」 |
 | 6. 主题 | 和选词一样聚，个数不限。拿不准候选类别时按推理的候选类别归类，在主题的 `priority_basis` 里写「候选类别为推理，待验证」。能满足、但回答里基本不会出现品牌这一类的行照开、本期不出 |
@@ -61,7 +61,16 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 
 `config` 另写固定值：`generation_stage: "selection"`、`lifecycle_status: "hypothesis"`、`evidence_status: "hypothesis"`；根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`（validator 要求的固定值）。题的字段按 output-contract.md。
 
-`notes.md` 分这几节：「预跑答案」「目标客户」「使用场景候选」「约束条件」「没开的格子」「主题」「假设」「未覆盖来源」「validator 告警」，返修丢过题的再加「删题」。
+`notes.md` 分这几节：「预跑答案」「目标客户」「使用场景候选」「约束条件」「需求信号」「没开的格子」「主题」「假设」「未覆盖来源」「validator 告警」，返修丢过题的再加「删题」。
+
+## 需求信号必须填
+
+线上没有品牌方提供的数据，但公开层收得到买家原话（评价、社区）、搜索词和 AI 检索词，这些要登记进 `config.buyer_quotes`，否则 W36（题面条件没有依据）、W37（同一决策问两遍）两道门禁会整段跳过，validator 报「0 错误 0 告警」其实是没查。
+
+- 只登记**撑起某道题**的那几条，一条一个对象：`{输入编号, 原话, 目标客户, 约束条件}`。原话写原文不翻译，目标客户看不出留空。
+- 约束那一列的键名就是 `约束条件`，和对客 Base 的列名、采集脚本的 `signals.csv` 一致。英文别名 `constraint` 也认；2.65.0 之前的旧键名 `约束` 仍兼容，但新写的题库一律用 `约束条件`。
+- 题的 `evidence_refs` 填信号编号（`["US-R003"]`），不填别的题的题号。题面带条件却挂不上原话的，用 `condition_basis` 写清依据，不许留空。
+- 输入编号带市场前缀（`US-R001`），线上一个 Case 只跑一个市场，不跑就别编号。
 
 ## 交给本地选词接着做
 

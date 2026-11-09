@@ -403,9 +403,15 @@ class OldStructureTests(unittest.TestCase):
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
 
 QUOTES = [
+    {"输入编号": "Q01", "原话": "I want something that records continuously while parked.", "约束条件": "停车持续录像"},
+    {"输入编号": "Q04", "原话": "true 4K with a Sony STARVIS 2 sensor for plates at night", "约束条件": "STARVIS 2、夜间车牌、100 美元以内"},
+    {"输入编号": "Q08", "原话": "poor customer service despite good reviews", "约束条件": "客服、200 美元以内"},
+    {"输入编号": "Q09", "原话": "4 channel dash cam with parking mode", "约束条件": "四路、停车模式"},
+]
+
+# 2.65.0 之前写的题库用旧短键名 `约束`，scope_gates.quote_index 仍读，别删这条。
+QUOTES_LEGACY_KEY = [
     {"输入编号": "Q01", "原话": "I want something that records continuously while parked.", "约束": "停车持续录像"},
-    {"输入编号": "Q04", "原话": "true 4K with a Sony STARVIS 2 sensor for plates at night", "约束": "STARVIS 2、夜间车牌、100 美元以内"},
-    {"输入编号": "Q08", "原话": "poor customer service despite good reviews", "约束": "客服、200 美元以内"},
     {"输入编号": "Q09", "原话": "4 channel dash cam with parking mode", "约束": "四路、停车模式"},
 ]
 
@@ -508,6 +514,14 @@ class ScopeGateTests(unittest.TestCase):
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("no config.buyer_quotes", result.stdout)
+
+    def test_legacy_quote_key_is_still_read(self) -> None:
+        """2.65.0 把列名统一成 约束条件；旧题库的 约束 键仍要能读，否则 W36 静默失效。"""
+        data = scoped_bank([("Which dash cams keep recording while parked?", "Parking", ["停车持续录像"], ["Q01"])])
+        data["config"]["buyer_quotes"] = QUOTES_LEGACY_KEY
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("condition outside the cited evidence", result.stdout)
 
     def test_scenery_variant_of_one_decision_is_a_repeat(self) -> None:  # F13, F15, F12
         result = validate(scoped_bank([

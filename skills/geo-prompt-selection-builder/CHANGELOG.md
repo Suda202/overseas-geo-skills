@@ -1,3 +1,34 @@
+## 2.65.0（2026-11-09）约束列统一叫「约束条件」
+
+Suda 指出 2.64.0 的做法是把补丁当修复：发现 `scope_gates.py` 读 `约束`、文档写 `约束条件` 后，只在文档里加了一句「键名是 `约束`」，两边还是不统一，下一个照文档写的人照样会踩。
+
+统一到 `约束条件`——对客 Base 需求信号页的列名、三个采集脚本的 `signals.csv` 列名、第 2.25.0 版起的字段改名结果，用的都是这个名字；只有 `scope_gates.quote_index` 还停在旧短键名 `约束`。
+
+- `shared/scripts/scope_gates.py`：`quote_index` 改读 `约束条件`，`constraint` 英文别名保留，**旧键名 `约束` 继续兼容**（2.65.0 之前写的题库照读）。文件头那段「11-04 起对客 Base 不再记录约束」的说明已过时（对客表现在把约束条件列为必填两列之一），一并改正。
+- `references/output-contract.md`、`references/online-runner.md`、`run_selection_mode.py` 的 TASK：去掉「键名必须是 `约束`」的告警，改为「键名就是 `约束条件`，和 Base 列名、signals.csv 一致」。
+- 测试：`QUOTES` 改用 `约束条件`；新增 `QUOTES_LEGACY_KEY` 与 `test_legacy_quote_key_is_still_read`，锁住旧键名兼容。60 passed。
+- 端到端实测：`约束条件`、`约束`、`constraint` 三种键名都能被 W36 正确读到；条件对不上时仍报 W36。
+- 存量数据不迁移：三份客户旧题库用的是 `约束` 旧键名，靠兼容分支继续可读。
+
+## 2.64.0（2026-11-09）线上必填需求信号；线上不读对客表与品牌方数据文档
+
+Suda 定，起因是查线上 token 消耗时发现：6 次线上实跑（`80-代码/选词工具-harness-AB/runs/`）的 `config.buyer_quotes` 全是空数组，而线上 TASK 里从来没要求 agent 写它。后果是 W36（题面条件没有依据）、W37（同一决策问两遍）两道门禁整段跳过，validator 报「0 错误 0 告警」其实是没查；题上的 `evidence_refs` 也只能填自己的题号，一回事都追不到。
+
+- `scripts/run_selection_mode.py` 的 TASK 加「需求信号（必填）」一节：调研收到的买家原话、搜索词、AI 检索词里只登记撑起某道题的几条，写进 `config.buyer_quotes`；`evidence_refs` 填信号编号不填题号；挂不上原话的题必须写 `condition_basis`。`out/notes.md` 节清单加「需求信号」。
+- `references/online-runner.md` 加「需求信号必须填」一节，并同步 notes 节清单。
+- **键名坑**：`buyer_quotes` 里约束那一列的键名是 `约束`，不是 `约束条件`（对客 Base 的列叫「约束条件」，题库 JSON 沿用旧键名）。`shared/scripts/scope_gates.py` 的 `quote_index` 只读 `约束`，写成 `约束条件` 门禁读不到、静默失效。已用三个样本实测：键名写对时正常核对，写错时连合法的「200 美元」都被判成无依据。`references/output-contract.md` 的 `buyer_quotes` 行把这处写清。
+- **线上不拷两个文件**：`run_selection_mode.py` 的 `IGNORE` 加上 `client-facing-base.md` 和 `demand-side-signals.md`。前者只用来建对客确认表，线上不建表；后者是拆出来的品牌方数据文档，线上没有客户资料。一次跑单次少读约 38KB。
+- **`signal-sources.md` 拆分**：把「客户提供什么」「品牌方填写的业务信息」「品牌方提供的数据」三块搬到新文件 `references/demand-side-signals.md`，原文件留一句指针。`signal-sources.md` 从 19,984 字符降到 13,081（线上读这份），新文件 7,337 字符（线上不读）。`client-facing-base.md` 里两处指向 `signal-sources.md → 客户提供什么` 的链接改指新文件，`online-runner.md` 第 2 步同步。
+- 验证：`check_skill_terms.py` 通过、`pytest scripts/test_validate_after_sales_set.py` 59 passed、`evals/verify_workflow.py` 65/65、`e2e_input_contract.py` 与 `e2e_repair_loop.py` 全过。改前快照 `.snapshots/*.20261109-2026xx.bak` 与 `.snapshots/signal-sources.md.split-20261109-202835.bak`。
+
+## 2.63.0（2026-11-09）信号登记按目录收齐；对客表首次写入的重复与空值防护
+
+Suda 定，起因是某制氧机客户 PocketDevice 那次交付：选词规则本身写得清楚，但执行时漏了脚本产物——只读了子代理手收的那份社区原话，DataForSEO 的 10 条搜索量和搜索侧 133 条搜索联想都没进需求信号表，对客表里信号停在 72 条。同期部署脚本跑了两遍，业务范围整表翻倍，成对重复在表格里很难一眼看出。
+
+- selection-rules.md → 2 收需求信号：脚本产物按目录收齐再登记，不凭记忆挑；「会改变选词判断」是筛掉无关条目，不是只挑几条够用的；剔除了哪些噪声要在交付里说明。
+- selection-rules.md → 8：交付前核对三件事，信号来源覆盖本轮跑过的所有工具、写进对客表后回读行数去重、三张表词表一致。
+- client-facing-base.md：首次填充要幂等——清空后回读确认 0 行再写，写完全表按主字段统计唯一值；重复后怎么删、单值行的「市场」字段留空、同项目名合法多行的要加编号。译文不强制填：需求信号是内部判约束条件用的，品牌方一般不逐条读原话，要求看中文意思时再填。
+
 # 选词 skill 修订记录
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。

@@ -46,7 +46,7 @@
 | `slices` | 矩阵行：`{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`；一行 ＝ 产品线 × 市场 × 目标客户 × 场景 × 意图类型，`market` 在单市场题库里可以省略；`scene` 存这一行的使用场景（键名沿用）；不写 `journey_stage`；`priority` 即业务优先级，高 / 中 / 低；`prompt_type` 是这一行唯一的意图类型，用英文键（Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support，对应发现 / 问题解决 / 评估 / 对比 / 替代 / 验证 / 交易 / 售后），同一任务几种问法开几行（selection-rules.md → 5「意图类型：八类」）；每一行都要写。本期不出题的行也写在这里，不带 `topic_id`：非发现行看类型就知道本期不出；低档发现行在 `priority_basis` 末尾写「本期不出：……」（写法见 selection-rules.md → 5；品牌用不上、硬条件的处境不开行，记在 notes「没开的格子」）；它们和其他行一样写进对客确认表 |
 | `attribute_plan` | 约束条件名单（键名沿用）：`{attribute, no_carrier_reason}`；`attribute` 就是三张表「约束条件」的选项名（约束条件不单设表）。不写 `relative_competitor`、`priority`、`common_constraints`、`brand_value` |
 | `tag_dimensions` | 跨主题切片标签的维度：`{dimension, basis, values}`；`dimension` 为目标客户 / 使用场景 / 属性（也可写约束条件，值是约束条件）/ 自定义，`basis` 写跨哪些主题、切完谁拿去做什么，`values`：属性维度写业务范围「差异化优势」对应的约束条件，必须列出；自定义必填；其余维度选填。什么时候登记、怎么避开和主题重复见 selection-rules.md → 6「切片标签」；不需要横切就写 `[]` |
-| `buyer_quotes` | 需求信号（对客 Base 的需求信号表；键名沿用）：`{输入编号, 原话, 目标客户, 约束条件}`（整项选填，题引用信号时用来查条件依据；条件关键词写在「约束」列） |
+| `buyer_quotes` | 需求信号（对客 Base 的需求信号表；键名沿用）：`{输入编号, 原话, 目标客户, 约束条件}`。约束那一列的键名就是 `约束条件`，和对客 Base 列名、采集脚本的 `signals.csv` 一致；`constraint` 是英文别名，2.65.0 之前的旧键名 `约束` 也仍认。条件关键词写在这里，W36 按它核对题面条件有没有依据。线上跑 Case 时必须填，见 online-runner.md；不填时 W36、W37 跳过并告警一次 |
 | `base_conditions` | 品类本身的基础人群或用途（「养猫家庭」「私家车」），不算条件 |
 | `audience_terms` | `{目标客户: [自我描述词和暗示词]}`，查题面能不能看出谁在问（告警 W39）；选填，没写时这一项改为人工检查 |
 | `category_aliases` | 品类叫法变体，只差这些词的两道题不算重复 |
