@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or a Case (online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one Case unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "2.51.2"
+  version: "2.52.1"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -63,7 +63,7 @@ metadata:
 | `scripts/write_prompt_reasons.py --base <token> --brand <品牌> --noun <品类名词>` | 往提示词库写出题原因 |
 | `scripts/check_client_base.py --base <token> [--template]` | 对客确认表发出前检查 |
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |
-| `scripts/normalize_case.py <payload.json> [-o <out>] [--from-base-record]` | Case 校验与归一化（线上表单数据、Case 文件或飞书记录） |
+| `scripts/normalize_case.py <payload.json> [-o <out>]` | Case 校验与归一化（线上表单数据或 Case 文件，字段同《品牌资料收集》第一部分） |
 | `scripts/run_selection_mode.py run --case <payload.json> --market <市场> --platforms <平台> --out <新目录> --agent sdk` | 线上一条命令跑完一个 Case × 市场，检查不过自动返修，见 online-runner.md |
 | `scripts/export_upload_csv.py <bank.json> --out <dir>` | 导出上传 CSV |
 | `scripts/write_tags.py --base <token> --bank <bank.json> [--write]` | 把切片标签写进提示词库「标签」列 |

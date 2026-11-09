@@ -2,6 +2,27 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.52.1（2026-11-09）模型生成的线索照样登记；GSC 里 AI 发出的检索不再跳过
+
+Suda 审同事版 4.4 节时提出：模型生成的联想写清来源类型就能进表；深度调研不必每条引用都核；GSC 里 AI 发出的检索是 AI 会搜的词，跳过不合适。
+
+- **模型生成的线索**：selection-rules 第 2 步改写为「照样登记，来源类型写清」，能开假设级的行和候选题进试跑，不算矩阵行买家支撑，不能据此说需求高频。规则本身没变（需求信号表早就收这几类），只改掉「不算原话」这个容易读成「不进表」的说法。
+- **GSC 里 AI 发出的检索**：不再跳过，按一条需求信号登记，来源类型记 query fan-outs、出处写 GSC，只开假设级（分不清背后是真实用户、监测工具，还是我们自己试跑的子查询）；同时交内容计划对照站内页面。只有提示词模板碎片仍跳过。signal-sources 信号表 query fan-outs 行、client-facing-base 来源类型说明同步。
+- **用大模型做意图调研**：标为选做；结果按「模型建议问题」登记，不逐条核；只有要改记成社区、评价来支撑矩阵行的那几条，登记前打开原帖核对原话（Hbrand 那次 Gemini 有 3 条挂错帖子）。
+- `check_skill_terms.py` 加退役说法。改前快照在项目根 `.snapshots/signal-model-generated-*/`。
+
+## 2.52.0（2026-11-09）Case 输入合同 v2：字段同《品牌资料收集》第一部分
+
+Suda 定：线上诊断表单和售后收资料用同一套字段，以飞书《AI 搜索监测｜品牌资料收集》第一部分为准；旧字段删掉，不兼容。
+
+- **字段**：必填 品牌、官方域名（可多个，第一个是主站）、本期产品线、竞品（1–3）；选填 品牌别名、适用边界、核心目标客户与购买场景（按业务优先级排）、差异化优势、业务目标。市场走 `--market`，语言走 `options.locale`。
+- **删掉的字段**：公司名、品牌名称（改名品牌）、业务 / 产品名称、业务模式、品类、目标企业画像（垂直行业）、目标客户、痛点、使用场景、产品特性、补充内容、希望解决的问题、主题、购买标准、集成与兼容、信任与合规、地理与市场。v2 里传了报 `retired_field` 并写明并到哪；`presales-case-input/v1` 整份报 `unsupported_version`。品类改由选词从本期产品线和官网推出，写 `config.category_label`；业务模式随 B2B 专属字段一起删。
+- **「待补充」按没填处理**（告警 `pending_value`），必填项填「待补充」报 `missing_field`；「无」原样记录，品牌别名填「无」时 `brand_aliases` 为空。
+- `normalize_case.py` 重写；`--from-base-record`（飞书 Case 表适配）删除，旧 Case 表字段都是 v1。归一化结果去掉 `topics`、`topic_source`，新增 `brand_aliases`、`official_domains`、`product_line`。
+- 同步：input-contract.md、两份示例、shared 两份公开模板、online-runner 第 1、4、5、7 步、`run_selection_mode.py` 任务说明、shared/prompt-generation-principles「主题的两种来源」、canonical-intent-mapping 字段互查表、售前流水线 SKILL；report-builder `load_case` 认「品牌」「本期产品线」，`run_pipeline.py` 把 `config.category_label` 带进报告用 Case。`check_skill_terms.py` 加退役说法。
+- 同日研发文档《售前诊断：线上生词改用选词 skill》第 2 节改字段表，第 4 节改为意图类型八类（后端按类型统计、删 `question_types` 列、新增 `alternatives` 和 `information`），竞品沿用线上「表单＋按提及率补足＋本品＝5 个品牌」移入「不改的」。导出脚本等后端上线后再改。
+- 验证：`e2e_input_contract.py` 40/40（重写为 v2 用例）、`e2e_repair_loop.py` 7/7、validator 测试 58 passed、`verify_workflow.py` 64/64、shared 测试 2 passed、report-builder 测试 40 passed、退役说法扫描 0 命中。改前快照在项目根 `.snapshots/case-input-v2-20261109-105510/`。
+
 ## 报告侧（2026-11-08）Bbrand H1 预览定为所有售前诊断报告的模板（report-builder 2.8.0、售前流水线 2.1.0）
 
 - **模块显隐按数据判**（`render_report.slim_for_html` 写 `meta.shopping.enabled`、`meta.sentiment_enabled`）：商品卡在选词判定「关」、或整份采集一张卡都没有时关（写了「开」也关）；情感在没判读完、或判读完一条正负信号都没有时关。关掉的不只是模块：核心洞察的商品卡提及率、回答详情里的商品卡、问题明细与抽屉的情感列、单次回答的品牌情感一起不出，对应数据也不进 HTML。四种组合（都有 / 缺商品卡 / 缺情感 / 都没有）用 Bbrand 数据各出一份在浏览器核过。
