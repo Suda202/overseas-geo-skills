@@ -511,6 +511,10 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
 REGISTERED_TYPES = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
 # The mention-rate KPI reads these types (Suda 2026-11-02).
 KPI_INTENTS = {"Discovery"}
+# Sales unit (Suda 2026-11-09): one Discovery Topic is sold as 10 Prompts, 8 of them distinct decisions.
+TOPIC_FLOOR, TOPIC_DECISION_FLOOR, OTHER_TOPIC_FLOOR = 10, 8, 5
+# Sales cap (Suda 2026-11-09): candidates are uncapped; a sold Topic carries at most 10 formal Prompts.
+TOPIC_SALES_CAP = 10
 PROMPT_FIELDS = ("attribute_ref", "constraint_type")
 # A Prompt states the constraint it tests (attribute_ref); target customer and use scenario are read from its
 # matrix row (config.slices).
@@ -1003,17 +1007,18 @@ class BankValidator:
             decisions = {(str(q.get("attribute_ref") or "").strip(),
                           tuple(sorted(str(c).strip() for c in (q.get("constraints") or []))))
                          for q in kpi}
-            if kpi and (len(kpi) < 5 or len(decisions) < 4):
+            if kpi and (len(kpi) < TOPIC_FLOOR or len(decisions) < TOPIC_DECISION_FLOOR):
                 floor.append(f"{tid}: {len(kpi)} KPI Prompts / {len(decisions)} decision signatures")
             active = [q for q in items if str(q.get("status") or "").strip() != "停测"]
-            if not kpi and active and len(active) < 5:
+            if not kpi and active and len(active) < OTHER_TOPIC_FLOOR:
                 floor.append(f"{tid}: {len(active)} non-Discovery Prompts")
         if floor:
             self.warnings.append(f"[W59] Topics below the default coverage target ({'; '.join(floor)}); "
                                  "in order: (1) add missed buyer constraints, scenes, audiences or limits; (2) build compound "
                                  "conditions with real purchase meaning — never pad with synonyms, reordering or mechanical "
                                  "condition permutations; (3) check over-splitting — merge only adjacent Topics of the same "
-                                 "purchase decision with similar candidate solutions. Record the decision if still short.")
+                                 "purchase decision with similar candidate solutions. Still short: never pad with repeats — the brand party may fill the "
+                                 "10-Prompt unit with Prompts from other Topics (mixed selection); record the decision.")
 
     def check_topic_priority(self, topics: list[dict]) -> None:
         """Topic priority is summarised, not judged again (Suda 2026-11-05): by default the tier most of its rows carry;
@@ -1265,18 +1270,30 @@ class BankValidator:
                 )
 
     def check_formal_cap(self) -> None:
-        """Gate 14 (交付范围, Suda 2026-11-05): a locked set holds at most 60 Prompts per product line × country ×
-        language; one bank is one country × one language, so it counts per product line. No cap per Topic, and none
-        while the set is still a candidate set."""
+        """Gate 14 (交付范围): a locked set holds at most 60 Prompts per product line × country × language (Suda
+        2026-11-05); one bank is one country × one language, so it counts per product line. Sales cap one Topic at 10
+        formal Prompts (Suda 2026-11-09), so a line holds at most 10 × the Topics carrying formal Prompts — mixed
+        selection may put more than 10 in one Topic. No cap while the set is still a candidate set."""
         if self.config.get("lifecycle_status") not in FORMAL_LIFECYCLES:
             return
         formal_slices = slice_index(self.config)
         per_line: Counter[str] = Counter()
+        line_topics: dict[str, set] = {}
         for row in self.questions:
             if self.intents.get(id(row)) == "Verification" or str(row.get("status") or "").strip() == "停测":
                 continue
             line = row.get("product_line") or (formal_slices.get(str(row.get("slice_ref") or "").strip()) or {}).get("product_line")
-            per_line[str(line or "").strip() or "—"] += 1
+            key = str(line or "").strip() or "—"
+            per_line[key] += 1
+            line_topics.setdefault(key, set()).add(str(row.get("topic_id") or ""))
+        over_unit = {line: f"{n} Prompts / {len(line_topics[line])} Topics" for line, n in sorted(per_line.items())
+                     if n > TOPIC_SALES_CAP * len(line_topics[line])}
+        if over_unit:
+            fail(
+                f"formal set is sold as at most {TOPIC_SALES_CAP} Prompts per Topic, so a product line holds at most "
+                f"{TOPIC_SALES_CAP} × its Topics; move the rest out of the deliverable set: {over_unit}",
+                self.errors,
+            )
         over = {line: n for line, n in sorted(per_line.items()) if n > 60}
         if over:
             fail(

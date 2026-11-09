@@ -51,6 +51,23 @@ def current_bank(count: int, lifecycle: str) -> dict[str, object]:
     }
 
 
+def spread_topics(data: dict, sizes: list[int] | None = None) -> dict:
+    """Re-file the Prompts of current_bank into Topics of the given sizes (default: 10 each), one Discovery row each."""
+    questions = data["questions"]
+    sizes = sizes or [10] * ((len(questions) + 9) // 10)
+    topics, slices, start = [], [], 0
+    for index, size in enumerate(sizes, 1):
+        topic_id, slice_id = f"topic_{index}", f"M-{index:03d}"
+        topics.append({"topic_id": topic_id, "topic": f"Example Topic {index}"})
+        slices.append({"slice_id": slice_id, "topic_id": topic_id, "prompt_type": "Discovery", "priority": "高",
+                       "priority_basis": "核心目标客户与使用场景（1）"})
+        for row in questions[start:start + size]:
+            row.update(topic_id=topic_id, slice_ref=slice_id)
+        start += size
+    data["config"]["topics"], data["config"]["slices"] = topics, slices
+    return data
+
+
 def validate(data: dict[str, object], old_structure: bool = False) -> subprocess.CompletedProcess[str]:
     """Run the validator. A fixture refused as old structure would make every assertNotIn pass vacuously, so that
     fails here unless the test is about old structure."""
@@ -175,9 +192,9 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout)
 
     def test_formal_set_caps_each_product_line_at_sixty(self) -> None:
-        # 2026-11-05：单个主题不设上限；正式题每条产品线 × 国家 × 语言合计最多 60 道
+        # 正式题每条产品线 × 国家 × 语言合计最多 60 道；每 10 道放一个主题，不碰售卖上限（2026-11-09）
         def locked(count: int, lifecycle: str = "locked") -> dict:
-            data = current_bank(count, lifecycle)
+            data = spread_topics(current_bank(count, lifecycle))
             data["config"]["customer_confirmation"] = {
                 "status": "confirmed",
                 "scope_status": "confirmed",
@@ -202,6 +219,28 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertNotIn("at most 60 Prompts per product line", validate(stopped).stdout)
         # 候选阶段不设上限
         self.assertEqual(validate(locked(61, "customer_confirmed")).returncode, 0, validate(locked(61, "customer_confirmed")).stdout)
+
+    def test_formal_set_caps_each_topic_at_ten(self) -> None:
+        # 2026-11-09：售卖以一个主题 10 道为上限；混合选择时单个主题可以超过 10 道，合计不超过 10 × 主题数
+        def locked(sizes: list[int], lifecycle: str = "locked") -> dict:
+            data = spread_topics(current_bank(sum(sizes), lifecycle), sizes)
+            data["config"]["customer_confirmation"] = {
+                "status": "confirmed", "scope_status": "confirmed", "prompt_set_status": "confirmed"}
+            data["config"]["trial"] = {"status": "passed", "planned_runs": 3, "valid_runs": 3,
+                                       "evidence_refs": ["trial/run-1.json"]}
+            return data
+
+        message = "sold as at most 10 Prompts per Topic"
+        self.assertNotIn(message, validate(locked([10])).stdout)
+        result = validate(locked([11]))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(message, result.stdout)
+        self.assertNotIn(message, validate(locked([4, 16])).stdout)  # 混合选择
+        self.assertIn(message, validate(locked([4, 17])).stdout)
+        stopped = locked([11])
+        stopped["questions"][0]["status"] = "停测"
+        self.assertNotIn(message, validate(stopped).stdout)
+        self.assertNotIn(message, validate(locked([11], "customer_confirmed")).stdout)  # 候选阶段不设上限
 
     def test_bare_category_prompt_warns(self) -> None:
         # 2026-10-29 起不写宽泛品类题：全条件化不告警，无限定条件的发现题逐条告警

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""写出提示词库的「出题原因」（对客确认 Base，任意客户通用）。
+"""写出提示词库的「出题原因」和「提示词优先级」（对客确认 Base，任意客户通用）。
 
-规则见 references/client-facing-base.md → *提示词矩阵* / *提示词库*。提示词库没有优先级列，档位只读所属切片
-（矩阵行）的「业务优先级」（高 / 中 / 低）。出题原因三部分：这道题测哪类买家在什么处境下的需求 → 依据的需求信号
-（按来源类型计数、社区和评价列出站点、一条代表原话）→ 为什么重要（切片「业务优先级依据」原文）。判断只写在矩阵行，
-这里不留第二份。
+规则见 references/selection-rules.md → 7「品牌明显劣势」「出题原因」和 client-facing-base.md → *提示词库*。
+提示词优先级不判，算出来：等于所属切片（矩阵行）的「业务优先级」；题库里这道题记了 `brand_weakness` 的降一档，
+低档不再降，验证题不降。出题原因一两句：有降档、假设的写在开头，再写哪类买家在什么处境下问什么、看 AI 什么，
+最后接题上的 `reason_note`。证据看「证据」列，行的依据看提示词矩阵，这里不重复。
 
 只认现行结构的 Base：没有属性池表，提示词矩阵有「业务优先级」「业务优先级依据」「目标客户」「意图类型」，
-需求信号表叫「需求信号」。旧 Base 不迁移，脚本报「不支持的旧结构」并以退出码 2 结束。
+需求信号表叫「需求信号」，提示词库有「提示词优先级」。旧 Base 不迁移，脚本报「不支持的旧结构」并以退出码 2 结束。
 
 用法（在客户目录下跑，lark-cli 只能写当前目录）：
-    python3 -I write_prompt_reasons.py --base <token> --brand Nina [--alias Nbrand] [--noun 工具] [--write]
-    python3 -I write_prompt_reasons.py --from-dump <目录> --brand Nina    # 读 <表名>.ndjson，只预览
-预览产物：--preview out.json（每道题算出的字段）。
+    python3 -I write_prompt_reasons.py --base <token> --bank bank.json --brand Nina [--alias Nbrand] [--noun 工具] [--write]
+    python3 -I write_prompt_reasons.py --from-dump <目录> --bank bank.json --brand Nina    # 读 <表名>.ndjson，只预览
+多市场每个市场的题库各给一次 --bank。预览产物：--preview out.json（每道题算出的字段）。
 退出码：0 正常；1 有题算不出；2 读不到 Base，或是不支持的旧结构 Base。
 """
 import argparse
@@ -26,40 +26,9 @@ import time
 from pathlib import Path
 
 ROW_TIERS = ("高", "中", "低")
+STEP_DOWN = {"高": "中", "中": "低", "低": "低"}
 # 现行结构的提示词矩阵必须有的字段
 CURRENT_MATRIX_FIELDS = ("业务优先级", "业务优先级依据", "目标客户", "意图类型")
-# 来源类型的显示名
-SOURCE_LABEL = {"社区": "社区原话", "评价": "用户评价", "搜索联想": "Google 相关搜索",
-                "关键词工具": "搜索词", "GSC": "品牌方 Google 搜索后台查询",
-                "Bing": "品牌方 Bing 搜索后台查询", "Google Ads": "Google 广告搜索词",
-                "电商平台搜索": "电商平台搜索词",
-                "Bing AI 检索词": "Bing AI 检索词", "query fan-outs": "AI 检索时拆出的子查询",
-                "AI 追问": "AI 回答末尾的追问", "模型建议问题": "AI 推荐的延伸问题",
-                "销售": "销售记录", "客服": "客服记录",
-                "站内搜索": "站内搜索词", "品牌官网": "品牌官网线索", "竞品官网": "竞品官网线索"}
-# 挑代表原话的先后：买家亲口说的在前，AI 检索词最后
-SOURCE_RANK = {"社区": 0, "评价": 1, "客服": 2, "销售": 3, "GSC": 4, "Bing": 5,
-               "Google Ads": 6, "站内搜索": 7, "电商平台搜索": 8, "搜索联想": 9,
-               "关键词工具": 10, "Bing AI 检索词": 11, "query fan-outs": 12, "AI 追问": 12, "模型建议问题": 13,
-               "品牌官网": 14, "竞品官网": 14}
-SITE_CLUES = {"品牌官网", "竞品官网"}  # 品牌自己写的内容，只计数，不拿来当代表原话（2026-11-05）
-SITE_SOURCES = {"社区", "评价"}  # 只给这两类列站点
-# 关键词工具按工具分选项；出题原因里合成「搜索词」一类计数
-KEYWORD_TOOLS = {"DataForSEO", "Semrush", "Ahrefs", "Similarweb", "Keyword Planner", "Naver"}
-# 网址域名 → 站点名（「出处」里有网址时按它认）
-SITE_DOMAINS = {"reddit.com": "Reddit", "ptt.cc": "PTT", "dcard.tw": "Dcard", "mobile01.com": "Mobile01",
-                "pantip.com": "Pantip", "trustpilot.com": "Trustpilot", "g2.com": "G2", "capterra.com": "Capterra",
-                "play.google.com": "Google Play", "apps.apple.com": "App Store", "youtube.com": "YouTube",
-                "quora.com": "Quora", "facebook.com": "Facebook", "instagram.com": "Instagram",
-                "threads.net": "Threads", "tiktok.com": "TikTok", "x.com": "X", "twitter.com": "X",
-                "xiaohongshu.com": "小红书", "zhihu.com": "知乎", "weibo.com": "微博", "bilibili.com": "B站",
-                "hardwarezone.com.sg": "HardwareZone", "hardwarezone.com": "HardwareZone", "kin.naver.com": "네이버 지식iN", "blog.naver.com": "네이버 블로그", "cafe.naver.com": "네이버 카페"}
-# 通用平台名：出处以它开头就归到这个名字（「PTT Stock 板」→ PTT）
-PLATFORMS = ["PTT", "Dcard", "Mobile01", "CMoney", "巴哈姆特", "Reddit", "YouTube", "Quora", "Facebook",
-             "Instagram", "Threads", "TikTok", "X", "Twitter", "Trustpilot", "G2", "Capterra", "Amazon",
-             "Google Play", "App Store", "小红书", "知乎", "微博", "抖音", "B站", "Pantip",
-             "네이버 지식iN", "네이버 블로그", "네이버 카페", "디시인사이드", "블라인드", "클리앙", "뽐뿌", "OKKY"]
-NOISE = re.compile(r"[（(][^（）()]*(20\d\d|Suda|原记|按规则|核对)[^（）()]*[)）]")
 
 
 def text(v):
@@ -71,26 +40,6 @@ def text(v):
 
 def ids(v):
     return [x["id"] for x in (v or []) if isinstance(x, dict) and "id" in x]
-
-
-def site_of(note: str) -> str:
-    """出处认站点：已知网址按域名认 → 各段开头的平台名 → 第一段人写的说明 → 网址的域名。"""
-    m = re.search(r"https?://([^/\s)\]]+)", note)
-    host = m.group(1).lower().removeprefix("www.") if m else ""
-    for dom, name in SITE_DOMAINS.items():
-        if host == dom or host.endswith("." + dom):
-            return name
-    if re.match(r"amazon\.", host):
-        return "Amazon"
-    for part in re.split(r"[｜|]", note):
-        for p in PLATFORMS:
-            if part.strip().startswith(p):
-                return p
-    head = re.split(r"[｜|／/]", note, maxsplit=1)[0].strip()
-    if head and not head.startswith(("http", "[http")):
-        return re.sub(r"\s*板$", "", re.split(r"[（(，,]", head)[0]).strip()[:20]
-    return host
-
 
 
 def situation(typ, who, cond, brand, noun, baseline):
@@ -114,34 +63,6 @@ def situation(typ, who, cond, brand, noun, baseline):
     if typ == "问题解决":
         return f"{who}在自己想办法解决问题（{cond}），看 AI 回答时会不会引用 {brand} 官网。"
     return None
-
-
-def source_group(e):
-    t = text(e.get("来源类型"))
-    return "关键词工具" if t in KEYWORD_TOOLS else t
-
-
-def evidence_part(rows):
-    """第二部分：按来源类型计数，社区和评价列站点，再挑一条代表原话。"""
-    cnt, sites = collections.Counter(), collections.defaultdict(set)
-    for e in rows:
-        t = source_group(e)
-        cnt[t] += 1
-        where = text(e.get("出处"))
-        if t in SITE_SOURCES and where:
-            sites[t].add(site_of(where))
-    if not cnt:
-        return ""
-    order = sorted(cnt, key=lambda t: (-cnt[t], SOURCE_RANK.get(t, 9)))
-    parts = [f"{SOURCE_LABEL.get(t, t)} {cnt[t]} 条" + (f"（{'、'.join(sorted(sites[t]))}）" if sites[t] else "")
-             for t in order]
-    # 同一来源类型里有月搜索量的在前
-    buyer_rows = [e for e in rows if source_group(e) not in SITE_CLUES]
-    rep = sorted(buyer_rows, key=lambda e: (SOURCE_RANK.get(source_group(e), 12),
-                                            0 if text(e.get("月搜索量")) else 1))[0] if buyer_rows else {}
-    z = (text(rep.get("译文")) or text(rep.get("中文意思")) or text(rep.get("原话"))).strip().rstrip("。？?！!")
-    quote = f"，例如「{z[:38]}{'…' if len(z) > 38 else ''}」" if z else ""
-    return f"依据：{'、'.join(parts)}{quote}。"
 
 
 class Lark:
@@ -200,9 +121,19 @@ def old_structure(pool, matrix) -> list[str]:
     return found
 
 
-def build(matrix, quotes, lib, brand, aliases, noun, base_audiences):
-    """逐题算出题原因。返回 (更新, 算不出)。"""
-    out, skipped = {}, []
+def load_banks(paths):
+    """题库里每道题的 brand_weakness、reason_note，按题号。"""
+    notes = {}
+    for p in paths:
+        for q in json.loads(Path(p).read_text(encoding="utf-8")).get("questions", []):
+            notes[q["question_id"]] = {"weakness": (q.get("brand_weakness") or "").strip().rstrip("。"),
+                                       "note": (q.get("reason_note") or "").strip().rstrip("。")}
+    return notes
+
+
+def build(matrix, lib, bank, brand, aliases, noun, base_audiences):
+    """逐题算出题原因和提示词优先级。返回 (更新, 算不出, 降档题号)。"""
+    out, skipped, lowered = {}, [], []
     for r in lib:
         code = text(r.get("编号"))
         sl_ids = ids(r.get("所属切片"))
@@ -211,15 +142,16 @@ def build(matrix, quotes, lib, brand, aliases, noun, base_audiences):
             continue
         sl = matrix[sl_ids[0]]
         typ = text(sl.get("意图类型"))  # 类型只有一个来源：所属切片
-        if text(sl.get("业务优先级")) not in ROW_TIERS:
+        tier = text(sl.get("业务优先级"))
+        if tier not in ROW_TIERS:
             skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没判业务优先级"))
             continue
-        why = NOISE.sub("", text(sl.get("业务优先级依据")).split("\n", 1)[0]).strip().rstrip("。；;")
-        if not why:
-            skipped.append((code, f"所属切片 {text(sl.get('切片编号'))} 没写业务优先级依据"))
+        if code not in bank:
+            skipped.append((code, "题库里没有这个题号（--bank 给全了吗）"))
             continue
         aud = text(sl.get("目标客户"))
         who = "买家" if (not aud or aud in base_audiences) else aud
+        scene = text(sl.get("使用场景")).strip().rstrip("。")
         named = next((a for a in aliases if a and a in text(r.get("提示词"))), brand)
         # 约束条件是多选，第一个是主约束
         att = (text(r.get("约束条件")).split("/") or [""])[0] or None
@@ -228,21 +160,43 @@ def build(matrix, quotes, lib, brand, aliases, noun, base_audiences):
         if p1 is None:
             skipped.append((code, f"意图类型「{typ}」没有句式"))
             continue
-        p2 = evidence_part([quotes[i] for i in ids(r.get("证据")) if i in quotes])
-        p3 = f"这个处境：{why}。"
+        weak, note = bank[code]["weakness"], bank[code]["note"]
+        prio, head = tier, []
+        if weak and typ == "验证":
+            head.append(f"风险：{weak}。")
+        elif weak:
+            prio = STEP_DOWN[tier]
+            head.append(f"降为{prio}：{weak}。" if prio != tier else f"风险：{weak}。")
+            if prio != tier:
+                lowered.append(code)
+        basis = text(sl.get("业务优先级依据"))
+        if "假设" in basis:
+            m = re.search(r"假设[:：]([^。；;\n]+)", basis)
+            guess = m.group(1).strip() if m else "这个处境有一部分依据是推断"
+            head.append(f"假设：{guess}，请品牌方确认。")
+        if not any(h.startswith("假设") for h in head) and att is not None and not ids(r.get("证据")):
+            head.append("待核实：这道题没有挂买家原话，条件来自调研推断，请品牌方用销售和客服常被问到的问题核对。")
+        tail = f"{note}。" if note else ""
         if att is None:
-            p3 = f"测品类整体格局；{p3}"
-        reason = f"{p1}{p2}{p3}"
+            tail = f"测品类整体格局。{tail}"
+        reason = "".join(head) + (f"处境：{scene}。" if scene else "") + p1 + tail
+        upd = {}
         if reason != text(r.get("出题原因")):
-            out[r["record_id"]] = (code, {"出题原因": reason})
-    return out, skipped
+            upd["出题原因"] = reason
+        if prio != text(r.get("提示词优先级")):
+            upd["提示词优先级"] = prio
+        if upd:
+            out[r["record_id"]] = (code, upd)
+    return out, skipped, lowered
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--base", help="对客确认 Base 的 token")
-    src.add_argument("--from-dump", help="离线目录，含 提示词矩阵/需求信号/提示词库 .ndjson；只能预览")
+    src.add_argument("--from-dump", help="离线目录，含 提示词矩阵/提示词库 .ndjson；只能预览")
+    ap.add_argument("--bank", action="append", default=[], required=True,
+                    help="题库 JSON（读 brand_weakness、reason_note）；多市场每份各给一次")
     ap.add_argument("--brand", required=True, help="题面里称呼的品牌或产品名，如 Nina")
     ap.add_argument("--alias", action="append", default=[], help="点名题里可能出现的其他名字（公司名等），可重复")
     ap.add_argument("--noun", default="产品", help="品类名词，写进句子：买家找「工具」时…")
@@ -262,18 +216,18 @@ def main():
     if old:
         print(f"不支持的旧结构 Base（{'；'.join(old)}）：旧 Base 不迁移，不写出题原因", file=sys.stderr)
         sys.exit(2)
-    signals = get("需求信号", True)
-    if signals is None:
-        sys.exit("读不到需求信号表")
-    quotes = {r["record_id"]: r for r in signals}
     lib = get("提示词库")
+    if lib and "提示词优先级" not in {k for r in lib for k in r}:
+        print("提示词库没有「提示词优先级」字段：先按模板加上（单选 高 / 中 / 低）再跑", file=sys.stderr)
+        sys.exit(2)
     base_aud = set(a.base_audience) or {
         collections.Counter(text(r.get("目标客户")) for r in matrix.values() if text(r.get("目标客户"))).most_common(1)[0][0]}
 
-    out, skipped = build(matrix, quotes, lib, a.brand, [a.brand, *a.alias], a.noun, base_aud)
+    out, skipped, lowered = build(matrix, lib, load_banks(a.bank), a.brand, [a.brand, *a.alias], a.noun, base_aud)
     if a.preview:
         Path(a.preview).write_text(json.dumps({c: f for c, f in out.values()}, ensure_ascii=False, indent=1))
-    print(f"提示词 {len(lib)} 道；要更新 {len(out)} 道；基础人群按「{'、'.join(sorted(base_aud))}」写成「买家」")
+    print(f"提示词 {len(lib)} 道；要更新 {len(out)} 道；因品牌明显劣势降档 {len(lowered)} 道{('：' + '、'.join(lowered)) if lowered else ''}；"
+          f"基础人群按「{'、'.join(sorted(base_aud))}」写成「买家」")
     for c, why in skipped:
         print(f"算不出：{c}：{why}")
     if skipped:

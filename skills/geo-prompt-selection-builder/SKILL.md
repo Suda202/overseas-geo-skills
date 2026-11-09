@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or a Case (online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one Case unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "2.57.0"
+  version: "2.59.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -21,7 +21,7 @@ metadata:
 | 3 | 约束条件 | 收得宽、统一粒度；不判重要性和相对竞品，只记品牌可核实的明显劣势；写题前确认硬条件 | 三张表共用的「约束条件」选项、品牌明显劣势记录 |
 | 4 | 目标客户与使用场景 | 按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 业务范围里的目标客户行和使用场景行，品牌方确认后冻结 |
 | 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每行判一次业务优先级，这是全流程唯一的档位判断 | 提示词矩阵表 |
-| 6 | 主题与主题优先级 | 主题 ＝ 同一类候选 × 同一意图类型；每主题至少 5 题；主题优先级从矩阵行汇总，不另判 | 主题表、`config.tag_dimensions` |
+| 6 | 主题与主题优先级 | 主题 ＝ 同一类候选 × 同一意图类型；按主题售卖，每个发现主题至少 10 题；主题优先级从矩阵行汇总，不另判 | 主题表、`config.tag_dimensions` |
 | 7 | 写题 | 本期只在高、中档发现行上出题；按决策差异定题数；问不出发现题的行改类型 | 提示词库、题库 JSON |
 | 8 | 校验与导出 | validator 错误全改、告警逐条记处理；按场景导出。试跑、挑题、锁版归 `geo-monitoring` | 题库 JSON、对客确认表和 / 或上传 CSV |
 
@@ -60,7 +60,7 @@ metadata:
 | 脚本 | 用途 |
 |-|-|
 | `scripts/validate_after_sales_set.py <bank.json> [--previous <旧版>]` | 题库门禁，输出就绪结论；旧结构题库报「不支持」并退出 |
-| `scripts/write_prompt_reasons.py --base <token> --brand <品牌> --noun <品类名词>` | 往提示词库写出题原因 |
+| `scripts/write_prompt_reasons.py --base <token> --bank <bank.json> --brand <品牌> --noun <品类名词>` | 往提示词库写出题原因和提示词优先级 |
 | `scripts/check_client_base.py --base <token> [--template]` | 对客确认表发出前检查 |
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |
 | `scripts/normalize_case.py <payload.json> [-o <out>]` | Case 校验与归一化（线上表单数据或 Case 文件，字段同《品牌资料收集》第一部分） |

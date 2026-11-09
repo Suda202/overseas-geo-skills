@@ -52,6 +52,7 @@
 | `category_aliases` | 品类叫法变体，只差这些词的两道题不算重复 |
 | `audience_inputs` | 收到的需求信号编号，查有没有没用上的 |
 | `retired` | 停测的题号和原因（Base 里已删除） |
+| `purchase_selection` | 可选，锁版时由监测写：`mode`（单主题 / 混合）、`topics`（每个主题选了几道）、`reason`（品牌方给的原因），用来判断按主题售卖是否合理（geo-monitoring trial-and-lock.md「记选择方式」） |
 | `assessment_scope` | 锁版时的考核口径：考核题、平台市场语言和次数、品牌分母、计算方式 |
 | `warning_decisions` | 每条告警的处理记录：`{match: 告警里的一段文字, decision: "已改写" / "保留：理由"}`，或按编号整类处理 `{gate: "W39", decision: "保留：理由"}`（见下「告警」） |
 | `trial` | `planned_runs: 3`、`status`、`valid_runs`、`evidence_refs`（原始答案位置） |
@@ -75,11 +76,11 @@
 | `changeability` / `changeability_basis` | 可改变性（高 / 中 / 低 / 待试跑）及信源结构与可执行动作依据，仅作探索，不改档 | 可改变性 |
 | `status` | 待审核 / 需修改 / 已批准 / 正式 / 停测 | 状态 |
 
-按需才写：`condition_basis`（条件不来自引用的需求信号时，写 `{条件: 依据}`）、`audience_implicit`（题面没写提问人、但条件已经隐含时的理由）、`intent_key` 和 `market_decision`（多市场，`shared_equivalent` / `localized` / `market_specific`）、`evidence_refs`（引用的买家原话编号，选填）、`tags`（只写登记在 `tag_dimensions` 自定义维度里的值；目标客户、约束条件这些标签导出时派生，不写在题上）。
+按需才写：`condition_basis`（条件不来自引用的需求信号时，写 `{条件: 依据}`）、`audience_implicit`（题面没写提问人、但条件已经隐含时的理由）、`intent_key` 和 `market_decision`（多市场，`shared_equivalent` / `localized` / `market_specific`）、`evidence_refs`（引用的买家原话编号，选填）、`tags`（只写登记在 `tag_dimensions` 自定义维度里的值；目标客户、约束条件这些标签导出时派生，不写在题上）、`brand_weakness`（题面条件落在品牌明显劣势里时写一句「品牌在 X 上不如 Y（事实，出处）」；提示词优先级据此降一档，selection-rules.md → 7「品牌明显劣势」）、`reason_note`（拆题理由、复合条件真实性这类要给品牌方看的一句，接在出题原因后面）。
 
 目标客户、使用场景、意图类型都从所在矩阵行读，题上不写旅程阶段。
 
-以下字段不再写：`monitoring_prompt`、`journey_stage`、`group_role`（核心 / 实验 / 监测三层已取消，考核按类型认）、`formal_visibility_eligible`（算不算提及率考核按类型认：只有发现算）、`constraint_type`、`ai_cognitive_gap`（基线结果进报告）、`target_count`、`planned_prompts`、`source_slices`、`expected_total`、`priority`（题上的提示词优先级，2026-11-05 撤）、`priority_change_reason`，以及 cadence、version、lineage_id、prompt_group、competitor_set、business_priority、change_reason。其中 `journey_stage`、`group_role` 和旧字段名 `intent`、`persona`、`attribute`、`review_status` 出现就按旧结构拒收；其余写了也不读。
+以下字段不再写：`monitoring_prompt`、`journey_stage`、`group_role`（核心 / 实验 / 监测三层已取消，考核按类型认）、`formal_visibility_eligible`（算不算提及率考核按类型认：只有发现算）、`constraint_type`、`ai_cognitive_gap`（基线结果进报告）、`target_count`、`planned_prompts`、`source_slices`、`expected_total`、`priority`、`priority_change_reason`（提示词优先级不写在题库里，由 `write_prompt_reasons.py` 从行档位和 `brand_weakness` 算出写进对客表），以及 cadence、version、lineage_id、prompt_group、competitor_set、business_priority、change_reason。其中 `journey_stage`、`group_role` 和旧字段名 `intent`、`persona`、`attribute`、`review_status` 出现就按旧结构拒收；其余写了也不读。
 
 ## 上传 CSV
 
@@ -116,7 +117,7 @@ python3 -I scripts/validate_after_sales_set.py BANK.json [--previous PRIOR-BANK.
 | 4 | 每道题有主题、市场、类型、中文含义，题面用市场语言写 |
 | 8 | 题面完全重复 |
 | 12 | 发现题不出现品牌、别名、竞品名，要向 AI 要候选 |
-| 14 | 锁版后每条产品线（一个题库 = 一个国家 × 一种语言）正式题最多 60 道；单个主题不设上限 |
+| 14 | 锁版后每条产品线（一个题库 = 一个国家 × 一种语言）正式题最多 60 道，且不超过 10 × 有正式题的主题数（售卖一个主题 10 道为上限；混合选择时单个主题可以超过 10 道）；候选阶段不设上限 |
 | 26 | 试跑前业务范围已确认；锁版前正式题已确认、试跑完成、版本已定 |
 | 32 | 题面用采集语言写：一半以上的字符是该语言的文字；语种识别（lingua，75 种语言）判定题面是另一门语言、且采集语言自身的置信度低于 0.05 |
 | 38 | 对比题必须带使用场景（`constraints` 不为空） |
@@ -155,14 +156,14 @@ python3 -I scripts/validate_after_sales_set.py BANK.json [--previous PRIOR-BANK.
 | W54 | 无条件的发现题（只在品牌方点名大词时写） |
 | W56 | 有题写了审核状态、有题没写，没写的按待审核算 |
 | W57 | 属性只被还没批准的题承载，不算覆盖（客户确认后是报错） |
-| W59 | 主题不够 5 道考核题（发现题）或不够 4 个不同购买决策，其他类型的主题不够 5 道（停测题不计）；按 selection-rules 第 6 步硬要求 3 的顺序处理（补遗漏需求与条件 → 有意义的复合条件 → 查是否拆得过细），仍不足的写处理记录，品牌方点名单买的注明读数波动风险 |
+| W59 | 主题不够 10 道考核题（发现题）或不够 8 个不同购买决策，其他类型的主题不够 5 道（停测题不计）；按 selection-rules 第 6 步硬要求 3 的顺序处理（补遗漏需求与条件 → 有意义的复合条件 → 查是否拆得过细），仍不足的不凑重复题，品牌方可用其他主题的题补足 10 道（混合选择），写处理记录，品牌方点名单买的注明读数波动风险 |
 | W62 | 切片标签维度不合格：维度名不对、没写 `basis`、自定义没登记 `values`；某个值不到 2 个主题、不到 5 道题、和主题名相同；整个维度每个值都只落在一个主题（这个维度就是主题的切分轴）（停测、需修改、问题解决不计） |
 | W63 | 题上手写的 `tags` 没登记在 `tag_dimensions` 的自定义维度里，导出时不带 |
 | W64 | 业务优先级为低的行挂了题：低档默认不出题（selection-rules.md → 5）；高、中档覆盖不够时从低档补的题属正常，写处理记录保留理由 |
 
 ### 不支持的旧结构
 
-Abrand、Bbrand 9 月版、UNI_A、Ebrand、Hbrand 选词 2.1、360 选词等按旧结构写的题库保持历史版本，不迁移、不校验、不导出。validator（`validate_after_sales_set.legacy_markers`）见到下面任一项就判为旧结构：`generation_stage` 不是 `selection`；没有矩阵行；有 `config.extra_prompt_types`（旧售前题库）或 `config.leader_default`；有行没写 `prompt_type`、写了 `prompt_types` 列表或档位写 P1 / P2 / P3；行或题上有旅程阶段；题上有 `group_role`、旧字段名（`intent` 代替 `prompt_type`、`Prompt Type:` 标签、`persona`、`buyer`、`attribute`、`buyer_demand_evidence`、`condition_slot`、`review_status`）；`attribute_plan` 是旧的 `{p1, p2, p3}` 写法，或带 `relative_competitor`、`priority`、`common_constraints`、`brand_value`。
+Abrand、Bbrand 9 月版、UNI_A、Ebrand、Hbrand 选词 2.1、Sbrand 选词等按旧结构写的题库保持历史版本，不迁移、不校验、不导出。validator（`validate_after_sales_set.legacy_markers`）见到下面任一项就判为旧结构：`generation_stage` 不是 `selection`；没有矩阵行；有 `config.extra_prompt_types`（旧售前题库）或 `config.leader_default`；有行没写 `prompt_type`、写了 `prompt_types` 列表或档位写 P1 / P2 / P3；行或题上有旅程阶段；题上有 `group_role`、旧字段名（`intent` 代替 `prompt_type`、`Prompt Type:` 标签、`persona`、`buyer`、`attribute`、`buyer_demand_evidence`、`condition_slot`、`review_status`）；`attribute_plan` 是旧的 `{p1, p2, p3}` 写法，或带 `relative_competitor`、`priority`、`common_constraints`、`brand_value`。
 
 ### 人工检查（交付前）
 
