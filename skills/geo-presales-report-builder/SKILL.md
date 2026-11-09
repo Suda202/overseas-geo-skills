@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Bbrand H1 template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.8.1"
+  version: "2.9.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
@@ -195,6 +195,8 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 带官网的提及率 | 目标品牌被提及的 Discovery 回答中，正文至少引用一次其官网的回答数 ÷ 目标品牌被提及的 Discovery 回答数；分子分母随值给出（`linked_mention_counts`）。偏低 = 被提到了但 AI 没拿官网作依据。与引用份额分母不同，不互相换算；跨平台看平台切片。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
 | 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；只统计发现、替代两类题。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
 | 正向情感占比 | 正向 Claim 信号 ÷（正向 + 负向 Claim 信号），**排除中性**（句级降级路径按句数计） |
+
+**回答正文里的商品卡**在原文位置渲染（2026-11-09）：ChatGPT 每张卡以带 title 的商品图开头，清洗时转占位符留在原位，`markdown_to_html` 还原成卡片（图、徽标、标题、价格、评分、卖点、Shop 链接）；带 title 但缺价格/评分/编号标题的图按文章配图处理，不渲染成卡。AI Mode、Gemini 正文没有卡片位置，AIO 全是 base64 内嵌图，这三个平台的卡片仍按平台顺序排在正文上方（`details[].product_cards`）。
 
 **引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-presales-crawl-integrity` 的数据分层契约与缺陷 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
 

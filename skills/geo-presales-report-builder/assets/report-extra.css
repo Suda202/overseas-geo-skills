@@ -399,6 +399,64 @@
   line-height: 1.4;
 }
 
+/* 正文里的商品卡（2026-11-09）：放在回答原文原有位置，横向排列，和平台视觉接近 */
+.product-card-inline {
+  margin: 14px 0 18px;
+  background: var(--card);
+  align-items: center;
+}
+.product-card-inline .product-card-img {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  background: #fff;
+}
+.product-card-inline .product-card-img img {
+  object-fit: contain;
+}
+.product-card-badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--gold-deep);
+  font: 700 10.5px/1.6 var(--sans);
+  letter-spacing: .02em;
+}
+.product-card-inline .product-card-title {
+  font-size: 14px;
+  -webkit-line-clamp: 3;
+}
+.product-card-points {
+  margin: 6px 0 6px;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.product-card-blurb {
+  margin: 4px 0 8px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.product-card-shop {
+  display: inline-block;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--gold-deep);
+  font: 600 12px/1.4 var(--sans);
+  text-decoration: none;
+}
+.product-card-shop:hover { border-color: var(--gold); }
+@media(max-width:600px){
+  .product-card-inline{flex-direction:column;align-items:flex-start}
+  .product-card-inline .product-card-img{flex-basis:auto;width:100%;height:140px}
+}
+
 /* 引用列表：icon + URL 同一行，URL 单行截断 hover 显示完整 */
 .citation-item {
   display: flex;

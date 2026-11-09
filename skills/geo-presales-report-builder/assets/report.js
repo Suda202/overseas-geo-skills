@@ -875,8 +875,14 @@
     return '<div class="answer-switch">' + tabs + panels + "</div>";
   }
 
-  function productCardsBlock(cards) {
+  // 顶部的商品卡块只在正文里没有原位卡片时才出（2026-11-09）：ChatGPT 的回答卡片已经在原文
+  // 该在的位置渲染，再在上面摆一排就是同一批卡显示两遍。AI Mode、AIO 正文里没有卡片位置，
+  // 仍靠 details[].product_cards 在这里按平台顺序排。
+  function productCardsBlock(cards, entry) {
     if (!HAS_SHOPPING || !cards.length) return "";
+    var inline = (entry && (entry.answer_html || "").indexOf("product-card-inline") >= 0 &&
+      (entry.answer_zh_html || entry.answer_html || "").indexOf("product-card-inline") >= 0);
+    if (inline) return "";
     return '<section class="answer-cards"><h4 class="drawer-sec">商品卡 <span class="drawer-sec-count">' + cards.length + " 张</span></h4>" +
       '<div class="answer-card-row">' + cards.map(function (c, i) {
         return '<div class="answer-card' + (c.target ? " is-target" : "") + '">' +
@@ -1077,7 +1083,7 @@
       '<p class="drawer-q">' + esc(record ? record.en : "") + "</p>" +
       '<p class="drawer-zh">' + esc(record ? record.zh : entry.question_zh) + "</p>" +
       // 主题、意图类型在问题概览里已经有，单次回答不再重复；商品卡放在回答正文前面
-      productCardsBlock(entry.product_cards || []) +
+      productCardsBlock(entry.product_cards || [], entry) +
       // answer_html / answer_zh_html 在数据层由 markdown 转换并转义过，这里直接注入，不再二次 esc。
       answerSwitch(entry) +
       "</div>" +

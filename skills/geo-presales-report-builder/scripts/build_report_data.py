@@ -1860,11 +1860,23 @@ _HTML_UNWRAP = re.compile(
     r"<\s*/?\s*(?:div|span|a|p|ul|ol|li|strong|em|b|i|table|thead|tbody|tr|td|th"
     r"|ProductComparisonTable)\b[^>]*>", re.I)
 _HTML_BR = re.compile(r"<\s*br\s*/?\s*>", re.I)
+# 兜底删残留标签。必须排除 `<https://…>` 这种尖括号包裹的链接（markdown 里写
+# `[Shop RivalB2](<url>)` 是常见写法），否则整条 URL 被当标签删掉，链接变成空括号——
+# 正文卡片里的 Shop 链接一直因此丢失（2026-11-09 查商品卡位置时发现）。
 _HTML_LEFT = re.compile(r"<\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b[^>]*>")
+_HTML_LEFT_SAFE = re.compile(r"<\s*(?!https?://)[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?>")
 # ChatGPT 正文里的商品占位符（product["turn0product7","名称",{"render_as":"hero"}] /
 # entity["turn0product5","名称"]），不是回答内容；与 EntityCard 同法保留品名文本
 _CHATGPT_PRODUCT_TOKEN = re.compile(
     r"\b(?:product|entity)\[\"turn\d+\w*\",\"([^\"]*)\"(?:,\{[^}]*\})?\]")
+
+# 正文里的商品卡图：ChatGPT 每张卡以 `<img src="…" title="商品名">` 开头，后面跟徽标、编号标题、
+# 价格、评分、卖点和 Shop 链接，卡与卡之间用 `---` 分隔。这些图原来和普通图片一起被删，卡片位置
+# 也就丢了（2026-11-09 Suda：商品卡要出现在它原本该在的位置）。现在只把 http 图且带非空 title 的
+# 转成占位符留在原位，渲染时还原成卡片；`data:` 内嵌图（AIO 那 8 张）和其他图片照旧删除。
+_CARD_IMG = re.compile(r"<img\b[^>]*>", re.I)
+_CARD_IMG_TOKEN = re.compile(r"^__GEO_CARD_IMG_([A-Za-z0-9%._~-]+)__$")
+_CARD_RULE = re.compile(r"^(?:-{2,}|\*{3}|_{3})$")
 
 _PRODUCT_TABLE_HEADER = re.compile(
     r"^\|\s*id\s*\|.*\b(?:goods|商品)\b.*\b(?:price|价格)\b.*\b(?:rating|评分)\b.*\|\s*$",
@@ -1874,6 +1886,29 @@ _PRODUCT_TABLE_IMG = re.compile(
     r"<img\b[^>]*\bsrc=[\"']([^\"']+)[\"'][^>]*>", re.I,
 )
 _PRODUCT_IMAGE_TOKEN = re.compile(r"^__GEO_PRODUCT_IMAGE_([A-Za-z0-9%._~-]+)__$")
+
+
+def _protect_card_images(value: str) -> str:
+    """正文商品卡图转占位符，保留位置；其余图片交给后面的删除步骤。
+
+    条件从严：src 是 http(s)、必须有非空 title。AIO 的 8 张图全是 data: 内嵌，会被跳过。
+    """
+    from urllib.parse import quote
+
+    def swap(match: "re.Match[str]") -> str:
+        tag = match.group(0)
+        src = re.search(r'\bsrc=["\']([^"\']+)["\']', tag, re.I)
+        title = re.search(r'\btitle=["\']([^"\']*)["\']', tag, re.I)
+        alt = re.search(r'\balt=["\']([^"\']*)["\']', tag, re.I)
+        if not src or not str(src.group(1)).lower().startswith(("http://", "https://")):
+            return tag
+        if not title or not title.group(1).strip():
+            return tag
+        payload = "~".join(quote(part, safe="") for part in
+                           (src.group(1), alt.group(1) if alt else "", title.group(1)))
+        return f"__GEO_CARD_IMG_{payload}__"
+
+    return _CARD_IMG.sub(swap, value)
 
 
 def _protect_product_table_images(value: str) -> str:
@@ -1921,6 +1956,7 @@ def normalize_answer_html(text: str) -> str:
     value = value.replace(PRODUCT_VIEWER_NOISE, " ")
     # 先保护商品表中的图片，普通回答中的图片仍按原规则删除。
     value = _protect_product_table_images(value)
+    value = _protect_card_images(value)
     value = _HTML_IMG.sub("", value)
     value = _HTML_IMAGE_ALT.sub("", value)
     value = _HTML_PLATFORM_BLOCK.sub("", value)
@@ -1937,7 +1973,7 @@ def normalize_answer_html(text: str) -> str:
     value = "\n".join(lines)
     value = _HTML_BR.sub("\n", value)
     value = _HTML_UNWRAP.sub("", value)
-    value = _HTML_LEFT.sub("", value)      # 兜底：任何残留标签
+    value = _HTML_LEFT_SAFE.sub("", value)  # 兜底：残留标签，但保留 <http…> 链接
     return value
 
 
@@ -2161,6 +2197,17 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
             out.append('<div class="answer-table-wrap">' + "".join(table) + "</div>")
             continue
 
+        # 正文商品卡：占位行开始，向下收集这一张卡的徽标 / 标题 / 价格 / 评分 / 卖点 / Shop 链接，
+        # 到分隔线、下一个占位行或空两行后的大标题为止（2026-11-09 卡片放回正文原位）。
+        if _CARD_IMG_TOKEN.fullmatch(stripped):
+            close_lists()
+            card, nxt = _render_inline_card(lines, i, inline)
+            if card:
+                out.append(card)
+            # 认成商品卡时跳过整段卡片内容；认不出时只丢掉这张图，后面的文字按普通正文渲染
+            i = nxt
+            continue
+
         heading = _re.match(r"^(#{1,6})\s+(.*)$", stripped)
         if heading:
             close_lists()
@@ -2197,6 +2244,101 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
 
     close_lists()
     return "".join(out)
+
+
+def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]:
+    """把从占位行开始的一段商品卡渲染成卡片 HTML，返回 (html, 下一行下标)。
+
+    卡内结构（ChatGPT）：占位图、可选徽标 `Best overall`、**1. 标题**、## $349.99、
+    `RivalB2 · 4.9/5 (23 reviews)`、卖点列表、一句推荐语、[Shop RivalB2](url)。
+    遇到下一个占位图、分隔线（---）或空两行后跟标题即认为这张卡结束。
+    """
+    import html as _html
+    from urllib.parse import unquote
+
+    parts = _CARD_IMG_TOKEN.fullmatch(lines[start].strip()).group(1).split("~")
+    src = unquote(parts[0]) if parts else ""
+    alt = unquote(parts[1]) if len(parts) > 1 else ""
+    title_attr = unquote(parts[2]) if len(parts) > 2 else ""
+
+    i = start + 1
+    badge = heading_text = price = rating_line = blurb = shop_url = shop_label = ""
+    bullets: list[str] = []
+    blank = 0
+    while i < len(lines):
+        text = lines[i].strip()
+        if _CARD_IMG_TOKEN.fullmatch(text) or _CARD_RULE.match(text):
+            break
+        if not text:
+            blank += 1
+            if blank >= 2 and i + 1 < len(lines) and re.match(r"^#{1,6}\s", lines[i + 1].strip()):
+                break
+            i += 1
+            continue
+        blank = 0
+        m_badge = re.fullmatch(r"`([^`]+)`", text)
+        m_title = re.match(r"^\*\*\d+\.\s*(.+?)\*\*$", text)
+        m_price = re.match(r"^##\s*(.+)$", text)
+        m_rating = re.match(r"^([^·|]{1,40})\s*·\s*([\d.]+)\s*/\s*5", text)
+        m_bullet = re.match(r"^[-*+]\s+(.+)$", text)
+        # 链接写成 [Shop RivalB2](<url>) 时，尖括号已被 escape 成 &lt;/&gt;，取完 URL 再剥掉。
+        # 链接写成 [Shop RivalB2](<url>)，尖括号 escape 后是 &lt;/&gt;，URL 里的 & 是 &amp;；两种都要认。
+        m_link = re.match(r"^\[([^\]]+)\]\(<?([^)\s]+?)>?\)$", text)
+        if m_badge and not badge and not heading_text:
+            badge = m_badge.group(1)
+        elif m_title and not heading_text:
+            heading_text = re.sub(r"\*\*", "", m_title.group(1)).strip()
+        elif m_price and not price:
+            price = m_price.group(1).strip()
+        elif m_rating and not rating_line:
+            rating_line = f"{m_rating.group(1).strip()} · {m_rating.group(2)}/5"
+        elif m_bullet:
+            bullets.append(m_bullet.group(1))
+        elif m_link and not shop_url:
+            shop_label = m_link.group(1)
+            shop_url = (m_link.group(2).strip().strip("<>")
+                        .replace("&lt;", "").replace("&gt;", "").replace("&amp;", "&"))
+        elif not blurb:
+            blurb = text
+        i += 1
+
+    # 判定是不是商品卡：必须带价格或「x/5」评分，或同时有编号标题与 、 卖点/描述。
+    # 文章配图（「360 Logo PNG Vector」这类带 title 的插图）也带 title，只凭 title 会认错；
+    # 认不出就返回空串，调用方按普通内容继续渲染（2026-11-09 实测 0034 有两张插图混进卡片）。
+    looks_like_card = bool(price) or bool(rating_line) or (
+        bool(heading_text) and bool(bullets or blurb))
+    if not looks_like_card:
+        return "", start + 1
+
+    name = heading_text or title_attr or alt
+    card = ['<div class="product-card product-card-inline">']
+    if src:
+        card.append('<div class="product-card-img"><img src="' + _html.escape(src, quote=True) +
+                    '" alt="' + _html.escape(alt, quote=True) +
+                    '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"></div>')
+    card.append('<div class="product-card-body">')
+    if badge:
+        card.append(f'<span class="product-card-badge">{inline(badge)}</span>')
+    if name:
+        card.append(f'<div class="product-card-title">{inline(name)}</div>')
+    meta = []
+    if price:
+        meta.append(f'<span class="product-card-price">{inline(price)}</span>')
+    if rating_line:
+        meta.append(f'<span class="product-card-rating">{inline(rating_line)}</span>')
+    if meta:
+        card.append('<div class="product-card-meta">' + " · ".join(meta) + "</div>")
+    if bullets:
+        card.append('<ul class="product-card-points">' +
+                    "".join(f"<li>{inline(item)}</li>" for item in bullets) + "</ul>")
+    if blurb:
+        card.append(f'<p class="product-card-blurb">{inline(blurb)}</p>')
+    if shop_url:
+        card.append('<a class="product-card-shop" href="' + _html.escape(shop_url, quote=True) +
+                    '" target="_blank" rel="noopener noreferrer">' +
+                    inline(shop_label or "Shop") + "</a>")
+    card.append("</div></div>")
+    return "".join(card), i
 
 
 def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dict,
