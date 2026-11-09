@@ -45,7 +45,7 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 
 跳过的站和打不开的帖子写进 `out/notes.md` 的「未覆盖来源」，不另找办法绕过登录。
 
-取网页一律 `net.py fetch <url> --country <市场代码>`：代理节点默认是 SG，和 Case 市场不一致时常取不到（2026-11-09 topuniversities 用 SG 节点失败、US 节点 25 秒取到），一次失败要多花半分钟到一分钟。被拦的页面不要再试 `render`，它在被拦页面上基本超时；`render` 只在 `fetch` 提示「可能是 JS 渲染页」时用，服务器上要装 Chrome 并设 `CHROME_PATH`，没装就跳过、按未覆盖来源记。同一个 URL 成功取过一次有缓存，返修轮重复打开不再付费。
+取网页一律 `net.py fetch <url> --country <市场代码>`：代理节点默认是 SG，和 Case 市场不一致时常取不到（2026-11-09 topuniversities 用 SG 节点失败、US 节点 25 秒取到），一次失败要多花半分钟到一分钟。被拦的页面不要再试 `render`，它在被拦页面上基本超时；`render` 只在 `fetch` 提示「可能是 JS 渲染页」时用，服务器上要装 Chrome 并设 `CHROME_PATH`，没装就跳过、按未覆盖来源记。同一个 URL 成功取过一次有缓存，返修轮重复打开不再付费。要读的页面攒成一批一次传给 `fetch`（默认 5 路并发，按输入顺序输出）；Facebook、X、Instagram、Threads、HardwareZone 和 7 天内直连被拦过的域名脚本会自动跳过直连。Reddit 每个工作目录最多 10 次联网请求（环境变量 `NET_REDDIT_MAX`，runner 默认设好，约 10 分钟），先挑最相关的版块和帖子，到上限后读不到的写进「未覆盖来源」。
 
 ## 和本地选词不一样的几步
 

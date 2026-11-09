@@ -27,6 +27,8 @@ agent 两种接法：
   --agent-cmd "…"   宿主自己的 harness：在工作目录里用 shell 执行，环境变量 WORKSPACE、
                     TASK_FILE 指向工作目录和任务说明；命令结束后应已写出 out/bank.json。
 调研要用的密钥照常放环境变量：SCRAPELESS_API_KEY、DATAFORSEO_LOGIN、DATAFORSEO_PASSWORD。
+Reddit 限量：agent 里的 net.py reddit 每个工作目录最多 NET_REDDIT_MAX 次联网请求（默认 10，约 10 分钟），
+计数在 logs/reddit_calls；宿主可用同名环境变量改。
 DataForSEO 按人记账：宿主把发起这次选词的同事姓名放进 DATAFORSEO_WHO；没传时记成「线上选词（未传调用人）」。
 DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.dataforseo/ledger.jsonl（DATAFORSEO_LEDGER 可改），
 用 shared/scripts/collect_keyword_data.py ledger 汇总。
@@ -86,7 +88,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 联网：
-- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> --country {market}`，被拦的页面不要再试 `render`；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
+- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> [<url> ...] --country {market}`，要读的页面攒成一批一次传（脚本并发取），被拦的页面不要再试 `render`；Reddit 本次最多 {reddit_max} 次联网请求（`net.py reddit` 到上限会提示），先挑最相关的版块和帖子，读不到的记进未覆盖来源；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`。
 - 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
 - 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 online-runner.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
 - 调研过程文件都放 `research/`。只在本工作目录里读写，不要访问工作目录以外的路径。
@@ -180,12 +182,19 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         src = SKILLS / name
         if src.is_dir():
             shutil.copytree(src, ws / ".agents/skills" / name, symlinks=True, ignore=IGNORE)
-    task = task_file.read_text(encoding="utf-8") if task_file else TASK.format(market=market, locale=locale, platforms=",".join(names))
+    task = task_file.read_text(encoding="utf-8") if task_file else TASK.format(market=market, locale=locale, platforms=",".join(names),
+                                                                                  reddit_max=os.environ.get("NET_REDDIT_MAX", "10"))
     (ws / "TASK.md").write_text(task, encoding="utf-8")
     write_json(ws / "out/result.json", {"status": "prepared", "market": market, "locale": locale,
                                          "platforms": names,
                                          "warnings": result["warnings"]})
     return 0
+
+
+def net_env(ws: Path) -> dict:
+    """net.py 的线上限量：Reddit RSS 约每分钟 1 次，是线上调研最慢的一环，默认每个工作目录最多 10 次联网请求。"""
+    return {"NET_REDDIT_MAX": os.environ.get("NET_REDDIT_MAX", "10"),
+            "NET_REDDIT_COUNTER": str(ws / "logs/reddit_calls")}
 
 
 async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
@@ -199,7 +208,7 @@ async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
            "ANTHROPIC_DEFAULT_HAIKU_MODEL": model, "ANTHROPIC_DEFAULT_SONNET_MODEL": model,
            "ANTHROPIC_DEFAULT_OPUS_MODEL": model, "CLAUDE_CODE_SUBAGENT_MODEL": model,
            "ANTHROPIC_AUTH_TOKEN": "", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-           "CLAUDE_CONFIG_DIR": str(home)}
+           "CLAUDE_CONFIG_DIR": str(home), **net_env(ws)}
     opts = ClaudeAgentOptions(cwd=str(ws), model=model, env=env, permission_mode="bypassPermissions",
                               disallowed_tools=["WebSearch", "WebFetch"], setting_sources=["project"],
                               max_turns=600)
@@ -227,7 +236,7 @@ def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
         if agent == "sdk":
             record.update(asyncio.run(_run_sdk(ws, task, timeout, tag)))
         else:
-            env = dict(os.environ, WORKSPACE=str(ws), TASK_FILE=str(task_path))
+            env = dict(os.environ, WORKSPACE=str(ws), TASK_FILE=str(task_path), **net_env(ws))
             with (ws / f"logs/agent{tag}.log").open("w", encoding="utf-8") as log:
                 proc = subprocess.run(agent_cmd, shell=True, cwd=ws, env=env, stdout=log,
                                       stderr=subprocess.STDOUT, timeout=timeout)

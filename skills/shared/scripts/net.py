@@ -5,15 +5,18 @@
 360 网关对 Claude 5 系列（opus/sonnet 槽）一律拒收（错误码 10137）。
 
   python3 net.py search "<query>" [--gl sg --hl en]    Google 搜索（Scrapeless，付费，每次 1 调用；同一查询有缓存）
-  python3 net.py fetch <url> [--raw] [--country SG] [--proxy] [--fresh]
+  python3 net.py fetch <url> [<url> ...] [--urls-file F] [--jobs 5] [--raw] [--country SG] [--proxy] [--fresh]
                                                         取页面正文；直连（15 秒超时）403/挑战页时改走 Scrapeless 目标国代理（付费，不开 JS，1 次），
                                                         再不行退到 Wayback；--country 填目标市场（默认 SG，节点不对常取不到）；
                                                         --proxy 跳过直连直接走代理（Facebook 公开群帖子要这样取，直连返回 400 登录页）；
-                                                        成功结果按 URL 缓存，--fresh 跳过缓存重取
+                                                        Facebook、X、Instagram、Threads、HardwareZone 和 7 天内直连被拦过的域名自动跳过直连；
+                                                        多个 URL 并发取（--jobs，默认 5），按输入顺序输出；
+                                                        成功结果按 URL 缓存，--fresh 跳过缓存并重新试直连
   python3 net.py render <url> [--raw] [--wait 8000]     JS 渲染页：独立无头 Chrome（临时 profile，免费，不占 Suda 的浏览器）
   python3 net.py reddit <url|query> [--sub X] [--t all|year|month] [--limit 25]
                                                         Reddit 走 RSS 直连（免费）：版块/帖子 URL 取帖子与评论，否则当搜索词；
-                                                        未登录约每分钟 1 次，按 x-ratelimit-reset 自动等待（.json/无头/Scrapeless 都被拦，2026-10-27 实测）
+                                                        未登录约每分钟 1 次，按 x-ratelimit-reset 自动等待（.json/无头/Scrapeless 都被拦，2026-10-27 实测）；
+                                                        设了环境变量 NET_REDDIT_MAX 时联网请求到上限就停（线上选词默认 10 次）
 
 缓存目录 /tmp/hb_net_cache。Scrapeless key 先读环境变量 SCRAPELESS_API_KEY（服务器上用），没有再读 macOS 钥匙串同名项。
 render 用的 Chrome 默认是 macOS 路径，服务器上用环境变量 CHROME_PATH 指定。

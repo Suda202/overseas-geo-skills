@@ -8,7 +8,7 @@
 2. **其余站先 `net.py fetch`**：直连（免费，15 秒超时）被拦时脚本自动改走 Scrapeless 不带 JS（付费，每页 1 次），再退 Wayback，`--country` 填目标市场。`net.py render` 无头 Chrome（免费）只用在直连 200 但正文是 JS 空壳的页面（Pantip 这类），被拦的页面上它基本超时（2026-11-09 实测 3/3、每次 68 秒）。不需要登录的页面不进 Suda 已登录的浏览器。
 3. **Scrapeless 开 JS 渲染反而更差**：Reddit 弹人机验证，Facebook 报 `Navigating frame was detached`，X 报隧道连接失败，topuniversities 同样报 frame detached（2026-11-09）。`net.py fetch` 已不再开 JS 重试。
 4. **列表页能读不等于帖子能读**：下表多数站只测了版块页或列表页，真要收原话先拿一个帖子页再测。Pantip 静态 HTML 里的评论是模板占位符，必须走无头 Chrome。
-5. **本机连不上的站只能走代理**：Facebook、X、Instagram、Threads、HardwareZone 直连都超时（本机没有系统代理）。
+5. **本机连不上的站只能走代理**：Facebook、X、Instagram、Threads、HardwareZone 直连都超时（本机没有系统代理）。`net.py fetch` 对这几个站和 7 天内直连被拦过的域名自动跳过直连；多个页面一次传给 `fetch` 并发取。
 6. **找不到入口就先搜帖子**：Facebook 群首页翻不了页，用 `net.py search 'site:域名 关键词'` 先拿帖子固定链接，再逐帖取。
 
 ## 通用平台
