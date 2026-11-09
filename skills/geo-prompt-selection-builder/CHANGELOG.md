@@ -2,6 +2,14 @@
 
 正文（SKILL.md 和 references/）只写现在的规则；规则怎么来的记在这里。2026-11-01 之前每条规则后面带的「Suda 某日」决定记录，完整保留在快照 `.snapshots/selection-simplify-20261101-002909/geo-prompt-selection-builder/`（项目根目录下），包括已合并删除的 after-sales-rules.md、representative-library.md 和被移出的对照笔记。
 
+## 2.56.1（2026-11-09）主题表「月搜索量」改成数字字段
+
+Suda 定：父关键词的精确月搜索量直接填进「月搜索量」，不另设「父关键词月搜索」字段，模板也这样改。
+
+- client-facing-base.md 主题表：月搜索量是数字字段，填父关键词的精确月均搜索量（优先 DataForSEO，品牌方给的 Semrush / Ahrefs 也可以）；只有区间时（没投放的 Google Ads 关键字规划师）留空、区间写进主题优先级依据，再用 DataForSEO 补；默认视图按主题优先级、再按月搜索量从大到小排。需求信号表的月搜索量仍是四档单选。
+- 取数顺序（Suda 同日补充）：品牌方给了 Semrush / Ahrefs / Similarweb 数据的直接用，不再跑 DataForSEO；没给的才跑 DataForSEO。selection-rules.md 第 6 步「月搜索量取哪家的」是唯一定义处，client-facing-base.md 改为引用；模板和 Ubrand 的「月搜索量」字段说明同步。
+- 飞书模板《AI 搜索监测确认表（模板）》主题表：删掉四档单选「月搜索量」，新建同名数字字段（整数、千分位），两行示例填 2,400、320，视图加排序，「主题优先级依据」示例改写；改前快照在项目根 `.snapshots/tpl-scene-rename-20261109/tpl_topics_before_vol.ndjson`。Ubrand 对客 Base 同步，填 DataForSEO 英国精确月均。
+
 ## 2.56.0（2026-11-09）评估预跑默认不跑、按需补跑；能力不明确的照常开行
 
 Suda 定：本地选词和线上出词要一致，评估预跑在本地也删掉，按需判断要不要跑。推翻 2026-10-29（1.81.9）的「品牌和业务范围竞品各一道评估预跑」。原因：它当时的三个用途里，判属性池相对竞品已随属性池删除（相对竞品挪到基线后），品牌事实核查随品牌呈现暂停，只剩补约束条件候选，品类认知题和需求信号已覆盖；品牌劣势的类型（说错、各家都一样、没公开、能力缺口）基线后看具体题的答案判更准，选词阶段只按官网规格判能力缺口。外部调研（`30-选Topic与生词/方案/研究与评审/brand-weakness-prompt-inclusion-research-20261109.md`）确认没有一家主张因品牌弱排除题。
