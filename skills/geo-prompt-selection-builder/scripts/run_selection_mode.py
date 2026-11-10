@@ -123,7 +123,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 候选题一个市场 30–60 道（validator 对超出只告警，但导出对超 60 报错）；每个导出文件（市场 × 产品线）最多 60 条。写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。
 
 输入：
-- `inputs/case-normalized.json`：归一化后的品牌资料。竞品用品牌资料里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
+- `inputs/case-normalized.json`：归一化后的品牌资料。竞品用品牌资料里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「产品线」和官网推出，写进 `config.category_label`。
 - 题型：只出发现题。品牌资料里的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 

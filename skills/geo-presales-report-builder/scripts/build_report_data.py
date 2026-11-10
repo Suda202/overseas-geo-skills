@@ -363,9 +363,9 @@ def load_case(path: Path) -> dict:
                 return value.strip()
         return None
 
-    # Case 输入合同 v2（2026-11-09）叫「品牌」「本期产品线」；旧 Case 文件、v8 题库 case_fields 仍是「品牌名称」「品类」
+    # 品牌资料输入合同 v2 叫「品牌」「产品线」（2026-11-10 前叫「本期产品线」）；旧 Case 文件、v8 题库 case_fields 仍是「品牌名称」「品类」
     brand, domain = pick("品牌", "品牌名称"), pick("官方域名")
-    category = pick("品类", "category_label", "本期产品线")
+    category = pick("品类", "category_label", "产品线", "本期产品线")
     competitors = []
     for index in (1, 2, 3):
         name, comp_domain = pick(f"竞品 {index}"), pick(f"竞品 {index} 官网域名")

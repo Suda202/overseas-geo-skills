@@ -10,7 +10,7 @@ the same fields. v1 payloads (公司名 / 业务模式 / 品类 / 痛点 …) ar
 Output is deterministic: ``case_fields`` with numbered fields expanded, the
 client's competitors (not frozen), locale and handoff. Things that need model
 judgment (category name ``category_label``, Topics, matrix rows, Prompts) are
-left to the skill; ``category_label`` is derived from 本期产品线 and the site.
+left to the skill; ``category_label`` is derived from 产品线 and the site.
 
 Exit codes: 0 valid, 1 input errors, 2 unreadable input.
 """
@@ -28,7 +28,7 @@ RETIRED_VERSIONS = ("presales-case-input/v1",)
 LOCALE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "references" / "locale-templates.json"
 
 # 与《品牌资料收集》第一部分一一对应（市场、语言是采集配置：市场走 --market，语言走 options.locale）。
-SCALAR_REQUIRED = ("品牌", "本期产品线")
+SCALAR_REQUIRED = ("品牌", "产品线")
 DOMAIN_KEY = "官方域名"
 SCALAR_OPTIONAL = ("适用边界",)
 # 多值字段，按 `字段 n` 展开；顺序原样保留（核心目标客户与购买场景按业务优先级排，最优先的在前）。
@@ -40,9 +40,9 @@ CASE_KEYS = set(SCALAR_REQUIRED + (DOMAIN_KEY,) + SCALAR_OPTIONAL + NUMBERED_LIS
 RETIRED_FIELDS = {
     "公司名": "删除；易混淆的公司或品牌名写进「品牌别名」",
     "品牌名称": "改名「品牌」",
-    "业务 / 产品名称": "改用「本期产品线」",
+    "业务 / 产品名称": "改用「产品线」",
     "业务模式": "删除；B2B / B2C 从「核心目标客户与购买场景」判断",
-    "品类": "删除；品类由选词从「本期产品线」和官网推出",
+    "品类": "删除；品类由选词从「产品线」和官网推出",
     "目标企业画像": "并入「核心目标客户与购买场景」",
     "垂直行业": "并入「核心目标客户与购买场景」",
     "目标客户": "并入「核心目标客户与购买场景」",
@@ -58,6 +58,8 @@ RETIRED_FIELDS = {
     "信任与合规": "删除",
     "地理与市场": "删除；市场走 --market",
 }
+# 改了名但仍照收的字段：旧名 → 新名。照收并给 renamed_field 提醒（线上表单未必同步改名）。
+RENAMED_FIELDS = {"本期产品线": "产品线"}  # 2026-11-10
 COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
 # 《品牌资料收集》：暂不确定的填「待补充」，按没填处理；不适用的填「无」，原样记录。
@@ -260,6 +262,15 @@ def normalize(payload: dict) -> dict:
     if not isinstance(case, dict):
         report.error("missing_field", "case", "缺少 case 对象")
         return _result(report, None)
+    case = dict(case)
+    for old_key, new_key in RENAMED_FIELDS.items():
+        if old_key in case:
+            value = case.pop(old_key)
+            if new_key in case:
+                report.warn("renamed_field", old_key, f"{old_key} 已改名「{new_key}」，两个都传了，用「{new_key}」")
+            else:
+                case[new_key] = value
+                report.warn("renamed_field", old_key, f"{old_key} 已改名「{new_key}」，本次按「{new_key}」收")
     for key in sorted(set(case) & set(RETIRED_FIELDS)):
         report.error("retired_field", key, f"{key} 已停用（2026-11-09）：{RETIRED_FIELDS[key]}")
     unknown = sorted(set(case) - CASE_KEYS - set(RETIRED_FIELDS))
@@ -314,9 +325,9 @@ def normalize(payload: dict) -> dict:
         "brand_aliases": [a for a in lists.get("品牌别名", []) if a != "无"],
         "official_domain": domains[0] if domains else "",
         "official_domains": domains,
-        "product_line": fields.get("本期产品线", ""),
-        # 品类名由选词从本期产品线和官网推出，写进题库 config.category_label
-        "derived_field_sources": {"brand_name": "品牌", "official_domain": "官方域名", "category_label": "本期产品线（推断）"},
+        "product_line": fields.get("产品线", ""),
+        # 品类名由选词从产品线和官网推出，写进题库 config.category_label
+        "derived_field_sources": {"brand_name": "品牌", "official_domain": "官方域名", "category_label": "产品线（推断）"},
         # 竞品取客户填的，不冻结；报告侧按提及率补足归线上与监测（2026-11-06 / 11-09）
         "competitor_selection": {"status": "client_input", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,

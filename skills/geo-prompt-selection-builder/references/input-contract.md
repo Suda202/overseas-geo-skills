@@ -47,7 +47,7 @@
 | `品牌` | string | 是 | 对外使用的正式品牌名。一家公司多个品牌的，每个品牌一份品牌资料 |
 | `品牌别名` | string 或 string[] | 否 | 简称、旧名、本地语言名、常见拼写和空格变体；易混淆、不能算作本品牌的名称也写在这里并注明。产品系列名和型号不从品牌方收，由我们查官网和公开资料补。报告的提及识别靠它 |
 | `官方域名` | string 或 string[] | 是 | `http://` 或 `https://` 开头的完整网址。可填多个，第一个是品牌主站，子域名、市场独立站往后写 |
-| `本期产品线` | string | 是 | 本期监测的产品或服务。品类名由选词从这里和官网推出，不单独收 |
+| `产品线` | string | 是 | 本期监测的产品或服务。品类名由选词从这里和官网推出，不单独收。旧名「本期产品线」（2026-11-10 改名）照收，按「产品线」记并给 `renamed_field` 警告 |
 | `适用边界` | string | 否 | 本期不覆盖的产品、渠道、客群或服务；边界外的问法不出题 |
 | `竞品` | object[] | 是 | 1–3 个，见下表。取客户填的，不冻结 |
 | `核心目标客户与购买场景` | string 或 string[] | 否 | 按业务优先级排，最重要的写第 1 条。每条写目标客户（B2C 写客户人群；B2B 写企业类型、规模及决策或使用角色）和购买场景与需求（要解决什么问题、购买时关注什么）。建议不超过 5 条 |
@@ -55,7 +55,7 @@
 
 **多值字段传字符串还是数组**：`品牌别名`、`官方域名`、`核心目标客户与购买场景`、`差异化优势` 两种都收。传数组时逐项展开成 `核心目标客户与购买场景 1`、`核心目标客户与购买场景 2`……，顺序原样保留；传字符串（表单的单个文本框）时整段作为一项，不按逗号拆。能拿到分项时优先传数组。
 
-**选填字段留空会怎样**：不报错。字段越少，题目越依赖本期产品线和公开调研。
+**选填字段留空会怎样**：不报错。字段越少，题目越依赖产品线和公开调研。
 
 **线上表单里不属于本合同的项**：「市场」传给入口脚本的 `--market`；「语言」映射到 `options.locale`；「AI 平台」传给 `--platforms`。手动上传题目时不调用生词 skill。
 
@@ -104,13 +104,13 @@
   "errors": [],
   "warnings": [{ "code": "pending_value", "field": "适用边界", "message": "适用边界 为「待补充」，已按未填写处理" }],
   "normalized": {
-    "case_fields": { "品牌": "...", "本期产品线": "...", "核心目标客户与购买场景 1": "...", "竞品 1": "...", "...": "..." },
+    "case_fields": { "品牌": "...", "产品线": "...", "核心目标客户与购买场景 1": "...", "竞品 1": "...", "...": "..." },
     "brand_name": "...",
     "brand_aliases": ["..."],
     "official_domain": "...",
     "official_domains": ["..."],
     "product_line": "...",
-    "derived_field_sources": { "brand_name": "品牌", "official_domain": "官方域名", "category_label": "本期产品线（推断）" },
+    "derived_field_sources": { "brand_name": "品牌", "official_domain": "官方域名", "category_label": "产品线（推断）" },
     "competitor_selection": { "status": "client_input", "selection_count": 3, "formal_competitors": [ "..." ] },
     "locale": "en",
     "handoff": { "confirmation_status": "none", "confirmed_fields": [], "sources": [] }
@@ -156,7 +156,7 @@
 
 ## 7. skill 拿到 `normalized` 之后做什么
 
-`case_fields`、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：品类名 `category_label`（从本期产品线和官网推出）、`brand_object_type`、目标客户与使用场景、矩阵行、主题、全部题目（见 [online-runner.md](online-runner.md)）。
+`case_fields`、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：品类名 `category_label`（从产品线和官网推出）、`brand_object_type`、目标客户与使用场景、矩阵行、主题、全部题目（见 [online-runner.md](online-runner.md)）。
 
 ## 8. 验收
 

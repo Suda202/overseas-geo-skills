@@ -1,3 +1,14 @@
+## 3.3.1（2026-11-10）字段「本期产品线」改名「产品线」
+
+触发依据：Suda 2026-11-10 指示，字段名不需要「本期」（每期只做一条产品线已写在规则里）。只改字段名，规则不变。
+
+- `scripts/normalize_case.py`：必填字段改为「产品线」；加 `RENAMED_FIELDS`，传旧名「本期产品线」照收、按「产品线」记，给 `renamed_field` 警告（线上表单未必同步改名，不报错）；两个都传时用「产品线」。
+- 同步改名：input-contract.md（字段表加旧名照收说明）、selection-rules.md、client-facing-base.md、demand-side-signals.md、online-runner.md、`run_selection_mode.py` 任务说明、两份输入示例、shared 两份公开模板、`check_skill_terms.py` v2 字段说明；report-builder `build_report_data.py` 的 `load_case` 认「产品线」，旧名「本期产品线」仍认。
+- `check_skill_terms.py` 退役说法加「本期产品线」。
+- `evals/e2e_input_contract.py` 改用新字段名，加一条旧名照收用例。
+- 飞书同步：《AI 搜索监测｜品牌资料收集》rev 567、研发文档《售前诊断生词优化》rev 235、《生词规则》rev 788，`本期产品线` 全部改为 `产品线`，其余内容逐字未动（改前改后 markdown 对比）。模板 Base 无此字样；已交付的客户 Base 不改。
+- 改前快照：项目根 `.snapshots/*.20261110-152113.bak`。
+
 ## 3.3.0（2026-11-10）锁版证据门槛、品牌方数据定位、去掉 Case 说法
 
 1. **锁版证据门禁对齐现实**。触发依据：Suda 2026-11-10 确认《品牌资料收集》第二部分（GSC、关键词工具、销售、客服数据）实际是选填，售前诊断阶段大部分客户不会提供；原门禁「证据级别不到一手不能锁版」（`after_sales_signal` 也挡）与现实冲突。改为：只有 `evidence_status: "hypothesis"`（整份题集没有任何买家信号，全靠推测）不能锁版；`after_sales_signal`（评价、社区、搜索数据等公开买家信号撑起的题集）加品牌方确认正式题即可锁版；`first_party_data: false` 只让就绪结论最高 Usable、交付说明写清还能补什么，不挡锁版。
