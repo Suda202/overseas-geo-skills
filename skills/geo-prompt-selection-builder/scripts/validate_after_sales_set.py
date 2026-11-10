@@ -511,8 +511,9 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
 REGISTERED_TYPES = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
 # The mention-rate KPI reads these types (Suda 2026-11-02).
 KPI_INTENTS = {"Discovery"}
-# Sales unit (Suda 2026-11-09): one Discovery Topic is sold as 10 Prompts, 8 of them distinct decisions.
-TOPIC_FLOOR, TOPIC_DECISION_FLOOR, OTHER_TOPIC_FLOOR = 10, 8, 5
+# Sales unit (Suda 2026-11-09): one Discovery Topic is sold as 10 Prompts, each a distinct purchase decision.
+# 3.0.0 dropped the second threshold (8 distinct decision signatures): one number, 10.
+TOPIC_FLOOR, OTHER_TOPIC_FLOOR = 10, 5
 # Sales cap (Suda 2026-11-09): candidates are uncapped; a sold Topic carries at most 10 formal Prompts.
 TOPIC_SALES_CAP = 10
 PROMPT_FIELDS = ("attribute_ref", "constraint_type")
@@ -640,41 +641,37 @@ def monitored_set(data: dict) -> str:
 # Row tiers: 高 / 中 / 低.
 TIER_INDEX = {"高": 0, "中": 1, "低": 2}
 TOPIC_PRIORITIES = ("高", "中", "低")
-CHANGEABILITY = ("高", "中", "低", "待试跑")
 BUSINESS_GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
 
 
-def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], warnings: list[str],
-                decision_rows: list[str]) -> None:
-    """Gates 49–52 (Suda 2026-11-02 审核清单 B2): the brand party's goals decide which Prompt types are written.
+# Only 发现型可见度 is open (selection-rules.md → 1), so business_goals is a constant (3.0.0): a bank that leaves it
+# out is read as this default. Reopening other goals makes it required again (type-branches.md「开放时要改的地方」).
+DEFAULT_BUSINESS_GOALS = {"selected": ["发现型可见度"], "information_named": False}
 
-    config.business_goals = {selected: [goals in the brand party's order], information_named: bool}. Presales banks
-    Alternatives belong to 竞争定位.
-    Verification and Accuracy are outside selection banks and rejected by the main type check. Transactional and
-    Support belong to no goal yet (selection-rules.md → 1) and always warn when written. decision_rows: the 高 / 中
-    对比 rows, named by gate 50.
+
+def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], warnings: list[str]) -> None:
+    """Gates 49 and 52 (Suda 2026-11-02 审核清单 B2): the brand party's goals decide which Prompt types are written.
+
+    config.business_goals = {selected: [goals], information_named: bool}; missing means DEFAULT_BUSINESS_GOALS
+    (3.0.0). Alternatives belong to 竞争定位. Verification and Accuracy are outside selection banks and rejected by
+    the main type check. Transactional and Support belong to no goal yet (selection-rules.md → 1) and always warn
+    when written. The dormant gates 50 / 51 (a selected goal with no Prompt of its type) were removed in 3.0.0.
     """
     goals = config.get("business_goals")
+    if goals is None:
+        goals = DEFAULT_BUSINESS_GOALS
     selected = goals.get("selected") if isinstance(goals, dict) else None
     if (not isinstance(goals, dict) or not isinstance(selected, list)
             or any(str(g).strip() not in BUSINESS_GOALS for g in selected)):
-        warnings.append("[W49] config.business_goals missing or malformed: write {selected: [the goals the brand party "
-                        f"picked, in its order, from {' / '.join(BUSINESS_GOALS)}], information_named: true / false}} "
-                        "so the goal-to-type checks (gates 50–52) can run")
+        warnings.append("[W49] config.business_goals malformed: leave it out (read as {selected: [\"发现型可见度\"], "
+                        "information_named: false}) or write {selected: [goals from "
+                        f"{' / '.join(BUSINESS_GOALS)}], information_named: true / false}} so gate 52 can run")
         return
     chosen = {str(g).strip() for g in selected}
     named_info = goals.get("information_named") is True
     by_type: dict[str, list[str]] = {}
     for q in questions:
         by_type.setdefault(intents.get(id(q)) or "", []).append(str(q.get("question_id")))
-    if "竞争定位" in chosen and not by_type.get("Competitor"):
-        shown = ", ".join(decision_rows[:8]) + (" …" if len(decision_rows) > 8 else "")
-        warnings.append("[W50] business_goals selects 竞争定位 but the bank holds no Competitor Prompt "
-                        f"(高 / 中 对比 rows: {shown or 'none opened'}); write the 对比 Prompts the step-1 "
-                        "evidence supports, or record why none is written")
-    if "声誉与信任" in chosen and not (by_type.get("Evaluation") or by_type.get("Trust")):
-        warnings.append("[W51] business_goals selects 声誉与信任 but the bank holds no Evaluation or Trust Prompt; write the "
-                        "评估 / 验证 Prompts the step-1 evidence supports, or record why none is written")
     unasked = [(t, label) for t, label, ok in (
         ("Competitor", "竞争定位", "竞争定位" in chosen),
         ("Alternatives", "竞争定位", "竞争定位" in chosen),
@@ -816,7 +813,9 @@ class BankValidator:
                 fail(f"config.slices: duplicate slice_id {sid}", errors)
             by_id[sid] = row
             tier = str(row.get("priority") or "").strip()
-            if tier not in TIER_INDEX:
+            if not tier and not self.row_due(row):
+                pass  # non-Discovery rows are registered without a tier this period (3.0.0)
+            elif tier not in TIER_INDEX:
                 fail(f"slice {sid}: priority must be 高 / 中 / 低; a situation the brand cannot "
                      "use or serve is not opened as a row", errors)
             elif is_blank(row.get("priority_basis")):
@@ -851,9 +850,6 @@ class BankValidator:
                 low_carried.append(f"{qid}({ref})")
             if not is_blank(row.get("topic_id")) and q.get("topic_id") != row.get("topic_id"):
                 fail(f"{qid}: topic_id {q.get('topic_id')!r} differs from its row {ref}'s {row.get('topic_id')!r}", errors)
-            change = str(q.get("changeability") or "").strip()
-            if change and change not in CHANGEABILITY:
-                fail(f"{qid}: changeability must be one of {'/'.join(CHANGEABILITY)}", errors)
         # Gate 48: 高 and 中 Discovery rows with no Prompt are an omission or a deliberate skip that needs a warning
         # decision; rows of the other types wait for their goals to open.
         bare = [sid for sid, row in by_id.items()
@@ -1004,11 +1000,8 @@ class BankValidator:
         for tid, items in sorted(by_topic.items(), key=lambda kv: str(kv[0])):
             kpi = [q for q in items if self.intents.get(id(q)) in KPI_INTENTS
                    and str(q.get("status") or "").strip() != "停测"]
-            decisions = {(str(q.get("attribute_ref") or "").strip(),
-                          tuple(sorted(str(c).strip() for c in (q.get("constraints") or []))))
-                         for q in kpi}
-            if kpi and (len(kpi) < TOPIC_FLOOR or len(decisions) < TOPIC_DECISION_FLOOR):
-                floor.append(f"{tid}: {len(kpi)} KPI Prompts / {len(decisions)} decision signatures")
+            if kpi and len(kpi) < TOPIC_FLOOR:
+                floor.append(f"{tid}: {len(kpi)} KPI Prompts")
             active = [q for q in items if str(q.get("status") or "").strip() != "停测"]
             if not kpi and active and len(active) < OTHER_TOPIC_FLOOR:
                 floor.append(f"{tid}: {len(active)} non-Discovery Prompts")
@@ -1042,10 +1035,10 @@ class BankValidator:
                     self.warnings.append(f"[W46] topic {tid}: priority {level} but its highest row is {best}; "
                                          "主题优先级 takes the highest 业务优先级 in the Topic (2.62.0) — change the rows, not the Topic")
 
-    # ---------- goals and slice tags (W49–W52, W62, W63) ----------
+    # ---------- goals and slice tags (W49, W52, W62, W63) ----------
 
     def check_goals_and_tags(self) -> None:
-        goal_checks(self.config, self.questions, self.intents, self.warnings, self.competitor_rows())
+        goal_checks(self.config, self.questions, self.intents, self.warnings)
         # Gates W62/W63 (Suda 2026-11-03): slice tags cut data across Topics. A value inside one Topic,
         # or under 5 Prompts, duplicates the Topic filter or reads as noise; export drops it either way.
         _, tag_problems, unregistered = _tag_plan(self.config, self.questions)
@@ -1055,12 +1048,6 @@ class BankValidator:
             listed = "; ".join(f"{qid}: {'、'.join(tags)}" for qid, tags in list(unregistered.items())[:6])
             self.warnings.append(f"[W63] hand-written tags not registered as a 自定义 value in config.tag_dimensions "
                                  f"({listed}{' …' if len(unregistered) > 6 else ''}); export leaves them out")
-
-    def competitor_rows(self) -> list[str]:
-        """高 / 中 对比 rows, named by gate 50."""
-        return sorted(sid for sid, r in slice_index(self.config).items()
-                      if str(r.get("prompt_type") or "").strip() == "Competitor"
-                      and TIER_INDEX.get(str(r.get("priority") or "").strip()) in (0, 1))
 
     # ---------- conditions and audiences (gate 38; W36, W37, W39) ----------
 

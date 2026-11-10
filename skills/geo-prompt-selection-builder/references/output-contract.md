@@ -40,10 +40,10 @@
 | `evidence_status` | 题库整体的证据级别；`hypothesis` 或 `after_sales_signal` 不能锁版，就绪结论最高 Usable |
 | `first_party_data` | 有没有用到品牌方一手数据；`false` 时就绪结论最高 Usable |
 | `customer_confirmation` | `scope_status`（试跑前确认业务范围）、`prompt_set_status`（试跑后确认正式题）、`status` |
-| `business_goals` | 本期做的目标：`{selected: [...], information_named: true / false}`。`selected` 取值：发现型可见度 / 竞争定位 / 品牌呈现 / 声誉与信任；目前只做发现型可见度，一律写 `{selected: ["发现型可见度"], information_named: false}`（selection-rules.md → 1；其他目标的启用方式待定）；`information_named` 是品牌方是否点名问题解决（口径见 selection-rules.md → 7. 写题「什么算品牌方点名问题解决」）。必须写 |
+| `business_goals` | 本期做的目标：`{selected: [...], information_named: true / false}`。`selected` 取值：发现型可见度 / 竞争定位 / 品牌呈现 / 声誉与信任；目前只做发现型可见度，是常量：可以不写，validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充（selection-rules.md → 1）；写了就要写对（W49）。`information_named` 是品牌方是否点名问题解决（口径见 type-branches.md「什么算品牌方点名问题解决」）。开放其他目标时恢复必填，见 type-branches.md「开放时要改的地方」 |
 | `shopping_cards` | 每条产品线统计不统计商品卡：`{product_line, status, basis}`，`status` 为 开 / 关 / 试跑后定，`basis` 写按什么商品属性判的（selection-rules.md → 1）；试跑后由监测改成开或关并写上出卡比例。选填，没写时按关处理 |
 | `topics` | `{topic_id, topic, priority, priority_basis}`；`priority` 即主题优先级，高 / 中 / 低 |
-| `slices` | 矩阵行：`{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`；一行 ＝ 产品线 × 市场 × 目标客户 × 场景 × 意图类型，`market` 在单市场题库里可以省略；`scene` 存这一行的使用场景（键名沿用）；不写 `journey_stage`；`priority` 即业务优先级，高 / 中 / 低；`prompt_type` 是这一行唯一的意图类型，用英文键（Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support，对应发现 / 问题解决 / 评估 / 对比 / 替代 / 验证 / 交易 / 售后），同一任务几种问法开几行（selection-rules.md → 5「意图类型：八类」）；每一行都要写。本期不出题的行也写在这里，不带 `topic_id`：非发现行看类型就知道本期不出；低档发现行在 `priority_basis` 末尾写「本期不出：……」（写法见 selection-rules.md → 5；品牌用不上、硬条件的处境不开行，记在 notes「没开的格子」）；它们和其他行一样写进对客确认表 |
+| `slices` | 矩阵行：`{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`；一行 ＝ 产品线 × 市场 × 目标客户 × 场景 × 意图类型，`market` 在单市场题库里可以省略；`scene` 存这一行的使用场景（键名沿用）；不写 `journey_stage`；`priority` 即业务优先级，高 / 中 / 低，只有发现行写，非发现行本期只登记、不判档，不写 `priority`；`prompt_type` 是这一行唯一的意图类型，用英文键（Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support，对应发现 / 问题解决 / 评估 / 对比 / 替代 / 验证 / 交易 / 售后），同一任务几种问法开几行（selection-rules.md → 5「意图类型：八类」）；每一行都要写。本期不出题的行也写在这里，不带 `topic_id`：非发现行看类型就知道本期不出，开行依据写在 `priority_basis`，不写进对客确认表；低档发现行在 `priority_basis` 末尾写「本期不出：……」，和其他发现行一样写进对客确认表（写法见 selection-rules.md → 5；品牌用不上、硬条件的处境不开行，记在 notes「没开的格子」） |
 | `attribute_plan` | 约束条件名单（键名沿用）：`{attribute, no_carrier_reason}`；`attribute` 就是三张表「约束条件」的选项名（约束条件不单设表）。不写 `relative_competitor`、`priority`、`common_constraints`、`brand_value` |
 | `tag_dimensions` | 跨主题切片标签的维度：`{dimension, basis, values}`；`dimension` 为目标客户 / 使用场景 / 属性（也可写约束条件，值是约束条件）/ 自定义，`basis` 写跨哪些主题、切完谁拿去做什么，`values`：属性维度写业务范围「差异化优势」对应的约束条件，必须列出；自定义必填；其余维度选填。什么时候登记、怎么避开和主题重复见 selection-rules.md → 6「切片标签」；不需要横切就写 `[]` |
 | `buyer_quotes` | 需求信号（对客 Base 的需求信号表；键名沿用）：`{输入编号, 原话, 目标客户, 约束条件}`。约束那一列的键名就是 `约束条件`，和对客 Base 列名、采集脚本的 `signals.csv` 一致；`constraint` 是英文别名，2.65.0 之前的旧键名 `约束` 也仍认。条件关键词写在这里，W36 按它核对题面条件有没有依据。线上跑 Case 时必须填，见 online-runner.md；不填时 W36、W37 跳过并告警一次 |
@@ -73,7 +73,6 @@
 | `slice_ref` | 所在矩阵行；目标客户、使用场景、意图类型、产品线从这一行读 | 所属切片 |
 | `attribute_ref` | 测的主约束条件（键名沿用）；宽泛品类题留空字符串 | 约束条件（第一个；默认视图隐藏） |
 | `constraints` | 题面条件（关键词列表），没有写 `[]` | — |
-| `changeability` / `changeability_basis` | 可改变性（高 / 中 / 低 / 待试跑）及信源结构与可执行动作依据，仅作探索，不改档 | 可改变性 |
 | `status` | 待审核 / 需修改 / 已批准 / 正式 / 停测 | 状态 |
 
 按需才写：`condition_basis`（条件不来自引用的需求信号时，写 `{条件: 依据}`）、`audience_implicit`（题面没写提问人、但条件已经隐含时的理由）、`intent_key` 和 `market_decision`（多市场，`shared_equivalent` / `localized` / `market_specific`）、`evidence_refs`（引用的买家原话编号，选填）、`tags`（只写登记在 `tag_dimensions` 自定义维度里的值；目标客户、约束条件这些标签导出时派生，不写在题上）、`brand_weakness`（题面条件落在品牌明显劣势里时写一句「品牌在 X 上不如 Y（事实，出处）」；提示词优先级据此降一档，selection-rules.md → 7「品牌明显劣势」）、`reason_note`（拆题理由、复合条件真实性这类要给品牌方看的一句，接在出题原因后面）。
@@ -122,7 +121,7 @@ python3 -I scripts/validate_after_sales_set.py BANK.json [--previous PRIOR-BANK.
 | 32 | 题面用采集语言写：一半以上的字符是该语言的文字；语种识别（lingua，75 种语言）判定题面是另一门语言、且采集语言自身的置信度低于 0.05 |
 | 38 | 对比题必须带使用场景（`constraints` 不为空） |
 | 42 | 相对弱势可保留，是否满足硬条件需人工核实并记录 |
-| 43 | 业务优先级和主题优先级取值合法、写了依据；题的主题和所在行一致 |
+| 43 | 发现行的业务优先级和主题优先级取值合法、写了依据（非发现行不判档，不查）；题的主题和所在行一致 |
 | 60 | 每一行的 `prompt_type` 是八类之一 |
 | 61 | 题的类型和所属行的 `prompt_type` 一致；不接受 Verification、Accuracy |
 | 66 | 一个主题只放一种意图类型 |
@@ -148,15 +147,13 @@ python3 -I scripts/validate_after_sales_set.py BANK.json [--previous PRIOR-BANK.
 | W46 | 主题优先级和组内最高的业务优先级对不上（改矩阵行的档位，不单改主题） |
 | W47 | 单产品线 × 单市场的候选题不在 30–60 道 |
 | W48 | 业务优先级为高、中的发现行没有题；非发现行本期不出，不告警 |
-| W49 | 没写 `config.business_goals`，或写法不对（`selected` 不是四个目标里的值） |
-| W50 | （休眠：目前 `selected` 只会是发现型可见度）`business_goals` 含竞争定位，但题库里没有任何对比题（高、中对比行也就都没有题） |
-| W51 | （休眠，同上）`business_goals` 含声誉与信任，但题库里没有评估题或验证题 |
+| W49 | `config.business_goals` 写法不对（`selected` 不是四个目标里的值）；没写时按发现型可见度填充，不告警 |
 | W52 | 题库里有发现以外的题，但 `business_goals` 里没有对应目标：对比、替代对应竞争定位，评估、验证对应声誉与信任，问题解决对应 `information_named`；交易、售后本期没有对应目标，写了就告警 |
 | W53 | 题没有所在行（没写 `slice_ref`） |
 | W54 | 无条件的发现题（只在品牌方点名大词时写） |
 | W56 | 有题写了审核状态、有题没写，没写的按待审核算 |
 | W57 | 属性只被还没批准的题承载，不算覆盖（客户确认后是报错） |
-| W59 | 主题不够 10 道考核题（发现题）或不够 8 个不同购买决策，其他类型的主题不够 5 道（停测题不计）；按 selection-rules 第 6 步硬要求 3 的顺序处理（补遗漏需求与条件 → 有意义的复合条件 → 查是否拆得过细），仍不足的不凑重复题，品牌方可用其他主题的题补足 10 道（混合选择），写处理记录，品牌方点名单买的注明读数波动风险 |
+| W59 | 发现主题不够 10 道考核题（发现题，每道一个不同购买决策，按 selection-rules 第 7 步「去重看购买决策」人工判），其他类型的主题不够 5 道（停测题不计）；按 selection-rules 第 6 步硬要求 3 的顺序处理（补遗漏需求与条件 → 有意义的复合条件 → 查是否拆得过细），仍不足的不凑重复题，品牌方可用其他主题的题补足 10 道（混合选择），写处理记录，品牌方点名单买的注明读数波动风险 |
 | W62 | 切片标签维度不合格：维度名不对、没写 `basis`、自定义没登记 `values`；某个值不到 2 个主题、不到 5 道题、和主题名相同；整个维度每个值都只落在一个主题（这个维度就是主题的切分轴）（停测、需修改、问题解决不计） |
 | W63 | 题上手写的 `tags` 没登记在 `tag_dimensions` 的自定义维度里，导出时不带 |
 | W64 | 业务优先级为低的行挂了题：低档默认不出题（selection-rules.md → 5）；高、中档覆盖不够时从低档补的题属正常，写处理记录保留理由 |

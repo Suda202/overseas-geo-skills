@@ -1,3 +1,21 @@
+## 3.0.0（2026-11-10）定稿冻结版
+
+触发依据：`30-选Topic与生词/方案/生词方法论定稿-20261110.md` 第四节「定稿前最后一批减法」8 条、四b「门禁严度排查」和第四节表格后的「两处文字修正」。本版之后正文按定稿第五节「改动协议」冻结：改正文只认线上真实失败、品牌方或销售书面反馈、试跑或基线证明产出错题三类触发，CHANGELOG 每条记触发证据。
+
+1. **线上瘦身**（`scripts/run_selection_mode.py` prepare）：不再拷贝 `geo-monitoring`，TASK 加一句「指向 geo-monitoring 的链接是锁版阶段规则，线上不读」；`geo-presales-report-builder` 只拷 `scripts/`。查 `collect_answers.py` 的导入发现它在模块加载时就要 `geo-presales-report-editor/scripts/geo_presales_core` 和 `geo-presales-crawl-integrity/scripts/audit_crawl_integrity.py`（后者再读同 skill 的 `references/platform-contract.json`），旧版 prepare 这两个都没拷，工作目录里的 `collect_answers.py --help` 直接 `ModuleNotFoundError`；现在按最小集合拷这三样（`PARTIAL_COPIES`），实测工作目录里 `--help` 正常。另把 skill 目录里 lark-cli 落下的 Base 导出（`tbl*.ndjson`、`tbl*.manifest.json`、`tpl_*.manifest.json`）加进 `IGNORE`。TASK 加跳读清单：selection-rules.md 里对客 Base 写法、品牌方资料流程、售前主题重聚对账三类小节线上跳过。online-runner.md「怎么跑」同步。
+2. **删 `changeability` / `changeability_basis`**：选词阶段取值只能是「待试跑」，判定依据（引用域名结构）试跑后才有，归监测侧（`geo-monitoring/scripts/changeability_domains.py` 照旧写回题库，选词不读）。output-contract.md 题字段表删这一行；online-runner.md 第 7 步删「写待试跑」；client-facing-base.md 提示词库删「可改变性」列和隐藏列提法；validator 删 `CHANGEABILITY` 取值检查；`check_client_base.py` 把提示词库「可改变性」列入已移除字段，「信源壁垒」的现行说法改为「归监测侧」。
+3. **`business_goals` 常量化**：只做发现期间，validator 对缺失的 `config.business_goals` 按 `{selected: ["发现型可见度"], information_named: false}` 填充（`DEFAULT_BUSINESS_GOALS`），W49 只报写了但写法不对；默认填充后 W52 照查。删休眠门禁 W50、W51（及只为 W50 服务的 `competitor_rows`）。type-branches.md「开放时要改的地方」加第 6 条「恢复 business_goals 必填与 W50 / W51」。selection-rules.md → 1、output-contract.md、online-runner.md 第 1 步同步。
+4. **W59 删第二阈值**：去掉「8 个不同购买决策」（`TOPIC_DECISION_FLOOR` 与决策签名计数），只留「每发现主题至少 10 道、每道一个不同购买决策」一个数；每道是否不同仍按第 7 步「去重看购买决策」人工判。output-contract.md W59 描述同步；selection-rules.md 硬要求 3 在 2.62.0 已是单一数字，未改。
+5. **主题同档排序砍为一级**（selection-rules.md → 6「主题优先级」）：同档只按点名条目序号排（对应第 1 条在前，只对应我方补充处境的在后），搜索量写进依据作参考、不参与排序；删「先排发现类主题 → 条目序号 → 搜索量」三级瀑布和「月搜索量取哪家的」强制取数段。原段里全书唯一的「展示量不算搜索量」定义和取量方法搬到 signal-sources.md 新小节「月搜索量取哪家的（关键词工具）」，signal-sources.md 两处、client-facing-base.md 一处原指向 selection-rules 的引用改指新位置。总纲档位表、client-facing-base.md 主题表、SKILL.md 步骤表同步。
+6. **非发现行只登记、不判档、不进对客确认表**：selection-rules.md → 5（「意图类型：八类」末段、「业务优先级」的非发现行条目、查漏段）改为非发现行只写进 `config.slices`、开行依据照写、不写 `priority`；type-branches.md「业务优先级上限」整节标为开放对应目标时启用、本期暂不执行，「开放时要改的地方」加第 7 条反向步骤；output-contract.md `slices` 说明去掉「和其他行一样写进对客确认表」、门禁 43 只查发现行；client-facing-base.md 提示词矩阵只放发现行；validator 对非发现行缺 `priority` / `priority_basis` 不报错；`check_client_base.py` 见到非发现行报「从对客表删掉」并不再查其档位。
+7. **重聚对账阈值**（selection-rules.md → 6「报价与交付的先后」）：删「个数差不超过 1 / 差 2 个及以上」，改为被采购的主题有变动必须书面告知品牌方确认，其余调整在交付说明里写明；client-facing-base.md 主题表同步。
+8. **TASK 明写题量硬限**：候选 30–60 道、每个导出文件 ≤60 条，超出先砍中档行里证据最弱的题（validator 对超 60 只告警 W47，导出却报错，agent 不改就白跑一轮返修）。online-runner.md 第 7 步同步。
+9. **两处文字修正**：总纲「只测买家真在问、有机会推动的问题」删「、有机会推动」；第 6 步主题判法「问买家会不会拿这类东西换那类东西（看用途、特性、价格）」2.62.0 已在「怎么聚」里，未重复加。
+
+- 测试：pytest 删 W50 / W51 用例，加缺失 goals 默认填充、默认填充后 W52 照查、W50 / W51 已删、W59 只看 10 道、非发现行不判档五处断言（62 passed）；`verify_workflow.py` 改「行没定档」用例到发现行，新增非发现行不判档、goals 缺失默认、goals 写错告警、changeability 不读四个用例，`check_client_base` 的类型行用例改为非发现行要报（67/67）。
+- `check_skill_terms.py` 加 8 组退役说法（有机会推动、个数差阈值、三级排序、指向 selection-rules 的取量、8 个不同决策、changeability 待试跑、非发现行照常判档进对客表、business_goals 一律写 / 必须写）；原 2026-11-02 那条「不写进对客表」严格规则收窄到低档发现行，避免和本版非发现行不进对客表冲突。
+- 改前快照：项目根 `.snapshots/*.20261110-104950.bak`（本 skill 14 个文件）。
+
 ## 2.65.0（2026-11-09）约束列统一叫「约束条件」
 
 Suda 指出 2.64.0 的做法是把补丁当修复：发现 `scope_gates.py` 读 `约束`、文档写 `约束条件` 后，只在文档里加了一句「键名是 `约束`」，两边还是不统一，下一个照文档写的人照样会踩。

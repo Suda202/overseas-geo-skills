@@ -267,9 +267,12 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
             row["slice_ref"] = "M-001"
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
-        # 可改变性低保留业务优先级：题上没有优先级，档位只读所在行
-        data["questions"][0]["changeability"] = "低"
-        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
+        # 可改变性归监测侧（3.0.0）：选词不读 changeability，写了什么都不查
+        data["questions"][0]["changeability"] = "待试跑"
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("changeability", result.stdout)
+        data["questions"][0].pop("changeability")
         # 低档行可以出题（Suda 2026-11-05）；行没定档、行优先级没写依据、主题对不上：报错
         data["questions"][2]["slice_ref"] = "M-002"
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
@@ -292,6 +295,27 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         # 品类认知只在属性池前预跑，不进新结构题库（Suda 2026-10-29）
         data["questions"][4]["prompt_type"] = "Category Awareness"
         self.assertIn("Category Awareness Prompts in the bank", validate(data).stdout)
+
+    def test_non_discovery_row_needs_no_priority(self) -> None:
+        # 3.0.0：非发现行只登记、不判档；发现行没定档仍报错
+        data = current_bank(5, "hypothesis")
+        data["config"]["slices"].append({"slice_id": "M-002", "prompt_type": "Competitor", "scene": "对比"})
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("slice M-002", result.stdout)
+        data["config"]["slices"][1]["prompt_type"] = "Discovery"
+        self.assertIn("slice M-002: priority must be", validate(data).stdout)
+
+    def test_topic_floor_is_ten_prompts_only(self) -> None:
+        # 3.0.0：W59 只剩「每发现主题至少 10 道」一个数，不再按 8 个不同决策签名告警
+        data = current_bank(10, "hypothesis")
+        for i, row in enumerate(data["questions"]):
+            text = f"Which cat litter box works best for setup number {i}?"
+            row.update(user_question=text, monitoring_prompt=text, attribute_ref="", constraints=[])
+        result = validate(data)
+        self.assertNotIn("[W59]", result.stdout)
+        data["questions"] = data["questions"][:9]
+        self.assertIn("[W59] Topics below the default coverage target (topic_1: 9 KPI Prompts)", validate(data).stdout)
 
     def test_topic_needs_prompts(self) -> None:
         data = current_bank(2, "hypothesis")
@@ -706,25 +730,29 @@ def add_typed(data: dict[str, object], prompt_type: str) -> None:
 
 
 class BusinessGoalGateTests(unittest.TestCase):
-    """Gates 49–52 (Suda 2026-11-02 审核清单 B2): business_goals decides which Prompt types are written."""
+    """Gates 49 and 52 (Suda 2026-11-02 审核清单 B2; W50 / W51 removed in 3.0.0): business_goals decides which Prompt
+    types are written."""
 
-    def test_49_missing_business_goals(self) -> None:
-        self.assertIn("config.business_goals missing or malformed", validate(goal_bank(None)).stdout)
-        self.assertNotIn("config.business_goals missing", validate(goal_bank(["发现型可见度"])).stdout)
-        # 写了但取值不在四个目标里，同样告警
-        self.assertIn("config.business_goals missing or malformed", validate(goal_bank(["品牌曝光"])).stdout)
+    def test_49_missing_business_goals_defaults_to_discovery(self) -> None:
+        # 3.0.0：只做发现期间 business_goals 是常量，没写按 {selected: [发现型可见度], information_named: false} 填
+        self.assertNotIn("[W49]", validate(goal_bank(None)).stdout)
+        self.assertNotIn("[W49]", validate(goal_bank(["发现型可见度"])).stdout)
+        # 写了但取值不在四个目标里，仍告警
+        self.assertIn("[W49] config.business_goals malformed", validate(goal_bank(["品牌曝光"])).stdout)
 
-    def test_50_competitive_positioning_without_competitor_prompt(self) -> None:
-        data = goal_bank(["发现型可见度", "竞争定位"])
-        self.assertIn("selects 竞争定位 but the bank holds no Competitor Prompt", validate(data).stdout)
-        add_typed(data, "Competitor")
-        self.assertNotIn("selects 竞争定位", validate(data).stdout)
+    def test_default_goals_still_drive_gate_52(self) -> None:
+        # 默认填充后 W52 照查：没写 business_goals 的题库出了对比题、问题解决题照样告警
+        for prompt_type, label in (("Competitor", "竞争定位"), ("Information", "information_named")):
+            with self.subTest(prompt_type=prompt_type):
+                data = goal_bank(None)
+                add_typed(data, prompt_type)
+                self.assertIn(f"{prompt_type} Prompts written without the goal {label}", validate(data).stdout)
 
-    def test_51_reputation_without_evaluation_prompt(self) -> None:
-        data = goal_bank(["声誉与信任"])
-        self.assertIn("selects 声誉与信任 but the bank holds no Evaluation or Trust Prompt", validate(data).stdout)
-        add_typed(data, "Evaluation")
-        self.assertNotIn("selects 声誉与信任", validate(data).stdout)
+    def test_dormant_gates_50_51_removed(self) -> None:
+        # 3.0.0：选了目标却没有对应题型的休眠门禁 W50 / W51 已删
+        out = validate(goal_bank(["发现型可见度", "竞争定位", "声誉与信任"])).stdout
+        self.assertNotIn("[W50]", out)
+        self.assertNotIn("[W51]", out)
 
     def test_52_type_written_without_its_goal(self) -> None:
         for prompt_type, label in (("Competitor", "竞争定位"), ("Evaluation", "声誉与信任"),
@@ -762,7 +790,6 @@ class EightTypeTests(unittest.TestCase):
         add_typed(ok, "Trust")
         out = validate(ok).stdout
         self.assertNotIn("written without the goal", out)
-        self.assertNotIn("holds no Evaluation or Trust Prompt", out)
 
     def test_transactional_and_support_have_no_goal_yet(self) -> None:
         for prompt_type, label in (("Transactional", "交易（未开放）"), ("Support", "售后（未开放）")):
@@ -784,7 +811,7 @@ class WarningCodeTests(unittest.TestCase):
 
     @staticmethod
     def short_bank() -> dict[str, object]:
-        data = goal_bank(None)
+        data = goal_bank(["品牌曝光"])  # malformed goals keep one [W49] open (missing goals default since 3.0.0)
         data["config"]["collection_config"] = {"market": "United States", "language": "en"}
         for i, text in ((0, "best litter box"), (1, "best cat litter box")):
             data["questions"][i]["user_question"] = text  # [W32] too short, twice

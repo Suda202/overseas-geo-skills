@@ -68,15 +68,27 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SKILLS = SKILL.parent
-# 会用到的 skill：选词本身、shared 的联网与信号脚本、售前报告的采集器（研究预跑）、
-# 监测（选词文档里有指向它的链接）。
-SKILL_DIRS = ("geo-prompt-selection-builder", "shared", "geo-presales-report-builder", "geo-monitoring")
+# 整个拷贝的 skill：选词本身、shared 的联网与信号脚本。
+# geo-monitoring 不拷（3.0.0）：选词文档里指向它的链接是锁版阶段规则，线上不读。
+SKILL_DIRS = ("geo-prompt-selection-builder", "shared")
+# 只拷一部分的 skill（3.0.0）：研究预跑只用 geo-presales-report-builder/scripts/collect_answers.py，
+# 它在导入时还要 geo-presales-report-editor 的 geo_presales_core 包和 geo-presales-crawl-integrity 的
+# audit_crawl_integrity.py（后者读同 skill 的 references/platform-contract.json 覆盖平台合同）。
+# 这是让 collect_answers.py 能在工作目录里跑起来的最小集合。
+PARTIAL_COPIES = (
+    ("geo-presales-report-builder", "scripts"),
+    ("geo-presales-report-editor", "scripts/geo_presales_core"),
+    ("geo-presales-crawl-integrity", "scripts/audit_crawl_integrity.py"),
+    ("geo-presales-crawl-integrity", "references/platform-contract.json"),
+)
 # legacy = 已归档的旧规则，不给 agent 看，免得混用两套口径
 # client-facing-base.md = 只用来建对客确认表，线上不写这张表，不拷贝（省 ~31KB 上下文）
 # demand-side-signals.md = signal-sources.md 里「客户提供什么」等品牌方数据小节，线上没有客户数据
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
                                 "*.local.json", "build", "legacy",
-                                "client-facing-base.md", "demand-side-signals.md")
+                                "client-facing-base.md", "demand-side-signals.md",
+                                # lark-cli 在 skill 目录里落下的 Base 导出（客户数据），线上不需要
+                                "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
 DEFAULT_TIMEOUT = 120 * 60
 # 与 geo-presales-report-builder/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
 KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa"}
@@ -84,6 +96,13 @@ KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "over
 TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续，把假设写进 `out/notes.md`。
 
 任务：给这个品牌生成一批提示词。先读 `.agents/skills/geo-prompt-selection-builder/references/online-runner.md`（线上和本地不一样的地方），再按 `.agents/skills/geo-prompt-selection-builder/references/selection-rules.md` 第 1–8 步逐步做。只做到校验与导出，不试跑、不写对客确认表。
+
+线上跳过不读：
+- 文档里指向 `geo-monitoring` 的链接是锁版阶段规则（试跑、挑正式题、锁版、基线），线上不读，工作目录里也没有这个 skill。
+- selection-rules.md 里这三类小节线上跳过：对客 Base 写法（第 8 步「写进对客表后回读行数」、「交付」里的对客确认表，以及所有指向 client-facing-base.md 的说明）；品牌方资料流程（第 1 步「品牌方先给，我们核对」「只要会改变选词判断的数据」，第 2 步「GSC 和搜索词报告分开用」）；售前主题重聚对账（第 6 步「报价与交付的先后」「品牌方售前点名的主题不重聚」）。
+
+题量硬限（超了导出脚本直接报错、要返修）：
+- 候选题一个市场 30–60 道（validator 对超出只告警，但导出对超 60 报错）；每个导出文件（市场 × 产品线）最多 60 条。写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。
 
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
@@ -192,6 +211,14 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         src = SKILLS / name
         if src.is_dir():
             shutil.copytree(src, ws / ".agents/skills" / name, symlinks=True, ignore=IGNORE)
+    for name, rel in PARTIAL_COPIES:
+        src = SKILLS / name / rel
+        dst = ws / ".agents/skills" / name / rel
+        if src.is_dir():
+            shutil.copytree(src, dst, symlinks=True, ignore=IGNORE)
+        elif src.is_file():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
     task = task_file.read_text(encoding="utf-8") if task_file else TASK.format(market=market, locale=locale, platforms=",".join(names),
                                                                                   reddit_max=os.environ.get("NET_REDDIT_MAX", "10"))
     (ws / "TASK.md").write_text(task, encoding="utf-8")
