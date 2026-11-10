@@ -347,7 +347,7 @@ def slim_for_html(data: dict) -> dict:
                                                            "share_of_voice", "average_rank",
                                                            "citation_share", "citation_rate")} for b in core + extra]
         # 带官网的提及率只供统计与下游读取，不进售前 HTML（Suda 2026-09-29）。
-        # 引用率（官网引用率）2026-11-07 起进问题明细，参照 Hbrand 基线报告。
+        # 引用率（官网引用率）2026-11-07 起进问题明细，参照现行基线报告样稿。
         for field in ("linked_mention_rate", "linked_mention_counts", "official_citation_counts"):
             (slice_value.get("kpis") or {}).pop(field, None)
         for row in slice_value.get("competition_all", []):

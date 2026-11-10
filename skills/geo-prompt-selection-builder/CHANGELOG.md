@@ -21,6 +21,10 @@ Suda 定，起因是查线上 token 消耗时发现：6 次线上实跑（`80-�
 - **`signal-sources.md` 拆分**：把「客户提供什么」「品牌方填写的业务信息」「品牌方提供的数据」三块搬到新文件 `references/demand-side-signals.md`，原文件留一句指针。`signal-sources.md` 从 19,984 字符降到 13,081（线上读这份），新文件 7,337 字符（线上不读）。`client-facing-base.md` 里两处指向 `signal-sources.md → 客户提供什么` 的链接改指新文件，`online-runner.md` 第 2 步同步。
 - 验证：`check_skill_terms.py` 通过、`pytest scripts/test_validate_after_sales_set.py` 59 passed、`evals/verify_workflow.py` 65/65、`e2e_input_contract.py` 与 `e2e_repair_loop.py` 全过。改前快照 `.snapshots/*.20261109-2026xx.bak` 与 `.snapshots/signal-sources.md.split-20261109-202835.bak`。
 
+## 2.64.0（2026-11-09）列序按实际填充率排
+
+Suda 定。用某制氧机客户那份表 198 条信号统计了每个字段的填充率，发现需求信号的「月搜索量」只有 4.5% 有值却排在第 6 列，品牌方扫表时看到一大片空白会以为没填完；主题表的「父关键词」「月搜索量」两个结构化字段全空，量只写在依据文字里。模板与某制氧机客户表都已调：需求信号把月搜索量、引用它的问题收到尾部；主题表把父关键词、月搜索量提到依据前面。Suda 明确编号类字段不重要，不往回加。
+
 ## 2.63.0（2026-11-09）信号登记按目录收齐；对客表首次写入的重复与空值防护
 
 Suda 定，起因是某制氧机客户 PocketDevice 那次交付：选词规则本身写得清楚，但执行时漏了脚本产物——只读了子代理手收的那份社区原话，DataForSEO 的 10 条搜索量和搜索侧 133 条搜索联想都没进需求信号表，对客表里信号停在 72 条。同期部署脚本跑了两遍，业务范围整表翻倍，成对重复在表格里很难一眼看出。

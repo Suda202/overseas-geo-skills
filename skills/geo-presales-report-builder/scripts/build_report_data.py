@@ -1545,7 +1545,7 @@ def build_sources(metrics: dict, answers: list[dict],
             if canonical:
                 unique_sources.add(canonical)
 
-    # 引用率：至少引用一次该来源的回答 ÷ 有效回答（按回答计，与按次数计的引用份额并列；参照 Hbrand 基线报告）
+    # 引用率：至少引用一次该来源的回答 ÷ 有效回答（按回答计，与按次数计的引用份额并列；参照现行基线报告样稿）
     answers_n = len(discovery)
     domain_answers: dict[str, set] = defaultdict(set)
     type_answers: dict[str, set] = defaultdict(set)
@@ -2392,7 +2392,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                 if not answer:
                     continue
                 # 品牌提及与指标层同口径：在去引用正文上匹配（剥引用标签/定义行/图片 alt + 清商品卡
-                # 商家列），否则 ([RivalH1][4]) 这类引用标签会被算成提及（Hbrand 2026-10-22）。
+                # 商家列），否则 ([RivalH1][4]) 这类引用标签会被算成提及（2026-10-22）。
                 # answer 原文仍用于正文渲染与引用抽取。
                 ranking_text = de_cite.blank_merchant_columns(de_cite.strip_citations(answer))
                 ranked = []

@@ -530,7 +530,7 @@
   /* ---------- 03 引用 ---------- */
 
   function renderSources() {
-    // 每个「引用份额」旁边配「引用率」（至少引用一次该来源的回答 ÷ 有效回答），参照 Housebell 基线报告
+    // 每个「引用份额」旁边配「引用率」（至少引用一次该来源的回答 ÷ 有效回答），参照现行基线报告样稿
     var slice = currentSlice();
     var sources = slice.sources || {};
     var rates = sources.rates || {};
