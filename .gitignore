@@ -21,3 +21,7 @@ skills/*/scripts/confirm-base-target.local.json
 
 # 测试缓存
 .pytest_cache/
+
+# e2e 跑出来的报告，只在本地看
+skills/geo-prompt-selection-builder/reports/
+skills/geo-prompt-selection-builder/evals/reports/

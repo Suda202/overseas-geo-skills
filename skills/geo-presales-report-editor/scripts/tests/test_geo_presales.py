@@ -11,6 +11,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 FIXTURES_DIR = SCRIPT_DIR.parent / "evals" / "fixtures"
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR.parents[1] / "geo-metrics" / "scripts"))
 
 from geo_presales_core.config import normalize_config
 from geo_presales_core.crawler import answer_validity, import_crawl

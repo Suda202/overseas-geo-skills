@@ -1,6 +1,6 @@
 # 影子审计说明
 
-`scripts/geo_presales.py` 和 `scripts/geo_presales_core/` 保留原来的本地 crawler 数据导入、规则计算和报告回归能力，但其定位已经改变。生产回答采集由搜索团队负责，本地 crawler 适配器不进入正式链路：
+`scripts/geo_presales.py`、`scripts/geo_presales_editor/` 和 `geo-metrics/scripts/geo_presales_core/` 保留原来的本地 crawler 数据导入、规则计算和报告回归能力，但其定位已经改变。生产回答采集由搜索团队负责，本地 crawler 适配器不进入正式链路：
 
 - 用于研发测试公式、URL 规则、对象匹配和任务协议；
 - 用于拿同一批原始样本与公司后端结果对账；

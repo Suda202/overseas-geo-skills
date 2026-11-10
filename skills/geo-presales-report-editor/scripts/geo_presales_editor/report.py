@@ -5,8 +5,8 @@ from pathlib import Path
 
 from .store import record_event, save_manifest
 from .tasks import create_task
-from .util import ContractError, format_display, get_path, now_iso, read_json, sha256_file, sha256_obj, write_json
-from .metrics import _is_sentiment_answer
+from geo_presales_core.util import ContractError, format_display, get_path, now_iso, read_json, sha256_file, sha256_obj, write_json
+from geo_presales_core.metrics import _is_sentiment_answer
 
 
 MODULE_TITLES = {

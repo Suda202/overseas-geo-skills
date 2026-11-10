@@ -16,8 +16,9 @@ Brand sources (extract takes exactly one):
   --aliases 'A,B,C'   single-brand mode, kept for backward compatibility
   --lexicon <json>    multi-brand mode; reads brands[].name/aliases/type so
                       every unit carries the brand it is judged for (competitor
-                      sentiment matrix). Alias matching is identical in both
-                      modes (see alias_pattern).
+                      sentiment matrix). Brand recognition and citation
+                      stripping are geo-metrics' (core find_alias_spans +
+                      de_cite_crawl), the same as the visibility metrics.
 """
 from __future__ import annotations
 
@@ -32,24 +33,24 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+# 品牌识别与去引用只有一份实现，在 geo-metrics（与提及率同口径）
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
+import de_cite_crawl as de_cite  # noqa: E402
+from geo_presales_core.util import (  # noqa: E402
+    case_sensitive_for,
+    find_alias_spans,
+    read_case_sensitive_aliases,
+    resolve_alias_spans,
+)
+
 
 
 # ---------- de-cite / UI strip (markdown crawler exports) ----------
 
 def strip_answer_text(text: str) -> str:
-    """Remove citation markup and widget UI so only body prose remains.
-
-    Handles ChatGPT-style markdown pills ``([Source][N])``, reference
-    definition lines ``[N]: url "title"``, stray ``[N]`` markers, and Gemini
-    ``<FollowUp .../>`` widgets plus simple HTML tags such as ``<br>``.
-    """
-    t = re.sub(r"<FollowUp\b[^>]*/?>", "", text)
-    t = re.sub(r"<br\s*/?>", " ", t)
-    t = re.sub(r"<[A-Za-z][^>]{0,60}>", " ", t)
-    t = re.sub(r"\(\s*\[[^\]]{0,80}\]\s*\[\s*\d+\s*\]\s*\)", "", t)
-    t = re.sub(r"^\s*\[\d+\]:\s*\S.*$", "", t, flags=re.M)
-    t = re.sub(r"\[\s*\d+\s*\]", "", t)
-    return t
+    """去引用标记、平台组件与商品卡渠道列，和提及率读同一份正文；再去掉残留的 ``[N]`` 角标。"""
+    t = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
+    return re.sub(r"\[\s*\d+\s*\]", "", t)
 
 
 def split_units(text: str) -> list[str]:
@@ -71,27 +72,21 @@ def split_units(text: str) -> list[str]:
 
 # ---------- brand alias matching ----------
 
-def alias_pattern(alias: str) -> re.Pattern[str]:
-    """Latin aliases get word-boundary guards (case-insensitive); other scripts literal."""
-    if re.fullmatch(r"[A-Za-z][A-Za-z0-9\+\.\' ]*", alias):
-        esc = re.escape(alias).replace(r"\ ", r"\s*")
-        return re.compile(r"(?<![A-Za-z0-9])" + esc + r"(?![A-Za-z0-9])", re.I)
-    return re.compile(re.escape(alias))
-
-
-def compile_aliases(aliases: list[str]) -> list[re.Pattern[str]]:
-    cleaned = [a.strip() for a in aliases if a.strip()]
-    if not cleaned:
-        raise SystemExit("必须提供至少一个品牌别名（--aliases）")
-    return [alias_pattern(a) for a in cleaned]
+def brands_in_unit(unit: str, brands: list[dict]) -> list[dict]:
+    """单元里认出的品牌（core 匹配 + 跨品牌最长优先消解），按词表顺序返回。"""
+    candidates = [
+        {**span, "object_id": index}
+        for index, brand in enumerate(brands)
+        for span in find_alias_spans(unit, brand["aliases"], brand["case_sensitive_aliases"])
+    ]
+    hit = {span["object_id"] for span in resolve_alias_spans(candidates)}
+    return [brand for index, brand in enumerate(brands) if index in hit]
 
 
 def load_lexicon(path: str) -> list[dict]:
-    """Load brands[] from a brand lexicon JSON and compile each brand's aliases.
+    """Load brands[] from a brand lexicon JSON as {name, type, aliases, case_sensitive_aliases}.
 
-    Every entry is normalised to {name, type, patterns}. Alias matching reuses
-    ``compile_aliases`` so a multi-brand run matches exactly as a single-brand
-    run would for the same alias list (no divergent case/boundary handling).
+    The lexicon's top-level ``case_sensitive_aliases`` applies to every brand, as in the metrics.
     """
     data = json.load(open(path))
     brands = data.get("brands") if isinstance(data, dict) else None
@@ -110,6 +105,7 @@ def load_lexicon(path: str) -> list[dict]:
         raise SystemExit(f"词表 {path} 缺少非空的 brands 数组")
     compiled: list[dict] = []
     seen: set[str] = set()
+    case_sensitive = read_case_sensitive_aliases(path)
     for entry in brands:
         name = str(entry.get("name") or "").strip()
         aliases = [str(a) for a in (entry.get("aliases") or []) if str(a).strip()]
@@ -123,7 +119,8 @@ def load_lexicon(path: str) -> list[dict]:
         compiled.append({
             "name": name,
             "type": str(entry.get("type") or "").strip() or None,
-            "patterns": compile_aliases(aliases),
+            "aliases": aliases,
+            "case_sensitive_aliases": case_sensitive_for(aliases, case_sensitive),
         })
     return compiled
 
@@ -176,10 +173,9 @@ ANSWER_FIELD = {
     "alexa": "md_text",
 }
 
-# Scrapeless 锚点残留文案：它紧贴在商品名后（`RivalA5 CarafeGo to product
-# viewer dialog for this item.`），会让证据句带着平台 UI 文案交付给客户。
-# 与 geo-presales-report-builder 的渲染清洗共用同一常量。
-PRODUCT_VIEWER_NOISE = "Go to product viewer dialog for this item."
+# Scrapeless 锚点残留文案（`RivalA5 CarafeGo to product viewer dialog for this item.`），
+# 常量与报告渲染、词表挖掘共用 geo-metrics 的 de_cite_crawl。
+PRODUCT_VIEWER_NOISE = de_cite.PRODUCT_VIEWER_NOISE
 
 
 def answer_text(task: dict, platform: str) -> str:
@@ -265,7 +261,7 @@ def iter_crawl_files(crawl_dir: str):
 
 
 def resolve_brands(args: argparse.Namespace) -> list[dict]:
-    """Build the [{name, type, patterns}] brand list from --lexicon or --aliases."""
+    """Build the [{name, type, aliases, case_sensitive_aliases}] brand list from --lexicon or --aliases."""
     if args.lexicon and args.aliases:
         raise SystemExit("--lexicon 与 --aliases 互斥，请只提供其一")
     if args.lexicon:
@@ -273,9 +269,11 @@ def resolve_brands(args: argparse.Namespace) -> list[dict]:
     if not args.aliases:
         raise SystemExit("必须提供 --aliases（单品牌）或 --lexicon（多品牌词表）")
     aliases = [a.strip() for a in args.aliases.split(",") if a.strip()]
+    if not aliases:
+        raise SystemExit("必须提供至少一个品牌别名（--aliases）")
     name = (args.brand or "").strip() or aliases[0]
     return [{"name": name, "type": args.brand_type or None,
-             "patterns": compile_aliases(aliases)}]
+             "aliases": aliases, "case_sensitive_aliases": []}]
 
 
 def cmd_extract(args: argparse.Namespace) -> None:
@@ -309,7 +307,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
         scope_answers += 1
         matched_here: set[str] = set()
         for unit in split_units(answer_text(task, platform)):
-            matched = [b for b in brands if any(p.search(unit) for p in b["patterns"])]
+            matched = brands_in_unit(unit, brands)
             if not matched:
                 continue
             distinct_units += 1

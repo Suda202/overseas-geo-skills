@@ -21,7 +21,7 @@ from urllib.parse import urlsplit
 
 REPO_SCRIPTS = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])
-)) / "geo-presales-report-editor" / "scripts"
+)) / "geo-metrics" / "scripts"
 
 CITATION_FIELD = {
     "overview": "source",

@@ -13,7 +13,7 @@ metadata:
 把一条评测 Case 一路带到可交客户的单文件 HTML 报告。**本 skill 只编排、零新逻辑**：口径、校验、计算、渲染都在被调 skill 及其脚本里。这里只回答两个问题：下一步跑什么；停下来时请哪个 skill 出场。
 
 - 负责：阶段顺序、断点续跑、每个暂停点的分派。
-- 不负责：任何指标口径（builder/editor 统一实现）、采集缺陷的判定规则（crawl-integrity）、Claim 判读规则（sentiment-judge）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
+- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集缺陷的判定规则（crawl-integrity）、Claim 判读规则（sentiment-judge）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
 - 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过 crawl-integrity）；只判情感用 `geo-presales-sentiment-judge`；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
 
 ## 从哪一段进

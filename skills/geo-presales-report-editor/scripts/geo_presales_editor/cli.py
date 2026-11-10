@@ -6,15 +6,15 @@ import shutil
 import sys
 from pathlib import Path
 
-from .config import normalize_config
-from .crawler import import_crawl
-from .deterministic import prepare_answers
-from .metrics import compute_metrics
-from .questions import normalize_question_bank
+from geo_presales_core.config import normalize_config
+from geo_presales_core.crawler import import_crawl
+from geo_presales_core.deterministic import prepare_answers
+from geo_presales_core.metrics import compute_metrics
+from geo_presales_core.questions import normalize_question_bank
 from .report import finalize_report, prepare_report_tasks
 from .store import create_run_dir, record_event, require_run, save_manifest
 from .tasks import create_prepare_tasks, pending_tasks, submit_task
-from .util import ContractError, read_json, write_json
+from geo_presales_core.util import ContractError, read_json, write_json
 
 
 def _emit(value) -> None:

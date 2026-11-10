@@ -6,7 +6,7 @@
 点名品牌少还有两种原因，都不算题不合格：题面是单数（Which tool …），AI 只推一个；词表里没有答案点的品牌。
 
 1. 归题、去重、判失败页和 ``changeability_domains.py`` 用同一套（同一个 Resolver、同一套镜像目录去重）。
-2. 正文：取平台正文字段，用 ``geo-presales-report-audit/scripts/de_cite_crawl.py`` 去引用标记、
+2. 正文：取平台正文字段，用 ``geo-metrics/scripts/de_cite_crawl.py`` 去引用标记、
    清空商品卡的销售渠道列（渠道不是候选）。
 3. 品牌：题库 config 的本品和竞品（``brand_name`` / ``aliases`` / ``competitors`` /
    ``competitor_selection.formal_competitors``）∪ ``--lexicon`` 品牌词表（售前报告同一格式，
@@ -17,7 +17,7 @@
    单选答案、词表缺品牌（补进词表重跑）。
 
 没有词表时只认题库 config 里的几家，计数会偏低、误标变多：先跑
-``geo-presales-report-builder/scripts/mine_brand_lexicon.py --collect-dir <试跑目录>`` 挖候选，
+``geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <试跑目录>`` 挖候选，
 人工收成词表再给 ``--lexicon``。
 
 输出（``--out`` 目录）：``brand_count.csv``（每题 × 平台一行）、``brand_count.json``（含每次回答的品牌名单）。
@@ -39,7 +39,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parents[1]
-for extra in (HERE, SKILLS / "geo-presales-report-audit" / "scripts"):
+for extra in (HERE, SKILLS / "geo-metrics" / "scripts"):
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
 
@@ -47,6 +47,7 @@ import changeability_domains as cd  # noqa: E402  （同时把售前报告数据
 from changeability_domains import brd  # noqa: E402
 from de_cite_crawl import blank_merchant_columns, strip_citations  # noqa: E402
 from geo_presales_core.crawler import answer_validity  # noqa: E402
+import geo_presales_core.util as core_util  # noqa: E402
 from geo_presales_core.util import find_alias_spans, normalize_text, resolve_alias_spans  # noqa: E402
 
 DEFAULT_TYPES = ("Discovery", "Alternatives")
@@ -93,7 +94,9 @@ def build_brands(config: dict, lexicon_path: Path | None):
             raise SystemExit(f"词表读不了（{status}）：{lexicon_path}")
         for entry in entries:
             add(entry["name"], entry["aliases"])
-    brands = [{"object_id": f"b{i}", "name": v["name"], "aliases": sorted(v["aliases"])}
+    case_sensitive = core_util.read_case_sensitive_aliases(lexicon_path)
+    brands = [{"object_id": f"b{i}", "name": v["name"], "aliases": sorted(v["aliases"]),
+               "case_sensitive_aliases": core_util.case_sensitive_for(v["aliases"], case_sensitive)}
               for i, v in enumerate(merged.values())]
     return brands, status
 
@@ -101,7 +104,7 @@ def build_brands(config: dict, lexicon_path: Path | None):
 def brands_in(text: str, brands: list[dict]) -> list[str]:
     spans = []
     for b in brands:
-        for span in find_alias_spans(text, b["aliases"]):
+        for span in find_alias_spans(text, b["aliases"], b["case_sensitive_aliases"]):
             spans.append(dict(span, object_id=b["object_id"]))
     first: dict[str, int] = {}
     for span in resolve_alias_spans(spans):

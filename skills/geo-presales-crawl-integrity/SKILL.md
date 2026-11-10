@@ -64,7 +64,7 @@ metadata:
    - `SHOPPING_FLAG_WITHOUT_CARDS` → 警告。AIO 标了概览购物却没有商品卡，商品层丢失；该条购物指标标注采集缺陷。其余 `SHOPPING_*` 只是信息（抽到多少卡、排除了哪些占位卡、广告卡、AIO `products` 字段），见缺陷目录 D9。
    - `TARGET_OUTSIDE_BODY_ONLY` → 不是缺陷。这是「被检索但未被提及」的内容机会，单独统计并交给内容侧。
 
-5. **交下游前对齐口径**：品牌分母、引用计数单位（次数 vs 去重来源）的唯一权威实现是 `geo-presales-report-editor/scripts/geo_presales_core/`（`geo-presales-report-builder` 复用该实现），本 skill 不另立一套。两处不一致时以 core 的定义为准。
+5. **交下游前对齐口径**：品牌分母、引用计数单位（次数 vs 去重来源）的唯一权威实现是 `geo-metrics/scripts/geo_presales_core/`（`geo-presales-report-builder` 复用该实现），本 skill 不另立一套。两处不一致时以 core 的定义为准。
 
 ## 交付门槛
 

@@ -28,7 +28,44 @@ COMMON_MULTI_LABEL_SUFFIXES = {
     "com.cn", "net.cn", "org.cn", "gov.cn",
     "com.sg", "com.hk", "com.tw", "co.nz",
     "com.br", "com.mx", "co.in", "co.kr",
+    # 东南亚市场二级后缀；缺了会把所有马来西亚站点并成一个 "com.my" 桶
+    "com.my", "net.my", "org.my", "gov.my", "edu.my", "net.sg", "org.sg",
+    "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
 }
+
+# Google 等新跟踪参数：采集入口先剥掉（strip_tracking_params），避免同一页面被计成多条引用
+INGEST_EXTRA_TRACKING_KEYS = {
+    "srsltid", "gbraid", "wbraid", "yclid", "igshid", "gad_source", "gclsrc",
+    "msclkid", "ref_src", "ref_url", "guccounter", "guce_referrer", "spm", "scm",
+}
+
+# 平台站内跳转 / 聚合页链接，按契约不算引用
+PLATFORM_INTERNAL_HOSTS = {
+    "google.com", "google.com.sg", "google.com.my", "google.co", "google.com.hk",
+    "gstatic.com", "googleusercontent.com", "bing.com", "chatgpt.com", "openai.com",
+    "perplexity.ai", "gemini.google.com",
+    "copilot.microsoft.com", "bingapis.com", "grok.com",
+}
+
+
+def is_platform_internal(host: str) -> bool:
+    return any(host == h or host.endswith("." + h) for h in PLATFORM_INTERNAL_HOSTS)
+
+
+def strip_tracking_params(raw_url: str) -> str:
+    """采集入口剥离跟踪参数，保留路径与分片；没有可剥的就原样返回。"""
+    keys = TRACKING_QUERY_KEYS | INGEST_EXTRA_TRACKING_KEYS
+    try:
+        parts = urlsplit(str(raw_url))
+        pairs = parse_qsl(parts.query, keep_blank_values=True)
+    except ValueError:
+        return str(raw_url)
+    if not pairs:
+        return str(raw_url)
+    kept = [(k, v) for k, v in pairs if k.casefold() not in keys]
+    if len(kept) == len(pairs):
+        return str(raw_url)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
 
 
 class ContractError(ValueError):
@@ -111,7 +148,7 @@ def _has_latin_edge(char: str) -> bool:
     return bool(char and char.isalnum() and _LATIN_EDGE.match(char))
 
 
-def find_alias_spans(text: str, aliases: list[str]) -> list[dict]:
+def find_alias_spans(text: str, aliases: list[str], case_sensitive=None) -> list[dict]:
     normalized = unicodedata.normalize("NFKC", str(text or ""))
     matches: list[dict] = []
     for raw_alias in sorted({str(a).strip() for a in aliases if str(a).strip()}, key=len, reverse=True):
@@ -135,7 +172,27 @@ def find_alias_spans(text: str, aliases: list[str]) -> list[dict]:
         if key not in seen:
             seen.add(key)
             deduped.append(item)
+    if case_sensitive:
+        # 列在名单里的写法只认原文与名单某个大小写逐字相同（ERA≠era、AVG≠avg）。同位置按
+        # casefold 去重后留下哪个别名随集合顺序变，所以判原文写法在不在名单里，不判与留下的别名相等
+        listed = set(case_sensitive)
+        deduped = [s for s in deduped if s["alias"] not in listed or s["matched_text"] in listed]
     return deduped
+
+
+def case_sensitive_for(aliases, case_sensitive) -> list[str]:
+    """名单里属于这组别名的写法（按 normalize_alias 归并），挂到品牌对象的 case_sensitive_aliases。"""
+    own = {normalize_alias(a) for a in aliases or []}
+    return sorted({c for c in case_sensitive or [] if normalize_alias(c) in own})
+
+
+def read_case_sensitive_aliases(lexicon_path) -> list[str]:
+    """品牌词表 JSON 顶层的 case_sensitive_aliases：要区分大小写的品牌名或别名写法，对词表内外所有品牌生效。"""
+    if not lexicon_path or not Path(lexicon_path).exists():
+        return []
+    raw = json.loads(Path(lexicon_path).read_text(encoding="utf-8"))
+    values = raw.get("case_sensitive_aliases") if isinstance(raw, dict) else None
+    return [str(v).strip() for v in values or [] if str(v).strip()]
 
 
 def resolve_alias_spans(spans: list[dict]) -> list[dict]:

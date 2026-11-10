@@ -192,7 +192,7 @@ def _match_object(text: str | None, objects: list[dict]) -> str | None:
     candidates = [
         {**span, "object_id": obj["object_id"]}
         for obj in objects
-        for span in find_alias_spans(text, obj["aliases"])
+        for span in find_alias_spans(text, obj["aliases"], obj.get("case_sensitive_aliases"))
     ]
     resolved = resolve_alias_spans(candidates)
     return resolved[0]["object_id"] if resolved else None
@@ -241,7 +241,7 @@ def attribute_cards(cards: list[dict] | None, objects: list[dict]) -> list[dict]
             host = normalize_host(offer["url"]) if offer.get("url", "") and "://" in offer["url"] else ""
             official = bool(host) and any(domain_matches(host, d) for d in owner["official_domains"])
             if not official and offer.get("merchant"):
-                official = bool(find_alias_spans(offer["merchant"], owner["aliases"]))
+                official = bool(find_alias_spans(offer["merchant"], owner["aliases"], owner.get("case_sensitive_aliases")))
             offer["channel"] = "official" if official else "third_party"
         out.append(row)
     return out

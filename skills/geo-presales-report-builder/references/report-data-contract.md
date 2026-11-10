@@ -201,7 +201,7 @@
 
 **shopping**
 
-- 由 core `compute_metrics` 产出（`metrics["shopping"]`，实现在 `geo_presales_core/shopping.py`），本层原样挂到切片上，不重算。口径以 `geo-presales-report-editor` 的统计范围契约「购物层指标」为准。
+- 由 core `compute_metrics` 产出（`metrics["shopping"]`，实现在 `geo_presales_core/shopping.py`），本层原样挂到切片上，不重算。口径以 `geo-metrics` 的统计范围契约「购物层指标」为准。
 - `by_platform` 键是平台目录名（`chatgpt` / `overview` / `aimode` / `gemini`）。全部平台切片也只给逐平台结果，不合池。没有商品字段的平台进 `unsupported_platforms`，不出现在 `by_platform` 里。
 - 比率字段都是 core 的 `{numerator, denominator, raw, display}` 结构，分子分母随值携带；分母为 0 时 `raw=null`、`display="—"`。
 - `products` / `competitor_products_where_target_absent` / `merchants` 各截前 20 行；`target_products` 全量。
@@ -225,7 +225,7 @@
 
 ## 口径来源
 
-- 可见度、声量、平均提及位置、引用、机会分档：复用 `geo-presales-report-editor/scripts/geo_presales_core` 的 `prepare_answers` 与 `compute_metrics`。
+- 可见度、声量、平均提及位置、引用、机会分档：复用 `geo-metrics/scripts/geo_presales_core` 的 `prepare_answers` 与 `compute_metrics`。
 - 正式可见度只用 Discovery 意图。情绪样本用 `analysis_type` 含 sentiment 的题。
 - 声量份额分母 = 全部纳入对象的提及次数之和；纳入对象 = 目标品牌 + 3 个配置竞品 + 开放品牌词表命中的品牌。
 - 空答案（正文为空）不进入任何分母。

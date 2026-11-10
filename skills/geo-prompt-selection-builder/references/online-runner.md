@@ -33,7 +33,7 @@
 python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
-脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
+脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
 ### 审核环
 

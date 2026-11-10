@@ -25,4 +25,4 @@
 ## 词表与共享资产
 
 - 品牌词表命名统一下划线 `brand_lexicon.<维度>.json`;首选结构 `brands[].name/aliases/type`,dict 型「标准名 → 别名 list」为兼容格式(消费方均已适配,`_` 开头的键为元数据)。`shared/brand-lexicon.brand-b.json` 是历史命名,保留不改。
-- 指标口径唯一实现在 `geo-presales-report-editor/scripts/geo_presales_core/`;`shared/scripts/` 下的三个指标脚本已标记 DEPRECATED,仅只读参考。
+- 指标口径与品牌识别唯一实现在 `geo-metrics/scripts/geo_presales_core/`(skill `geo-metrics`);`shared/scripts/` 下的三个指标脚本已标记 DEPRECATED,仅只读参考。

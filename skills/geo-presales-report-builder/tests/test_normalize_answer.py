@@ -23,7 +23,7 @@ class TestPlatformNoise(unittest.TestCase):
 
     def test_shared_constant_matches_lexicon_miner(self):
         spec2 = importlib.util.spec_from_file_location(
-            "mine_brand_lexicon", SCRIPT.parent / "mine_brand_lexicon.py")
+            "mine_brand_lexicon", SCRIPT.parents[2] / "geo-metrics" / "scripts" / "mine_brand_lexicon.py")
         mod2 = importlib.util.module_from_spec(spec2)
         sys.modules["mine_brand_lexicon"] = mod2
         spec2.loader.exec_module(mod2)

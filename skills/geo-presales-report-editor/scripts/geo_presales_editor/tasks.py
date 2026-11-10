@@ -4,9 +4,9 @@ import re
 from pathlib import Path
 
 from . import TASK_PROTOCOL_VERSION
-from .deterministic import SOURCE_TYPES
+from geo_presales_core.deterministic import SOURCE_TYPES
 from .store import record_event, save_manifest
-from .util import ContractError, get_path, now_iso, read_json, sha256_file, sha256_obj, stable_id, write_json
+from geo_presales_core.util import ContractError, get_path, now_iso, read_json, sha256_file, sha256_obj, stable_id, write_json
 
 
 ALLOWED_RESULT_STATUS = {"completed", "partial", "cannot_complete"}

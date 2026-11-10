@@ -93,9 +93,9 @@ def normalize_question_bank(raw: dict | list, config: dict) -> dict:
             if not intent:
                 raise ContractError(f"Question {question_id} has invalid funnel intent: {claimed_intent!r}")
 
-        target_hits = find_alias_spans(text, target["aliases"])
+        target_hits = find_alias_spans(text, target["aliases"], target.get("case_sensitive_aliases"))
         competitor_hits = [
-            {"object_id": obj["object_id"], "spans": find_alias_spans(text, obj["aliases"])}
+            {"object_id": obj["object_id"], "spans": find_alias_spans(text, obj["aliases"], obj.get("case_sensitive_aliases"))}
             for obj in competitors
         ]
         competitor_hits = [hit for hit in competitor_hits if hit["spans"]]

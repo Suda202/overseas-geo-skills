@@ -56,7 +56,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 # 脱离整套 skill 单独部署时，用 GEO_PRESALES_SKILLS_ROOT 指向 skills 根目录。
 SKILLS_ROOT = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
-CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
+CORE_DIR = SKILLS_ROOT / "geo-metrics" / "scripts"
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
@@ -78,26 +78,9 @@ from geo_presales_core.util import (  # noqa: E402
 # 标题（如 "...car cameras by Garmin, Nextbase, RivalB1 and more"）里的品牌会被
 # find_alias_spans 当成提及——这是 geo-presales-report-audit 已记录的错误类型
 # 「引用锚文本公司名误计为品牌」。引用统计仍用原文，标记要被解出来。
-AUDIT_SCRIPTS = SKILLS_ROOT / "geo-presales-report-audit" / "scripts"
-if str(AUDIT_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(AUDIT_SCRIPTS))
-import de_cite_crawl as de_cite  # noqa: E402
+import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core 同目录）
 
-# 后端 registrable_domain 只用「常见多级后缀表」做展示层聚合，表里缺 SEA 市场的
-# 二级后缀（如 .com.my）。缺了会把所有马来西亚站点并成一个 "com.my" 桶。这里把
-# 后端自己声明为近似的这张表补全；官方域名匹配走注意 domain_matches，不依赖此表，
-# 因此本扩充只影响展示层的域名聚合，**不改变任何指标**。
-core_util.COMMON_MULTI_LABEL_SUFFIXES |= {
-    "com.my", "net.my", "org.my", "gov.my", "edu.my", "com.sg", "net.sg", "org.sg",
-    "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
-}
-
-# 后端 normalize_url 会剥离 utm_* 与一组跟踪参数，但缺 srsltid 等 Google 新参数。
-# 采集侧在入口补齐同类跟踪参数，避免同一页面被计成多条引用。
-INGEST_TRACKING_KEYS = set(core_util.TRACKING_QUERY_KEYS) | {
-    "srsltid", "gbraid", "wbraid", "yclid", "igshid", "gad_source", "gclsrc",
-    "msclkid", "ref_src", "ref_url", "guccounter", "guce_referrer", "spm", "scm",
-}
+# 域名后缀表、跟踪参数、平台站内域名都在 core util（geo-metrics），这里不再补丁。
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DOMAIN_CACHE = SKILL_DIR / "assets" / "domain-categories.json"
@@ -202,13 +185,6 @@ _BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", r
 _BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
 _BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
 
-# 平台站内跳转 / 聚合页链接，按契约丢弃
-PLATFORM_INTERNAL_HOSTS = {
-    "google.com", "google.com.sg", "google.com.my", "google.co", "google.com.hk",
-    "gstatic.com", "googleusercontent.com", "bing.com", "chatgpt.com", "openai.com",
-    "perplexity.ai", "gemini.google.com",
-    "copilot.microsoft.com", "bingapis.com", "grok.com",
-}
 
 # 题库 diagnosis_intent -> 后端 diagnostic_intent（意图口径 shared/canonical-intent-mapping.md）
 # 题库 diagnosis_intent -> 后端 diagnostic_intent。
@@ -332,23 +308,8 @@ def round1(value):
     return None if value is None else round(value, 1)
 
 
-def is_platform_internal(host: str) -> bool:
-    return any(host == h or host.endswith("." + h) for h in PLATFORM_INTERNAL_HOSTS)
-
-
-def clean_url(raw_url: str) -> str:
-    """入口侧剥离跟踪参数（后端 normalize_url 同类行为的补集），保留路径与分片。"""
-    try:
-        parts = urlsplit(str(raw_url))
-        pairs = parse_qsl(parts.query, keep_blank_values=True)
-    except ValueError:
-        return str(raw_url)
-    if not pairs:
-        return str(raw_url)
-    kept = [(k, v) for k, v in pairs if k.casefold() not in INGEST_TRACKING_KEYS]
-    if len(kept) == len(pairs):
-        return str(raw_url)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
+is_platform_internal = core_util.is_platform_internal
+clean_url = core_util.strip_tracking_params
 
 
 # ------------------------------------------------------------------ 输入读取
@@ -521,7 +482,7 @@ def _name_tokens_subset(a: str, b: str) -> bool:
 
 
 def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
-                 domain_cache: dict | None = None) -> dict:
+                 domain_cache: dict | None = None, case_sensitive=()) -> dict:
     """构造 config（normalize_config 的内部产物形态）。
 
     对象集 = 目标品牌 + Case 里的 3 个配置竞品 + 词表中的开放品牌。
@@ -589,6 +550,12 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
     for entry in unresolved:
         add(entry["name"], entry["domains"], entry["aliases"], "open",
             3 + len([o for o in objects if o["role"] == "open"]) + 1)
+
+    # 词表顶层 case_sensitive_aliases：每个品牌只挂属于自己的写法，识别时由 core 过滤
+    for obj in objects:
+        own = core_util.case_sensitive_for(obj["aliases"], case_sensitive)
+        if own:
+            obj["case_sensitive_aliases"] = own
 
     config = {
         "schema_version": "geo-presales-config/v1",
@@ -1614,8 +1581,8 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
                   objects: list[dict]) -> list[dict]:
     object_count = len(objects)
     # 题面是否点名目标品牌，用与正文识别同一套别名匹配，不在渲染层另写一套。
-    target_aliases = next(
-        (list(o["aliases"]) for o in objects if o["role"] == "target"), [])
+    target_obj = next((o for o in objects if o["role"] == "target"), {"aliases": []})
+    target_aliases = list(target_obj["aliases"])
     by_question: dict[str, list[dict]] = defaultdict(list)
     for answer in answers:
         by_question[answer["question_id"]].append(answer)
@@ -1646,7 +1613,8 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             # 显式给出三个布尔，不让渲染层去比中文标签或百分比字符串。
             "discovery": question.get("diagnostic_intent") == "discovery",
             "target_in_question": bool(
-                core_util.find_alias_spans(question["question_text"], target_aliases)),
+                core_util.find_alias_spans(question["question_text"], target_aliases,
+                                            target_obj.get("case_sensitive_aliases"))),
             "mentioned": None,
             # 该题下每个纳入品牌的口径，供审计报告的分题全品牌表使用。
             # 之前只带目标品牌一行，审计侧只能自己再算一遍，形成第二份指标实现。
@@ -1814,7 +1782,9 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         "lexicon_uncertain": lexicon_uncertain,
         "objects": [{"object_id": o["object_id"], "role": o["role"],
                      "name": o["canonical_name"], "domains": o["official_domains"],
-                     "aliases": o["aliases"]}
+                     "aliases": o["aliases"],
+                     **({"case_sensitive_aliases": o["case_sensitive_aliases"]}
+                        if o.get("case_sensitive_aliases") else {})}
                     for o in config["objects"]],
         "sample_issues": sample_issues,
         "question_order_check": {
@@ -1845,8 +1815,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
 
 # 回答正文里混着平台的原始 HTML。转义前必须按类型处理，否则会被当文本显示——
 # 实测 `<img src="data:image/jpeg;base64,...">` 一出现就是几百字，把表格单元撑爆。
-# Scrapeless 锚点残留文案（挖词表脚本用同一常量做清洗）
-PRODUCT_VIEWER_NOISE = "Go to product viewer dialog for this item."
+PRODUCT_VIEWER_NOISE = de_cite.PRODUCT_VIEWER_NOISE
 _HTML_IMG = re.compile(r"<img\b[^>]*>", re.I)
 _HTML_IMAGE_ALT = re.compile(r"<image\b[^>]*>", re.I)
 # 平台给的交互建议块（追问、相关推荐），不是回答内容，整块去掉
@@ -2397,7 +2366,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                 ranking_text = de_cite.blank_merchant_columns(de_cite.strip_citations(answer))
                 ranked = []
                 for obj in display_objects:
-                    spans = find_alias_spans(ranking_text, obj["aliases"])
+                    spans = find_alias_spans(ranking_text, obj["aliases"], obj.get("case_sensitive_aliases"))
                     if spans:
                         ranked.append((spans[0]["start"], obj))
                 # 目标品牌置顶，其余按正文首次出现位置排序
@@ -2624,7 +2593,8 @@ def main(argv=None) -> int:
         if case_topics:
             print(f"题库主题与 Case 主题不同，按题库主题出报告：{topics}（Case 写的是 {case_topics}）")
 
-    config = build_config(case, topics, lexicon_entries, load_domain_cache(args.domain_cache))
+    config = build_config(case, topics, lexicon_entries, load_domain_cache(args.domain_cache),
+                          core_util.read_case_sensitive_aliases(args.lexicon))
     if args.sku_map:
         config["sku_map"] = json.loads(Path(args.sku_map).read_text(encoding="utf-8"))
     bank = build_question_bank(rows, config, topics)

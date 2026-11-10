@@ -1,0 +1,45 @@
+{
+  "input_version": "presales-case-input/v2",
+  "case": {
+    "品牌": "ExampleBiz",
+    "品牌别名": [
+      "ExampleBiz",
+      "Example Biz"
+    ],
+    "官方域名": "https://www.example-biz.example",
+    "产品线": "企业差旅管理平台（Corporate Travel Management）",
+    "适用边界": "适用于需要集中管理员工商务出行的企业，不面向个人休闲旅游，也不替代仅处理报销或财务记账的单点工具。",
+    "竞品": [
+      {
+        "名称": "TravelRival One",
+        "官网域名": "https://www.travel-rival-one.example"
+      },
+      {
+        "名称": "TravelRival Two",
+        "官网域名": "https://www.travel-rival-two.example"
+      }
+    ],
+    "核心目标客户与购买场景": [
+      "中大型企业的差旅负责人：员工经常跨境出差，需要集中预订机票、酒店、火车和用车；关注预订渠道是否统一、改签有没有人处理",
+      "企业财务与采购负责人：要让差旅政策自动执行、审批更快；关注支付和费用数据能否统一"
+    ],
+    "差异化优势": [
+      "依托母公司的全球旅行供应链，覆盖预订、审批、支付、分析与人工服务的一体化方案，具备跨境差旅的本地资源和服务网络，支持碳排放追踪与可持续差旅管理"
+    ]
+  },
+  "options": {
+    "locale": "en"
+  },
+  "handoff": {
+    "confirmation_status": "partial",
+    "confirmed_fields": [
+      "竞品"
+    ],
+    "sources": [
+      {
+        "url": "https://www.example-biz.example",
+        "summary": "官网产品与服务页"
+      }
+    ]
+  }
+}

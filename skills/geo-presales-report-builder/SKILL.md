@@ -63,7 +63,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 2. **确认或生成开放品牌词表**：
 
    ```bash
-   python3 scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
+   python3 ../geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
    ```
 
    词表落 `assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。
@@ -179,9 +179,9 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 ## 指标口径
 
-口径全部复用 `geo-presales-report-editor/scripts/geo_presales_core` 的 `prepare_answers` 与 `compute_metrics`，本 skill 不另写指标。
+口径全部复用 `geo-metrics/scripts/geo_presales_core` 的 `prepare_answers` 与 `compute_metrics`，本 skill 不另写指标。
 
-**该目录归 `geo-presales-report-editor` 所有，本 skill 只读。** 发现口径不对时改在 owner 那边，不在本 skill 复制一份实现；本 skill 的 `verify_report_data.py` 是对它的独立复算，两者口径必须一致——不一致时以 owner 的定义为准，并把差异报出来，不要单方面对齐（2026-09-16 就出过一次：生产侧口径被静默改动，复算侧没跟，门禁报出的差异最终证明是生产侧的问题）。
+**该目录归 `geo-metrics` 所有，本 skill 只读。** 发现口径不对时改在 owner 那边，不在本 skill 复制一份实现；本 skill 的 `verify_report_data.py` 是对它的独立复算，两者口径必须一致——不一致时以 owner 的定义为准，并把差异报出来，不要单方面对齐（2026-09-16 就出过一次：生产侧口径被静默改动，复算侧没跟，门禁报出的差异最终证明是生产侧的问题）。
 
 | 指标 | 口径 |
 |---|---|
@@ -193,7 +193,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 引用份额 | 指向官网的引用次数 ÷ 全部引用次数。**四个层级都保留**：单条回答（抽屉）、单题（明细表）、单平台（平台切片）、多回答多平台（全量切片）。官网、来源类别、域名、页面四处份额同一口径：分子、分母都是**未去重引用次数**；去重（到回答 / 到 URL）只用于 `citation_units.unique_sources` 这类「有多少个不同来源」的计数，不进任何份额的分子分母，也不参与榜单挑选和排序 |
 | 引用率（官网引用率） | 正文至少引用一次目标品牌官网的回答数 ÷ 有效回答数；按回答计票，一条回答引用多次也只算一次。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算。**样本随模块走（2026-11-07 Suda）**：核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代，与提及率同一批回答（点名品牌的题会把本品官网拉进引用，混进来就没法和提及率比）；03 引用模块、问题明细统计全部意图类型，按筛选收窄 |
 | 带官网的提及率 | 目标品牌被提及的 Discovery 回答中，正文至少引用一次其官网的回答数 ÷ 目标品牌被提及的 Discovery 回答数；分子分母随值给出（`linked_mention_counts`）。偏低 = 被提到了但 AI 没拿官网作依据。与引用份额分母不同，不互相换算；跨平台看平台切片。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
-| 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；只统计发现、替代两类题。口径与实现都在 core（`shopping.py`，契约见 `geo-presales-report-editor` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
+| 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；只统计发现、替代两类题。口径与实现都在 core（`shopping.py`，契约见 `geo-metrics` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
 | 正向情感占比 | 正向 Claim 信号 ÷（正向 + 负向 Claim 信号），**排除中性**（句级降级路径按句数计） |
 
 **回答正文里的商品卡**在原文位置渲染（2026-11-09）：ChatGPT 每张卡以带 title 的商品图开头，清洗时转占位符留在原位，`markdown_to_html` 还原成卡片（图、徽标、标题、价格、评分、卖点、Shop 链接）；带 title 但缺价格/评分/编号标题的图按文章配图处理，不渲染成卡。AI Mode、Gemini 正文没有卡片位置，AIO 全是 base64 内嵌图，这三个平台的卡片仍按平台顺序排在正文上方（`details[].product_cards`）。

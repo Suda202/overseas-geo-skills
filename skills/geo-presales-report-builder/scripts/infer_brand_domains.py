@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
-                       / "geo-presales-report-editor" / "scripts"))
+                       / "geo-metrics" / "scripts"))
 from geo_presales_core.util import normalize_host, registrable_domain  # noqa: E402
 
 # 这些标签过于通用，与品牌同名也不足以判定为官网

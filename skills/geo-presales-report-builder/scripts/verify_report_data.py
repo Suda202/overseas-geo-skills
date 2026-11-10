@@ -32,7 +32,7 @@ from urllib.parse import parse_qsl, urlsplit
 # 脱离整套 skill 单独部署时，用 GEO_PRESALES_SKILLS_ROOT 指向 skills 根目录。
 SKILLS_ROOT = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
-CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
+CORE_DIR = SKILLS_ROOT / "geo-metrics" / "scripts"
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
@@ -49,19 +49,8 @@ import geo_presales_core.util as core_util  # noqa: E402
 
 # 品牌匹配必须与数据层一致地跑在去引用正文上，否则复算会重现「被引文章标题里的品牌
 # 被算成提及」的旧行为，与本模块要校验的数据层对不上。见 build_report_data.py 的说明。
-_AUDIT_SCRIPTS = SKILLS_ROOT / "geo-presales-report-audit" / "scripts"
-if str(_AUDIT_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_AUDIT_SCRIPTS))
-import de_cite_crawl as de_cite  # noqa: E402
+import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core 同目录）
 
-core_util.COMMON_MULTI_LABEL_SUFFIXES |= {
-    "com.my", "net.my", "org.my", "gov.my", "edu.my", "com.sg", "net.sg", "org.sg",
-    "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
-}
-INGEST_TRACKING_KEYS = set(core_util.TRACKING_QUERY_KEYS) | {
-    "srsltid", "gbraid", "wbraid", "yclid", "igshid", "gad_source", "gclsrc",
-    "msclkid", "ref_src", "ref_url", "guccounter", "guce_referrer", "spm", "scm",
-}
 
 PLATFORM_DIR_BY_LABEL = {"AIO": "overview", "Gemini": "gemini",
                          "ChatGPT": "chatgpt", "Perplexity": "perplexity", "AI Mode": "aimode",
@@ -116,12 +105,6 @@ def citation_field(platform_dir: str):
 BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re.M)
 BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
 BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
-PLATFORM_INTERNAL_HOSTS = {
-    "google.com", "google.com.sg", "google.com.my", "google.co", "google.com.hk",
-    "gstatic.com", "googleusercontent.com", "bing.com", "chatgpt.com", "openai.com",
-    "perplexity.ai", "gemini.google.com",
-    "copilot.microsoft.com", "bingapis.com", "grok.com",
-}
 DISCOVERY_LABEL = "发现"
 # 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics._visibility_answers 同口径，按中文标签独立写一份）
 VISIBILITY_LABEL_GROUPS = [{"发现", "替代"}, {"问题解决"}]
@@ -238,7 +221,8 @@ class Recomputer:
                 candidates = [
                     {**span, "object_id": obj["object_id"]}
                     for obj in self.objects
-                    for span in find_alias_spans(matching, obj.get("aliases") or [obj["name"]])
+                    for span in find_alias_spans(matching, obj.get("aliases") or [obj["name"]],
+                                                 obj.get("case_sensitive_aliases"))
                 ]
                 for span in resolve_alias_spans(candidates):
                     grouped.setdefault(span["object_id"], []).append(span)
@@ -573,7 +557,8 @@ class Recomputer:
         if not str(text or "").strip():
             return None
         candidates = [{**span, "object_id": obj["object_id"]} for obj in self.objects
-                      for span in find_alias_spans(str(text), obj.get("aliases") or [obj["name"]])]
+                      for span in find_alias_spans(str(text), obj.get("aliases") or [obj["name"]],
+                                               obj.get("case_sensitive_aliases"))]
         resolved = resolve_alias_spans(candidates)
         return resolved[0]["object_id"] if resolved else None
 
@@ -633,23 +618,8 @@ class Recomputer:
         return order.index(object_id) + 1
 
 
-def _clean_url(raw_url: str) -> str:
-    try:
-        parts = urlsplit(str(raw_url))
-        pairs = parse_qsl(parts.query, keep_blank_values=True)
-    except ValueError:
-        return str(raw_url)
-    if not pairs:
-        return str(raw_url)
-    kept = [(k, v) for k, v in pairs if k.casefold() not in INGEST_TRACKING_KEYS]
-    if len(kept) == len(pairs):
-        return str(raw_url)
-    from urllib.parse import urlencode, urlunsplit
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
-
-
-def _is_platform_internal(host: str) -> bool:
-    return any(host == h or host.endswith("." + h) for h in PLATFORM_INTERNAL_HOSTS)
+_clean_url = core_util.strip_tracking_params
+_is_platform_internal = core_util.is_platform_internal
 
 
 def _pct(frac) -> str:

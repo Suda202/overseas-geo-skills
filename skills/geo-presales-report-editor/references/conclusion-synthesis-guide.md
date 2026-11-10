@@ -36,7 +36,7 @@
 
 不得在同一报告中混用“发现型、纯发现型、竞品比较、功能核实、准确性诊断、品牌评价”等名称。尤其不要另造“纯发现”口径；需要说明范围时直接写“发现类问题”或“发现类问题结果”。
 
-按指标分别选样本，不把诊断意图当作互斥总开关：正式可见度和主要引用生态只纳入 Discovery；情绪直接纳入完整 `analysis_type=sentiment` 数据。记录不是 Discovery，只代表它不能进入正式可见度，不能据此删除它的有效情绪结果；记录带有 `visibility` 处理标记，也不能据此把非 Discovery 样本并入正式可见度。完整定义见 [统计范围与客户指标命名契约](metric-scope-and-copy-contract.md)。
+按指标分别选样本，不把诊断意图当作互斥总开关：正式可见度和主要引用生态只纳入 Discovery；情绪直接纳入完整 `analysis_type=sentiment` 数据。记录不是 Discovery，只代表它不能进入正式可见度，不能据此删除它的有效情绪结果；记录带有 `visibility` 处理标记，也不能据此把非 Discovery 样本并入正式可见度。完整定义见 [统计范围与客户指标命名契约](../../geo-metrics/references/metric-scope-and-copy-contract.md)。
 
 不同数据回答不同问题，不能混成同一批样本：
 

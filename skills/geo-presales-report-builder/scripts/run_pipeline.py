@@ -114,7 +114,7 @@ def stage_lexicon(args) -> None:
         print(f"✓ [1 品牌词表] {args.lexicon}")
         return
     candidates = args.out_dir / "brand-candidates.csv"
-    run([sys.executable, HERE / "mine_brand_lexicon.py",
+    run([sys.executable, SKILLS / "geo-metrics" / "scripts" / "mine_brand_lexicon.py",
          "--collect-dir", args.collect, "--out", candidates], args.dry_run, "1 词表挖掘")
     raise Pause(
         f"词表 {args.lexicon} 不存在。已挖掘候选到 {candidates},"

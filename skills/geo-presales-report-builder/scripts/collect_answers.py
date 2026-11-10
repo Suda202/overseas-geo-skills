@@ -48,7 +48,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parent.parent
-CORE_DIR = SKILLS / "geo-presales-report-editor" / "scripts"
+CORE_DIR = SKILLS / "geo-metrics" / "scripts"
 INTEGRITY = SKILLS / "geo-presales-crawl-integrity" / "scripts" / "audit_crawl_integrity.py"
 BASE_URL = os.environ.get("SCRAPELESS_BASE_URL", "https://api.scrapeless.com")  # 覆盖仅供本地假服务测试
 CREATE_PATH = "/api/v2/scraper/request"

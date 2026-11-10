@@ -153,7 +153,7 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
             candidates = [
                 {**span, "object_id": obj["object_id"]}
                 for obj in objects
-                for span in find_alias_spans(matching_text, obj["aliases"])
+                for span in find_alias_spans(matching_text, obj["aliases"], obj.get("case_sensitive_aliases"))
             ]
             for span in resolve_alias_spans(candidates):
                 resolved_spans[span["object_id"]].append({

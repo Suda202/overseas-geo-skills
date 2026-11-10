@@ -1,6 +1,6 @@
 """DEPRECATED（2026-09-17）：遗留实现，仅供只读参考，不得用于正式交付。
 
-正式指标口径的唯一实现是 geo-presales-report-editor/scripts/geo_presales_core/
+正式指标口径的唯一实现是 geo-metrics/scripts/geo_presales_core/
 （prepare_answers / compute_metrics），报告生成走 geo-presales-report-builder。
 本脚本的口径与 core 未对齐，端到端结果已确认不等价（见文内注释）。
 """
@@ -405,7 +405,7 @@ def build(audit_dir: Path, target: str) -> str:
         "BANK=<题库.json>; LEX=<品牌词表.json>\n"
         "python3 $SKILLS/geo-presales-crawl-integrity/scripts/audit_crawl_integrity.py \\\n"
         "  --collect-dir <结果目录> --target " + target + " --out <audit-dir>/crawl-integrity.json\n"
-        "python3 $SKILLS/geo-presales-report-audit/scripts/de_cite_crawl.py \\\n"
+        "python3 $SKILLS/geo-metrics/scripts/de_cite_crawl.py \\\n"
         "  --collect-dir <结果目录> --question-bank $BANK --out <audit-dir>/normalized-answers.jsonl\n"
         "python3 $SKILLS/geo-presales-report-audit/scripts/verify_brand_extraction.py \\\n"
         "  --normalized <audit-dir>/normalized-answers.jsonl --extractions '<audit-dir>/extract-*.json' \\\n"

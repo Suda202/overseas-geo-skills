@@ -82,13 +82,13 @@ python3 scripts/prepare_badcase_draft.py validate --input <草稿.json>
 python3 scripts/annotate_evidence_screenshot.py --input <截图.png> --output <标注.png> --title "<问题说明>" --box <x,y,w,h>
 ```
 
-各子命令的完整参数以 `--help` 为准；原始采集层 `de_cite_crawl.py` 与 `verify_brand_extraction.py` 的完整命令见 [原始爬虫层品牌抽取](references/raw-crawl-extraction.md)。
+各子命令的完整参数以 `--help` 为准；原始采集层 `geo-metrics/scripts/de_cite_crawl.py` 与本 skill `verify_brand_extraction.py` 的完整命令见 [原始爬虫层品牌抽取](references/raw-crawl-extraction.md)。
 
 原始采集层另有两个：
 
 | 脚本 | 负责 | 不负责 |
 |---|---|---|
-| `de_cite_crawl.py` | 把采集目录规范化为去引用正文，产出 `normalized-answers.jsonl`（含清空 merchants 列的 `body_ranking`） | 识别品牌、判情绪 |
+| `geo-metrics/scripts/de_cite_crawl.py`（归 geo-metrics，本 skill 调用） | 把采集目录规范化为去引用正文，产出 `normalized-answers.jsonl`（含清空 merchants 列的 `body_ranking`） | 识别品牌、判情绪 |
 | `verify_brand_extraction.py` | 品牌抽取的独立复核：名称在正文、首现顺序、标准名一致性、词典召回 | 生成品牌序列本身 |
 
 标准品牌别名表放 `assets/brand_lexicon.<case>.json`，键为标准名、值为正文中出现的写法；`geo-presales-report-builder` 与 `geo-presales-sentiment-judge` 均可直接读取该 dict 格式（`_` 开头的键视为元数据）。**分片抽取回收后必须先归一标准名再算排名**，`verify_brand_extraction.py` 的第 3 项检查会拦截漏归一的写法。

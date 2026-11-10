@@ -76,7 +76,7 @@ FANOUT_FIELDS = {
 # 同一条回答在两个 skill 里判定相反。
 SKILLS_ROOT = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
-CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
+CORE_DIR = SKILLS_ROOT / "geo-metrics" / "scripts"
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 from geo_presales_core.crawler import answer_validity  # noqa: E402

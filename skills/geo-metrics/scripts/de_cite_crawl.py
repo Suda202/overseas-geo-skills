@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import sys
 from collections import Counter
@@ -40,18 +39,22 @@ REF_MARKER_PAREN = re.compile(r"\(\[[^\]\n]{1,80}\]\[\d+\]\)")
 REF_MARKER_BARE = re.compile(r"\[[^\]\n]{1,80}\]\[\d+\]")
 IMAGE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
 MD_LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
-HTML_TAG = re.compile(r"<[^>]{1,300}>")
+# 标签名必须紧跟 `<`，免得把「< $100 … >」这类正文吃掉；不限长度：ChatGPT 的 <img> 常超 300 字，
+# 它的 title 是被引网页标题（「Bbrand dashcam Pro vs. …」），漏删就会被算成提及
+HTML_TAG = re.compile(r"<[A-Za-z/!][^<>]*>")
+# 裸网址不是正文提及（www.rival-b2.example 里的 rivalb2 不算）
+BARE_URL = re.compile(r"https?://\S+|www\.\S+")
 # markdown 反斜杠转义：Gemini 把正文里的标点全转义（「rival-h2\.example」「OrangeTee \& Tie」），
 # ChatGPT 也有「Hbrand.com\.」「\$」。不还原就按字面匹配不到带点的品牌名——Hbrand 基线
 # Gemini 漏了 74 条 rival-h2.example 提及（2026-10-29）。`|` 不还原：表格里的 `\|` 是单元格内容，
 # 还原后会被 blank_merchant_columns 当成分列符。
+# Scrapeless 商品卡锚点残留文案，会粘在商品名后面（「DispenserGo」）；报告渲染、词表挖掘都用这一份
+PRODUCT_VIEWER_NOISE = "Go to product viewer dialog for this item."
+
 MD_ESCAPE = re.compile(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{}~])")
 
-# 失败页判定统一走 geo_presales_core 的唯一实现，不在下游复刻一份签名表。
-# 该目录归 geo-presales-report-editor 所有，签名与长度阈值由它定义。
-SKILLS_ROOT = Path(os.environ.get(
-    "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
-CORE_DIR = SKILLS_ROOT / "geo-presales-report-editor" / "scripts"
+# 失败页判定统一走同目录 geo_presales_core 的唯一实现，不在下游复刻一份签名表。
+CORE_DIR = Path(__file__).resolve().parent
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
@@ -88,7 +91,8 @@ def strip_citations(text: str) -> str:
     text = REF_MARKER_BARE.sub("", text)
     text = IMAGE.sub("", text)
     text = MD_LINK.sub(r"\1", text)
-    text = HTML_TAG.sub("", text)
+    text = HTML_TAG.sub(" ", text)
+    text = BARE_URL.sub(" ", text)
     # 引用标记剥完再还原转义，免得 `\[` `\]` 还原后拼出假引用标记
     text = MD_ESCAPE.sub(r"\1", text)
     text = re.sub(r"[ \t]+\n", "\n", text)

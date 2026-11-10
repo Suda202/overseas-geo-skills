@@ -1,0 +1,34 @@
+{
+  "input_version": "presales-case-input/v2",
+  "case": {
+    "品牌": "ExampleStream",
+    "品牌别名": [
+      "ExampleStream",
+      "Example Stream"
+    ],
+    "官方域名": "https://www.example-stream.example",
+    "产品线": "海外订阅制视频流媒体平台（Example Streaming Platform）",
+    "适用边界": "适用于希望以订阅方式观看带多语言字幕的外语剧集与短剧的海外个人观众；不适用于原产地用户，也不适用于只观看本地语言内容或体育直播的观众。",
+    "竞品": [
+      {
+        "名称": "StreamRival One",
+        "官网域名": "https://www.rival-one.example"
+      },
+      {
+        "名称": "StreamRival Two",
+        "官网域名": "https://www.rival-two.example"
+      }
+    ],
+    "核心目标客户与购买场景": [
+      "海外外语影视剧观众：想追正在更新的热播剧；关注是否独家、是否与原产地同步更新",
+      "用字幕学外语的观众：想用双语字幕看剧辅助语言学习；关注字幕语言覆盖和翻译质量",
+      "短剧与综艺爱好者：想在通勤或碎片时间看竖屏短剧和综艺；关注会员价格与权益是否划算"
+    ],
+    "差异化优势": [
+      "与原产地平台同步上新部分剧集，字幕与配音覆盖多个主要市场语言，内容组合覆盖长剧、竖屏短剧与综艺，提供离线下载与多端进度同步"
+    ]
+  },
+  "options": {
+    "locale": "en"
+  }
+}

@@ -3,8 +3,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from . import RULESET_VERSION, SCHEMA_VERSION
-from .util import ContractError, now_iso, read_json, sha256_obj, write_json
+from geo_presales_core import RULESET_VERSION, SCHEMA_VERSION
+from geo_presales_core.util import ContractError, now_iso, read_json, sha256_obj, write_json
 
 
 MANIFEST_NAME = "manifest.json"

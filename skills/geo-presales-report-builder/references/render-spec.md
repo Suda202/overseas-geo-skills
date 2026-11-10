@@ -57,7 +57,7 @@ Markdown 转换的处理顺序不能随意调换,引用 pill 必须在普通链�
 
 ## 购物商品卡模块
 
-口径在 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」,这里只写怎么展示。
+口径在 `geo-metrics/references/metric-scope-and-copy-contract.md`「购物层指标」,这里只写怎么展示。
 
 - **品牌 / SKU 切换**放在触发率指标卡下面、三张指标表上面,左对齐。
 - **商品卡触发率**是一个指标卡,跟平台筛选走;全部平台时把返回了商品字段的平台合计,选到不返回商品字段的平台写「接口未返回」。

@@ -1,6 +1,6 @@
 ---
 name: geo-monitoring
-description: Use when running or reporting GEO answer monitoring on a locked Prompt set or its candidate trial — the quality trial (3 runs per Prompt on each monitored platform) and judging which Prompts pass, helping the brand party pick and lock the formal set and later retire formal Prompts, the formal Before baseline (7 runs per query × platform × country × language), periodic collection, collection cadence and re-run triggers, the baseline HTML report, and handing located gaps to the content team. Do not use for researching, writing, adding or merging Prompts (geo-prompt-selection-builder), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers (geo-presales-report-editor core).
+description: Use when running or reporting GEO answer monitoring on a locked Prompt set or its candidate trial — the quality trial (3 runs per Prompt on each monitored platform) and judging which Prompts pass, helping the brand party pick and lock the formal set and later retire formal Prompts, the formal Before baseline (7 runs per query × platform × country × language), periodic collection, collection cadence and re-run triggers, the baseline HTML report, and handing located gaps to the content team. Do not use for researching, writing, adding or merging Prompts (geo-prompt-selection-builder), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers or brand recognition (geo-metrics).
 metadata:
   author: Overseas GEO Project
   version: "1.8.4"
@@ -18,7 +18,7 @@ metadata:
 | 监测 → 选词 | 试跑判为要改写的题、答案里发现的新选购标准、基线后要补的需求；选词据此改题、加题、并题 |
 | 监测 → 内容团队 | 缺口诊断与优化方向（见「交给内容团队」） |
 
-不在范围：调研、写题、改题、加题、并题（`geo-prompt-selection-builder`）；指标口径定义（`geo-presales-report-editor` core）；情感规则（`geo-presales-sentiment-judge`）；前置售前诊断报告（`geo-presales-report-builder`）。
+不在范围：调研、写题、改题、加题、并题（`geo-prompt-selection-builder`）；指标口径定义与品牌识别（`geo-metrics`）；情感规则（`geo-presales-sentiment-judge`）；前置售前诊断报告（`geo-presales-report-builder`）。
 
 ## 工具
 

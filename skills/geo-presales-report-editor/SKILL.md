@@ -16,7 +16,7 @@ metadata:
 
 ## 底层的归属与变更纪律
 
-`scripts/geo_presales_core/`（含 `metrics.py`、`shopping.py`、`deterministic.py`、`config.py`）**归本 skill 所有**，是四个 skill 共用的指标口径实现——`geo-presales-report-builder` 全面复用它的 `prepare_answers` 与 `compute_metrics` 做指标计算；`geo-presales-report-audit` 与 `geo-presales-crawl-integrity` 只引用它的 `answer_validity` 做答案有效性判断（crawl-integrity 另引用 `shopping.extract_product_cards` 核对商品卡字段），不调用指标计算。
+指标口径与品牌识别的唯一实现 `geo_presales_core` 归 `geo-metrics`（2026-11-10 从本 skill 移出），本 skill 只调用。本 skill 自己的只有影子审计 CLI 的任务编排 `scripts/geo_presales_editor/`（cli、tasks、report、store）和上传 CSV 的 `backend_report.py`。
 
 **其他 skill 对本目录只读。** 需要改口径时，改在本 skill 里，不在下游复制一份；下游需要不同口径时在自身的适配层做显式转换，并在产物里标注口径来源。
 
@@ -34,7 +34,7 @@ metadata:
 
 1. [结论综合规则](references/conclusion-synthesis-guide.md)
 2. [上传 CSV 契约](references/report-upload-csv-contract.md)
-3. [统计范围与客户指标命名契约](references/metric-scope-and-copy-contract.md)
+3. [统计范围与客户指标命名契约](../geo-metrics/references/metric-scope-and-copy-contract.md)
 4. [跨 skill 规范映射](../shared/canonical-intent-mapping.md)：模块代码（M01–M10）、意图词表与 `target_attributes` 派生说明。
 
 只有从 v2 后端统计包新生成 CSV 时，再完整读取 [后端输入契约](references/backend-input-contract.md) 和 [报告任务契约](references/backend-report-task-contract.md)。命令和异常恢复见 [使用说明](references/usage.md)。

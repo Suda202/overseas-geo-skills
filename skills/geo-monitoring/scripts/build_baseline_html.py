@@ -41,7 +41,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 SK = ROOT / ".agents" / "skills" / "geo-presales-report-builder" / "scripts"
-CORE = ROOT / ".agents" / "skills" / "geo-presales-report-editor" / "scripts"
+CORE = ROOT / ".agents" / "skills" / "geo-metrics" / "scripts"
 for p in (str(SK), str(CORE)):
     if p not in sys.path:
         sys.path.insert(0, p)
@@ -81,21 +81,10 @@ def load_config(path: Path) -> dict:
 def install_patches(cfg: dict):
     """口径补丁。必须在导入 build_report_data 之前打到 util 上，deterministic 导入时才绑定到补丁版。"""
     import geo_presales_core.util as core_util
+    # case_sensitive_aliases 不在这里打补丁：prepare 时写进 lexicon.json 顶层，由 core 识别读取（geo-metrics）
     core_util.COMMON_MULTI_LABEL_SUFFIXES |= set(cfg.get("multi_label_suffixes") or [])
-    orig_spans = core_util.find_alias_spans
-    cs = set(cfg.get("case_sensitive_aliases") or [])
-
-    def find_alias_spans(text, aliases):
-        # core 按 casefold 去重同位置的别名，留下哪一个随集合顺序变（lyf / Lyf / LYF），
-        # 所以判「原文写法是不是列出的某个大小写」，不判与留下的那个别名逐字相等
-        return [s for s in orig_spans(text, aliases) if s["alias"] not in cs or s["matched_text"] in cs]
-
-    core_util.find_alias_spans = find_alias_spans
     import build_report_data as brd
     import geo_presales_core.deterministic as det
-    det.find_alias_spans = find_alias_spans
-    orig_blank = brd.de_cite.blank_merchant_columns
-    brd.de_cite.blank_merchant_columns = lambda text: URL.sub(" ", orig_blank(text))
     brd.KNOWN_PLATFORM_LABELS.update(cfg.get("platform_labels") or {})
     sites = set(cfg.get("competitor_site_domains") or [])
     orig_official = det._classify_official
@@ -162,7 +151,7 @@ def install_patches(cfg: dict):
         return full
 
     brd.build_slice = build_slice
-    return brd, core_util, find_alias_spans
+    return brd, core_util
 
 
 def patch_verify(vr):
@@ -256,7 +245,10 @@ def prepare_inputs(cfg, questions, intent, platforms):
         case[f"竞品 {i}"], case[f"竞品 {i} 官网域名"] = comp["name"], comp["official_domains"][0]
     (out / "case.json").write_text(json.dumps(case, ensure_ascii=False, indent=1))
     brands = [dict(t, type="target")] + [dict(x, type="competitor") for x in c] + list(cfg.get("open_brands") or [])
-    (out / "lexicon.json").write_text(json.dumps({"brands": brands}, ensure_ascii=False, indent=1))
+    lexicon = {"brands": brands}
+    if cfg.get("case_sensitive_aliases"):
+        lexicon["case_sensitive_aliases"] = list(cfg["case_sensitive_aliases"])
+    (out / "lexicon.json").write_text(json.dumps(lexicon, ensure_ascii=False, indent=1))
     cache = {d: kind for kind, ds in (cfg.get("domain_categories") or {}).items() for d in ds}
     (out / "domain-categories.json").write_text(json.dumps(cache, ensure_ascii=False, indent=1))
     print("合成采集文件", n)
@@ -1169,7 +1161,7 @@ def main(argv=None) -> int:
     ap.add_argument("--merge-claims", type=Path, metavar="DIR", help="合并 DIR 下 batch-*.claims.json 为 sentiment 目录的 claims-raw.json")
     args = ap.parse_args(argv)
     cfg = load_config(args.config.resolve())
-    brd, core_util, find_alias_spans = install_patches(cfg)
+    brd, core_util = install_patches(cfg)
     questions = list(csv.DictReader(open(cfg["questions_csv"], encoding="utf-8-sig")))
     intent = intent_of(cfg)
     platforms = sorted({d.name.split(".", 1)[1] for r in cfg["runs"] for d in r.iterdir()
@@ -1206,7 +1198,6 @@ def main(argv=None) -> int:
             return rc
         # 校验在回写真实意图之前跑：校验脚本按 meta.questions 的意图挑可见度样本，回写后它只认发现题
         import verify_report_data as vr
-        vr.find_alias_spans = find_alias_spans
         patch_verify(vr)
         if vr.main(["--report", str(data_path), "--collect", str(out / "collect")]):
             raise SystemExit("verify_report_data 未通过，不渲染")

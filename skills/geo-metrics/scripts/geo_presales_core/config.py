@@ -4,7 +4,7 @@ import re
 import uuid
 
 from . import RULESET_VERSION, SCHEMA_VERSION
-from .util import ContractError, normalize_alias, normalize_host, now_iso, sha256_obj
+from .util import ContractError, case_sensitive_for, normalize_alias, normalize_host, now_iso, sha256_obj
 
 
 DEFAULT_QUOTAS = {
@@ -217,6 +217,12 @@ def normalize_config(raw: dict) -> dict:
         _normalize_object(item, "discovered", index)
         for index, item in enumerate(_as_list(raw.get("discovered_objects") or raw.get("discovered_competitors")), 1)
     ]
+
+    case_sensitive = [str(v).strip() for v in _as_list(raw.get("case_sensitive_aliases")) if str(v).strip()]
+    for obj in [target, *competitors, *discovered]:
+        own = case_sensitive_for(obj["aliases"], case_sensitive)
+        if own:
+            obj["case_sensitive_aliases"] = own
 
     alias_owner: dict[str, str] = {}
     for obj in [target, *competitors]:

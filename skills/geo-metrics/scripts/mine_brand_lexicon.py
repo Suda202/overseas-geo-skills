@@ -92,8 +92,8 @@ TEXT_FIELD_DEFAULT = "result_text"
 # Cleaning
 # --------------------------------------------------------------------------
 
-# 与渲染层共用同一定义，避免两处漂移（改一处即两边生效）。
-from build_report_data import PRODUCT_VIEWER_NOISE  # noqa: E402
+# 与报告渲染共用同一定义（同目录 de_cite_crawl），避免两处漂移。
+from de_cite_crawl import PRODUCT_VIEWER_NOISE  # noqa: E402
 
 
 def clean_text(raw: str) -> str:

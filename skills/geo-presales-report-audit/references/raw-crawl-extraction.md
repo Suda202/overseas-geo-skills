@@ -21,7 +21,7 @@
 ## 一、去引用（确定性）
 
 ```bash
-python3 scripts/de_cite_crawl.py \
+python3 ../geo-metrics/scripts/de_cite_crawl.py \
   --collect-dir <采集目录> --question-bank <题库.json> \
   --out <输出>/normalized-answers.jsonl
 ```

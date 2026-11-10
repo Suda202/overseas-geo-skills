@@ -1,6 +1,6 @@
 # 海外 GEO Skills
 
-这个仓库有 8 个 Skill 和一个共享目录 `shared/`，大部分 Skill 是被别的 Skill 调用的零件。日常只需要从下面「按你要做的事找入口」里找一个入口，其余的由入口按需调用。
+这个仓库有 9 个 Skill 和一个共享目录 `shared/`，大部分 Skill 是被别的 Skill 调用的零件。日常只需要从下面「按你要做的事找入口」里找一个入口，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
@@ -17,6 +17,7 @@
 | Skill | 谁调用它 | 做什么 |
 | --- | --- | --- |
 | `geo-presales-crawl-integrity` | pipeline、监测 | 算指标前检查采集能不能用 |
+| `geo-metrics` | 报告数据层、监测基线 | 指标口径与实现的唯一来源：品牌识别、去引用正文、提及率/引用份额/官网引用率/商品卡 |
 | `geo-presales-report-builder` | pipeline | 算可见度与引用指标，渲染 HTML 报告；`collect_answers.py` 采集也在这里 |
 | `geo-presales-sentiment-judge` | pipeline | 句级情感判读，算正向情感占比 |
 
@@ -136,7 +137,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 ### 依赖
 
-仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。八个 Skill 里只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余六个和 `shared/` 的脚本只用标准库，没有清单。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
+仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。九个 Skill 里只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余七个和 `shared/` 的脚本只用标准库，没有清单。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
 
 ### 跨 Skill 路径
 

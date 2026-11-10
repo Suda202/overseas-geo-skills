@@ -14,7 +14,7 @@ metadata:
 
 **四层结构**:`AI 回答 → evidence_text → Claim → Attribute → Theme`,sentiment 挂在 Claim/Attribute 上。完整定义、示例与统计口径见 [Claim 层契约](references/claim-layer-contract.md)——**改抽取或统计前必读**。
 
-- **单品牌与多品牌两种模式**。单品牌模式(`--aliases`)只抽目标品牌;多品牌模式(`--lexicon`)用品牌词表抽取目标品牌 + 配置竞品 + 开放品牌,每条带 `brand` / `brand_type`,供「竞品情感矩阵」使用。两种模式共用同一套别名匹配,口径不漂移。
+- **单品牌与多品牌两种模式**。单品牌模式(`--aliases`)只抽目标品牌;多品牌模式(`--lexicon`)用品牌词表抽取目标品牌 + 配置竞品 + 开放品牌,每条带 `brand` / `brand_type`,供「竞品情感矩阵」使用。两种模式的正文清洗与品牌识别都调用 `geo-metrics`(`de_cite_crawl` 去引用 + core `find_alias_spans` 跨品牌消解,读词表顶层 `case_sensitive_aliases`),和提及率认的是同一批品牌。
 - 每个单元/Claim 只按**它自己所属的品牌**判读,不做跨品牌比较、不做品牌间胜负判定。
 - **不设中性档**:品牌未提及或没有明确正负倾向时**不生成 Claim**,不推测、不补值、不计入分母。
 - 不回写后端 JSON 的 `sentiment` 字段——该字段的回答级口径仍由 `geo-presales-report-audit` 冻结,本 skill 的产物是独立指标与明细。

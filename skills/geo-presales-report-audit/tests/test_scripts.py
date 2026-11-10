@@ -405,7 +405,7 @@ class StructuredResultTests(unittest.TestCase):
         self.assertEqual(bundle["target_brand"], "Lbrand")
 
 
-DE_CITE_SCRIPT = ROOT / "scripts" / "de_cite_crawl.py"
+DE_CITE_SCRIPT = ROOT.parent / "geo-metrics" / "scripts" / "de_cite_crawl.py"
 VERIFY_SCRIPT = ROOT / "scripts" / "verify_brand_extraction.py"
 
 PROMPT = "Which smart dash cam brands should car owners consider?"
