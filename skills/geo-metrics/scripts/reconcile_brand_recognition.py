@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
-"""品牌识别对账：用报告同一套识别跑一遍，列出漏判候选和误判候选，给人复核。
+"""品牌识别对账：用报告同一套识别跑一遍，列出漏判候选、误判候选和建议补的别名，给人复核。
 
 识别路径与报告完全一致：strip_citations + blank_merchant_columns 清正文，answer_validity 判有效，
-build_report_data.load_lexicon 读词表，find_alias_spans + resolve_alias_spans 匹配。对账只在这之上加两条
-确定性规则，不改识别结果：
+build_report_data.load_lexicon 读词表，find_alias_spans + resolve_alias_spans 匹配。对账只在这之上列候选，
+不改识别结果：
 
-  漏判候选  正文里的大写词（或相邻两个词连写）与某品牌别名首字母相同、拼写近似（5–8 字母差 1、9 字母以上差 2，
-            或只差空格/连字符），且未被识别成任何品牌；词典里的普通单词不算。该回答没认出这个品牌时记「影响提及」，
-            否则「无影响」。
-  误判候选  品牌标准名带大写，但这条回答里它的命中全是小写（filter ring、outer ring 被算成 Ring）。
-            「常用词只在句首出现」试过，Bbrand 数据 6 条全是加粗列表项或标题里的真品牌，已弃用。
+  漏判候选  正文里的大写词（或相邻两个词连写）与某品牌别名首字母相同、拼写差 1–2 个字母（5–8 字母差 1、
+            9 字母以上差 2），且未被识别成任何品牌；英文常用词不算。该回答没认出这个品牌时记「影响提及」，
+            否则「无影响」。只差空格的写法 core 已自动识别（大写开头的拆分），这里不再列。
+  误判候选  品牌标准名带大写，但这条回答里它的命中全是小写（apple juice 被算成 Apple）。
+  别名候选  别名去掉末尾通用后缀（Water、Travel、Security、Inc 等）后的简称，在品牌没被认出的回答里出现。
+            简称常是另一个实体（「某系统名 + Security」→ 操作系统名、带数字的品牌 → 纯数字），所以只列出，
+            由人工或 AI 确认后写进词表，不自动计入。
 
-只看拉丁字母；泰文、中日文别名不参与近似拼写，计入 skipped_non_latin_aliases。
+只看拉丁字母；泰文、中日文别名不参与，计入 skipped_non_latin_aliases。
 词表外的新品牌不归这里，用 mine_brand_lexicon.py。
 
 用法
-    python3 reconcile_brand_recognition.py --collect <采集目录> [<采集目录> ...] \
+    python3 reconcile_brand_recognition.py --collect <采集目录> [<采集目录> ...] \\
         --lexicon <品牌词表.json> --out-dir <输出目录>
 产出 summary.json、candidates.csv、report.md。
 """
@@ -42,11 +44,15 @@ import build_report_data as brd  # noqa: E402
 import geo_presales_core.util as core_util  # noqa: E402
 from de_cite_crawl import blank_merchant_columns, strip_citations  # noqa: E402
 from geo_presales_core.crawler import answer_validity  # noqa: E402
-from geo_presales_core.util import find_alias_spans, normalize_text, resolve_alias_spans  # noqa: E402
+from geo_presales_core.util import find_alias_spans, is_common_word, normalize_text, resolve_alias_spans  # noqa: E402
 
 LATIN_ALIAS = re.compile(r"^[A-Za-z0-9 .'&+\-]+$")
 WORD_RE = re.compile(r"(?<![\w])[A-Za-z][A-Za-z0-9]*(?:['’.&+\-][A-Za-z0-9]+)*")
-DICT_PATH = Path("/usr/share/dict/words")
+SUFFIX_WORDS = frozenset({
+    "water", "systems", "system", "travel", "electronics", "technologies", "technology", "tech",
+    "solutions", "security", "official", "inc", "ltd", "llc", "corp", "corporation", "co", "company",
+    "group", "holdings", "limited",
+})
 
 
 def squash(text: str) -> str:
@@ -75,10 +81,15 @@ def allowed_distance(alias_len: int) -> int:
     return 1 if alias_len <= 8 else 2
 
 
-def load_dictionary() -> set[str]:
-    if not DICT_PATH.exists():
-        return set()
-    return {w.strip() for w in DICT_PATH.read_text(errors="ignore").splitlines() if w.strip().islower()}
+def suffix_shorts(alias: str) -> list[str]:
+    if not LATIN_ALIAS.match(alias):
+        return []
+    words = alias.split()
+    out = []
+    while len(words) > 1 and words[-1].casefold().strip(".,") in SUFFIX_WORDS:
+        words = words[:-1]
+        out.append(" ".join(words))
+    return out
 
 
 def build_brands(lexicon_path: Path) -> tuple[list[dict], dict]:
@@ -105,6 +116,15 @@ def build_brands(lexicon_path: Path) -> tuple[list[dict], dict]:
             "near": [(a, squash(a)) for a in aliases if LATIN_ALIAS.match(a) and len(squash(a)) >= 5],
             "has_upper": any(c.isupper() for c in entry["name"]),
         })
+    for b in brands:
+        own = {normalize_text(a) for a in b["aliases"]}
+        shorts = {}
+        for alias in b["aliases"]:
+            for short in suffix_shorts(alias):
+                if normalize_text(short) not in own:
+                    shorts.setdefault(short, alias)
+        b["shorts"] = [{"short": s, "from_alias": a, "other_brand": owner.get(normalize_text(s)),
+                        "digits_only": s.replace(" ", "").isdigit()} for s, a in shorts.items()]
     meta = {"brands": len(brands), "uncertain": sorted(uncertain), "dropped_duplicate_aliases": dropped,
             "skipped_non_latin_aliases": sum(1 for b in brands for a in b["aliases"] if not LATIN_ALIAS.match(a))}
     return brands, meta
@@ -184,7 +204,7 @@ def token_forms(body: str):
                 yield body[start:nend], start, nend
 
 
-def near_misses(body: str, brands: list[dict], found: dict, dictionary: set[str], width: int) -> list[dict]:
+def near_misses(body: str, brands: list[dict], found: dict, width: int) -> list[dict]:
     covered = [(s["start"], s["end"]) for spans in found.values() for s in spans]
     out, seen = [], set()
     for token, start, end in token_forms(body):
@@ -193,7 +213,7 @@ def near_misses(body: str, brands: list[dict], found: dict, dictionary: set[str]
             continue
         if any(s < end and start < e for s, e in covered):
             continue
-        if " " not in token and token.casefold() in dictionary:
+        if is_common_word(token):
             continue
         key = squash(token)
         for b in brands:
@@ -202,14 +222,11 @@ def near_misses(body: str, brands: list[dict], found: dict, dictionary: set[str]
                     continue
                 cap = allowed_distance(len(alias_key))
                 dist = edit_distance(key, alias_key, cap)
-                if dist > cap or (dist == 0 and token.casefold() == alias.casefold()):
-                    continue
-                if (b["object_id"], token) in seen:
+                if dist == 0 or dist > cap or (b["object_id"], token) in seen:
                     continue
                 seen.add((b["object_id"], token))
-                out.append({"kind": "漏判", "rule": "近似拼写" if dist else "只差空格或连字符",
-                            "brand": b["object_id"], "text": token, "alias": alias, "distance": dist,
-                            "affects_mention": b["object_id"] not in found,
+                out.append({"kind": "漏判", "rule": "近似拼写", "brand": b["object_id"], "text": token,
+                            "alias": alias, "distance": dist, "affects_mention": b["object_id"] not in found,
                             "context": snippet(body, start, end, width)})
     return out
 
@@ -228,6 +245,23 @@ def false_positives(body: str, brands_by_id: dict, found: dict, width: int) -> l
     return out
 
 
+def alias_suggestions(body: str, brands: list[dict], found: dict, width: int) -> list[dict]:
+    out = []
+    for b in brands:
+        if b["object_id"] in found:
+            continue
+        for item in b["shorts"]:
+            spans = find_alias_spans(body, [item["short"]])
+            if spans:
+                first = spans[0]
+                out.append({"kind": "别名候选", "rule": "去后缀简称", "brand": b["object_id"],
+                            "text": first["matched_text"], "alias": item["from_alias"], "distance": "",
+                            "affects_mention": True, "context": snippet(body, first["start"], first["end"], width),
+                            "short": item["short"], "other_brand": item["other_brand"] or "",
+                            "digits_only": item["digits_only"]})
+    return out
+
+
 def write_outputs(out_dir: Path, args, stats, meta, per_brand, rows) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     summary_rows = []
@@ -243,12 +277,25 @@ def write_outputs(out_dir: Path, args, stats, meta, per_brand, rows) -> dict:
             "fp_rate_upper_bound": round(c["fp"] / c["recognized"], 4) if c["recognized"] else 0,
         })
     summary_rows.sort(key=lambda r: (-(r["miss_candidates_affecting"] + r["fp_candidates"]), -r["recognized_answers"]))
+
+    grouped: dict[tuple, dict] = {}
+    for r in rows:
+        if r["kind"] != "别名候选":
+            continue
+        g = grouped.setdefault((r["brand"], r["short"]), {
+            "brand": r["brand"], "short": r["short"], "from_alias": r["alias"], "answers": 0,
+            "other_brand": r["other_brand"], "digits_only": r["digits_only"], "contexts": []})
+        g["answers"] += 1
+        if len(g["contexts"]) < 3:
+            g["contexts"].append(r["context"])
+    suggestions = sorted(grouped.values(), key=lambda g: -g["answers"])
+
     summary = {"inputs": {"collect": [str(p) for p in args.collect], "lexicon": str(args.lexicon)},
-               "stats": stats, "lexicon": meta, "brands": summary_rows}
+               "stats": stats, "lexicon": meta, "brands": summary_rows, "alias_suggestions": suggestions}
     (out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     fields = ["kind", "rule", "brand", "text", "alias", "distance", "affects_mention", "platform", "file", "context"]
     with (out_dir / "candidates.csv").open("w", newline="", encoding="utf-8-sig") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -276,6 +323,13 @@ def write_outputs(out_dir: Path, args, stats, meta, per_brand, rows) -> dict:
         for r in picked[:args.show]:
             lines.append(f"- **{r['brand']}** ← `{r['text']}`（{r['rule']}，{r['platform']}，{Path(r['file']).name}）："
                          f"{r['context']}")
+    lines += ["", f"## 别名候选（去后缀简称，共 {len(suggestions)} 个）", "",
+              "只在该品牌没被认出的回答里统计。简称常是另一个实体，确认是同一品牌再写进词表。", ""]
+    for g in suggestions[:args.show]:
+        flags = "；".join(f for f in (f"已是 {g['other_brand']} 的别名" if g["other_brand"] else "",
+                                       "纯数字" if g["digits_only"] else "") if f)
+        lines.append(f"- **{g['brand']}** ← `{g['short']}`（由 {g['from_alias']} 去后缀，{g['answers']} 条回答"
+                     f"{'；' + flags if flags else ''}）：{g['contexts'][0]}")
     (out_dir / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return summary
 
@@ -291,8 +345,6 @@ def main(argv=None) -> int:
 
     brands, meta = build_brands(args.lexicon)
     brands_by_id = {b["object_id"]: b for b in brands}
-    dictionary = load_dictionary()
-    meta["dictionary_words"] = len(dictionary)
     stats = defaultdict(int)
     per_brand = defaultdict(lambda: defaultdict(int))
     rows = []
@@ -300,21 +352,22 @@ def main(argv=None) -> int:
         found = recognize(body, brands)
         for object_id in found:
             per_brand[object_id]["recognized"] += 1
-        misses = near_misses(body, brands, found, dictionary, args.context)
+        misses = near_misses(body, brands, found, args.context)
         fps = false_positives(body, brands_by_id, found, args.context)
+        suggestions = alias_suggestions(body, brands, found, args.context)
         for brand in {r["brand"] for r in misses if r["affects_mention"]}:
             per_brand[brand]["miss_affecting"] += 1
         for brand in {r["brand"] for r in misses if not r["affects_mention"]}:
             per_brand[brand]["miss_no_effect"] += 1
         for r in fps:
             per_brand[r["brand"]]["fp"] += 1
-        rows += [dict(r, platform=platform, file=str(path)) for r in misses + fps]
+        rows += [dict(r, platform=platform, file=str(path)) for r in misses + fps + suggestions]
     for key in ("files", "duplicates", "invalid", "legacy_string_task_result", "bad_json", "bad_task_result",
                 "unknown_platform", "answers"):
         stats.setdefault(key, 0)
     summary = write_outputs(args.out_dir, args, dict(stats), meta, per_brand, rows)
     print(json.dumps({"answers": stats["answers"], "candidates": len(rows), "out": str(args.out_dir),
-                      "top": summary["brands"][:5]}, ensure_ascii=False, indent=2))
+                      "alias_suggestions": len(summary["alias_suggestions"])}, ensure_ascii=False, indent=2))
     return 0
 
 

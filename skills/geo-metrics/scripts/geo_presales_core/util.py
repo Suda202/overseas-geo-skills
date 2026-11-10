@@ -31,6 +31,8 @@ COMMON_MULTI_LABEL_SUFFIXES = {
     # 东南亚市场二级后缀；缺了会把所有马来西亚站点并成一个 "com.my" 桶
     "com.my", "net.my", "org.my", "gov.my", "edu.my", "net.sg", "org.sg",
     "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
+    # 新加坡政府、教育、个人站按机构拆开（hdb.gov.sg 与 ura.gov.sg 是两个来源），都是公共后缀表正式后缀
+    "gov.sg", "edu.sg", "per.sg",
 }
 
 # Google 等新跟踪参数：采集入口先剥掉（strip_tracking_params），避免同一页面被计成多条引用
@@ -148,19 +150,77 @@ def _has_latin_edge(char: str) -> bool:
     return bool(char and char.isalnum() and _LATIN_EDGE.match(char))
 
 
+# 品牌识别的两条通用规则（2026-11-10），只作用于拉丁字母别名：
+# 1. 5 个字母以上的别名，字符之间可夹 1 个空格/连字符/点/下划线（Blue Wave = BlueWave）；原文被这样
+#    拆开时每段都要大写开头，免得普通短语混进来（「blue wave patterns」不算 BlueWave）；
+# 2. 别名是英文常用词时，原文必须带大写才算（apple juice 不算 Apple）。
+# 去后缀派生简称试过后撤回：「某系统名 + Security」派生出操作系统名、带数字的品牌派生出纯数字，
+# 简称常是另一个实体，只在对账脚本里列成候选，由人工或 AI 确认后写进别名。
+# 常用词表随包带（取自 Webster's 2nd 小写词条），线上拷贝 core 时一起走，各机器读数一致。
+_LATIN_ALIAS = re.compile(r"^[0-9A-Za-zÀ-ɏḀ-ỿ .&'+\-_]+$")
+_SEPARATORS = "-_. "
+_SEPARATOR_RUN = re.compile(r"[\s\-_\.]+")
+_WORDS_PATH = Path(__file__).with_name("english_words.txt")
+_COMMON_WORDS: frozenset[str] | None = None
+
+
+def is_common_word(alias: str) -> bool:
+    global _COMMON_WORDS
+    if _COMMON_WORDS is None:
+        _COMMON_WORDS = frozenset(_WORDS_PATH.read_text(encoding="utf-8").split())
+    token = str(alias or "").strip().casefold()
+    return bool(token) and " " not in token and token in _COMMON_WORDS
+
+
+def _alnum_len(alias: str) -> int:
+    return sum(1 for ch in alias if ch.isalnum())
+
+
+def _separator_tolerant(alias: str) -> bool:
+    return bool(_LATIN_ALIAS.match(alias)) and _alnum_len(alias) >= 5
+
+
+def _alias_regex(alias: str) -> str:
+    if not _separator_tolerant(alias):
+        return re.escape(alias).replace(r"\ ", r"[\s\-_\.]*")
+    parts = []
+    for index, char in enumerate(alias):
+        if char in _SEPARATORS:
+            parts.append(r"[\s\-_\.]*")
+            continue
+        parts.append(re.escape(char))
+        following = alias[index + 1:index + 2]
+        if char.isalnum() and following.isalnum():
+            parts.append(r"[ \-_\.]?")
+    return "".join(parts)
+
+
+def _split_is_capitalised(alias: str, matched: str) -> bool:
+    pieces = [p for p in _SEPARATOR_RUN.split(matched) if p]
+    if len(pieces) <= len([p for p in _SEPARATOR_RUN.split(alias) if p]):
+        return True
+    return all(p[0].isupper() or p[0].isdigit() for p in pieces)
+
+
 def find_alias_spans(text: str, aliases: list[str], case_sensitive=None) -> list[dict]:
     normalized = unicodedata.normalize("NFKC", str(text or ""))
     matches: list[dict] = []
     for raw_alias in sorted({str(a).strip() for a in aliases if str(a).strip()}, key=len, reverse=True):
         alias = unicodedata.normalize("NFKC", raw_alias)
-        escaped = re.escape(alias).replace(r"\ ", r"[\s\-_\.]*")
         left = r"(?<![\w])" if _has_latin_edge(alias[:1]) else ""
         right = r"(?![\w])" if _has_latin_edge(alias[-1:]) else ""
-        pattern = re.compile(left + escaped + right, re.IGNORECASE | re.UNICODE)
+        pattern = re.compile(left + _alias_regex(alias) + right, re.IGNORECASE | re.UNICODE)
+        needs_upper = _LATIN_ALIAS.match(alias) is not None and is_common_word(alias)
+        tolerant = _separator_tolerant(alias)
         for found in pattern.finditer(normalized):
+            matched = found.group(0)
+            if needs_upper and not any(ch.isupper() for ch in matched):
+                continue
+            if tolerant and not _split_is_capitalised(alias, matched):
+                continue
             matches.append({
                 "alias": raw_alias,
-                "matched_text": found.group(0),
+                "matched_text": matched,
                 "start": found.start(),
                 "end": found.end(),
             })
@@ -186,13 +246,18 @@ def case_sensitive_for(aliases, case_sensitive) -> list[str]:
     return sorted({c for c in case_sensitive or [] if normalize_alias(c) in own})
 
 
-def read_case_sensitive_aliases(lexicon_path) -> list[str]:
-    """品牌词表 JSON 顶层的 case_sensitive_aliases：要区分大小写的品牌名或别名写法，对词表内外所有品牌生效。"""
+def read_lexicon_list(lexicon_path, key: str) -> list[str]:
+    """品牌词表 JSON 顶层的名单字段（case_sensitive_aliases、competitor_site_domains）。"""
     if not lexicon_path or not Path(lexicon_path).exists():
         return []
     raw = json.loads(Path(lexicon_path).read_text(encoding="utf-8"))
-    values = raw.get("case_sensitive_aliases") if isinstance(raw, dict) else None
+    values = raw.get(key) if isinstance(raw, dict) else None
     return [str(v).strip() for v in values or [] if str(v).strip()]
+
+
+def read_case_sensitive_aliases(lexicon_path) -> list[str]:
+    """要区分大小写的品牌名或别名写法，对词表内外所有品牌生效。"""
+    return read_lexicon_list(lexicon_path, "case_sensitive_aliases")
 
 
 def resolve_alias_spans(spans: list[dict]) -> list[dict]:

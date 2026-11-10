@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-TEXT_FIELD = {"overview": "content", "grok": "full_response", "alexa": "md_text"}
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
+from geo_presales_core.crawler import answer_body  # noqa: E402
+
 PLATFORM_LABELS = {"overview": "AIO", "gemini": "Gemini",
                    "chatgpt": "ChatGPT", "perplexity": "Perplexity", "aimode": "AI Mode",
                    "copilot": "Copilot", "grok": "Grok", "alexa": "Alexa"}
@@ -48,7 +51,7 @@ def main() -> int:
                 continue
             for path in sorted(folder.glob("*.json")):
                 result = json.loads(path.read_text(encoding="utf-8")).get("task_result") or {}
-                answer = str(result.get(TEXT_FIELD.get(platform_dir, "result_text")) or "").strip()
+                answer = answer_body(result, platform_dir).strip()
                 if not answer:
                     continue
                 entries.append({

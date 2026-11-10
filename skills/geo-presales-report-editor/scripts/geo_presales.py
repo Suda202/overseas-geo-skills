@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # python3 -I 不加脚本目录
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
 
 from geo_presales_editor.cli import main  # noqa: E402

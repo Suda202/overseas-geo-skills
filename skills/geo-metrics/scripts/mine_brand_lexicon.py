@@ -83,17 +83,16 @@ def discover_regions(collect_dir: str) -> list[str]:
                 regions.append(child)
     return regions
 
-# ``overview`` keeps its prose in ``content``; the chat-shaped platforms use
-# ``result_text``.
-TEXT_FIELD = {"overview": "content", "grok": "full_response", "alexa": "md_text"}
-TEXT_FIELD_DEFAULT = "result_text"
 
 # --------------------------------------------------------------------------
 # Cleaning
 # --------------------------------------------------------------------------
 
 # 与报告渲染共用同一定义（同目录 de_cite_crawl），避免两处漂移。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I 不加脚本目录
 from de_cite_crawl import PRODUCT_VIEWER_NOISE  # noqa: E402
+from geo_presales_core.crawler import answer_body  # noqa: E402
+from geo_presales_core.lexicon import load_lexicon as core_load_lexicon  # noqa: E402
 
 
 def clean_text(raw: str) -> str:
@@ -169,8 +168,7 @@ def iter_docs(collect_dir: str):
                 except (OSError, ValueError):
                     continue
                 task = payload.get("task_result") or {}
-                field = TEXT_FIELD.get(platform, TEXT_FIELD_DEFAULT)
-                body = task.get(field) or ""
+                body = answer_body(task, platform)
                 yield platform, region, path, clean_text(body)
 
 
@@ -205,22 +203,23 @@ def mine(collect_dir: str):
 # --------------------------------------------------------------------------
 
 def load_lexicon(path: str):
-    """Return (alias->brand, stopword set) lowercased, longest alias first."""
+    """Return (alias->brand, stopword set) lowercased. Brands come from core lexicon.load_lexicon
+    (same reader as the report); ``uncertain`` names and ``stopwords`` are read from the raw file."""
+    entries, _uncertain, _status = core_load_lexicon(path)
+    alias_map = {}
+    for brand in entries:
+        for alias in [brand["name"], *brand["aliases"]]:
+            if alias:
+                alias_map[alias.lower()] = brand["name"]
     with open(path, encoding="utf-8") as fh:
         lex = json.load(fh)
-    alias_map = {}
-    for brand in lex.get("brands", []):
-        name = brand["name"]
-        for alias in [name, *brand.get("aliases", [])]:
-            if alias:
-                alias_map[alias.lower()] = name
+    lex = lex if isinstance(lex, dict) else {}
     for entry in lex.get("uncertain", []):
         name = entry.get("name") if isinstance(entry, dict) else entry
         if name:
             alias_map.setdefault(name.lower(), f"uncertain:{name}")
     stop = {w.lower() for w in lex.get("stopwords", []) if w}
     return alias_map, stop
-
 
 def classify(cand: str, alias_map, stop):
     """Return a verdict string for one candidate.

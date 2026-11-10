@@ -32,6 +32,8 @@ def _copy_source(source: str | Path, target: Path) -> None:
 def cmd_create_run(args):
     raw = read_json(args.config)
     config = normalize_config(raw)
+    # 影子审计对齐上传 CSV：引用与提及率同一批（Discovery）回答
+    config.setdefault("citation_scope", "visibility")
     manifest = create_run_dir(args.run_dir, config, args.config)
     _emit({"run_dir": str(Path(args.run_dir).expanduser().resolve()), "run_id": config["run_id"], "state": manifest["state"]})
 

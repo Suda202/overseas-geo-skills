@@ -2,7 +2,7 @@
 
 Formal-baseline results go to the brand party as one HTML file (the candidate baseline was retired 2026-10-23; old candidate-baseline reports built with this script stay valid), never as Base tables (Suda 2026-10-21). A Base dashboard can only SUM / AVG / MAX / MIN and cannot divide across rows, so every rate had to be precomputed per filter combination (Hbrand: 1,344 helper rows), and a dashboard-level filter cannot be created through the API. The HTML is precomputed and verified too, but filters freely. The Base keeps only what the brand party confirms or edits (AI 认知差距 stays on 提示词库).
 
-Script: `scripts/build_baseline_html.py`. It reuses `geo-presales-report-builder` (build_report_data → verify_report_data → render_report) and `geo-presales-sentiment-judge`, patching them at run time; it never edits those skills' source.
+Script: `scripts/build_baseline_html.py`. It reuses `geo-presales-report-builder` (build_report_data → verify_report_data → render_report) and `geo-presales-sentiment-judge`. Since 2026-11-10 it uses the same metric calibers as the presales report with no run-time statistic patches (brand recognition, source classification and citation scope all come from `geo-metrics`); it only adapts display — the region layer carries the intent type, and the page adds the 引用率 KPI, per-run drawer and per-question comparison table.
 
 Run every command from the client's baseline directory with the script's absolute path:
 
@@ -38,9 +38,9 @@ Sentiment and translations are prepared before the report is built, so the repor
 | `runs`, `region` | Round directories and the region folder inside them |
 | `questions_csv`, `bank_json` | `query / question_zh / topic / question_id`; the bank gives each Prompt's type (`intent`, or `prompt_type`) |
 | `topic_labels`, `platform_labels` | Display names; Google's answer box is 「AI Overviews」 |
-| `case_sensitive_aliases` | Abbreviations that collide with words (ERA); list every accepted casing (lyf / Lyf / LYF) |
-| `multi_label_suffixes` | e.g. `gov.sg`, so each agency counts as its own domain |
-| `competitor_site_domains` | Same-category platforms counted as 竞品网站 beyond the configured brands |
+| `case_sensitive_aliases` | Abbreviations that collide with words (ERA); list every accepted casing (lyf / Lyf / LYF). Written to the brand lexicon's top level; geo-metrics core applies it |
+| `multi_label_suffixes` | Must already be in geo-metrics core `COMMON_MULTI_LABEL_SUFFIXES` (`gov.sg`, `edu.sg`, `per.sg` are); the build stops if one is missing — add it there, not here |
+| `competitor_site_domains` | Same-category platforms counted as 竞品网站 beyond the configured brands. Written to the brand lexicon's top level; geo-metrics core source classification applies it |
 | `domain_categories` | `ugc / media_review / press_release / institutional` domain lists |
 | `sentiment` | `{units, claims, metrics}` paths; ignored until all three exist |
 | `translations` | Folder of `batch-*.zh.json` |

@@ -21,17 +21,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-# 回答正文在哪里。清洗与分层检查都以此为准。
-PLATFORM_ANSWER_FIELD = {
-    "chatgpt": ["result_text"],
-    "gemini": ["result_text"],
-    "aimode": ["result_md", "result_text"],
-    "overview": ["content", "rawtext"],
-    "perplexity": ["result_text"],
-    "copilot": ["result_text"],
-    "grok": ["full_response"],
-    "alexa": ["md_text", "raw_text"],
-}
 
 # 正文引用标记的两种形态，四平台一致
 REF_DEF = re.compile(r"^\s*\[\d+\]:\s*\S+.*$", re.M)
@@ -58,7 +47,7 @@ CORE_DIR = Path(__file__).resolve().parent
 if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 
-from geo_presales_core.crawler import answer_validity  # noqa: E402
+from geo_presales_core.crawler import answer_body, answer_validity  # noqa: E402
 
 
 def dig(payload: dict, key: str):
@@ -72,11 +61,8 @@ def dig(payload: dict, key: str):
 
 
 def answer_text(payload: dict, platform: str) -> str:
-    for key in PLATFORM_ANSWER_FIELD.get(platform, ["result_text"]):
-        value = dig(payload, key)
-        if isinstance(value, str) and value.strip():
-            return value
-    return ""
+    """正文字段与报告数据层同一张表（core crawler.ANSWER_FIELD；AI Mode 取 result_text 不取 result_md）。"""
+    return answer_body(payload.get("task_result") or {}, platform)
 
 
 def strip_citations(text: str) -> str:
@@ -93,6 +79,8 @@ def strip_citations(text: str) -> str:
     text = MD_LINK.sub(r"\1", text)
     text = HTML_TAG.sub(" ", text)
     text = BARE_URL.sub(" ", text)
+    # AI Mode 商品表格把这句贴在商品名后（Google NestGo to …），不去掉品牌词边界会断
+    text = text.replace(PRODUCT_VIEWER_NOISE, " ")
     # 引用标记剥完再还原转义，免得 `\[` `\]` 还原后拼出假引用标记
     text = MD_ESCAPE.sub(r"\1", text)
     text = re.sub(r"[ \t]+\n", "\n", text)

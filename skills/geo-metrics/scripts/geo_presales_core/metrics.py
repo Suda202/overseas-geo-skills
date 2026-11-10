@@ -133,7 +133,7 @@ def _opportunity_sort_key(item: dict):
     return (intent, item["report_rank"] or 999, item["generation_sequence"])
 
 
-def _visibility_answers(config: dict, valid_answers: list[dict]) -> list[dict]:
+def visibility_answers(config: dict, valid_answers: list[dict]) -> list[dict]:
     """提及类指标（提及率、排名、声量份额、平均提及位置、问题机会）的样本。
 
     缺省只用 Discovery（后端与上传 CSV 口径）。``config["visibility_intent_groups"]`` 给出按顺序回退的
@@ -151,13 +151,59 @@ def _visibility_answers(config: dict, valid_answers: list[dict]) -> list[dict]:
     return []
 
 
+def question_object_stats(valid_answers: list[dict], objects: list[dict]) -> list[dict]:
+    """一道题（或任意一小组回答）里每个纳入对象的读数，不按意图筛样本，逐题明细用。
+
+    提及率 = 提及该对象的回答 ÷ 有效回答；声量 = 该对象提及回答数 ÷ 全部对象提及回答数之和；
+    平均位置只算有名次的提及；引用份额 = 指向该对象官网的引用次数 ÷ 全部引用次数（未去重）；
+    引用率 = 正文至少引用一次该对象官网的回答 ÷ 有效回答。
+    """
+    n = len(valid_answers)
+    counts: Counter = Counter()
+    rank_sum: dict[str, float] = defaultdict(float)
+    rank_n: Counter = Counter()
+    own_cites: Counter = Counter()
+    cited_answers: Counter = Counter()
+    citation_total = 0
+    for answer in valid_answers:
+        citation_total += len(answer["citations"])
+        owners = set()
+        for citation in answer["citations"]:
+            owner = citation.get("matched_official_object_id")
+            if owner:
+                own_cites[owner] += 1
+                owners.add(owner)
+        for owner in owners:
+            cited_answers[owner] += 1
+        for item in answer["objects"]:
+            if item["mentioned"]:
+                counts[item["object_id"]] += 1
+                if item.get("report_rank"):
+                    rank_sum[item["object_id"]] += item["report_rank"]
+                    rank_n[item["object_id"]] += 1
+    total_mentions = sum(counts.values())
+    return [
+        {
+            "object_id": obj["object_id"],
+            "name": obj["canonical_name"],
+            "role": obj["role"],
+            "mention_count": counts[obj["object_id"]],
+            "mention_rate": counts[obj["object_id"]] / n if n else None,
+            "share_of_voice": counts[obj["object_id"]] / total_mentions if total_mentions else None,
+            "average_rank": rank_sum[obj["object_id"]] / rank_n[obj["object_id"]] if rank_n[obj["object_id"]] else None,
+            "citation_share": own_cites[obj["object_id"]] / citation_total if citation_total else None,
+            "citation_rate": cited_answers[obj["object_id"]] / n if n else None,
+        }
+        for obj in objects
+    ]
+
+
 def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dict:
     valid_answers = _valid_answers(answers_doc)
-    discovery = _visibility_answers(config, valid_answers)
-    # 引用的样本：缺省同提及类样本（上传 CSV 是 Discovery；售前 HTML 报告是发现＋替代，Suda 2026-11-07
-    # 定核心洞察的引用也只看发现、替代，和提及率同一批回答才好比）；config["citation_scope"] == "all"
-    # 时用全部有效回答。售前 HTML 的引用模块（全部意图类型）由 build_sources 自己算，不读这里。
-    cite_answers = valid_answers if config.get("citation_scope") == "all" else discovery
+    discovery = visibility_answers(config, valid_answers)
+    # 引用默认统计全部有效回答（Suda 2026-11-10：统计层全部类型都算，展示哪一批由报告决定）。
+    # 报告要和提及率同一批回答比时传 config["citation_scope"] = "visibility"（售前核心洞察、上传 CSV 影子审计）。
+    cite_answers = discovery if config.get("citation_scope") == "visibility" else valid_answers
     sentiment_answers = [item for item in valid_answers if _is_sentiment_answer(item)]
     target_id = config["target_object_id"]
 
@@ -202,6 +248,11 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "share_of_voice": voice_values[obj["object_id"]],
             "average_rank": rank_values[obj["object_id"]],
             "linked_mention_rate": linked_values[obj["object_id"]],
+            # 该对象官网引用次数 ÷ 引用样本的全部引用次数（未去重），与目标的 official_share 同一公式
+            "citation_share": _percent(
+                sum(1 for answer in cite_answers for citation in answer["citations"]
+                    if citation.get("matched_official_object_id") == obj["object_id"]),
+                sum(len(answer["citations"]) for answer in cite_answers)),
         }
 
     mentioned_target = [answer for answer in sentiment_answers if _object(answer, target_id)["mentioned"]]
@@ -441,7 +492,7 @@ def compute_metrics(config: dict, question_bank: dict, answers_doc: dict) -> dic
             "share_of_voice_denominator": "有效 Discovery 回答中各已配置对象提及次数之和",
             "sentiment_scope": "all analysis_type=sentiment records; no diagnostic_intent filter (legacy explicit sentiment scopes only when analysis_type is absent)",
             "positive_sentiment_denominator": "有效 Sentiment 回答中已完成判断的目标品牌正向与负向评价之和；排除中性",
-            "citation_scope": "all valid answers" if config.get("citation_scope") == "all" else "same answers as visibility metrics",
+            "citation_scope": "same answers as visibility metrics" if config.get("citation_scope") == "visibility" else "all valid answers",
             "visibility_intent_groups": config.get("visibility_intent_groups") or [["discovery"]],
             "official_citation_denominator": "有效 Discovery 回答产生的原始引用记录",
             "official_citation_rate_denominator": "有效 Discovery 回答；分子为其中正文至少引用一次目标官网的回答",

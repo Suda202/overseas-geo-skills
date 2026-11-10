@@ -63,8 +63,11 @@ if str(CORE_DIR) not in sys.path:
 import geo_presales_core.util as core_util  # noqa: E402
 from geo_presales_core.config import all_objects
 from geo_presales_core.deterministic import prepare_answers  # noqa: E402
+import geo_presales_core.crawler as core_crawler  # noqa: E402
+import geo_presales_core.lexicon as core_lexicon  # noqa: E402
+import geo_presales_core.citations as core_citations  # noqa: E402
 from geo_presales_core.crawler import answer_validity
-from geo_presales_core.metrics import compute_metrics  # noqa: E402
+from geo_presales_core.metrics import compute_metrics, question_object_stats, visibility_answers  # noqa: E402
 from geo_presales_core.shopping import extract_product_cards, product_field_returned  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     normalize_host,
@@ -158,32 +161,21 @@ PLATFORM_LABELS: list[str] = []
 LABEL_TO_DIR: dict[str, str] = {}
 DIR_TO_LABEL: dict[str, str] = {}
 
-# 正文字段：overview 用 content，其余用 result_text（AI Mode 的 result_md 混有 base64 图片与 HTML 块，不用）。
-# Grok 用 full_response（raw_response 带 <grok:render> 标签）；Alexa 用 md_text（raw_text 带 {ref cite_…} 标记）。
-ANSWER_FIELD = {"overview": "content", "gemini": "result_text",
-                "chatgpt": "result_text", "perplexity": "result_text", "aimode": "result_text",
-                "copilot": "result_text", "grok": "full_response", "alexa": "md_text"}
-# 引用字段：逐平台不同。Grok 的 footnotes 是以 card id 为键的对象，不是数组
-CITATION_FIELD = {"overview": "source", "gemini": "citations",
-                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
-                  "copilot": "citations", "grok": "footnotes", "alexa": "references"}
-
-# Alexa 的 md_text 不带引用标记，引用位置只留在 raw_text 的 `{ref cite_<id>}`，按 id 对
-# references。id 偶有重复前缀（`cite_cite_dx9kveQ`），比对前剥掉。2026-10-21 实测：
-# 正文引用的 id 有一部分在 references 里找不到，照样计次数、记为 unresolved。
-ALEXA_REF_MARKER = re.compile(r"\{ref\s+((?:cite_)+)([A-Za-z0-9_-]+)\}")
-
-# 「同一回答内同一 URL 折叠为一条」的平台：这些平台会把一个逻辑来源拆成多条引用条目，
-# 把同一页面在一个回答里重复计数——Gemini 按 `…#:~:text=` 文本片段拆，AIO(overview)
-# 按「空壳条目(title/snippet 空) + 填充条目」或同页多摘要拆。按 canonical 折叠成一条
-# （「同一 url 视为同一引用」）。ChatGPT / Perplexity 不在此列：它们的重复是正文里对同一
-# 来源的多次真实引用，按实际次数计，不折叠。
-CITATION_URL_COLLAPSE_PLATFORMS = {"gemini", "overview"}
-
-# 正文引用标记。四平台格式一致：定义行 `[3]: https://… "标题"`，行内标记 `([来源名][3])`。
-_BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re.M)
-_BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
-_BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
+# 正文字段表在 geo-metrics（core crawler.ANSWER_FIELD）
+ANSWER_FIELD = core_crawler.ANSWER_FIELD
+# 引用抽取与计次在 geo-metrics（core citations）；这些名字保留给监测、对账脚本按 brd.xxx 调用
+CITATION_FIELD = core_citations.CITATION_FIELD
+ALEXA_REF_MARKER = core_citations.ALEXA_REF_MARKER
+CITATION_URL_COLLAPSE_PLATFORMS = core_citations.CITATION_URL_COLLAPSE_PLATFORMS
+_BODY_REF_DEF = core_citations._BODY_REF_DEF
+_BODY_REF_MARKER = core_citations._BODY_REF_MARKER
+_BODY_REF_MARKER_BARE = core_citations._BODY_REF_MARKER_BARE
+_platform_citation_entries = core_citations._platform_citation_entries
+_body_citation_occurrences = core_citations._body_citation_occurrences
+_citation_keep_mask = core_citations._citation_keep_mask
+_cited_count_entries = core_citations._cited_count_entries
+_alexa_citation_entries = core_citations._alexa_citation_entries
+_citation_entries = core_citations._citation_entries
 
 
 # 题库 diagnosis_intent -> 后端 diagnostic_intent（意图口径 shared/canonical-intent-mapping.md）
@@ -385,88 +377,8 @@ def load_question_rows(path: Path) -> list[dict]:
     return rows
 
 
-def load_lexicon(path) -> tuple[list[dict], set[str], str]:
-    """读取品牌词表，返回 ([{name, domains, aliases, type}], 排除名单, status)。
-
-    词表结构容忍多种写法（``{"brands": [...]}`` / 裸列表 / name->info 映射）。
-    ``uncertain`` 中的名字按词表约定排除在声量分母之外。
-    """
-    empty: tuple[list[dict], set[str], str] = ([], set(), "absent")
-    if not path:
-        return empty
-    path = Path(path)
-    if not path.exists():
-        return empty
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return [], set(), f"unreadable:{exc.__class__.__name__}"
-
-    uncertain = set()
-    if isinstance(raw, dict):
-        for item in raw.get("uncertain") or []:
-            name = item.get("name") if isinstance(item, dict) else item
-            if name:
-                uncertain.add(normalize_text(str(name)))
-
-    def as_list(value):
-        if value is None:
-            return []
-        return value if isinstance(value, list) else [value]
-
-    if isinstance(raw, dict) and isinstance(raw.get("brands"), (list, dict)):
-        # 正式结构 {"brands": [...]}；也容忍 {"brands": {标准名: 别名 list}} 的嵌套 dict。
-        # 顶层其余键（target / note / tiers 等元数据）一律不当作品牌——旧行为会把它们
-        # 静默变成品牌，声量分母随之被污染（2026-09-22 实测：22 个品牌的词表只出了 8 个对象，
-        # 还混进 target/note/tiers 三个假品牌）。
-        brands_field = raw["brands"]
-        if isinstance(brands_field, dict):
-            source = [{"name": key, "aliases": [key, *[str(a).strip() for a in as_list(value)]]}
-                      for key, value in brands_field.items()]
-        else:
-            source = brands_field
-        ignored = sorted(key for key in raw
-                         if key not in {"brands", "uncertain", "stopwords"} and not key.startswith("_"))
-        if ignored:
-            print(f"词表 {path}: 顶层 {ignored} 未识别为品牌，已忽略（只读 brands 分支）", file=sys.stderr)
-    elif isinstance(raw, list):
-        source = raw
-    elif isinstance(raw, dict):
-        # 兼容「标准名 → 别名 list」的 dict 型词表（report-audit / shared），别名必须保留；
-        # 以 `_` 开头的键（_comment/_canonical 等）是元数据，不是品牌。
-        source = []
-        for key, value in raw.items():
-            if key in {"uncertain", "stopwords"} or key.startswith("_"):
-                continue
-            if isinstance(value, dict):
-                source.append(dict(value, name=key))
-            elif isinstance(value, list):
-                source.append({"name": key, "aliases": [key, *value]})
-            else:
-                source.append({"name": key})
-    else:
-        return [], set(), "unsupported-shape"
-
-    entries = []
-    for item in source:
-        if isinstance(item, str):
-            item = {"name": item}
-        if not isinstance(item, dict):
-            continue
-        name = str(item.get("name") or item.get("brand") or item.get("canonical_name") or "").strip()
-        if not name or normalize_text(name) in uncertain:
-            continue
-        domains = [normalize_host(str(d)) for d in as_list(
-            item.get("official_domains") or item.get("domains") or item.get("domain"))]
-        aliases = [str(a).strip() for a in as_list(item.get("aliases")) if str(a).strip()]
-        entries.append({
-            "name": name,
-            "domains": [d for d in domains if d],
-            "aliases": aliases or [name],
-            "type": str(item.get("type") or "competitor_open").strip(),
-        })
-    return entries, uncertain, "loaded"
-
+# 品牌词表读取在 geo-metrics（core lexicon.load_lexicon）
+load_lexicon = core_lexicon.load_lexicon
 
 # ------------------------------------------------------------ 构造内部结构
 
@@ -482,7 +394,7 @@ def _name_tokens_subset(a: str, b: str) -> bool:
 
 
 def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
-                 domain_cache: dict | None = None, case_sensitive=()) -> dict:
+                 domain_cache: dict | None = None, case_sensitive=(), competitor_sites=()) -> dict:
     """构造 config（normalize_config 的内部产物形态）。
 
     对象集 = 目标品牌 + Case 里的 3 个配置竞品 + 词表中的开放品牌。
@@ -577,6 +489,7 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
         # 只剩问题解决题的切片才算问题解决；引用模块（sources）统计全部意图类型，由 build_sources 自己算。
         # core 缺省仍是只看 Discovery（上传 CSV 口径）。
         "visibility_intent_groups": VISIBILITY_INTENT_GROUPS,
+        "competitor_site_domains": list(competitor_sites),
         "citation_scope": "visibility",
         "target_object_id": "target",
         "quotas": {"total": 0},
@@ -655,283 +568,6 @@ def build_question_bank(rows: list[dict], config: dict, topics: list[str]) -> di
 
 
 # --------------------------------------------------------------- 采集数据加载
-
-def _platform_citation_entries(task_result: dict, field: str) -> list[dict]:
-    """供应商引用字段的条目。字段是回退来源，不是首选来源。"""
-    items = task_result.get(field) or []
-    if not isinstance(items, list):
-        return []
-    out = []
-    for order, raw in enumerate(items, 1):
-        if not isinstance(raw, dict):
-            continue
-        url = str(raw.get("url") or raw.get("link") or raw.get("href") or "").strip()
-        if not url:
-            continue
-        url = clean_url(url)
-        host = normalize_host(url)
-        if not host or is_platform_internal(host):
-            continue
-        title = (raw.get("title") or raw.get("name") or raw.get("attribution")
-                 or raw.get("website_name") or "")
-        out.append({
-            "raw_citation_id": None,
-            "source": "platform",
-            "source_order": order,
-            "raw_url": url,
-            "source_name": raw.get("website_name") or raw.get("attribution"),
-            "domain_hint": host,
-            "title": str(title).strip() or None,
-            "date": raw.get("date"),
-            "summary": raw.get("snippet") or raw.get("summary"),
-            "source_position": None,
-            "positions": raw.get("positions") or [],
-            "extraction_method": field,
-            "platform_reported_type": raw.get("type"),
-        })
-    return out
-
-
-def _body_citation_occurrences(text: str) -> tuple[dict, list]:
-    """从回答正文解析引用定义行与标记出现。
-
-    定义行形如 `[3]: https://… "标题"`，行内标记形如 `([来源名][3])`。
-    标记出现次数才是「引用次数」的计数单位：同一 URL 在一篇里出现 N 次就计 N 次。
-    """
-    definitions = {}
-    for number, url, title in _BODY_REF_DEF.findall(text or ""):
-        definitions[number] = {"url": url, "title": title}
-    spans, occurrences = [], []
-    for match in _BODY_REF_MARKER.finditer(text or ""):
-        spans.append(match.span())
-        occurrences.append((match.group(1).strip(), match.group(2), match.start()))
-    for match in _BODY_REF_MARKER_BARE.finditer(text or ""):
-        if any(start <= match.start() < end for start, end in spans):
-            continue
-        occurrences.append((match.group(1).strip(), match.group(2), match.start()))
-    occurrences.sort(key=lambda item: item[2])
-    return definitions, occurrences
-
-
-def _citation_keep_mask(occ_canonicals: list, collapse: bool) -> list:
-    """逐条正文引用是否计入引用次数（区分平台伪拆分与正文真重复）。
-
-    `occ_canonicals`：按正文顺序的 `(reference_number, canonical_url)` 列表，
-    `canonical_url` 为 None 表示这条 pill 解析不出 URL。
-
-    `collapse=True`（Gemini / AIO）：这些平台会把**一个来源**拆成多个编号
-    （Gemini 按 `…#:~:text=` 文本片段、AIO 按「裸桩条目 + 完整条目」），造成
-    「不同编号指向同一 URL」的伪重复；但正文**同一编号被多次引用**是真重复，必须保留。
-    规则：每个 canonical 只保留「出现次数最多的那个编号」的全部引用（并列取编号最小者），
-    其余编号视为伪拆分丢弃；解析不出 URL 的引用无法判断，一律保留。
-    这样 Gemini（各编号各一次）折叠到每 URL 一条，AIO 的真重复（同编号多次）原样保留。
-
-    `collapse=False`（ChatGPT / Perplexity）：正文对同一来源的多次引用都是真实次数，
-    全部保留。
-    """
-    if not collapse:
-        return [True] * len(occ_canonicals)
-    per_canon: dict[str, Counter] = defaultdict(Counter)
-    for number, canonical in occ_canonicals:
-        if canonical is not None:
-            per_canon[canonical][number] += 1
-    winner: dict[str, str] = {}
-    for canonical, counter in per_canon.items():
-        winner[canonical] = min(
-            counter.items(),
-            key=lambda kv: (-kv[1], int(kv[0]) if str(kv[0]).isdigit() else 1_000_000),
-        )[0]
-    return [canonical is None or number == winner[canonical]
-            for number, canonical in occ_canonicals]
-
-
-def _cited_count_entries(platform: str, task_result: dict):
-    """新格式引用条目：直接按供应商的 `cited_count` 计次数。
-
-    `cited_count` 是**未去重的引用次数**（供应商按正文 pill 统计，实测与正文逐条一致：
-    Bbrand 探针 2026-10-13，ChatGPT 14=14、Gemini 16=16、AI Mode 15=15、Perplexity 3=3；
-    当天新采的 ChatGPT 3=3）。字段已按 URL 去重，所以一条来源就是一行数据 + 一个次数。
-
-    返回 None 表示这批是旧格式（字段里没有任何 `cited_count`），调用方回退到正文 pill 计数。
-
-    **逐格判代数，不按平台或日期一刀切**：ChatGPT 2026-10-10 及更早的批次没有该字段，
-    10-13 起才有；AIO 同一批里正文未引用的来源条目也可能缺字段（AI Mode 写 0，AIO 省略）。
-    两种情况都由下面这个 `any(...)` 分派到正确的计数路径。
-
-    计数规则：
-    - `cited_count > 0`：计该次数，次数写入 `cited_count`。
-    - `cited_count == 0`：正文没引用，不计（Perplexity 实测 10 条里 7 条为 0）。
-    - 字段缺失：按 0 处理（AIO 的未引用来源直接省略字段，而不是写 0）。
-    - AIO 的商品卡（`type=product`、`index` 为 null）没有该字段，自然为 0，不计入引用。
-    """
-    field = CITATION_FIELD.get(platform)
-    raw_items = task_result.get(field)
-    if not isinstance(raw_items, list):
-        return None
-    if not any(isinstance(item, dict) and isinstance(item.get("cited_count"), int)
-               for item in raw_items):
-        return None
-    out = []
-    for order, raw in enumerate(raw_items, 1):
-        if not isinstance(raw, dict):
-            continue
-        count = raw.get("cited_count")
-        count = count if isinstance(count, int) else 0
-        if count <= 0:
-            continue
-        raw_url = str(raw.get("url") or raw.get("link") or raw.get("href") or "").strip()
-        url = clean_url(raw_url) if raw_url else ""
-        host = normalize_host(url) if url else None
-        if host and is_platform_internal(host):
-            continue
-        title = (raw.get("title") or raw.get("name") or raw.get("attribution")
-                 or raw.get("website_name") or "")
-        for _ in range(count):
-            out.append({
-                "raw_citation_id": None,
-                "source": "platform_cited_count",
-                "source_order": order,
-                "raw_url": url or None,
-                "source_name": raw.get("website_name") or raw.get("attribution"),
-                "domain_hint": host,
-                "title": str(title).strip() or None,
-                "date": raw.get("date"),
-                "summary": raw.get("snippet") or raw.get("summary"),
-                "source_position": None,
-                "positions": raw.get("positions") or [],
-                "extraction_method": f"{field}.cited_count",
-                "platform_reported_type": raw.get("type"),
-                "reference_number": str(raw.get("index")) if raw.get("index") is not None else None,
-                "mapping_method": "platform_cited_count",
-                "in_table_row": False,
-            })
-    return out
-
-
-def _alexa_citation_entries(task_result: dict) -> list[dict]:
-    """Alexa 的引用次数：raw_text 里 `{ref cite_<id>}` 的出现次数，按 id 对 references 取 URL。
-
-    与正文 pill 口径一致：一次出现计一次；references 里找不到的 id 照样计入、记 unresolved。
-    """
-    raw_text = str(task_result.get("raw_text") or "")
-    refs = {}
-    for item in task_result.get("references") or []:
-        if isinstance(item, dict) and item.get("id"):
-            refs[re.sub(r"^(?:cite_)+", "", str(item["id"]))] = item
-    out = []
-    for match in ALEXA_REF_MARKER.finditer(raw_text):
-        ref_id = match.group(2)
-        item = refs.get(ref_id) or {}
-        raw_url = str(item.get("url") or "").strip()
-        url = clean_url(raw_url) if raw_url else ""
-        host = normalize_host(url) if url else None
-        if host and is_platform_internal(host):
-            continue
-        line_start = raw_text.rfind("\n", 0, match.start()) + 1
-        out.append({
-            "raw_citation_id": None,
-            "source": "body_marker",
-            "source_order": len(out) + 1,
-            "raw_url": url or None,
-            "source_name": None,
-            "domain_hint": host,
-            "title": str(item.get("title") or "").strip() or None,
-            "date": None,
-            "summary": None,
-            "source_position": match.start(),
-            "positions": [],
-            "extraction_method": "alexa_raw_text_ref",
-            "platform_reported_type": None,
-            "reference_number": ref_id,
-            "mapping_method": "alexa_reference_id" if url else "unresolved",
-            "in_table_row": raw_text[line_start:].lstrip().startswith("|"),
-        })
-    return out
-
-
-def _citation_entries(platform: str, task_result: dict, answer_text: str = "") -> list[dict]:
-    """引用条目 = 该回答实际引用各来源的次数。
-
-    计数单位是「引用次数」：同一来源被引用 N 次就计 N 次（拆成 N 行，每行次数 1，
-    下游按行数统计，`cited_count` 字段保留原始次数便于核对）。
-
-    首选**供应商 `cited_count`**（新格式，2026-10-13 起五个平台都带；实测与正文 pill
-    逐条一致，Suda 2026-10-13 定为唯一口径）。字段不存在时回退到正文 pill 计数：
-    解析定义行与行内标记，Gemini / AIO 的旧格式伪拆分按 `_citation_keep_mask` 折叠、
-    保留正文同一编号的真重复，ChatGPT / Perplexity 全部按实际次数计。
-    Alexa 正文不带标记，走 `_alexa_citation_entries`。
-    """
-    if platform == "alexa":
-        return _alexa_citation_entries(task_result)
-    cited = _cited_count_entries(platform, task_result)
-    if cited is not None:
-        return cited
-
-    field = CITATION_FIELD.get(platform)
-    definitions, occurrences = _body_citation_occurrences(answer_text)
-
-    if not occurrences:
-        # 引用次数只计正文 pill（`([来源名][N])`）的出现次数。
-        # 正文一条 pill 都没有就是 0 条引用——不拿供应商字段的来源清单充数，
-        # 那是「回答引用了哪些来源」的另一个口径（Suda 2026-09-16）。
-        return []
-
-    raw_items = task_result.get(field)
-    fallback_items = raw_items if isinstance(raw_items, list) else []
-    candidates = []
-    occ_canonicals = []
-    for label, number, position in occurrences:
-        line_start = answer_text.rfind("\n", 0, position) + 1
-        in_table_row = answer_text[line_start:].lstrip().startswith("|")
-        definition = definitions.get(number)
-        raw_url = definition["url"] if definition else None
-        title = definition["title"] if definition else None
-        mapping = "body_definition"
-        if not raw_url and number.isdigit() and 0 < int(number) <= len(fallback_items):
-            item = fallback_items[int(number) - 1]
-            if isinstance(item, dict):
-                raw_url = str(item.get("url") or item.get("link") or item.get("href") or "").strip()
-                title = title or item.get("title") or item.get("name")
-                mapping = "platform_field_positional"
-        if not raw_url:
-            mapping = "unresolved"
-        url = clean_url(raw_url) if raw_url else ""
-        host = normalize_host(url) if url else None
-        if host and is_platform_internal(host):
-            continue
-        canonical = None
-        if url:
-            normalized = normalize_url(url)
-            canonical = (normalized or {}).get("canonical_url") or url
-        occ_canonicals.append((number, canonical))
-        candidates.append({
-            "raw_citation_id": None,
-            "source": "body_marker",
-            "source_order": None,
-            "raw_url": url or None,
-            "source_name": label,
-            "domain_hint": host,
-            "title": str(title).strip() if title else None,
-            "date": None,
-            "summary": None,
-            "source_position": position,
-            "positions": [],
-            "extraction_method": "body_reference_marker",
-            "platform_reported_type": None,
-            "reference_number": number,
-            "mapping_method": mapping,
-            "in_table_row": in_table_row,
-        })
-
-    keep = _citation_keep_mask(occ_canonicals, platform in CITATION_URL_COLLAPSE_PLATFORMS)
-    out = []
-    for candidate, keep_it in zip(candidates, keep):
-        if not keep_it:
-            continue
-        candidate["source_order"] = len(out) + 1
-        out.append(candidate)
-    return out
-
 
 def discover_sample_files(folder: Path, questions: list[dict]):
     """把一个平台×市场的采集文件归属到题。
@@ -1129,19 +765,14 @@ def is_discovery(answer: dict) -> bool:
     return answer.get("diagnostic_intent") == "discovery"
 
 
-# 提及类指标的样本：按顺序取第一组有回答的意图（与 core metrics._visibility_answers 同口径）
-VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives"], ["information"]]
+# 提及类指标的样本：按顺序取第一组有回答的意图（core metrics.visibility_answers 读 config 里这张表）
+VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives", "market_perception"], ["information"]]
 # 意图类型切片：放在 topic 位上，键写成「类型:发现」，前端选了意图类型、没选主题时用它
 TYPE_TOPIC_PREFIX = "类型:"
 
 
-def visibility_scope(answers: list[dict]) -> list[dict]:
-    valid = [a for a in answers if is_valid(a)]
-    for group in VISIBILITY_INTENT_GROUPS:
-        picked = [a for a in valid if a.get("diagnostic_intent") in group]
-        if picked:
-            return picked
-    return []
+def visibility_scope(answers: list[dict], config: dict) -> list[dict]:
+    return visibility_answers(config, [a for a in answers if is_valid(a)])
 
 
 def in_topic(item: dict, topic: str) -> bool:
@@ -1163,8 +794,6 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
                 source_limit: int = DEFAULT_SOURCE_LIMIT) -> dict:
     answers = collect_answers(index, region, platform, topic, regions)
     metrics = compute_metrics(config, bank, answers_doc(answers))
-    # 品牌引用份额（可见度矩阵）与核心洞察同口径：提及类样本（发现＋替代）
-    citation_scope = visibility_scope(answers)
 
     rows = []
     for obj in config["objects"]:
@@ -1177,7 +806,7 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
             "mention_rate": entry["mention_rate"]["raw"],
             "share_of_voice": entry["share_of_voice"]["raw"],
             "average_rank": entry["average_rank"]["raw"],
-            "citation_share": official_share(citation_scope, obj["object_id"]),
+            "citation_share": entry["citation_share"]["raw"],
             "linked_mention_rate": entry["linked_mention_rate"]["raw"],
             "linked_mention_numerator": entry["linked_mention_rate"]["numerator"],
             "linked_mention_denominator": entry["linked_mention_rate"]["denominator"],
@@ -1288,7 +917,7 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
             "answers": len(answers),
             "valid_answers": sum(1 for a in answers if is_valid(a)),
             "discovery_answers": sum(1 for a in answers if is_valid(a) and is_discovery(a)),
-            "visibility_answers": len(visibility_scope(answers)),
+            "visibility_answers": len(visibility_scope(answers, config)),
         },
     }
 
@@ -1382,14 +1011,6 @@ def rank_lookup_of(rows: list[dict]) -> dict:
             last_rank, last_value = index, row["mention_rate"]
         lookup[row["object_id"]] = last_rank
     return lookup
-
-
-def official_share(answers: list[dict], object_id: str):
-    citations = [c for answer in answers for c in answer["citations"]]
-    if not citations:
-        return None
-    own = sum(1 for c in citations if c.get("matched_official_object_id") == object_id)
-    return own / len(citations)
 
 
 def _top(ranked: list, limit: int) -> list:
@@ -1621,18 +1242,14 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             "brands": [],
         }
         if valid:
+            # 逐题读数的公式在 geo-metrics（core metrics.question_object_stats），这里只取值、排版
+            brands = question_object_stats(valid, objects)
+            target = next(b for b in brands if b["object_id"] == "target")
             mentions = [a for a in valid if target_of(a)["mentioned"]]
-            total_mentions = sum(1 for a in valid for o in a["objects"] if o["mentioned"])
-            citation_total = sum(len(a["citations"]) for a in valid)
-            citation_own = sum(1 for a in valid for c in a["citations"]
-                               if c.get("matched_official_object_id") == "target")
-            row["mention_rate"] = fmt_pct(len(mentions) / len(valid))
-            row["share"] = fmt_pct(len(mentions) / total_mentions) if total_mentions else "—"
-            row["citation_share"] = fmt_pct(citation_own / citation_total) if citation_total else "—"
-            # 引用率：正文至少引用一次官网的回答 ÷ 有效回答（按回答计，与引用份额按次数计不同）
-            row["citation_rate"] = fmt_pct(sum(
-                1 for a in valid if any(c.get("matched_official_object_id") == "target" for c in a["citations"])
-            ) / len(valid))
+            row["mention_rate"] = fmt_pct(target["mention_rate"])
+            row["share"] = fmt_pct(target["share_of_voice"]) if target["share_of_voice"] is not None else "—"
+            row["citation_share"] = fmt_pct(target["citation_share"]) if target["citation_share"] is not None else "—"
+            row["citation_rate"] = fmt_pct(target["citation_rate"])
             row["mentioned"] = bool(mentions)
             if mentions:
                 average = sum(target_of(a)["report_rank"] for a in mentions) / len(mentions)
@@ -1641,47 +1258,11 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             else:
                 # 排名只有分母为 0 才显示「—」，未提及按末位计。
                 row["rank"] = str(object_count)
-            # 该题下每个纳入品牌的口径。分题粒度，不等于切片级的 competition/matrix：
+            # 分题粒度的每个纳入品牌读数，不等于切片级的 competition/matrix：
             # 靠它才能看出「某品牌只在某道题有存在感、在其余题被谁挤掉」。
-            # 算提及率排名本来就要遍历全部对象，这里不增加计算量，只是把已算出的结果留下。
-            counts = Counter()
-            rank_sum = defaultdict(float)
-            rank_n = Counter()
-            own_cites = Counter()       # 指向该品牌官网的引用次数
-            cited_answers = Counter()   # 正文至少引用一次该品牌官网的回答数
-            for answer in valid:
-                owners = set()
-                for citation in answer["citations"]:
-                    owner = citation.get("matched_official_object_id")
-                    if owner:
-                        own_cites[owner] += 1
-                        owners.add(owner)
-                for owner in owners:
-                    cited_answers[owner] += 1
-            for answer in valid:
-                for obj in answer["objects"]:
-                    if obj["mentioned"]:
-                        counts[obj["object_id"]] += 1
-                        if obj.get("report_rank"):
-                            rank_sum[obj["object_id"]] += obj["report_rank"]
-                            rank_n[obj["object_id"]] += 1
-            row["brands"] = [
-                {
-                    "object_id": obj["object_id"],
-                    "name": obj["canonical_name"],
-                    "role": obj["role"],
-                    "mention_count": counts[obj["object_id"]],
-                    "mention_rate": counts[obj["object_id"]] / len(valid),
-                    "share_of_voice": (counts[obj["object_id"]] / total_mentions
-                                       if total_mentions else None),
-                    "average_rank": (rank_sum[obj["object_id"]] / rank_n[obj["object_id"]]
-                                     if rank_n[obj["object_id"]] else None),
-                    "citation_share": (own_cites[obj["object_id"]] / citation_total if citation_total else None),
-                    "citation_rate": cited_answers[obj["object_id"]] / len(valid),
-                }
-                for obj in objects
-            ]
+            row["brands"] = brands
             # 本题的提及率排名：按提及回答数在全部纳入对象里排并列名次（1,2,2,4）；本品没被提到记「—」
+            counts = {b["object_id"]: b["mention_count"] for b in brands}
             if counts["target"]:
                 row["mention_rank"] = str(1 + sum(1 for o in objects if counts[o["object_id"]] > counts["target"]))
         records.append(row)
@@ -2272,7 +1853,7 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
         i += 1
 
     # 判定是不是商品卡：必须带价格或「x/5」评分，或同时有编号标题与 、 卖点/描述。
-    # 文章配图（「360 Logo PNG Vector」这类带 title 的插图）也带 title，只凭 title 会认错；
+    # 文章配图（「XX Logo PNG Vector」这类带 title 的插图）也带 title，只凭 title 会认错；
     # 认不出就返回空串，调用方按普通内容继续渲染（2026-11-09 实测 0034 有两张插图混进卡片）。
     looks_like_card = bool(price) or bool(rating_line) or (
         bool(heading_text) and bool(bullets or blurb))
@@ -2594,7 +2175,8 @@ def main(argv=None) -> int:
             print(f"题库主题与 Case 主题不同，按题库主题出报告：{topics}（Case 写的是 {case_topics}）")
 
     config = build_config(case, topics, lexicon_entries, load_domain_cache(args.domain_cache),
-                          core_util.read_case_sensitive_aliases(args.lexicon))
+                          core_util.read_case_sensitive_aliases(args.lexicon),
+                          core_util.read_lexicon_list(args.lexicon, "competitor_site_domains"))
     if args.sku_map:
         config["sku_map"] = json.loads(Path(args.sku_map).read_text(encoding="utf-8"))
     bank = build_question_bank(rows, config, topics)

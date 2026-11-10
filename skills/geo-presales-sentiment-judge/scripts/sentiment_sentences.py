@@ -36,6 +36,8 @@ from pathlib import Path
 # 品牌识别与去引用只有一份实现，在 geo-metrics（与提及率同口径）
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
 import de_cite_crawl as de_cite  # noqa: E402
+from geo_presales_core.crawler import answer_body  # noqa: E402
+from geo_presales_core.lexicon import load_lexicon as core_load_lexicon  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     case_sensitive_for,
     find_alias_spans,
@@ -84,46 +86,20 @@ def brands_in_unit(unit: str, brands: list[dict]) -> list[dict]:
 
 
 def load_lexicon(path: str) -> list[dict]:
-    """Load brands[] from a brand lexicon JSON as {name, type, aliases, case_sensitive_aliases}.
-
-    The lexicon's top-level ``case_sensitive_aliases`` applies to every brand, as in the metrics.
-    """
-    data = json.load(open(path))
-    brands = data.get("brands") if isinstance(data, dict) else None
-    if brands is None and isinstance(data, dict):
-        # 兼容「标准名 → 别名 list」的 dict 型词表（report-audit / shared 落点）。
-        # `_` 开头的键（_comment/_canonical 等）是元数据；标准名自身也算一个别名。
-        converted = [
-            {"name": key, "aliases": [key, *value]}
-            for key, value in data.items()
-            if not key.startswith("_") and key not in {"uncertain", "stopwords"}
-            and isinstance(value, list)
-        ]
-        if converted:
-            brands = converted
-    if not isinstance(brands, list) or not brands:
-        raise SystemExit(f"词表 {path} 缺少非空的 brands 数组")
-    compiled: list[dict] = []
+    """品牌词表 → [{name, type, aliases, case_sensitive_aliases}]。读取规则与报告同一份（geo-metrics core lexicon）；
+    顶层 case_sensitive_aliases 对所有品牌生效。"""
+    entries, _uncertain, status = core_load_lexicon(path)
+    if status != "loaded" or not entries:
+        raise SystemExit(f"词表 {path} 读不出品牌（{status}）")
     seen: set[str] = set()
+    for entry in entries:
+        if entry["name"] in seen:
+            raise SystemExit(f"词表 {path} 出现重复品牌名：{entry['name']}")
+        seen.add(entry["name"])
     case_sensitive = read_case_sensitive_aliases(path)
-    for entry in brands:
-        name = str(entry.get("name") or "").strip()
-        aliases = [str(a) for a in (entry.get("aliases") or []) if str(a).strip()]
-        if not name:
-            raise SystemExit(f"词表 {path} 存在缺少 name 的品牌条目")
-        if not aliases:
-            raise SystemExit(f"词表 {path} 的品牌 {name} 没有任何别名")
-        if name in seen:
-            raise SystemExit(f"词表 {path} 出现重复品牌名：{name}")
-        seen.add(name)
-        compiled.append({
-            "name": name,
-            "type": str(entry.get("type") or "").strip() or None,
-            "aliases": aliases,
-            "case_sensitive_aliases": case_sensitive_for(aliases, case_sensitive),
-        })
-    return compiled
-
+    return [{"name": e["name"], "type": e["declared_type"], "aliases": e["aliases"],
+             "case_sensitive_aliases": case_sensitive_for(e["aliases"], case_sensitive)}
+            for e in entries]
 
 
 # ---------- extract ----------
@@ -159,19 +135,6 @@ def load_bank(path: str) -> list[dict]:
     return questions
 
 
-# Crawler exports put the answer body under different keys per platform; the
-# mapping mirrors the batch stats engine's ANSWER_FIELD so the two pipelines
-# read the same text. Unknown platforms fall back to result_text.
-ANSWER_FIELD = {
-    "overview": "content",
-    "gemini": "result_text",
-    "chatgpt": "result_text",
-    "perplexity": "result_text",
-    "aimode": "result_text",
-    "copilot": "result_text",
-    "grok": "full_response",
-    "alexa": "md_text",
-}
 
 # Scrapeless 锚点残留文案（`RivalA5 CarafeGo to product viewer dialog for this item.`），
 # 常量与报告渲染、词表挖掘共用 geo-metrics 的 de_cite_crawl。
@@ -179,12 +142,9 @@ PRODUCT_VIEWER_NOISE = de_cite.PRODUCT_VIEWER_NOISE
 
 
 def answer_text(task: dict, platform: str) -> str:
-    field = ANSWER_FIELD.get(platform, "result_text")
-    text = task.get(field)
-    if text is None and field != "result_text":
-        text = task.get("result_text")
+    # 正文字段与报告数据层同一张表（geo-metrics core crawler.answer_body）。
     # 换成空格而非直接删：它粘在商品名后，删掉会把两个名字拼成一个词。
-    return str(text or "").replace(PRODUCT_VIEWER_NOISE, " ")
+    return answer_body(task, platform).replace(PRODUCT_VIEWER_NOISE, " ")
 
 
 def answer_prompt(task: dict) -> str:

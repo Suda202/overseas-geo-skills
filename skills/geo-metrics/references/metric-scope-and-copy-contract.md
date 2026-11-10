@@ -13,12 +13,14 @@
 | 评价/情绪 | 完整 `analysis_type=sentiment` 数据 | `analysis_type` 不是 `sentiment` 的记录 | 不再按 `diagnostic_intent`、Discovery/Evaluation、通用题/品牌题或其他意图二次筛选 |
 | 竞品胜负 | 后端确认的 Competitor 样本 | 一般情绪、Discovery 提及率和品牌常识 | 只进入 M02 的决胜结果与正面对比证据，不进入正式可见度或情绪比例 |
 
-**售前 HTML 报告的口径（2026-11-07 Suda 定）与上表不同，只用于我们自己出的 HTML 报告，不改上传 CSV 和后端：**
+**售前 HTML 报告与监测基线 HTML 的口径（2026-11-07 定，2026-11-10 基线统一到同一套）与上表不同，只用于我们自己出的 HTML 报告，不改上传 CSV 和后端：**
 
-- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）默认统计发现＋替代；筛到只剩问题解决题时统计问题解决；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
+- 统计层默认原则（2026-11-10 Suda）：引用默认统计全部意图类型，各类型切片都算出来；展示哪一批由报告按需求决定。
+
+- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）默认统计发现＋替代（11-06 前的旧类型「品类认知」题面不点名品牌，并入这一组）；筛到只剩问题解决题时统计问题解决；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
 - 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Bbrand H1 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
-- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"], ["information"]]`、`citation_scope = "visibility"`（引用与提及类同一批回答），core `compute_metrics` 读这两个键；`build_sources` 自己从全部有效回答算引用模块。不写时（上传 CSV、编辑侧）仍是只看 Discovery。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
-- 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）仍按 2026-10-22 的口径：选词阶段所有题都计入提及率，「全部类型」的引用只合并发现和品类认知。
+- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"], ["information"]]`、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
+- 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）2026-11-10 起与售前同一套口径，不再打补丁：题库写真实意图类型，取代 10-22 的「所有题都计入提及率、全部类型引用只合并发现和品类认知」。
 
 执行两条独立判定，不使用互斥的“先按意图选一类”逻辑：
 
@@ -33,6 +35,7 @@
 
 | 客户名称 | 含义 | 不得混淆为 |
 |---|---|---|
+| 品牌提及率 | 去引用正文里出现品牌名或它的任一识别名称的 Discovery 回答数 ÷ Discovery 有效回答数。识别名称包括不含品牌名的自有产品名和子品牌名（LG 的 PuriCare）：只提产品也计入母品牌，与 Profound 子资产向上汇总一致（2026-11-10 Suda 定）。一条回答提到多个名称只计一次，产品本身不另出提及率 | 推荐率、引用率、产品级提及率 |
 | 提及率排名 | 在同一 Discovery 样本和冻结品牌集合中，按品牌提及率比较得到的相对名次 | 正文首次出现顺序、推荐顺序 |
 | 平均提及位置 | 品牌在被提及的 Discovery 回答正文中的首次合格出现位置取平均；只在品牌被提及时成立 | 提及率排名、模型对品牌优劣的语义排序 |
 | 引用份额 | 某来源、域名、页面或来源类型被引用的次数 ÷ 同一 Discovery 样本的全部引用次数。分子分母都按未去重次数计：同一回答多次引用同一来源计多次；去重只用于统计「有多少个不同来源」，不进份额。分母必须随数值一起确认 | 可见度、推荐率、流量占比、官网引用率 |

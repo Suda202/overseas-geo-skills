@@ -57,10 +57,8 @@ PLATFORM_DIR_BY_LABEL = {"AIO": "overview", "Gemini": "gemini",
                          "Copilot": "copilot", "Grok": "grok", "Alexa": "alexa"}
 # 回答正文与引用字段的已知映射。平台清单是发现出来的，未登记的平台回落到
 # 默认字段名（正文 result_text、无独立引用字段），不因新平台直接崩。
-DEFAULT_ANSWER_FIELD = "result_text"
-ANSWER_FIELD = {"overview": "content", "gemini": "result_text",
-                "chatgpt": "result_text", "perplexity": "result_text", "aimode": "result_text",
-                "copilot": "result_text", "grok": "full_response", "alexa": "md_text"}
+# 正文字段表与数据层同一张（geo-metrics core crawler）：读哪段正文是数据布局，不是复算要独立的口径
+from geo_presales_core.crawler import ANSWER_FIELD, DEFAULT_ANSWER_FIELD  # noqa: E402
 CITATION_FIELD = {"overview": "source", "gemini": "citations",
                   "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
                   "copilot": "citations", "grok": "footnotes", "alexa": "references"}
@@ -106,8 +104,8 @@ BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re
 BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
 BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
 DISCOVERY_LABEL = "发现"
-# 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics._visibility_answers 同口径，按中文标签独立写一份）
-VISIBILITY_LABEL_GROUPS = [{"发现", "替代"}, {"问题解决"}]
+# 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics.visibility_answers 同口径，按中文标签独立写一份）
+VISIBILITY_LABEL_GROUPS = [{"发现", "替代", "品类认知"}, {"问题解决"}]
 TYPE_TOPIC_PREFIX = "类型:"
 
 TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量

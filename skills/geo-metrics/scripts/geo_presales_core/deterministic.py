@@ -99,11 +99,15 @@ def _known_type(host: str, cache: dict | None = None) -> str | None:
     return None
 
 
-def _classify_official(host: str, objects: list[dict]) -> tuple[str | None, str | None]:
+def _classify_official(host: str, objects: list[dict], competitor_sites=()) -> tuple[str | None, str | None]:
+    """官网规则：纳入对象的官网按顺序第一个命中的胜出；都不中时，config 的 competitor_site_domains
+    （同类平台站点，词表顶层字段，因客户而异，不进共用的域名类别缓存）归「竞品网站」、不挂品牌。"""
     for obj in objects:
         for domain in obj["official_domains"]:
             if domain_matches(host, domain):
                 return ("brand_official" if obj["role"] == "target" else "competitor_official", obj["object_id"])
+    if any(domain_matches(host, site) for site in competitor_sites):
+        return "competitor_official", None
     return None, None
 
 
@@ -207,7 +211,8 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
                 "classification_confidence": None,
             })
             if row["host"]:
-                source_type, object_id = _classify_official(row["host"], all_objects(config))
+                source_type, object_id = _classify_official(row["host"], all_objects(config),
+                                                            config.get("competitor_site_domains") or ())
                 if source_type:
                     row.update({
                         "source_type": source_type,

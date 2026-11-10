@@ -7,16 +7,15 @@ render_report.py），只做售后口径适配，不改那个 skill 的源码：
 1. 合成采集目录：N 轮采集放进同一个「平台 × 意图」目录。售前报告的「地区」一层在这里放意图，页面上的
    地区筛选就成了意图类型筛选（全部类型 / 发现 / 问题解决 / …），与平台、主题两行筛选任意组合。每题 N 个文件，
    文件里补上题面（AI Overviews 不回传题面，build_report_data 靠题面把文件归到题）。
-2. 选词阶段所有题都计入可见度（Suda 2026-10-20）：题库 CSV 统一标 discovery，真实意图回写到页面数据。
-3. 售后口径：品牌识别前去掉裸 URL；指定别名区分大小写（ERA、SRX 这类缩写撞普通词）；可选按机构拆
-   gov.sg 这类二级后缀；「竞品网站」= 配置竞品与开放品牌官网 + config 里列的同类平台域名（不限配置竞品）。
-   声量份额由 core 按回答计（一个回答一个品牌只算一次）。
-4. 页面：顶部多一个「引用率」指标（= 官网引用率，售前页面不展示），03 引用模块同时给引用份额与引用率；
-   「全部类型」时 KPI 引用份额/引用率与 03 引用模块只统计发现＋品类认知题，点名题合计在 03 单列一行
-   （Profound ch4，Suda 2026-10-22）；选中单一类型时按该类型统计，逐题读数各算各的。
-   问题明细逐题给本品 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率，展开「与竞品对比」看竞品的前四项；主题行取主题
-   切片的合计值，不对逐题读数取平均。平台筛选即分平台读数。
-5. 校验：verify_report_data 独立复算全部切片，不一致就不渲染。
+2. 统计口径与售前报告同一套（Suda 2026-11-10），全部由 geo-metrics 与 build_report_data 原生实现，这里不打补丁：
+   题库 CSV 写真实意图类型；提及类指标与核心洞察的引用份额 / 引用率只算发现＋替代（品类认知旧题并入发现组），
+   对比、评估等点名题显示「—」；03 引用模块统计全部类型，按筛选收窄。品牌识别前去掉 HTML 标签与裸网址、
+   指定写法区分大小写（品牌词表 case_sensitive_aliases）；gov.sg 等按机构拆的后缀在 core 后缀表；
+   config.competitor_site_domains 写进品牌词表顶层，core 来源分类归「竞品网站」。
+3. 页面：顶部多一个「引用率」指标（= 官网引用率，售前页面不展示），03 引用模块同时给引用份额与引用率。
+   问题明细逐题给本品 提及率 / 提及率排名 / 声量份额 / 平均提及位置 / 引用份额 / 引用率，展开「与竞品对比」看竞品；
+   逐题读数取 build_report_data 的逐题记录。主题行取主题切片的合计值，不对逐题读数取平均。平台筛选即分平台读数。
+4. 校验：verify_report_data 独立复算全部切片，不一致就不渲染。
 
 售前模板只容 3 个配置竞品：config.competitors 填答案层前三，其余竞品放 open_brands，
 compare_brands 决定逐题对比显示哪些。没数据的模块整块隐藏、其余按顺序重新编号：情感没接入就不出 04 情感和回答详情里的情感，
@@ -52,20 +51,12 @@ INTENT_ZH = {"discovery": "发现", "information": "问题解决", "evaluation":
              "trust": "验证", "transactional": "交易", "support": "售后",
              "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
+# 中文类型 → 售前题库 CSV 的 diagnosis_intent（build_report_data.CSV_INTENT_MAP 的键）
+CSV_INTENT = {"发现": "discovery", "问题解决": "information", "评估": "evaluation", "对比": "competitor",
+              "替代": "alternatives", "验证": "trust", "交易": "transactional", "售后": "support",
+              "能力核查": "validation", "准确性": "accuracy", "品类认知": "market_perception"}
 INTENT_ORDER = ["发现", "问题解决", "评估", "对比", "替代", "验证", "交易", "售后", "能力核查", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
-# 引用聚合只统计题面不点名品牌的类型（Profound ch4 "scope your citation analysis to discovery prompts"，
-# Suda 2026-10-22）：点名题会把被点名品牌的官网拉进引用、抬高份额。合成目录的 region 层就是意图类型，
-# 所以「全部类型」切片的引用口径 = 只合池这两类 region；单类型切片仍按该类型自己的回答算，逐题读数不受影响。
-CITATION_SCOPE_TYPES = ("发现", "品类认知")
-CITATION_KPI_FIELDS = ("official_share", "official_citation_rate", "official_citation_counts")
-
-
-def citation_regions(regions) -> list:
-    """「全部类型」引用聚合合池的 region（= 意图类型）。build 与 verify 两侧共用这一个判断。"""
-    return [r for r in regions if r in CITATION_SCOPE_TYPES]
-
-
 def load_config(path: Path) -> dict:
     cfg = json.loads(path.read_text(encoding="utf-8"))
     base = path.parent
@@ -79,126 +70,15 @@ def load_config(path: Path) -> dict:
 
 
 def install_patches(cfg: dict):
-    """口径补丁。必须在导入 build_report_data 之前打到 util 上，deterministic 导入时才绑定到补丁版。"""
+    """只做展示适配；品牌识别、来源分类、引用口径全部走 geo-metrics 与 build_report_data 原生实现。"""
     import geo_presales_core.util as core_util
-    # case_sensitive_aliases 不在这里打补丁：prepare 时写进 lexicon.json 顶层，由 core 识别读取（geo-metrics）
-    core_util.COMMON_MULTI_LABEL_SUFFIXES |= set(cfg.get("multi_label_suffixes") or [])
+    extra = set(cfg.get("multi_label_suffixes") or []) - core_util.COMMON_MULTI_LABEL_SUFFIXES
+    if extra:
+        raise SystemExit(f"multi_label_suffixes {sorted(extra)} 不在 core 后缀表里：加进 "
+                         "geo-metrics/scripts/geo_presales_core/util.py 的 COMMON_MULTI_LABEL_SUFFIXES")
     import build_report_data as brd
-    import geo_presales_core.deterministic as det
     brd.KNOWN_PLATFORM_LABELS.update(cfg.get("platform_labels") or {})
-    sites = set(cfg.get("competitor_site_domains") or [])
-    orig_official = det._classify_official
-
-    def classify_official(host, objects):
-        found = orig_official(host, objects)
-        if found[0]:
-            return found
-        return ("competitor_official", None) if core_util.registrable_domain(host) in sites else (None, None)
-
-    det._classify_official = classify_official
-
-    # 03 引用模块：每个「引用份额」旁边配「引用率」= 至少引用一次该来源的回答 ÷ 有效回答（按回答计）。
-    # 挂在 build_sources 上，用它同一批回答与同一套 canonical / 域名 / 类别，口径与份额一致（Suda 2026-10-21）
-    orig_sources = brd.build_sources
-
-    def build_sources(metrics, answers, source_limit=brd.DEFAULT_SOURCE_LIMIT):
-        out = orig_sources(metrics, answers, source_limit)
-        # 与上游 build_sources 同一个回答池；「全部类型」时传进来的 answers 已由 build_slice 补丁收窄到
-        # citation_regions（发现＋品类认知），这里不再另判类型
-        pool = [a for a in answers if brd.is_valid(a) and brd.is_discovery(a)]
-        dom, url, typ = Counter(), Counter(), Counter()
-        for a in pool:
-            ds, us, ts = set(), set(), set()
-            for c in a["citations"]:
-                canonical = c.get("canonical_url")
-                if not canonical:
-                    continue
-                us.add(canonical)
-                ds.add(c.get("registrable_domain") or c.get("host") or "")
-                ts.add(brd.SOURCE_BUCKET.get(c.get("source_type") or "other", ("其他", ""))[0])
-            dom.update(ds); url.update(us); typ.update(ts)
-        n = len(pool)
-        rate = lambda k: brd.fmt_pct(k / n) if n else "—"
-        out["rates"] = {"types": {r[0]: rate(typ[r[0]]) for r in out.get("types") or []},
-                        "domains": {r[0]: rate(dom[r[0]]) for r in out.get("domains") or []},
-                        "pages": {r[0]: rate(url[r[0]]) for r in (out.get("pages") or []) + (out.get("official_pages") or [])}}
-        return out
-
-    brd.build_sources = build_sources
-
-    # 「全部类型」切片（region == ""）的引用聚合只合池发现＋品类认知：KPI 引用份额/引用率、03 引用模块
-    # （sources 整块）、品牌 citation_share（供平台矩阵）换成只用这两类 region 重算的值；提及/声量/排名/
-    # 逐题 records 仍取全部类型。另算一份点名题合计挂在 sources.named_scope，03 模块单列一行。
-    orig_slice = brd.build_slice
-
-    def build_slice(region, platform, topic, config, bank, index, per_platform, regions,
-                    source_limit=brd.DEFAULT_SOURCE_LIMIT):
-        full = orig_slice(region, platform, topic, config, bank, index, per_platform, regions, source_limit)
-        if region:
-            return full
-        scoped = citation_regions(regions)
-        cite = orig_slice("", platform, topic, config, bank, index, per_platform, scoped, source_limit)
-        for f in CITATION_KPI_FIELDS:
-            full["kpis"][f] = cite["kpis"][f]
-        full["sources"] = cite["sources"]
-        for oid, row in full["_rows"].items():
-            row["citation_share"] = cite["_rows"][oid]["citation_share"]
-        named = [r for r in regions if r not in scoped]
-        if named:
-            nk = orig_slice("", platform, topic, config, bank, index, per_platform, named, source_limit)["kpis"]
-            full["sources"]["named_scope"] = {"types": named, **{f: nk[f] for f in CITATION_KPI_FIELDS}}
-        full["sources"]["citation_scope_types"] = scoped
-        return full
-
-    brd.build_slice = build_slice
     return brd, core_util
-
-
-def patch_verify(vr):
-    """verify 独立复算与 build 同口径：「全部类型」切片的引用字段改用只合池发现＋品类认知 region 的复算，
-    点名题合计（sources.named_scope）用只合池点名类型的复算对账。复算本身仍是 verify 自己的实现。"""
-    orig = vr.Recomputer._recompute
-
-    def scoped(self, markets, platform, topic):
-        self.slice_regions = lambda region: list(markets)
-        try:
-            return orig(self, "", platform, topic)
-        finally:
-            del self.slice_regions
-
-    def _recompute(self, region, platform, topic):
-        full = orig(self, region, platform, topic)
-        if region:
-            return full
-        cite = scoped(self, citation_regions(self.regions), platform, topic)
-        for f in CITATION_KPI_FIELDS + ("citation_units",):
-            full[f] = cite[f]
-        for name, st in full["object_stats"].items():
-            st["citation_share"] = cite["object_stats"][name]["citation_share"]
-        return full
-
-    vr.Recomputer._recompute = _recompute
-    orig_check = vr._check_slice
-
-    def _check_slice(key, slc, recomputer, region, platform, topic, meta):
-        out = orig_check(key, slc, recomputer, region, platform, topic, meta)
-        if region:
-            return out
-        named = [r for r in recomputer.regions if r not in citation_regions(recomputer.regions)]
-        got = (slc.get("sources") or {}).get("named_scope")
-        if bool(named) != bool(got):
-            out.append(f"{key}: sources.named_scope 与点名类型 {named} 不符")
-        elif named:
-            exp = scoped(recomputer, named, platform, topic)
-            for f in ("official_share", "official_citation_rate"):
-                if not vr._close(got.get(f), exp[f]):
-                    out.append(f"{key}: sources.named_scope.{f} {got.get(f)!r} != 复算 {exp[f]!r}")
-            if got.get("official_citation_counts") != exp["official_citation_counts"]:
-                out.append(f"{key}: sources.named_scope.official_citation_counts "
-                           f"{got.get('official_citation_counts')!r} != 复算 {exp['official_citation_counts']!r}")
-        return out
-
-    vr._check_slice = _check_slice
 
 
 def intent_of(cfg: dict) -> dict:
@@ -238,7 +118,8 @@ def prepare_inputs(cfg, questions, intent, platforms):
         for q in questions:
             w.writerow({"query": q["query"], "question_zh": q.get("question_zh", ""),
                         "topic": topics.get(q["topic"], q["topic"]),
-                        "diagnosis_intent": "discovery", "tags": "", "question_types": "visibility,sentiment"})
+                        "diagnosis_intent": CSV_INTENT[intent[q["question_id"]]], "tags": "",
+                        "question_types": "visibility,sentiment"})
     t, c = cfg["target"], cfg["competitors"]
     case = {"品牌名称": t["name"], "官方域名": t["official_domains"][0], "品类": cfg.get("category", "")}
     for i, comp in enumerate(c, 1):
@@ -246,48 +127,14 @@ def prepare_inputs(cfg, questions, intent, platforms):
     (out / "case.json").write_text(json.dumps(case, ensure_ascii=False, indent=1))
     brands = [dict(t, type="target")] + [dict(x, type="competitor") for x in c] + list(cfg.get("open_brands") or [])
     lexicon = {"brands": brands}
-    if cfg.get("case_sensitive_aliases"):
-        lexicon["case_sensitive_aliases"] = list(cfg["case_sensitive_aliases"])
+    for key in ("case_sensitive_aliases", "competitor_site_domains"):
+        if cfg.get(key):
+            lexicon[key] = list(cfg[key])
     (out / "lexicon.json").write_text(json.dumps(lexicon, ensure_ascii=False, indent=1))
     cache = {d: kind for kind, ds in (cfg.get("domain_categories") or {}).items() for d in ds}
+
     (out / "domain-categories.json").write_text(json.dumps(cache, ensure_ascii=False, indent=1))
     print("合成采集文件", n)
-
-
-def official_rates(cfg, brd, core_util, questions, platforms):
-    """逐题 × 平台的官网引用回答数 / 有效回答数（按回答计，一条回答引用多次只算一次）。"""
-    official = {d.casefold() for d in cfg["target"]["official_domains"]}
-    brand_domains = {b["name"]: [d.casefold() for d in b.get("official_domains") or []]
-                     for b in [cfg["target"], *cfg["competitors"], *(cfg.get("open_brands") or [])]}
-    stats = {"_cites": {}}
-    for p in platforms:
-        for run in cfg["runs"]:
-            for i, q in enumerate(questions, 1):
-                f = run / f"scraper.{p}" / cfg["region"] / f"{i:04d}.json"
-                if not f.exists():
-                    continue
-                t = json.loads(f.read_text(encoding="utf-8")).get("task_result") or {}
-                body = str(t.get(brd.ANSWER_FIELD[p]) or "")
-                if not brd.answer_validity(body)[0]:
-                    continue
-                doms = set()
-                hosts = []
-                for c in brd._citation_entries(p, t, body):
-                    host = core_util.normalize_host(c.get("raw_url") or "")
-                    if host:
-                        doms.add(core_util.registrable_domain(host))
-                        hosts.append(host)
-                for key in ((q["question_id"], p), (q["question_id"], None)):
-                    hit, n = stats.get(key, (0, 0))
-                    stats[key] = (hit + bool(doms & official), n + 1)
-                    # 品牌对比的引用份额：指向该品牌官网的引用次数 ÷ 全部引用次数（不去重）
-                    bc = stats["_cites"].setdefault(key, {"_total": 0})
-                    bc["_total"] += len(hosts)
-                    for name, ds in brand_domains.items():
-                        k = sum(1 for h in hosts if any(core_util.domain_matches(h, d) for d in ds))
-                        if k:
-                            bc[name] = bc.get(name, 0) + k
-    return stats
 
 
 def attach_sentiment(cfg, data_path: Path):
@@ -343,7 +190,7 @@ def brand_sentiment(cfg):
     return out
 
 
-def patch_report_data(path: Path, cfg, questions, intent, crate_stats):
+def patch_report_data(path: Path, cfg, questions, intent):
     data = json.loads(path.read_text(encoding="utf-8"))
     meta = data["meta"]
     meta["regions"] = [r for r in INTENT_ORDER if r in meta["regions"]]
@@ -378,20 +225,19 @@ def patch_report_data(path: Path, cfg, questions, intent, crate_stats):
                              pct(top.get("share_of_voice")),
                              "—" if top.get("average_rank") is None else f"{top['average_rank']:.1f}", False])
             r["top"] = [top["name"], pct(top.get("mention_rate"))] if top and (top.get("mention_count") or 0) else None
-            bc = crate_stats["_cites"].get((qid, plat)) or {"_total": 0}
+            cshare = {b["name"]: b.get("citation_share") for b in brands}
+            no_cite = not brands or all(v is None for v in cshare.values())
             num = f"{r['qid']:04d}"
             for row in rows:
-                tot = bc["_total"]
-                row.append(pct(bc.get(row[0], 0) / tot) if tot else "无引用")
+                row.append("无引用" if no_cite else pct(cshare.get(row[0]) or 0))
                 pos, neg = sent.get((num, plat, row[0]), (0, 0))
                 row.append(pct(pos / (pos + neg)) if pos + neg else "—")
                 row.append(domain_of.get(row[0], ""))
-            hit, n = crate_stats.get((qid, plat), (0, 0))
             hb = rows[0] if rows and rows[0][0] == show[0] else [show[0], "—", "—", "—", "—", True]
             # 对比表按提及回答数从高到低；没被提到的排在最后（本品没被提到也一样，免得排第一行像是领先）
             rows.sort(key=lambda x: (x[2] == "—", int(x[2]) if x[2] != "—" else 0, not x[5]))
             r["hb"] = {"rate": hb[1], "rank": hb[2], "sov": hb[3], "pos": hb[4],
-                       "cshare": r.get("citation_share") or "—", "crate": pct(hit / n) if n else "—"}
+                       "cshare": r.get("citation_share") or "—", "crate": r.get("citation_rate") or "—"}
             r["comp"] = rows
     # 抽屉明细：合成目录里每题有 N 个文件（<题号>-r<轮次>.json），build_details 按文件名建键，前端按
     # 「意图|平台|0001」查找。改成每题每平台一条，下挂全部运行（runs），抽屉先列运行记录再看单次回答。
@@ -807,13 +653,6 @@ SOURCES_JS = r"""  function renderSources() {
     var badge = document.getElementById("sourceShareBadge");
     if (badge) {
       badge.innerHTML = "引用份额 <b>" + esc(sources.official_share || "—") + "</b> · 引用率 <b>" + esc(k.official_citation_rate || "—") + "</b>";
-      // 全部类型：引用只统计发现＋品类认知题；点名题合计单列（Suda 2026-10-22）
-      var ns = sources.named_scope;
-      if (sources.citation_scope_types) {
-        badge.innerHTML += '<span class="hb-scope">仅统计' + esc((sources.citation_scope_types || []).join("、") || "发现、品类认知") + "题" +
-          (ns ? "；点名题（" + esc((ns.types || []).join("、")) + "）引用份额 <b>" + esc(ns.official_share || "—") +
-            "</b> · 引用率 <b>" + esc(ns.official_citation_rate || "—") + "</b>，不计入本模块" : "") + "</span>";
-      }
     }
 
     var typesEl = document.getElementById("sourceTypes");
@@ -1196,14 +1035,11 @@ def main(argv=None) -> int:
                        "--source-limit", "0"])
         if rc:
             return rc
-        # 校验在回写真实意图之前跑：校验脚本按 meta.questions 的意图挑可见度样本，回写后它只认发现题
         import verify_report_data as vr
-        patch_verify(vr)
         if vr.main(["--report", str(data_path), "--collect", str(out / "collect")]):
             raise SystemExit("verify_report_data 未通过，不渲染")
         attach_sentiment(cfg, data_path)
-        patch_report_data(data_path, cfg, questions, intent,
-                          official_rates(cfg, brd, core_util, questions, platforms))
+        patch_report_data(data_path, cfg, questions, intent)
     render(cfg, data_path, html_path)
     return 0
 
