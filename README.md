@@ -1,6 +1,6 @@
 # 海外 GEO Skills
 
-这个仓库有 9 个 Skill 和一个共享目录 `shared/`，大部分 Skill 是被别的 Skill 调用的零件。日常只需要从下面「按你要做的事找入口」里找一个入口，其余的由入口按需调用。
+这个仓库有 9 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
@@ -11,21 +11,27 @@
 | 已交付的诊断报告要改 | `geo-presales-report-audit`，再 `geo-presales-report-editor` | 售前诊断 |
 | 签约前后定长期监测哪些题、出对客确认表 | `geo-prompt-selection-builder`（选词，本地出口） | 选词 |
 | 试跑、挑正式题并锁版，跑正式基线和按期采集 | `geo-monitoring` | 监测 |
+| 改提及、引用、商品卡怎么算，或改品牌怎么识别 | `geo-metrics` | 全部阶段 |
 
-下面这几个一般不直接用，由上面的入口调用：
+## 每个 Skill 负责什么
 
-| Skill | 谁调用它 | 做什么 |
+| Skill | 负责 | 不负责（交给谁） |
 | --- | --- | --- |
-| `geo-presales-crawl-integrity` | pipeline、监测 | 算指标前检查采集能不能用 |
-| `geo-metrics` | 报告数据层、监测基线 | 指标口径与实现的唯一来源：品牌识别、去引用正文、提及率/引用份额/官网引用率/商品卡 |
-| `geo-presales-report-builder` | pipeline | 算可见度与引用指标，渲染 HTML 报告；`collect_answers.py` 采集也在这里 |
-| `geo-presales-sentiment-judge` | pipeline | 句级情感判读，算正向情感占比 |
+| `geo-prompt-selection-builder` | 选词：业务范围、调研、约束条件、提示词矩阵、主题、写题、校验与导出 | 试跑、锁版、采集、报告（`geo-monitoring`、`geo-presales-pipeline`） |
+| `geo-presales-pipeline` | 售前报告的阶段顺序与暂停点，零口径 | 每个阶段的规则（交给该阶段的 Skill） |
+| `geo-presales-crawl-integrity` | 算指标前检查采集能不能用：字段层混用、引用定义丢失、空回答 | 算指标（`geo-metrics`） |
+| `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、提及率、声量、引用份额、官网引用率、商品卡，以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring）、情感判读（sentiment-judge） |
+| `geo-presales-report-builder` | 售前报告数据层组装、HTML 渲染；`collect_answers.py` 是唯一的采集实现 | 指标公式（`geo-metrics`） |
+| `geo-presales-sentiment-judge` | 句级情感判读，算正向情感占比 | 品牌识别（`geo-metrics`） |
+| `geo-presales-report-audit` | 已交付报告的品牌提及识别纠错、Bad Case | 客户结论（report-editor） |
+| `geo-presales-report-editor` | 客户结论与上传 CSV | 指标计算（`geo-metrics`） |
+| `geo-monitoring` | 试跑、锁版、正式基线、按期采集、基线 HTML 报告、缺口交给内容团队 | 写题（选词）、指标口径（`geo-metrics`） |
 
 售前生词、品牌信息整理（Case Builder）和竞品核验原来是三个独立 Skill，已经退役：生词并进选词，Case 改由线上表单或本地 JSON 提供、用选词的 `normalize_case.py` 归一化，竞品照用 Case 里填的。
 
 ## 售前诊断
 
-售前诊断报告是促成交用的，拆成四个环节，每个环节各有负责的 Skill，互不越界。线上给销售用时，只有 ② 生词换成本仓库的 Skill；③ 采集与出报告和人工改词都沿用线上原有流程。下面写的 ③ ④ 是本地跑法。
+售前诊断报告是促成交用的，拆成四个环节，每个环节各有负责的 Skill。线上给销售用时，只有 ② 生词换成本仓库的 Skill；③ 采集与出报告和人工改词都沿用线上原有流程。下面写的 ③ ④ 是本地跑法。
 
 ```text
 ① 准备品牌信息（Case） -> ② 生词 -> ③ 采集与出报告 -> ④ 修改已交付报告
@@ -80,18 +86,18 @@ python3 skills/geo-prompt-selection-builder/scripts/run_selection_mode.py run \
 
 ### ③ 采集与出报告（`geo-presales-pipeline`）
 
-pipeline 只管阶段顺序和暂停点，到每个暂停点请对应的 Skill 出场：采集（`collect_answers.py`）→ 采集完整性检查（crawl-integrity）→ 指标与渲染（report-builder）→ 情感判读（sentiment-judge）。手动跑一条命令到下一个暂停点：
+pipeline 只管阶段顺序和暂停点，到每个暂停点请对应的 Skill 出场：采集（`collect_answers.py`）→ 采集完整性检查（crawl-integrity）→ 指标与渲染（report-builder，指标调 `geo-metrics`）→ 情感判读（sentiment-judge）。手动跑一条命令到下一个暂停点：
 
 ```bash
 cd skills/geo-presales-report-builder
 python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv> \
-  --case <Case.json> --lexicon assets/brand_lexicon.<品类>.json --out-dir <输出> \
+  --case <Case.json> --lexicon <品牌词表.json> --out-dir <输出> \
   --brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌> --brand-name <品牌>
 ```
 
-采集前设 `no_proxy=api.scrapeless.com`，否则本机代理会掐断 HTTPS 握手。声量份额和提及率排名的分母是全部纳入品牌（目标 + 3 个配置竞品 + 开放词表命中），所以必须带 `--lexicon`。
+采集前设 `no_proxy=api.scrapeless.com`，否则本机代理会掐断 HTTPS 握手。声量份额和提及率排名的分母是全部纳入品牌（目标 + 3 个配置竞品 + 开放词表命中），所以必须带 `--lexicon`；词表格式见下文「品牌识别」。
 
-报告是单文件 HTML，所有客户共用同一个模板：数据筛选（地区、平台、意图类型、主题，多选）→ 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。没有商品卡数据（选词判定关，或整份采集一张卡都没有）、没有情感数据（没判读完，或一条正负信号都没有）时，对应模块连同散在各处的 KPI、明细列、回答详情一起隐藏，后面的模块顺延编号。页面上的数由内嵌的计算引擎按筛选现算，和离线预算的切片逐项对账，不一致就停下（`check_engine_parity.js`）。
+报告是单文件 HTML，所有客户共用同一个模板：数据筛选（地区、平台、意图类型、主题，多选）→ 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。没有商品卡数据、没有情感数据时，对应模块连同散在各处的 KPI、明细列、回答详情一起隐藏，后面的模块顺延编号。页面上的数由内嵌的计算引擎按筛选现算，和离线预算的切片逐项对账，不一致就停下（`check_engine_parity.js`）。
 
 ### ④ 修改已交付报告
 
@@ -107,41 +113,67 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 2 | 调研：先预跑品类认知与品牌、竞品评估，再收四类需求信号，看品牌与 3 家竞品官网 | 需求信号表、预跑答案、品牌能力清单 |
 | 3 | 约束条件：收得宽、统一粒度，不判重要性和相对竞品，只记品牌可核实的明显劣势 | 三张表共用的约束条件选项 |
 | 4 | 目标客户与使用场景：按会不会改变候选来拆并，只多看一条条件的挂成约束条件；品牌方确认后冻结 | 业务范围里的目标客户行与使用场景行 |
-| 5 | 提示词矩阵：一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型，只开成立的行；每行判一次业务优先级，这是全流程唯一的档位判断 | 提示词矩阵 |
-| 6 | 主题：主题 ＝ 同一类候选 × 同一意图类型，每主题至少 5 题；主题优先级从矩阵行汇总，不另判 | 主题表、`config.tag_dimensions` |
+| 5 | 提示词矩阵：一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型，只开成立的行；每行判一次业务优先级 | 提示词矩阵 |
+| 6 | 主题：按 AI 会推荐的同一类候选与同一意图类型分组；主题优先级从矩阵行汇总，不另判 | 主题表、`config.tag_dimensions` |
 | 7 | 写题：只在高、中档发现行上出题，按决策差异定题数 | 提示词库、题库 JSON |
 | 8 | 校验与导出：validator 错误全改、告警逐条记处理 | 题库 JSON、对客确认表和 / 或上传 CSV |
 
-确定性校验用 `scripts/validate_after_sales_set.py`，只认现行结构，旧结构的历史题库直接报不支持（不迁移、不校验、不导出）。意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后；目前只出发现题，其他七类的开行条件与题面写法在 `references/type-branches.md`。主题按 AI 会推荐的同一类候选分组，候选换了一类就分开。
+确定性校验用 `scripts/validate_after_sales_set.py`，只认现行结构，旧结构的历史题库直接报不支持。意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后；目前只出发现题，其他七类的开行条件与题面写法在 `references/type-branches.md`。
 
-导出上传 CSV 的几条硬规则：`tags` 按 `config.tag_dimensions` 派生，不重复写意图类型，只有替代题在第一位写「替代」；问题解决、验证、交易、售后后端还没有枚举，不导出并打印题号；停测或需修改的题不导出；`question_types` 由脚本按 `diagnosis_intent` 自动填，是过渡字段，每种类型统计什么以 `skills/shared/canonical-intent-mapping.md` 的「统计指标」列为准。
+导出上传 CSV 的几条硬规则：`tags` 按 `config.tag_dimensions` 派生，不重复写意图类型，只有替代题在第一位写「替代」；问题解决、验证、交易、售后后端还没有枚举，不导出并打印题号；停测或需修改的题不导出；`question_types` 由脚本按 `diagnosis_intent` 自动填。
 
 ## 监测：试跑、锁版、跑数并解释差距（`geo-monitoring`）
 
 不写题。候选题在每个监测平台各试跑 3 次，判题问得对不对；品牌方挑正式题并锁版后跑正式基线，每个 query × 平台 × 国家 × 语言 7 次，产出单文件 HTML 基线报告和交给内容团队的缺口方向；之后按题型定频率采集。采集同样用 `collect_answers.py`，跑之前先过 crawl-integrity。
 
-## 指标口径
+基线报告复用售前报告的数据层与渲染层，统计口径和售前报告是同一套，不打补丁；它只改展示：意图类型放在地区那一行当筛选，页面多一个「引用率」指标、每题的运行记录抽屉和竞品逐题对比。
 
-指标口径全库只有一份实现，在 `skills/geo-presales-report-editor/scripts/geo_presales_core/`，其他 Skill 只读。
+## 统计口径（`geo-metrics`）
 
-| 指标 | 谁算 | 口径 |
+全库只有一份实现，在 `skills/geo-metrics/scripts/`，其他 Skill 只调用。每个指标用哪批样本、对客户能叫什么名字，定义在 `skills/geo-metrics/references/metric-scope-and-copy-contract.md`。
+
+| 指标 | 样本范围（HTML 报告） | 口径 |
 | --- | --- | --- |
-| 提及率、提及率排名、声量份额、平均提及位置 | report-builder | 报告默认统计发现、替代两类（只剩问题解决题时算问题解决）；上传 CSV 与后端仍只看发现 |
-| 引用次数、引用份额、引用率 | report-builder | 只数正文里带编号的引用标记；份额按未去重次数算 |
-| 正向情感占比 | sentiment-judge 判读，report-builder 按切片汇总 | 正向 ÷（正向 + 负向），不设中性档 |
-| 商品卡触发率、商品卡提及率、商品卡平均位置、官网购买链接覆盖率 | report-builder（实现在 core `shopping.py`） | 只统计发现、替代两类题，按平台分开算，和提及率分开报；商品卡提及率再分品牌级与 SKU 级；公式见 `skills/geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」 |
+| 提及率、提及率排名、声量份额、平均提及位置 | 发现、替代两类；只剩问题解决题时算问题解决；对比、评估等题面点名品牌的类型显示「—」 | 品牌出现在去引用正文里才算提及；声量分母是全部纳入品牌 |
+| 引用份额、引用率、官网引用率 | 统计层默认全部意图类型；核心洞察只展示和提及率同一批回答，引用模块展示全部类型 | 只数正文里带编号的引用标记；份额按未去重次数算 |
+| 正向情感占比 | 情感题 | 正向 ÷（正向 + 负向），不设中性档；判读在 sentiment-judge |
+| 商品卡触发率、商品卡提及率、商品卡平均位置、官网购买链接覆盖率 | 发现、替代两类，按平台分开 | 和提及率分开报；商品卡提及率分品牌级与 SKU 级 |
 
-每种意图类型统计哪些指标（提及率、情感、胜负、准确性）由类型决定，引用所有类型都统计，对照和后端字段见 `skills/shared/canonical-intent-mapping.md`。上传时填的 `diagnosis_intent` 和后端内部存的值是两层，评估题上传填 `evaluation`。
+上传 CSV 与后端仍只看发现题。每种意图类型统计哪些指标由类型决定，对照和后端字段见 `skills/shared/canonical-intent-mapping.md`。
+
+有两处是刻意保留的第二份实现，改口径时要一起改：`geo-presales-report-builder/scripts/verify_report_data.py` 独立复算全部切片，用来抓数据层的错；报告页 `report-engine.js` 在浏览器里按多选筛选现算，由 `check_engine_parity.js` 对账。
+
+### 品牌识别
+
+识别入口是 core 的 `find_alias_spans`，售前报告、监测基线、试跑计数、情感抽取都调它。
+
+- **正文清洗**：先去掉引用标记、图片、链接网址、全部 HTML 标签（图片标签里的被引网页标题不算提及）、裸网址，清空商品卡的销售渠道列，再识别。
+- **匹配**：大小写不敏感；拉丁字母别名带词边界；泰文、中文这类连写文字不加词边界，不同品牌之间按最长优先、不重叠消解。
+- **分隔符放宽**：5 个字母以上的拉丁别名，字符之间可以夹 1 个空格、连字符、点或下划线；原文被这样拆开时每段都要大写开头。
+- **常用词要大写**：别名是英文常用词时，原文必须带大写才算。常用词表是 `geo_presales_core/english_words.txt`（取自 Webster's 2nd 小写词条）。
+- **不自动派生简称**：去掉 Security、Water 这类后缀得到的简称常常是另一个实体，所以不派生；`reconcile_brand_recognition.py` 把这类候选列出来，人工或 AI 确认后再写进词表。
+
+品牌词表结构：
+
+```json
+{
+  "brands": [{"name": "品牌名", "aliases": ["别名"], "type": "competitor_open", "domains": ["官网域名"]}],
+  "case_sensitive_aliases": ["要区分大小写的写法，比如和普通词撞的缩写"],
+  "competitor_site_domains": ["算作「竞品网站」的同类平台域名，不挂具体品牌"]
+}
+```
+
+别名按客户、按品牌各自补，不做跨客户共享。出报告前跑 `reconcile_brand_recognition.py` 查拼写漏判和常用词误判，用 `mine_brand_lexicon.py` 挖词表里没有的新品牌候选。
 
 ## 开发与维护
 
 ### 依赖
 
-仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。九个 Skill 里只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余七个和 `shared/` 的脚本只用标准库，没有清单。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
+仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余 Skill 和 `shared/` 的脚本只用标准库。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
 
 ### 跨 Skill 路径
 
-脚本都在 `<skills>/<skill>/scripts/` 下，用 `Path(__file__).resolve().parents[2]` 找到 skills 根目录。单独部署时用 `GEO_PRESALES_SKILLS_ROOT` 指定。
+脚本都在 `<skills>/<skill>/scripts/` 下，用 `Path(__file__).resolve().parents[2]` 找到 skills 根目录，统计实现从 `<skills>/geo-metrics/scripts` 导入（包名 `geo_presales_core`）。单独部署时用 `GEO_PRESALES_SKILLS_ROOT` 指定 skills 根目录。脚本按 `python3 -I` 隔离模式跑也能启动。
 
 ### 本地验证
 
@@ -157,7 +189,7 @@ python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
 python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 ```
 
-测试不调用外部 AI 平台。
+`geo-metrics` 的单元测试在 `geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）和 `geo-presales-report-audit/tests`（去引用）。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
 
 ### 发布
 
