@@ -1,3 +1,13 @@
+## 3.3.2（2026-11-10）补 requirements.txt
+
+触发依据：Suda 2026-11-10 指出选词 skill 的脚本缺依赖清单，仓库里也没有。只补清单和文档指向，不改任何规则和脚本。
+
+- 新增 `requirements.txt`：两个第三方包，`lingua-language-detector>=2.2.0,<3.0.0`、`claude-agent-sdk>=0.2.171,<0.3.0`，每个包下注缺了会怎样。Python 下限写 3.12（lingua 2.2.0 的 `Requires-Python`；只装 SDK 时 3.10 起）。
+- 依赖面用 AST 扫过全部 `scripts/`、`evals/` 和 `../shared/scripts/`：除这两个包外只用标准库，`geo_presales_core` 包本身也没有第三方依赖。两个包都是可选的：`lingua` 只在 `validate_after_sales_set.py` 的语种门禁里用，缺了跳过并给 W32；`claude-agent-sdk` 只在 `run_selection_mode.py` 的 `_run_sdk()` 里延迟导入，走 `--agent-cmd` 或自己写 `bank.json` 都不用装。
+- SKILL.md「参考与脚本」加一句安装说明，维护节里的 `pip install lingua-language-detector` 改为指向 `requirements.txt`。
+- 验证：Python 3.14 干净 venv 里 `pip install -r requirements.txt` 装上 SDK 0.2.180 和 lingua 2.2.0，`from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, ResultMessage` 通过，validator 带 lingua 跑样例不再报 W32；无 lingua 的 venv 里 validator 和 `run_selection_mode.py --help` 都正常（W32 按设计给出）。`check_skill_terms.py`、`test_validate_after_sales_set.py`（63 passed）、`evals/verify_workflow.py`（67/67）通过。
+- 改前快照：项目根 `.snapshots/SKILL.md.20261110-155738.bak`。
+
 ## 3.3.1（2026-11-10）字段「本期产品线」改名「产品线」
 
 触发依据：Suda 2026-11-10 指示，字段名不需要「本期」（每期只做一条产品线已写在规则里）。只改字段名，规则不变。

@@ -1,0 +1,16 @@
+# 选词 skill 脚本的第三方依赖。
+#
+# 装：python3 -m pip install -r requirements.txt
+# 需要 Python >= 3.12（lingua-language-detector 2.2.0 的下限；只装 claude-agent-sdk 时 3.10 起）。
+#
+# 除下面两个包外，scripts/ 和 evals/ 里的脚本只用标准库。两个包都是可选的，缺了不挡出题、
+# 校验和导出，只是各自退化成一种降级行为（写在包下面）。
+
+# 语种门禁：validator 判断题面是不是采集语言的原文（scripts/validate_after_sales_set.py）。
+# 没装时语种检查跳过，validator 照常跑完并给一条 W32 告警。
+lingua-language-detector>=2.2.0,<3.0.0
+
+# 线上一条命令跑的 --agent sdk 适配（scripts/run_selection_mode.py 的 _run_sdk）。
+# 只有 --agent sdk 用到，且是函数内延迟导入：宿主有自己的 harness 时走 --agent-cmd "<命令>"，
+# 或自己写代码产出 out/bank.json，都不需要装这个包。
+claude-agent-sdk>=0.2.171,<0.3.0
