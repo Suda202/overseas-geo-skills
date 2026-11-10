@@ -3,12 +3,12 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.3.4"
+  version: "3.3.8"
 ---
 
 # GEO Prompt Selection Builder（选词）
 
-选词生成要测的题：从业务范围（或一份品牌资料）和买家调研出发，梳理约束条件、目标客户与使用场景，画提示词矩阵，聚出主题（我们卖的购买意图），写题，校验后导出；签约后补题、并题。售前生词也用本 skill。到导出为止：试跑判读、品牌方挑正式题、锁版、正式题停测，以及跑基线、按期采集、出报告，都归 `geo-monitoring`。
+选词生成要测的题：从业务范围（或一份品牌资料）和买家调研出发，梳理约束条件、从核心目标客户与购买场景里拆出目标客户和使用场景，画提示词矩阵，聚出主题（我们卖的购买意图），写题，校验后导出；签约后补题、并题。售前生词也用本 skill。到导出为止：试跑判读、品牌方挑正式题、锁版、正式题停测，以及跑基线、按期采集、出报告，都归 `geo-monitoring`。
 
 **规则全文在 [references/selection-rules.md](references/selection-rules.md)，按下面 8 步分节；下表只是索引，判断标准以对应一节为准，开始任何一步前先读那一节。线上无人值守跑一份品牌资料时，先读 [references/online-runner.md](references/online-runner.md)，它只写和本地不一样的地方。**
 
@@ -17,11 +17,11 @@ metadata:
 | 步 | 做什么 | 按什么判断 | 产出 |
 |-|-|-|-|
 | 1 | 确认业务范围 | 品牌方先填，我们核对（线上用品牌资料代替，见 online-runner.md）；目前只做发现型可见度 | 业务范围表 |
-| 2 | 调研 | 先预跑品类认知（品牌、竞品评估按需补跑），再收四类需求信号，看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案、品牌能力清单 |
+| 2 | 调研 | 先预跑品类认知（品牌、竞品评估按需补跑），再收外部三类需求信号（线上由 runner 先固定采一轮），看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案、品牌能力清单 |
 | 3 | 约束条件 | 收得宽、统一粒度；不判重要性和相对竞品，只记品牌可核实的明显劣势；写题前确认硬条件 | 三张表共用的「约束条件」选项、品牌明显劣势记录 |
-| 4 | 目标客户与使用场景 | 按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 业务范围里的目标客户行和使用场景行，品牌方确认后冻结 |
+| 4 | 目标客户与使用场景 | 从业务范围「核心目标客户与购买场景」拆出来，按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 矩阵行的目标客户列和场景列，品牌方确认后冻结 |
 | 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每个发现行判一次业务优先级，这是全流程唯一的档位判断，非发现行只登记、不判档 | 提示词矩阵表 |
-| 6 | 主题与主题优先级 | 主题 ＝ 同一类候选 × 同一意图类型；按主题售卖，每个发现主题至少 10 题；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
+| 6 | 主题与主题优先级 | 主题 ＝ 值得独立监测的一组买家需求；先按候选类别初聚，再按竞争格局、评价标准、优化方向三问判断要不要按目标客户或使用场景拆；按主题售卖，每个发现主题至少 10 题；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
 | 7 | 写题 | 本期只在高、中档发现行上出题；按决策差异定题数；问不出发现题的行改类型 | 提示词库、题库 JSON |
 | 8 | 校验与导出 | validator 错误全改、告警逐条记处理；按场景导出。试跑、挑题、锁版归 `geo-monitoring` | 题库 JSON、对客确认表和 / 或上传 CSV |
 

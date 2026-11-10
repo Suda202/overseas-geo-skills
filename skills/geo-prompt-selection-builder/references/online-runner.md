@@ -37,7 +37,7 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 
 ### 审核环
 
-校验和导出第一次都通过后，脚本再新开一个审核 agent（不带生成时的上下文），按 [review-rubric.md](review-rubric.md) 八条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`，只写这一个文件。
+校验和导出第一次都通过后，脚本再新开一个审核 agent（不带生成时的上下文），按 [review-rubric.md](review-rubric.md) 九条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`，只写这一个文件。
 
 - 审核模型：`--agent sdk` 时读环境变量 `AGENT_REVIEW_MODEL`，没设用 `AGENT_MODEL`；`--agent-cmd` 时照常执行宿主命令（`TASK_FILE` 指向 `REVIEW.md`），模型由宿主定。
 - 阻塞发现（`blocking: true`）按返修的报错格式写成 `REVIEW-REPAIR-<n>.md`（stage 记 `review`）回喂 agent 返修，再跑校验和导出，然后 `REVIEW-<n>.md` 只复核上一轮报过的题号；复核仍有阻塞就继续返修，`--review-rounds` 轮（默认 1＝审一轮＋复核一轮，0 关闭审核）。最后一轮审核返修同样授权丢题不丢库；轮次用完仍有阻塞时，脚本自己把这些题删掉（删前题库存 `out/bank.before-drop.json`，题号和审核原文记进 `config.retired` 与 notes「删题（脚本兜底）」，删空的主题连登记一起删、挂在上面的矩阵行注明本期不出），再跑一遍校验和导出，通过就交付。删完仍没过，或阻塞发现没写题号删不了，才判生词失败。审核返修把校验改坏了，下一轮把校验报错和没修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 的额度。
@@ -70,7 +70,11 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 
 跳过的站和打不开的帖子写进 `out/notes.md` 的「未覆盖来源」，不另找办法绕过登录。
 
-取网页一律 `net.py fetch <url> --country <市场代码>`：代理节点默认是 SG，和本次运行的市场不一致时常取不到（2026-11-09 topuniversities 用 SG 节点失败、US 节点 25 秒取到），一次失败要多花半分钟到一分钟。被拦的页面不要再试 `render`，它在被拦页面上基本超时；`render` 只在 `fetch` 提示「可能是 JS 渲染页」时用，服务器上要装 Chrome 并设 `CHROME_PATH`，没装就跳过、按未覆盖来源记。同一个 URL 成功取过一次有缓存，返修轮重复打开不再付费。要读的页面攒成一批一次传给 `fetch`（默认 5 路并发，按输入顺序输出）；Facebook、X、Instagram、Threads、HardwareZone 和 7 天内直连被拦过的域名脚本会自动跳过直连。Reddit 每个工作目录最多 10 次联网请求（环境变量 `NET_REDDIT_MAX`，runner 默认设好，约 10 分钟），先挑最相关的版块和帖子，到上限后读不到的写进「未覆盖来源」。
+取网页一律 `net.py fetch <url> --country <市场代码>`：代理节点默认是 SG，和本次运行的市场不一致时常取不到（2026-11-09 topuniversities 用 SG 节点失败、US 节点 25 秒取到），一次失败要多花半分钟到一分钟。被拦的页面不要再试 `render`，它在被拦页面上基本超时；`render` 只在 `fetch` 提示「可能是 JS 渲染页」时用，服务器上要装 Chrome 并设 `CHROME_PATH`，没装就跳过、按未覆盖来源记。同一个 URL 成功取过一次有缓存，返修轮重复打开不再付费。要读的页面攒成一批一次传给 `fetch`（默认 5 路并发，按输入顺序输出）；Facebook、X、Instagram、Threads、HardwareZone 和 7 天内直连被拦过的域名脚本会自动跳过直连。Reddit 每个工作目录最多 10 次联网请求（环境变量 `NET_REDDIT_MAX`，runner 默认设好，约 10 分钟），先挑最相关的版块和帖子，到上限后读不到的写进「未覆盖来源」。Reddit 评论要给单帖 URL 才取得到，只给搜索词只返回主帖。
+
+**runner 先固定采一轮**：agent 启动前，runner 已经跑过搜索联想（`collect_serp_signals.py`）、竞品 Trustpilot 评价（`collect_reviews.py trustpilot`）和 Reddit 搜索加前 3 帖评论，合并在 `research/precollect/signals.csv`，各类成败和原因在 `research/precollect/summary.json`。agent 先读这两份，只对缺口补采，不重复采同样的来源；这份文件里与本产品线相关的信号要登记进 `config.buyer_quotes`。某一类采到了却一条没登记、`notes.md`「未覆盖来源」里也没说明这一类为什么全部无关，结束检查不通过、回喂返修。
+
+B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，不要试；Capterra、TrustRadius 用 `net.py fetch` 能取到完整评价，但要先用站内搜索确认产品有档案（2026-11-10 实测一家 GPU 云竞品两站都没有）。开发者和 AI 基础设施类品类，Hacker News 的 Algolia 接口直连可取评论全文（见 community-channels.md）。
 
 ## 和本地选词不一样的几步
 
@@ -78,7 +82,7 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 |---|---|
 | 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的品牌资料代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 可以不写（validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充）。品类名 `config.category_label` 从「产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
 | 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节；没有品牌方提供的资料，`demand-side-signals.md`（客户提供什么）不读，工作目录里也没有这个文件 |
-| 4. 目标客户与使用场景 | 目标客户从品牌资料里的「核心目标客户与购买场景」起步（排在前面的业务优先级高），按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
+| 4. 目标客户与使用场景 | 从品牌资料里的「核心目标客户与购买场景」拆出目标客户（排在前面的业务优先级高），不改写业务范围那几行；按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
 | 5. 业务优先级 | 业务重点从品牌资料里的核心目标客户与购买场景（按填写顺序）和差异化优势取，依据里写明出处；这几项都空时，主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「品牌资料无业务重点，按主要目标客户的核心使用场景定」。没开的行和原因写进 `notes.md`「没开的格子」 |
 | 6. 主题 | 和选词一样聚，个数不限。拿不准候选类别时按推理的候选类别归类，在主题的 `priority_basis` 里写「候选类别为推理，待验证」。能满足、但回答里基本不会出现品牌这一类的行照开、本期不出 |
 | 7. 写题 | 和选词一样，本期只出发现题。候选题一个市场 30–60 道，每个导出文件最多 60 条（导出对超 60 报错） |

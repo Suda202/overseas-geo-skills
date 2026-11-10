@@ -15,10 +15,11 @@
 
 | 站点 | 通道 | 能拿到什么 | 备注 |
 |---|---|---|---|
-| Reddit | `net.py reddit <版块/帖子 URL 或搜索词> [--sub 版块]`（RSS 直连，免费） | 版块最新帖、全站搜索、版内搜索、单帖加评论（实测 1 帖 + 46 条评论） | 未登录约每分钟 1 次，脚本按 `x-ratelimit-reset` 自动等待，不要并发；评论是扁平列表，没有楼层和点赞数。`.json`、old.reddit、无头 Chrome、Scrapeless、PullPush、Wayback 都不通 |
+| Reddit | `net.py reddit <版块/帖子 URL 或搜索词> [--sub 版块]`（RSS 直连，免费） | 版块最新帖、全站搜索、版内搜索、单帖加评论（实测 1 帖 + 46 条评论） | **两步取**：给搜索词只返回主帖，评论要再给单帖 URL 才有。先搜出帖子 URL，挑最相关的 3–5 帖逐帖读评论（2026-11-10 一次调研只搜不读帖，评论层一条没拿到）。未登录约每分钟 1 次，脚本按 `x-ratelimit-reset` 自动等待，不要并发；评论是扁平列表，没有楼层和点赞数。`.json`、old.reddit、无头 Chrome、Scrapeless、PullPush、Wayback 都不通 |
+| Hacker News | `https://hn.algolia.com/api/v1/search?query=<词>&tags=comment` 与 `/api/v1/items/<id>`（直连 JSON，免费） | 评论全文、作者、时间；按 id 可逐条核对原话 | 开发者、AI 基础设施类品类的买家讨论多在这里（2026-11-10 一个 GPU 云客户拿到约 30 条相关评论，含具体卡型的租价）。出处写 `https://news.ycombinator.com/item?id=<id>` |
 | Facebook 公开群 | `net.py fetch <帖子URL> --country SG --proxy --raw` | 帖子正文和大部分评论（8 条拿到 6 条） | 直连返回 400 登录页，必须加 `--proxy`。正文在内嵌 JSON 的 `message.text`，评论在 `body.text`，要去重。群首页只显示 2 帖、品牌主页 1 帖，翻不了页。不经过 Suda 的账号 |
 | Google 地图评价 | `collect_reviews.py google-maps "<店名 分店 城市>" --country sg --lang en --match <品牌>`，或给 `place_id:<ID>` | 评价原文、星级、日期、单条评价链接；每 10 条计一次费（单价见 signal-sources.md） | 搜索词可能落到别的分店，脚本打印匹配到的商家名，`--match` 不符就记失败（这一次照样计费）；`--sort lowest` 先取差评找决策摩擦；只打星没写字的评价不收（新加坡一家店 20 条里有 8 条）；外语评价取原文不取机翻。Scrapeless 的地图采集器已下线（15002），无头 Chrome 只看到受限版页面，都不能用 |
-| Trustpilot、Google Play、App Store | `collect_reviews.py` | 评价正文 | 无头 Chrome 也能读 Trustpilot；App Store 另有苹果公开 RSS（`itunes.apple.com/<区>/rss/customerreviews/page=1/id=<id>/sortby=mostrecent/json`，每页 50 条），Ybrand 美区 50 条、泰区和新加坡区 0 条，原因未确认 |
+| Trustpilot、Google Play、App Store | `collect_reviews.py` | 评价正文 | Trustpilot 用 `collect_reviews.py trustpilot <域名>`，原文完整、每条可在 `raw/` 核对；直接抓 trustpilot.com 网页会被 WAF 挡或被截断（2026-11-10 WebFetch 把引文截到 125 字以内），不要用网页通道代替。无头 Chrome 也能读 Trustpilot；App Store 另有苹果公开 RSS（`itunes.apple.com/<区>/rss/customerreviews/page=1/id=<id>/sortby=mostrecent/json`，每页 50 条），Ybrand 美区 50 条、泰区和新加坡区 0 条，原因未确认 |
 | YouTube | 直连 | 视频页、搜索页 | 评论正文没测 |
 | TikTok | 直连 | 只有页面外壳 | 正文没拿到 |
 | Threads | 有通道拿到主页 | 简介、粉丝数 | 帖子和回复没测 |
@@ -29,7 +30,7 @@
 
 | 行业 | 直连 | 无头 Chrome | 只有 Scrapeless | 不通 |
 |---|---|---|---|---|
-| B2B 软件 | LinkedIn 公开页 | TrustRadius | — | G2、Capterra（Cloudflare）、Gartner Peer Insights |
+| B2B 软件 | LinkedIn 公开页 | — | TrustRadius、Capterra（`net.py fetch` 直连 403、自动走代理后拿到完整评价，前提是产品在站上有档案，先用站内搜索确认） | G2（DataDome，代理和无头 Chrome 都挡，只有 Wayback 精确时间戳的旧快照能读，不适合当监测来源）、Gartner Peer Insights |
 | B2B 服务与代理 | Sortlist | — | Clutch、DesignRush | — |
 | 工业品 | Alibaba | Global Sources | Made-in-China | ThomasNet |
 | 医疗器械 | FDA MAUDE、COPD360social | — | — | — |
