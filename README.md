@@ -134,6 +134,10 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 ## 开发与维护
 
+### 依赖
+
+仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。八个 Skill 里只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余六个和 `shared/` 的脚本只用标准库，没有清单。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
+
 ### 跨 Skill 路径
 
 脚本都在 `<skills>/<skill>/scripts/` 下，用 `Path(__file__).resolve().parents[2]` 找到 skills 根目录。单独部署时用 `GEO_PRESALES_SKILLS_ROOT` 指定。

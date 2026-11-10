@@ -3,7 +3,7 @@ name: geo-presales-report-audit
 description: This skill should be used when auditing or correcting brand mention recognition and first-appearance rankings in GEO presales results, at either layer — raw crawler output (answer text that has no brand_rankings yet) or the assembled report JSON. It produces safe brand-ranking corrections and Bad Case evidence, not customer-facing analytical conclusions, metric aggregation, or sentiment changes.
 metadata:
   author: 海外 GEO 项目
-  version: "2.5.0"
+  version: "2.5.1"
 ---
 
 # GEO 售前报告质量审计
@@ -66,7 +66,9 @@ metadata:
 
 ## 确定性辅助工具
 
-`structured_result_audit.py` 负责引用清洗、结构校验和 `brand_rankings` 审核补丁安全写回；`prepare_badcase_draft.py` 负责 Bad Case 草稿格式；`annotate_evidence_screenshot.py` 负责确定性证据标注。参数与语义边界见结构化审计和 Bad Case 交付参考。三者都不替代开放式品牌发现、句子级情绪、竞品胜负或 Attribute 关联判断，也不直接写入飞书。典型命令：
+`structured_result_audit.py` 负责引用清洗、结构校验和 `brand_rankings` 审核补丁安全写回；`prepare_badcase_draft.py` 负责 Bad Case 草稿格式；`annotate_evidence_screenshot.py` 负责确定性证据标注。参数与语义边界见结构化审计和 Bad Case 交付参考。三者都不替代开放式品牌发现、句子级情绪、竞品胜负或 Attribute 关联判断，也不直接写入飞书。
+
+两个脚本要装第三方包：`structured_result_audit.py` 用 `beautifulsoup4`，`annotate_evidence_screenshot.py` 用 `pillow`，装 `python3 -m pip install -r requirements.txt`。两者都是脚本内延迟导入，缺包时只该脚本退出并报缺哪个包，其余脚本和流程照常跑。典型命令：
 
 ```bash
 # 报告 JSON 层：生成去引用审核包 → 审核后校验（可对比改前版本）→ 安全写回补丁

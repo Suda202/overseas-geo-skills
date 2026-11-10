@@ -1,0 +1,16 @@
+# geo-presales-report-audit 脚本的第三方依赖。
+#
+# 装：python3 -m pip install -r requirements.txt
+# 需要 Python >= 3.10（scripts/ 用了 `X | None` 注解；文件都有 `from __future__ import annotations`，
+# 3.9 也能跑，但 Pillow 13 起要求 3.11，这里按各包的声明取）。
+#
+# 除下面两个包外，本 skill 的 scripts/、evals/、tests/ 只用标准库。
+# 两个包都只在具体脚本里延迟导入，缺了不挡其余脚本：报错文字已写明缺哪个包。
+
+# 证据截图标注（scripts/annotate_evidence_screenshot.py）：画边框、编号气泡和字号自适应标题栏。
+# 缺了该脚本直接 SystemExit 报「缺少 Pillow」，tests/test_scripts.py 里对应用例 skip。
+pillow>=10.4
+
+# 引用清洗与结构化结果审计（scripts/structured_result_audit.py）：解析回答 HTML，剔除引用标签和
+# 商品卡里的链接文本。缺了脚本 SystemExit 报「缺少 BeautifulSoup4」。
+beautifulsoup4>=4.12

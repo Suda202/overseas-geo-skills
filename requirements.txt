@@ -1,0 +1,14 @@
+# 海外 GEO Skills 全家族依赖。
+#
+# 装：python3 -m pip install -r requirements.txt
+# 需要 Python >= 3.12。
+#
+# 8 个 Skill 里只有两个要第三方包，其余六个（geo-monitoring、geo-presales-crawl-integrity、
+# geo-presales-pipeline、geo-presales-report-builder、geo-presales-report-editor、
+# geo-presales-sentiment-judge）和 shared/ 的脚本只用标准库，没有各自的 requirements.txt。
+# 各 Skill 自己的清单在它目录下，这里只是把它们串起来，改依赖时改那份，别在这里加重。
+#
+# 三个包都是可选的，缺了各退化成一种降级行为，不挡其余流程（细节见各自的 requirements.txt）。
+
+-r skills/geo-prompt-selection-builder/requirements.txt
+-r skills/geo-presales-report-audit/requirements.txt
