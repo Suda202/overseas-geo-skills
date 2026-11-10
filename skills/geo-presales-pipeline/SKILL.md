@@ -39,7 +39,7 @@ metadata:
 ```bash
 cd <skills>/geo-presales-report-builder
 python3 scripts/collect_answers.py --questions <上传.csv> --out <采集目录> --regions US --dry-run
-export SCRAPELESS_API_KEY=...          # 只从环境变量读，不写进文件或命令参数
+export SCRAPELESS_API_KEY=...          # 服务器用环境变量；本机没设时自动读 macOS 钥匙串同名项。不写进文件或命令参数
 python3 scripts/collect_answers.py --questions <上传.csv> --out <采集目录> --regions US
 ```
 

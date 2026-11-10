@@ -14,7 +14,7 @@ manifest，不进任何分母（integrity D5）。AIO 例外：接口 success �
 「本次未触发概览」，不重试（契约 empty_answer_allowed）。
 
 用法：
-    export SCRAPELESS_API_KEY=...
+    Key 先读环境变量 SCRAPELESS_API_KEY，没有再读 macOS 钥匙串同名项（security add-generic-password -s SCRAPELESS_API_KEY -a $USER -w <key>）
     python3 scripts/collect_answers.py --questions <题库.csv> --out <采集目录> --regions US --dry-run
     python3 scripts/collect_answers.py --questions <题库.csv> --out <采集目录> --regions US
     python3 scripts/collect_answers.py --questions <题库.csv> --out <采集目录> --regions US --check-only
@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import csv
+import subprocess
 import hashlib
 import importlib.util
 import json
@@ -314,6 +315,18 @@ def write_manifest(out: Path, args, questions, platforms, regions, cells, unreco
     return manifest
 
 
+
+def _read_key() -> str:
+    """和 shared/scripts/net.py 同一顺序：先环境变量（服务器），再 macOS 钥匙串同名项（同事本机）。"""
+    value = os.environ.get("SCRAPELESS_API_KEY", "").strip()
+    if value:
+        return value
+    try:
+        return subprocess.run(["security", "find-generic-password", "-s", "SCRAPELESS_API_KEY", "-w"],
+                              capture_output=True, text=True).stdout.strip()
+    except FileNotFoundError:
+        return ""
+
 def main() -> int:
     global API_KEY
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -376,9 +389,10 @@ def main() -> int:
             print(f"[dry-run] 首轮 {len(todo)} 次调用；失败格每格最多再试 {args.max_attempts - 1} 次")
         return 0
 
-    API_KEY = os.environ.get("SCRAPELESS_API_KEY", "").strip()
+    API_KEY = _read_key()
     if not API_KEY:
-        print("缺少 SCRAPELESS_API_KEY 环境变量（不要把 Key 写进脚本或命令行参数）", file=sys.stderr)
+        print("缺少 SCRAPELESS_API_KEY：环境变量和 macOS 钥匙串（服务名 SCRAPELESS_API_KEY）里都没有"
+              "（不要把 Key 写进脚本或命令行参数）", file=sys.stderr)
         return 2
 
     done = 0
