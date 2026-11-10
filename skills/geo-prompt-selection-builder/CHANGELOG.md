@@ -1,3 +1,18 @@
+## 3.2.0（2026-11-10）线上审核环
+
+触发依据：Suda 2026-11-10 要求线上加审核环，审核模型由宿主配置。
+
+1. **runner 加审核阶段**（`scripts/run_selection_mode.py`）：`run` 在校验和导出第一次都通过后，写 `REVIEW.md` 让新开的审核 agent 按 `references/review-rubric.md` 八条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`（只写这一个文件）。走现有 `run_agent`，tag `-review`，agent 记录自动进 `costs.llm`。`--agent sdk` 时审核用 `AGENT_REVIEW_MODEL`（没设用 `AGENT_MODEL`），`--agent-cmd` 时 `TASK_FILE` 指向 `REVIEW.md`、模型由宿主定。
+2. **阻塞发现回喂返修**：`blocking: true` 的发现按返修报错格式（`[review] <题号> 第 <n> 条：…（建议：…）`）写成 `REVIEW-REPAIR-<n>.md`，返修后重跑 finalize，再用 `REVIEW-<n>.md` 只复核上一轮报过的题号；`--review-rounds`（默认 1，0 关闭）用完仍有阻塞才判失败，退出码 1。最后一轮审核返修同样授权丢题不丢库；返修把校验改坏时，下一轮把校验报错和未修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 额度。`REPAIR_TASK` 抽出 `why` / `extra` 两个占位，原返修任务文字不变。
+3. **非阻塞发现**：不触发返修，记进 `out/result.json` 的 `review.nonblocking`；本来就要审核返修时，返修任务顺带要求写进 `notes.md`「评审意见」一节。
+4. **不当闸门**：`review.json` 缺失、不是合法 JSON、结构不对（要是数组，每条有非空 `problem` 和布尔 `blocking`），或审核 agent 超时、出错，只在 `review.warnings` 记一条，照常交付。审核 agent 改了 `bank.json` 时恢复审核前的题库并记 warning。
+5. **`out/result.json` 加 `review` 块**：`rounds`、`blocking_found`、`nonblocking_found`（各轮累计）、`status`（`passed` / `repaired` / `skipped` / `review_failed`，`review_failed` 用 `reason` 区分审核没产出和阻塞没修完）、`review_repair_rounds`、`warnings`、`nonblocking`、`blocking_unresolved`；写块时重数一遍 `costs`，审核轮的 usage 才算得进去。
+6. **评审清单**（`references/review-rubric.md`）：八条核对一字未动；「输出格式」改为写进 `out/review.json` 并列出每条的键（`question_id` 可写题号数组），「约束」按 runner 实际做法改写阻塞 / 非阻塞的去向，加一条 review.json 坏掉不挡交付。
+7. 文档：online-runner.md「怎么跑」加「审核环」小节、「验收」加新 e2e；SKILL.md 脚本表和维护节验证命令加 `evals/e2e_review_loop.py`。
+
+- 测试：新增 `evals/e2e_review_loop.py`（假 agent 走 `--agent-cmd`），七条路径 13 项检查全过，结果写 `reports/review-loop-e2e.md`；`e2e_repair_loop.py` 在默认开审核下仍全过（假 agent 不写 review.json，审核记 review_failed、不影响交付）。
+- 改前快照：项目根 `.snapshots/*.20261110-112225.bak`（runner、review-rubric.md、online-runner.md、SKILL.md、CHANGELOG.md）。
+
 ## 3.1.0（2026-11-10）每轮自动记账
 
 触发依据：Suda 2026-11-10 要求每轮自动记账，统计口径为每客户平均花费。估算见 `30-选Topic与生词/方案/研究与评审/生词单轮成本估算-20261110.md` 末节「怎么把估算换成实测」。

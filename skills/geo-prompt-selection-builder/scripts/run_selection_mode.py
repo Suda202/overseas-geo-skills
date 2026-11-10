@@ -11,6 +11,10 @@
     返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
               finalize，默认最多 2 轮（--repair-rounds，0 关闭）；最后一轮授权 agent 丢题不丢库
               （改不好的题删掉、题号进 config.retired，每个主题仍只放一种意图类型）
+    审核      首次 finalize 通过后，新开一个审核 agent 按 references/review-rubric.md 八条核对题库，
+              发现写进 out/review.json；blocking 的发现写成 REVIEW-REPAIR-<n>.md 回喂返修、再 finalize、
+              只复核报过的题，默认 1 轮（--review-rounds，0 关闭；不占 --repair-rounds 额度）。
+              review.json 缺失、坏掉或审核 agent 超时只记 warning，不挡交付（3.2.0）
 
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt,gemini --out <工作目录> --agent sdk
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt --out <工作目录> --agent-cmd "<命令>"
@@ -23,9 +27,11 @@
 
 agent 两种接法：
   --agent sdk       内置 Claude Agent SDK 适配（pip 包 claude-agent-sdk）。环境变量：
-                    ANTHROPIC_BASE_URL、ANTHROPIC_API_KEY（模型网关）、AGENT_MODEL（模型名）。
+                    ANTHROPIC_BASE_URL、ANTHROPIC_API_KEY（模型网关）、AGENT_MODEL（模型名）；
+                    审核 agent 用 AGENT_REVIEW_MODEL，没设就用 AGENT_MODEL。
   --agent-cmd "…"   宿主自己的 harness：在工作目录里用 shell 执行，环境变量 WORKSPACE、
-                    TASK_FILE 指向工作目录和任务说明；命令结束后应已写出 out/bank.json。
+                    TASK_FILE 指向工作目录和任务说明；命令结束后应已写出 out/bank.json。审核轮 TASK_FILE
+                    指向 REVIEW.md（或 REVIEW-<n>.md），应写出 out/review.json；模型由宿主定。
 调研要用的密钥照常放环境变量：SCRAPELESS_API_KEY、DATAFORSEO_LOGIN、DATAFORSEO_PASSWORD。
 Reddit 限量：agent 里的 net.py reddit 每个工作目录最多 NET_REDDIT_MAX 次联网请求（默认 10，约 10 分钟），
 计数在 logs/reddit_calls；宿主可用同名环境变量改。
@@ -36,14 +42,19 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
 产物（都在工作目录里）：
   out/bank.json        题库 JSON（内部底稿）
   out/upload/*.csv     交给线上的 9 字段题（每个市场一份）
-  out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, costs, errors…}
+  out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, review, costs, errors…}
+                       review 是审核块（3.2.0）：{rounds, blocking_found, nonblocking_found,
+                       status: passed/repaired/skipped/review_failed, reason, warnings, nonblocking…}
                        costs 是本轮记账（3.1.0）：LLM usage 加总、Scrapeless 请求数、DataForSEO 流水，只记数量
                        不乘单价；按客户算钱用 shared/scripts/cost_report.py（单价读本机 ~/.geo-cost/prices.json）
   logs/                agent 记录（返修轮带 -repair<n> 后缀；agent-run*.json 含 SDK 的 usage）、两个检查与导出的原始输出
   logs/net_cache/      本轮 net.py 缓存（NET_CACHE_DIR），代理页数和搜索次数从这里数
   REPAIR-<n>.md        每轮返修回喂 agent 的任务（报错原文在里面）
+  REVIEW.md、REVIEW-<n>.md、REVIEW-REPAIR-<n>.md  审核、复核、审核返修的任务；out/review.json 是最近一轮
+                       审核的发现，logs/review-<n>.json 存每轮原件
 
-退出码：0 生词成功；1 生词失败（agent 出错、超时，或返修轮次用完检查仍没过，原因见 result.json）；
+退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现，
+原因见 result.json）；
 2 输入或环境有错（Case 归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
@@ -54,6 +65,9 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
   5. 工作目录已存在 → 拒绝覆盖，避免两个 Case 共用一个目录
   6. 没有 SCRAPELESS_API_KEY → agent 采不了研究预跑会凭空写题，启动前就停下
+  7. 审核 agent 没写 review.json、写坏了、结构不对或超时 → review.status=review_failed，记 warning，照常交付
+  8. 审核 agent 违规改了 bank.json → 恢复审核前的题库并记 warning
+  9. 审核返修把检查改坏 → 下一轮审核返修把检查报错和未修的阻塞发现一起回喂，额度用完才失败
 """
 from __future__ import annotations
 
@@ -135,7 +149,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 最后只回复一行：`DONE <validator 输出里的 readiness>`。
 """
 
-REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max_rounds} 轮）。工作目录里已有 out/bank.json，但结束检查没过。
+REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max_rounds} 轮）。工作目录里已有 out/bank.json，{why}。
 
 只做返修：按下面的报错改 `out/bank.json`（需要时更新 `out/notes.md`），不要重做调研（research/ 里已有材料），不要访问工作目录以外的路径。
 {drop_clause}
@@ -146,7 +160,38 @@ REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max
 改完后依次运行，两条都要退出码 0；有错就继续改：
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
-最后只回复一行：`DONE <validator 输出里的 readiness>`。
+{extra}最后只回复一行：`DONE <validator 输出里的 readiness>`。
+"""
+
+REPAIR_WHY = "但结束检查没过"
+REVIEW_REPAIR_WHY = "结束检查已过，但内容审核（[review]，判据见 `.agents/skills/geo-prompt-selection-builder/references/review-rubric.md`）报了阻塞问题"
+
+REVIEW_TASK = """你在无人值守流水线的审核环节，没有人会回答问题。工作目录里的题库已通过 validator 和导出检查，你按固定清单再核对一遍内容。你没有参与生成这份题库，只按清单判断，不要沿用生成时的理由。
+
+读这三个文件：
+- `out/bank.json`：题库
+- `out/notes.md`：生成记录（可能不存在，不存在就只看题库）
+- `.agents/skills/geo-prompt-selection-builder/references/review-rubric.md`：评审清单
+
+{scope}
+
+按清单「八条核对」逐题核对，判据和 blocking 取值照清单，不自己加条目、不建议加题、不重判优先级、不改主题划分。把发现写成一个 JSON 数组存到 `out/review.json`，每条一个对象，键为 `question_id`、`check`（1–8）、`problem`、`suggestion`、`blocking`（true / false），格式见清单「输出格式」；没有发现写 `[]`。
+
+只写 `out/review.json` 这一个文件：不改 `out/bank.json`、不改 `out/notes.md`、不调研、不联网、不访问工作目录以外的路径。
+最后只回复一行：`DONE <发现条数>`。
+"""
+
+REVIEW_SCOPE_FULL = "范围：题库里的全部题目。"
+REVIEW_SCOPE_RECHECK = """范围：这是复核，只看上一轮审核报过阻塞问题的这些题：{ids}。题库已按上一轮意见返修过，看这些题现在还有没有问题；清单外的题不看。清单里的题已经删掉（不在 `questions` 里、记进了 `config.retired`）的跳过。
+
+上一轮的阻塞发现原文：
+
+{findings}"""
+
+REVIEW_NOTES_CLAUSE = """另外，审核还报了下面几条非阻塞意见，不用为它们改题；把它们原样记进 `out/notes.md`「评审意见」一节（没有这一节就新建）：
+
+{items}
+
 """
 
 DROP_CLAUSE = """这是最后一轮返修，丢题不丢库：报错指向的题能改就改，改不好的直接删掉，不要为凑数新写题。删掉的题号和原因记进 `config.retired`，并写进 `out/notes.md`「删题」一节；空了的主题连主题登记一起删，删题后每个主题仍只放一种意图类型。宁可少交几道题，不要交整库失败。
@@ -248,9 +293,9 @@ def _usage(raw) -> dict:
     return {k: int(get(k, 0) or 0) for k in USAGE_KEYS}
 
 
-async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
+async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "", model: str = "") -> dict:
     from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage, query  # noqa: PLC0415
-    model = os.environ.get("AGENT_MODEL", "").strip()
+    model = model.strip() or os.environ.get("AGENT_MODEL", "").strip()
     if not os.environ.get("ANTHROPIC_BASE_URL") or not os.environ.get("ANTHROPIC_API_KEY") or not model:
         raise RuntimeError("--agent sdk 需要环境变量 ANTHROPIC_BASE_URL、ANTHROPIC_API_KEY、AGENT_MODEL")
     home = ws / "logs/agent-home"
@@ -285,7 +330,7 @@ async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
 
 
 def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
-              task_path: Path | None = None, tag: str = "") -> dict:
+              task_path: Path | None = None, tag: str = "", model: str = "") -> dict:
     task_path = task_path or ws / "TASK.md"
     task = task_path.read_text(encoding="utf-8")
     started = time.time()
@@ -293,7 +338,7 @@ def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
                     "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
     try:
         if agent == "sdk":
-            record.update(asyncio.run(_run_sdk(ws, task, timeout, tag)))
+            record.update(asyncio.run(_run_sdk(ws, task, timeout, tag, model)))
         else:
             env = dict(os.environ, WORKSPACE=str(ws), TASK_FILE=str(task_path), **net_env(ws))
             with (ws / f"logs/agent{tag}.log").open("w", encoding="utf-8") as log:
@@ -489,16 +534,170 @@ def collect_costs(ws: Path, market: str, since: str) -> dict:
             "llm": llm, "scrapeless_requests": scrapeless, "dataforseo": dfs}
 
 
+def format_errors(errors: list[dict]) -> str:
+    """返修任务里的报错格式：每条 `[stage] 原文`，空行分隔。"""
+    return "\n\n".join(f"[{e.get('stage', '?')}] {e.get('output') or e.get('message', '')}".strip() for e in errors)
+
+
 def repair_task(ws: Path, round_no: int, max_rounds: int) -> Path:
     """把上一轮 result.json 的报错写成返修任务，返回任务文件路径。"""
     result = json.loads((ws / "out/result.json").read_text(encoding="utf-8"))
-    errors = "\n\n".join(f"[{e.get('stage', '?')}] {e.get('output') or e.get('message', '')}".strip()
-                         for e in result.get("errors", []))
+    errors = format_errors(result.get("errors", []))
     drop = DROP_CLAUSE if round_no >= max_rounds else ""
     path = ws / f"REPAIR-{round_no}.md"
-    path.write_text(REPAIR_TASK.format(round=round_no, max_rounds=max_rounds, drop_clause=drop, errors=errors),
+    path.write_text(REPAIR_TASK.format(round=round_no, max_rounds=max_rounds, why=REPAIR_WHY, drop_clause=drop,
+                                       errors=errors, extra=""),
                     encoding="utf-8")
     return path
+
+
+# ---- 审核环（3.2.0） ------------------------------------------------------------------
+
+def _finding_ids(finding: dict) -> list[str]:
+    """question_id 可能是一个题号、题号列表或空（主题级发现）。"""
+    raw = finding.get("question_id")
+    items = raw if isinstance(raw, list) else [raw]
+    return [str(x).strip() for x in items if str(x or "").strip()]
+
+
+def finding_message(f: dict) -> str:
+    ids = "、".join(_finding_ids(f)) or "（未指明题号）"
+    msg = f"{ids} 第 {f.get('check', '?')} 条：{str(f.get('problem') or '').strip()}"
+    if str(f.get("suggestion") or "").strip():
+        msg += f"（建议：{str(f['suggestion']).strip()}）"
+    return msg
+
+
+def parse_review(path: Path) -> tuple[list[dict] | None, str]:
+    """读 out/review.json；返回 (发现列表, 出错说明)。结构不对时发现为 None。"""
+    if not path.exists():
+        return None, "审核 agent 没有写出 out/review.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"out/review.json 不是合法 JSON：{exc}"
+    if isinstance(data, dict) and isinstance(data.get("findings"), list):
+        data = data["findings"]  # 宽容：包了一层 {"findings": [...]}
+    if not isinstance(data, list):
+        return None, f"out/review.json 应是 JSON 数组，收到 {type(data).__name__}"
+    for i, f in enumerate(data):
+        if not isinstance(f, dict) or not isinstance(f.get("blocking"), bool) or not str(f.get("problem") or "").strip():
+            return None, f"out/review.json 第 {i + 1} 条结构不对：要有 problem（非空）和 blocking（true / false）"
+    return data, ""
+
+
+def review_task(ws: Path, run_no: int, recheck: list[dict] | None) -> Path:
+    if recheck is None:
+        scope = REVIEW_SCOPE_FULL
+    else:
+        ids = list(dict.fromkeys(i for f in recheck for i in _finding_ids(f)))
+        scope = REVIEW_SCOPE_RECHECK.format(ids="、".join(ids) or "（上一轮发现没有指明题号，复核这些发现涉及的题）",
+                                            findings="\n".join(f"- {finding_message(f)}" for f in recheck))
+    path = ws / ("REVIEW.md" if run_no == 1 else f"REVIEW-{run_no}.md")
+    path.write_text(REVIEW_TASK.format(scope=scope), encoding="utf-8")
+    return path
+
+
+def review_repair_task(ws: Path, round_no: int, max_rounds: int, errors: list[dict], notes: list[dict]) -> Path:
+    drop = DROP_CLAUSE if round_no >= max_rounds else ""
+    extra = REVIEW_NOTES_CLAUSE.format(items="\n".join(f"- {finding_message(f)}" for f in notes)) if notes else ""
+    path = ws / f"REVIEW-REPAIR-{round_no}.md"
+    path.write_text(REPAIR_TASK.format(round=round_no, max_rounds=max_rounds, why=REVIEW_REPAIR_WHY, drop_clause=drop,
+                                       errors=format_errors(errors), extra=extra),
+                    encoding="utf-8")
+    return path
+
+
+def write_review_block(ws: Path, market: str, review: dict, fail: str = "") -> None:
+    """把审核块写进 result.json；审核 agent 跑在最后一次 finalize 之后，costs 重数一遍才含审核轮。"""
+    path = ws / "out/result.json"
+    result = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    result["review"] = review
+    if fail:
+        result["status"] = "failed"
+        result.setdefault("errors", []).append({"stage": "review", "message": fail})
+    result["costs"] = collect_costs(ws, market, result.get("prepared_at", ""))
+    write_json(path, result)
+
+
+def review_loop(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
+                max_rounds: int, repair_rounds: int, market: str) -> int:
+    """首次 finalize 通过后跑：审核 → 阻塞发现回喂返修 → finalize → 只复核报过的题。返回最终退出码。"""
+    review = {"rounds": 0, "blocking_found": 0, "nonblocking_found": 0, "status": "skipped", "reason": "",
+              "review_repair_rounds": 0, "warnings": [], "nonblocking": [], "blocking_unresolved": []}
+    if max_rounds <= 0:
+        review["reason"] = "--review-rounds 0，未审核"
+        write_review_block(ws, market, review)
+        return 0
+    model = os.environ.get("AGENT_REVIEW_MODEL", "").strip() or os.environ.get("AGENT_MODEL", "").strip()
+    bank = ws / "out/bank.json"
+    out = ws / "out/review.json"
+    recheck: list[dict] | None = None
+    noted: set[str] = set()      # 已经搭车交给返修记进 notes.md 的非阻塞意见
+    used = 0
+    while True:
+        review["rounds"] += 1
+        n = review["rounds"]
+        if out.exists():
+            out.unlink()  # 只认这一轮写的
+        before = bank.read_bytes()
+        task = review_task(ws, n, recheck)
+        record = run_agent(ws, agent, agent_cmd, timeout, task_path=task,
+                           tag="-review" if n == 1 else f"-review{n}", model=model if agent == "sdk" else "")
+        if bank.read_bytes() != before:
+            bank.write_bytes(before)
+            review["warnings"].append(f"第 {n} 轮审核 agent 改了 out/bank.json，已恢复审核前的题库")
+        if out.exists():
+            shutil.copy2(out, ws / f"logs/review-{n}.json")
+        findings, err = parse_review(out)
+        if findings is None:
+            # 审核是增强不是闸门：审核没跑成只记 warning，题库已过检查照常交付
+            if record.get("error"):
+                err = f"{record['error']}；{err}"
+            review.update(status="review_failed", reason="审核没有产出可用结果，按已过检查的题库交付")
+            review["warnings"].append(f"第 {n} 轮审核：{err}")
+            write_review_block(ws, market, review)
+            return 0
+        blocking = [f for f in findings if f["blocking"]]
+        fresh_notes = []
+        for f in findings:
+            if f["blocking"]:
+                continue
+            key = finding_message(f)
+            if key not in {finding_message(x) for x in review["nonblocking"]}:
+                review["nonblocking"].append(f)
+                fresh_notes.append(f)
+        review["blocking_found"] += len(blocking)
+        review["nonblocking_found"] += len(fresh_notes)
+        if not blocking:
+            review.update(status="repaired" if used else "passed", blocking_unresolved=[])
+            write_review_block(ws, market, review)
+            return 0
+        pending_errors = [{"stage": "review", "message": finding_message(f)} for f in blocking]
+        while True:
+            if used >= max_rounds:
+                review.update(status="review_failed", reason="审核返修轮次用完仍有阻塞发现", blocking_unresolved=blocking)
+                write_review_block(ws, market, review, fail=f"审核返修 {max_rounds} 轮后仍有 {len(blocking)} 条阻塞发现："
+                                   + "；".join(finding_message(f) for f in blocking))
+                return 1
+            used += 1
+            review["review_repair_rounds"] = used
+            notes = [f for f in review["nonblocking"] if finding_message(f) not in noted]
+            noted.update(finding_message(f) for f in notes)
+            task = review_repair_task(ws, used, max_rounds, pending_errors, notes)
+            record = run_agent(ws, agent, agent_cmd, timeout, task_path=task, tag=f"-review-repair{used}")
+            code = finalize(ws, record, repair_rounds=repair_rounds)
+            if code == 0:
+                break
+            # 返修把检查改坏了：检查报错和没修的阻塞发现一起进下一轮
+            result = json.loads((ws / "out/result.json").read_text(encoding="utf-8"))
+            pending_errors = list(result.get("errors", [])) + [
+                {"stage": "review", "message": finding_message(f)} for f in blocking]
+            if used >= max_rounds:
+                review.update(status="review_failed", reason="审核返修后检查没过，轮次已用完", blocking_unresolved=blocking)
+                write_review_block(ws, market, review)
+                return 1
+        recheck = blocking
 
 
 def main() -> int:
@@ -518,6 +717,9 @@ def main() -> int:
             p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="agent 时间上限（秒），每轮返修同额")
             p.add_argument("--repair-rounds", type=int, default=2,
                            help="检查没过时回喂报错返修的最大轮数（默认 2，0 关闭；最后一轮授权丢题不丢库）")
+            p.add_argument("--review-rounds", type=int, default=1,
+                           help="审核报阻塞问题时回喂返修的最大轮数（默认 1＝审一轮＋复核一轮，0 关闭审核；"
+                                "不占 --repair-rounds 额度）")
     p = sub.add_parser("finalize")
     p.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
@@ -551,7 +753,9 @@ def main() -> int:
         task_path = repair_task(ws, rounds, a.repair_rounds)
         record = run_agent(ws, a.agent, a.agent_cmd, a.timeout, task_path=task_path, tag=f"-repair{rounds}")
         code = finalize(ws, record, repair_rounds=rounds)
-    return code
+    if code != 0:
+        return code
+    return review_loop(ws, a.agent, a.agent_cmd, a.timeout, a.review_rounds, rounds, a.market.strip())
 
 
 if __name__ == "__main__":

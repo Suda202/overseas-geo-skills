@@ -33,6 +33,16 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 
 脚本先归一化 Case，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
+### 审核环
+
+校验和导出第一次都通过后，脚本再新开一个审核 agent（不带生成时的上下文），按 [review-rubric.md](review-rubric.md) 八条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`，只写这一个文件。
+
+- 审核模型：`--agent sdk` 时读环境变量 `AGENT_REVIEW_MODEL`，没设用 `AGENT_MODEL`；`--agent-cmd` 时照常执行宿主命令（`TASK_FILE` 指向 `REVIEW.md`），模型由宿主定。
+- 阻塞发现（`blocking: true`）按返修的报错格式写成 `REVIEW-REPAIR-<n>.md`（stage 记 `review`）回喂 agent 返修，再跑校验和导出，然后 `REVIEW-<n>.md` 只复核上一轮报过的题号；复核仍有阻塞就继续返修，`--review-rounds` 轮（默认 1＝审一轮＋复核一轮，0 关闭审核）用完才判生词失败。最后一轮审核返修同样授权丢题不丢库。审核返修把校验改坏了，下一轮把校验报错和没修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 的额度。
+- 非阻塞发现不触发返修，记进 `out/result.json` 的 `review.nonblocking`；本来就要审核返修时，顺带让返修 agent 写进 `notes.md`「评审意见」一节。
+- 审核是增强，validator 才是闸门：`review.json` 缺失、不是合法 JSON、结构不对，或审核 agent 超时、出错时，只在 `review.warnings` 记一条，照常交付已过校验的题库。审核 agent 改了 `bank.json` 时脚本恢复审核前的题库并记 warning。
+- `out/result.json` 的 `review` 块：`rounds`（审核加复核跑了几轮）、`blocking_found` / `nonblocking_found`（各轮累计）、`status`（`passed` 无阻塞发现；`repaired` 返修后复核通过；`skipped` 关闭审核；`review_failed` 审核没产出可用结果或阻塞没修完，看 `reason` 和总的 `status` 区分）、`review_repair_rounds`、`warnings`、`nonblocking`、`blocking_unresolved`。每轮原件存 `logs/review-<n>.json`；审核和审核返修的 agent 记录（`logs/agent-run-review*.json`）进 `costs.llm` 加总。
+
 ### 每轮记账
 
 每轮自动记账，统计口径是每个客户平均花多少钱。脚本每次 finalize 都往 `out/result.json` 写一个 `costs` 块，只记数量和用量，不乘单价：
@@ -93,3 +103,4 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 
 - `python3 evals/e2e_input_contract.py`：Case 输入合同（示例 payload、飞书路径与接口路径一致、错误输入的错误码），结果写 `reports/input-contract-e2e.md`。
 - `python3 evals/e2e_repair_loop.py`：返修循环四条路径（修好、丢题保底、关闭返修、无 bank），结果写 `reports/repair-loop-e2e.md`。
+- `python3 evals/e2e_review_loop.py`：审核环七条路径（无发现、阻塞返修后复核通过、review.json 坏掉、结构不对、关闭审核、额度用完、审核超时），结果写 `reports/review-loop-e2e.md`。
