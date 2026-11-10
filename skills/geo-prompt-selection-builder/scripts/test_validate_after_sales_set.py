@@ -68,6 +68,19 @@ def spread_topics(data: dict, sizes: list[int] | None = None) -> dict:
     return data
 
 
+def lockable_bank(count: int = 10) -> dict:
+    """A locked bank that passes every lock check: both confirmations and a passed 3-run trial."""
+    data = spread_topics(current_bank(count, "locked"))
+    data["config"]["customer_confirmation"] = {
+        "status": "confirmed",
+        "scope_status": "confirmed",
+        "prompt_set_status": "confirmed",
+    }
+    data["config"]["trial"] = {"status": "passed", "planned_runs": 3, "valid_runs": 3,
+                               "evidence_refs": ["trial/run-1.json"]}
+    return data
+
+
 def validate(data: dict[str, object], old_structure: bool = False) -> subprocess.CompletedProcess[str]:
     """Run the validator. A fixture refused as old structure would make every assertNotIn pass vacuously, so that
     fails here unless the test is about old structure."""
@@ -110,12 +123,22 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(current_bank(4, "locked"))
         self.assertNotIn("at least 5 Prompts per Topic", result.stdout)
 
-    def test_after_sales_signal_cannot_be_formal_ready(self) -> None:
-        data = current_bank(5, "locked")
+    def test_after_sales_signal_confirmed_can_lock(self) -> None:  # Suda 2026-11-10：公开买家信号＋品牌方确认即可锁版
+        data = lockable_bank()
         data["config"]["evidence_status"] = "after_sales_signal"
+        data["config"]["first_party_data"] = False
+        result = validate(data)
+        self.assertNotIn("cannot be marked formal-ready", result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("Usable", result.stdout)  # 没有一手数据：不挡锁版，只把就绪结论封顶在 Usable
+
+    def test_hypothesis_cannot_lock(self) -> None:
+        data = lockable_bank()
+        data["config"]["evidence_status"] = "hypothesis"
         result = validate(data)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("cannot be marked formal-ready", result.stdout)
+        self.assertEqual(result.stdout.count("ERROR:"), 1, result.stdout)
+        self.assertIn("hypothesis evidence cannot be marked formal-ready", result.stdout)
 
     def test_candidate_count_outside_30_to_60_warns(self) -> None:
         # 门禁 47：单产品线 × 单市场候选题 30–60 道，超出告警；锁版后不查

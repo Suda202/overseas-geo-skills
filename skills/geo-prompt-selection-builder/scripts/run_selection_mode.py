@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""选词的线上一条命令入口：Case（表单数据或文件）→ 每个市场一批 9 字段的题（Suda 2026-10-29；
-2026-11-06 随售前生词并入选词 skill）。
+"""选词的线上一条命令入口：品牌资料（表单数据或文件）→ 每个市场一批 9 字段的题（Suda 2026-10-29；
+2026-11-06 随售前生词并入选词 skill）。参数名 --case、文件名 case-normalized.json、normalize_case.py
+里的 case 是历史命名，正文一律叫品牌资料（3.3.0）。
 
 规则见 references/online-runner.md 和 references/selection-rules.md。本脚本把
 确定性的部分包起来，中间的调研和写题交给 agent：
 
-    prepare   归一化 Case，建独立工作目录（skill 拷贝、inputs/、TASK.md）
+    prepare   归一化品牌资料，建独立工作目录（skill 拷贝、inputs/、TASK.md）
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
     finalize  跑选词 validator 和导出脚本，写 out/result.json
     返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
@@ -55,15 +56,15 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
 
 退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现，
 原因见 result.json）；
-2 输入或环境有错（Case 归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
+2 输入或环境有错（品牌资料归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
-  1. Case 缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
+  1. 品牌资料缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
   2. agent 没写出 bank.json、超时或异常退出 → 没有 bank.json 就失败，不返修、不拿半成品导出
   3. 题库没过选词 validator（含主题都有题、一个主题一种类型）或导出检查（超 60 条、字段缺、类型不对） → 回喂报错返修（最多 --repair-rounds 轮），仍没过才失败，报错原文进 result.json
   4. 题库的市场和传入的 --market 不一致 → 同样走返修（agent 改 region），仍不一致才失败
   4b. --platforms 里有采集器不认识的平台名 → 输入错误，不启动 agent
-  5. 工作目录已存在 → 拒绝覆盖，避免两个 Case 共用一个目录
+  5. 工作目录已存在 → 拒绝覆盖，避免两次运行（品牌 × 市场）共用一个目录
   6. 没有 SCRAPELESS_API_KEY → agent 采不了研究预跑会凭空写题，启动前就停下
   7. 审核 agent 没写 review.json、写坏了、结构不对或超时 → review.status=review_failed，记 warning，照常交付
   8. 审核 agent 违规改了 bank.json → 恢复审核前的题库并记 warning
@@ -122,8 +123,8 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 候选题一个市场 30–60 道（validator 对超出只告警，但导出对超 60 报错）；每个导出文件（市场 × 产品线）最多 60 条。写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。
 
 输入：
-- `inputs/case-normalized.json`：归一化后的品牌信息（Case）。竞品用 Case 里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
-- 题型：只出发现题。Case 的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
+- `inputs/case-normalized.json`：归一化后的品牌资料。竞品用品牌资料里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「本期产品线」和官网推出，写进 `config.category_label`。
+- 题型：只出发现题。品牌资料里的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 需求信号（必填）：
@@ -229,7 +230,7 @@ def parse_platforms(raw: str) -> tuple[list[str], list[str]]:
 
 def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: Path | None) -> int:
     if ws.exists():
-        print(f"工作目录已存在：{ws}（每个 Case × 市场用一个新目录）", file=sys.stderr)
+        print(f"工作目录已存在：{ws}（每个品牌 × 市场用一个新目录）", file=sys.stderr)
         return 2
     market = market.strip()
     if not market:
@@ -278,7 +279,7 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
 
 def net_env(ws: Path) -> dict:
     """net.py 的线上限量：Reddit RSS 约每分钟 1 次，是线上调研最慢的一环，默认每个工作目录最多 10 次联网请求。
-    缓存目录按工作目录隔离（3.1.0），代理页数和搜索次数才能按轮归集；代价是不同 Case 之间不共享网页缓存。"""
+    缓存目录按工作目录隔离（3.1.0），代理页数和搜索次数才能按轮归集；代价是不同品牌 × 市场的运行之间不共享网页缓存。"""
     return {"NET_REDDIT_MAX": os.environ.get("NET_REDDIT_MAX", "10"),
             "NET_REDDIT_COUNTER": str(ws / "logs/reddit_calls"),
             "NET_CACHE_DIR": str(ws / "logs/net_cache")}
@@ -705,7 +706,7 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("run", "prepare"):
         p = sub.add_parser(name)
-        p.add_argument("--case", type=Path, required=True, help="presales-case-input/v2 JSON（见 references/input-contract.md）")
+        p.add_argument("--case", type=Path, required=True, help="品牌资料 JSON，presales-case-input/v2（见 references/input-contract.md）")
         p.add_argument("--market", required=True, help="市场代码，与采集的 --regions 一致，如 US")
         p.add_argument("--platforms", required=True,
                        help="表单「AI 平台」选中的平台，逗号分隔，如 chatgpt,gemini；研究预跑只跑这些")

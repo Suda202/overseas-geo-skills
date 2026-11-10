@@ -1143,8 +1143,11 @@ class BankValidator:
         self.check_formal_cap()
 
         evidence_status = config.get("evidence_status")
-        if evidence_status in {"hypothesis", "after_sales_signal"} and lifecycle in FORMAL_LIFECYCLES:
-            fail("hypothesis or after_sales_signal evidence cannot be marked formal-ready", errors)
+        # Only a hypothesis-grade set (no buyer signal at all) cannot lock (Suda 2026-11-10): public buyer signals
+        # (after_sales_signal) plus the brand party's confirmation are enough; missing first-party data only caps
+        # the readiness verdict at Usable.
+        if evidence_status == "hypothesis" and lifecycle in FORMAL_LIFECYCLES:
+            fail("hypothesis evidence cannot be marked formal-ready", errors)
 
         confirmation = config.get("customer_confirmation") or {}
         if lifecycle in {"customer_confirmed", *FORMAL_LIFECYCLES}:
@@ -1180,7 +1183,7 @@ class BankValidator:
         formal_collection = baseline.get("status") in {"formal", "active"}
         if formal_collection and lifecycle not in {"locked", "formal_baseline", "active"}:
             fail("formal baseline metadata requires a locked or formal lifecycle", errors)
-        if formal_collection and evidence_status in {"hypothesis", "after_sales_signal"}:
+        if formal_collection and evidence_status == "hypothesis":
             fail("formal baseline metadata requires confirmed evidence", errors)
         if formal_collection and (confirmation.get("status") not in {"confirmed", "locked"}):
             fail("formal baseline metadata requires customer confirmation", errors)

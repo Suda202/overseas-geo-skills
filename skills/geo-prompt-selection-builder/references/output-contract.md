@@ -37,8 +37,8 @@
 | 字段 | 内容 |
 |-|-|
 | `lifecycle_status` | `hypothesis` / `customer_confirmed` / `locked` / `formal_baseline` / `active` |
-| `evidence_status` | 题库整体的证据级别；`hypothesis` 或 `after_sales_signal` 不能锁版，就绪结论最高 Usable |
-| `first_party_data` | 有没有用到品牌方一手数据；`false` 时就绪结论最高 Usable |
+| `evidence_status` | 题库整体的证据级别：`hypothesis`（整份题集没有任何买家信号，全靠推测）不能锁版，就绪结论最高 Usable；`after_sales_signal`（评价、社区、搜索数据等公开买家信号撑起的题集）加上品牌方确认正式题即可锁版 |
+| `first_party_data` | 有没有用到品牌方一手数据；`false` 时就绪结论最高 Usable，交付说明写清品牌方可补哪些数据，不挡锁版 |
 | `customer_confirmation` | `scope_status`（试跑前确认业务范围）、`prompt_set_status`（试跑后确认正式题）、`status` |
 | `business_goals` | 本期做的目标：`{selected: [...], information_named: true / false}`。`selected` 取值：发现型可见度 / 竞争定位 / 品牌呈现 / 声誉与信任；目前只做发现型可见度，是常量：可以不写，validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充（selection-rules.md → 1）；写了就要写对（W49）。`information_named` 是品牌方是否点名问题解决（口径见 type-branches.md「什么算品牌方点名问题解决」）。开放其他目标时恢复必填，见 type-branches.md「开放时要改的地方」 |
 | `shopping_cards` | 每条产品线统计不统计商品卡：`{product_line, status, basis}`，`status` 为 开 / 关 / 试跑后定，`basis` 写按什么商品属性判的（selection-rules.md → 1）；试跑后由监测改成开或关并写上出卡比例。选填，没写时按关处理 |
@@ -46,7 +46,7 @@
 | `slices` | 矩阵行：`{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`；一行 ＝ 产品线 × 市场 × 目标客户 × 场景 × 意图类型，`market` 在单市场题库里可以省略；`scene` 存这一行的使用场景（键名沿用）；不写 `journey_stage`；`priority` 即业务优先级，高 / 中 / 低，只有发现行写，非发现行本期只登记、不判档，不写 `priority`；`prompt_type` 是这一行唯一的意图类型，用英文键（Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support，对应发现 / 问题解决 / 评估 / 对比 / 替代 / 验证 / 交易 / 售后），同一任务几种问法开几行（selection-rules.md → 5「意图类型：八类」）；每一行都要写。本期不出题的行也写在这里，不带 `topic_id`：非发现行看类型就知道本期不出，开行依据写在 `priority_basis`，不写进对客确认表；低档发现行在 `priority_basis` 末尾写「本期不出：……」，和其他发现行一样写进对客确认表（写法见 selection-rules.md → 5；品牌用不上、硬条件的处境不开行，记在 notes「没开的格子」） |
 | `attribute_plan` | 约束条件名单（键名沿用）：`{attribute, no_carrier_reason}`；`attribute` 就是三张表「约束条件」的选项名（约束条件不单设表）。不写 `relative_competitor`、`priority`、`common_constraints`、`brand_value` |
 | `tag_dimensions` | 跨主题切片标签的维度：`{dimension, basis, values}`；`dimension` 为目标客户 / 使用场景 / 属性（也可写约束条件，值是约束条件）/ 自定义，`basis` 写跨哪些主题、切完谁拿去做什么，`values`：属性维度写业务范围「差异化优势」对应的约束条件，必须列出；自定义必填；其余维度选填。什么时候登记、怎么避开和主题重复见 selection-rules.md → 6「切片标签」；不需要横切就写 `[]` |
-| `buyer_quotes` | 需求信号（对客 Base 的需求信号表；键名沿用）：`{输入编号, 原话, 目标客户, 约束条件}`。约束那一列的键名就是 `约束条件`，和对客 Base 列名、采集脚本的 `signals.csv` 一致；`constraint` 是英文别名，2.65.0 之前的旧键名 `约束` 也仍认。条件关键词写在这里，W36 按它核对题面条件有没有依据。线上跑 Case 时必须填，见 online-runner.md；不填时 W36、W37 跳过并告警一次 |
+| `buyer_quotes` | 需求信号（对客 Base 的需求信号表；键名沿用）：`{输入编号, 原话, 目标客户, 约束条件}`。约束那一列的键名就是 `约束条件`，和对客 Base 列名、采集脚本的 `signals.csv` 一致；`constraint` 是英文别名，2.65.0 之前的旧键名 `约束` 也仍认。条件关键词写在这里，W36 按它核对题面条件有没有依据。线上跑选词时必须填，见 online-runner.md；不填时 W36、W37 跳过并告警一次 |
 | `base_conditions` | 品类本身的基础人群或用途（「养猫家庭」「私家车」），不算条件 |
 | `audience_terms` | `{目标客户: [自我描述词和暗示词]}`，查题面能不能看出谁在问（告警 W39）；选填，没写时这一项改为人工检查 |
 | `category_aliases` | 品类叫法变体，只差这些词的两道题不算重复 |
@@ -177,7 +177,7 @@ Abrand、Bbrand 9 月版、UNI_A、Ebrand、Hbrand 选词 2.1、Sbrand 选词等
 ## 试跑与基线元数据
 
 - 试跑：每道候选题在每个监测平台 3 次（异常时最多 5 次）；读数只作探索，不进统计；`trial.status: passed`、`valid_runs`、`evidence_refs`。
-- 锁版：`locked` / `formal_baseline` / `active` 要两次确认、试跑完成、版本已定；假设级证据不能锁版。
+- 锁版：`locked` / `formal_baseline` / `active` 要两次确认、试跑完成、版本已定；`evidence_status: "hypothesis"` 不能锁版，`after_sales_signal` 可以；没有一手数据不挡锁版。
 - 正式基线：每个 query × 平台 × 国家 × 语言 7 次（2026-11-06 起，原 30 次）；`conditions_key`、`valid_samples_only: true`、`baseline.prompt_version` 与 `config.prompt_version` 一致；7 次是否跨天写在 `collection_config`。只算有效样本，失败不记 0，失败要重跑。2026-11-06 当天早些时候写的 30 次照认，锁版前改成 7 次。
 - 新增、删除、改写任何一道题都开新版本，受影响的市场重建基线，新旧曲线不拼接。
 - validator 只查声明的次数、引用和版本，不读爬虫答案；采集是否真的完成，由监测在标记完成前逐题逐平台核对原始结果。

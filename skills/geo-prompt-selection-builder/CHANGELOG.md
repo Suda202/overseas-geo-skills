@@ -1,3 +1,16 @@
+## 3.3.0（2026-11-10）锁版证据门槛、品牌方数据定位、去掉 Case 说法
+
+1. **锁版证据门禁对齐现实**。触发依据：Suda 2026-11-10 确认《品牌资料收集》第二部分（GSC、关键词工具、销售、客服数据）实际是选填，售前诊断阶段大部分客户不会提供；原门禁「证据级别不到一手不能锁版」（`after_sales_signal` 也挡）与现实冲突。改为：只有 `evidence_status: "hypothesis"`（整份题集没有任何买家信号，全靠推测）不能锁版；`after_sales_signal`（评价、社区、搜索数据等公开买家信号撑起的题集）加品牌方确认正式题即可锁版；`first_party_data: false` 只让就绪结论最高 Usable、交付说明写清还能补什么，不挡锁版。
+   - `scripts/validate_after_sales_set.py`：锁版检查（lifecycle 为 locked / formal_baseline / active）和正式基线元数据检查都只挡 `hypothesis`，报错文字改为 `hypothesis evidence cannot be marked formal-ready`；就绪封顶逻辑不变。
+   - `scripts/test_validate_after_sales_set.py`：删「after_sales_signal 不能锁版」用例，新增 `lockable_bank()` 夹具（两次确认、试跑通过）和两个用例：after_sales_signal 已确认可锁（退出码 0、仍封顶 Usable）、hypothesis 不可锁（只报这一条错）。
+   - `references/output-contract.md` `evidence_status`、`first_party_data` 两行和「锁版」一条；`references/selection-rules.md` 交付节；`geo-monitoring/references/trial-and-lock.md`「选正式题与锁版」的「锁版」一条加证据门槛（同文件今天早些时候「品牌读数不进选题」加的饱和剔除段保留）。
+2. **《品牌资料收集》第二部分定位为「售前不收、售后选填」**。触发依据同第 1 条。`references/selection-rules.md` 第 1 步数据清单前加一条：售前不向品牌方要；签约后选填，给了用于把证据升到一手、补需求信号，优先级最高的是销售常被问到的问题和客服高频问题；不给不影响流程、不挡锁版。`references/demand-side-signals.md` 开头加同样的定位，并说明下文「优先提供」是选填前提下的先后。
+3. **人读文字去掉「Case」，统一叫「品牌资料」**。触发依据：Suda 2026-11-10 要求去掉 Case 概念。改了 SKILL.md（英文 description 改 brand intake 表述、正文和表格）、`references/selection-rules.md`、`references/online-runner.md`、`references/input-contract.md`（标题改「品牌资料输入合同」）、`references/output-contract.md`、`references/signal-sources.md`、`references/demand-side-signals.md`、`scripts/run_selection_mode.py` 的 docstring / help / TASK 叙述、`shared/scripts/cost_report.py` 一处说明。接口全部不动：schema 名 `presales-case-input/v2`、顶层键 `case`、`case_fields`、`normalize_case.py`、`--case`、`inputs/case-normalized.json`、`DATAFORSEO_CASE`、DataForSEO 流水里的 `case` 字段，等研发有结论再说；input-contract.md 和 online-runner.md 各加一句「case 字样是历史命名」。online-runner.md 第 1 步顺手删掉「Case 的『业务目标』只当业务重点线索」一句：该字段 2026-11-09 已退役、传进来报 `retired_field`。
+   - 不把「Case」加进 `check_skill_terms.py` 的退役说法扫描：接口名、文件名和 CHANGELOG 里到处是 case，扫描会误报。
+   - evals 脚本标题里的「Case 输入合同」未改（只是测试报告标题）。
+
+- 改前快照：项目根 `.snapshots/*.20261110-113327.bak`（SKILL.md、CHANGELOG.md、output-contract.md、selection-rules.md、demand-side-signals.md、online-runner.md、input-contract.md、validator 与测试、run_selection_mode.py、cost_report.py、trial-and-lock.md）和 `signal-sources.md.20261110-113734.bak`。
+
 ## 3.2.0（2026-11-10）线上审核环
 
 触发依据：Suda 2026-11-10 要求线上加审核环，审核模型由宿主配置。
