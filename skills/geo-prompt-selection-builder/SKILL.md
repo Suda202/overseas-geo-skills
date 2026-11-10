@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.3.3"
+  version: "3.3.4"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -40,7 +40,7 @@ metadata:
 
 ## 边界
 
-- 不试跑、不挑正式题、不锁版、不停测正式题，不采集、不跑基线、不出报告（都归 `geo-monitoring`）；不定义指标口径（`geo-presales-report-editor` core）、情感规则（`geo-presales-sentiment-judge`）。
+- 不试跑、不挑正式题、不锁版、不停测正式题，不采集、不跑基线、不出报告（都归 `geo-monitoring`）；不定义指标口径（`geo-metrics`）、情感规则（`geo-presales-sentiment-judge`）。
 - 竞品用品牌方在品牌资料里填的，不冻结、不自己增删；试跑后按答案补哪几家归 `geo-monitoring`。
 - 没有任何买家信号时，可以先出一版标明「假设」的题集，列出还要品牌方确认的证据；不能进正式基线，不能把模型联想说成高频需求。这条说的是整份题集都没有买家信号；单个标了假设的矩阵行上的题，经品牌方批准可以进正式题，见 selection-rules.md → 5。
 

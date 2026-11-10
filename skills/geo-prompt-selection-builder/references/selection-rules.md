@@ -41,10 +41,10 @@
 
 ## 1. 确认业务范围
 
-- **品牌方先给，我们核对**：用飞书《AI 搜索监测｜品牌资料收集》收；收哪些字段、每行怎么填，唯一定义处是 client-facing-base.md → 业务范围。每期只收一个市场、一种语言、一条产品线，新增范围另附资料。品牌方不适用的写「无」，暂不确定的写「待补充」，「待补充」的项在业务范围行首写【请品牌方补充】。品类、平台、目标客户与使用场景由我们填。官网能查到的由我们预填，品牌方只核对。
+- **品牌方先给，我们核对**：用飞书《AI 搜索监测｜品牌资料收集》收；收哪些字段、每行怎么填，唯一定义处是 client-facing-base.md → 业务范围。每期只收一个市场、一种语言、一条产品线，监测的 AI 平台由品牌方选，新增范围另附资料。品牌方不适用的写「无」，暂不确定的写「待补充」，「待补充」的项在业务范围行首写【请品牌方补充】。品类、目标客户与使用场景由我们填。官网能查到的由我们预填，品牌方只核对。
 - **目前只做发现型可见度，只出发现题**：竞争定位、品牌呈现、声誉与信任三类目标和问题解决题都暂停。七种非发现类型对应哪个目标、什么时候开行、出几道，全部在 [type-branches.md](type-branches.md)；准确性题只在 `geo-monitoring/references/trial-and-lock.md` 定义。题库 `config.business_goals` 在只做发现期间是常量，可以不写，validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充（字段见 output-contract.md），据此查有没有多出的题型。
 - **考核只认发现题**：提及率考核只算发现题，其他类型都不计入（全书的考核口径以这一句为准，其他地方引用）。八类意图类型的题都占正式名额（额度的唯一定义处在 `geo-monitoring/references/trial-and-lock.md`「选正式题与锁版」）；准确性题在题库之外，不占名额。
-- **商品卡要不要统计，我们推理决定**：按产品线判，不问品牌方。消费类实体商品开；软件、SaaS、服务、房地产关；工业、工程类实体商品记「试跑后定」，由 `geo-monitoring/references/trial-and-lock.md` 按试跑出卡比例定。判断和理由写进 `config.shopping_cards`（output-contract.md），不进对客确认表；口径见 `geo-presales-report-editor/references/metric-scope-and-copy-contract.md`「购物层指标」。
+- **商品卡要不要统计，我们推理决定**：按产品线判，不问品牌方。消费类实体商品开；软件、SaaS、服务、房地产关；工业、工程类实体商品记「试跑后定」，由 `geo-monitoring/references/trial-and-lock.md` 按试跑出卡比例定。判断和理由写进 `config.shopping_cards`（output-contract.md），不进对客确认表；口径见 `geo-metrics/references/metric-scope-and-copy-contract.md`「购物层指标」。
 - **需求收集**：不问品牌方「要哪类题」，也不让品牌方选 GEO 优化目标；问他们面向谁、什么情况下需要，写进业务范围的核心目标客户与购买场景。
 
 - **品牌方给事实，我们做判断**。不问品牌方「为什么丢单」「买家怎么描述你的优势」这类要他们替我们下结论的问题；但优先目标客户、哪些场景容易赢、营销重点是品牌方的日常判断，留给他们。
