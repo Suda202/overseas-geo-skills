@@ -1,3 +1,12 @@
+## 3.3.3（2026-11-10）审核返修用完后脚本删题兜底
+
+触发依据：研发 2026-11-10 用线上代码跑 5 个品牌，其中一份 42 题的题库里 3 道题面写「美国提供服务/备件支持」却没写 `condition_basis`，审核返修一轮后复核仍阻塞，整库判生词失败。设计本来是丢题不丢库，但删不删全靠 agent 自觉。只改失败兜底，审核标准和门禁不动。
+
+- `run_selection_mode.py` 新增 `drop_blocked_questions()`：审核返修轮次用完仍有阻塞时，脚本删掉阻塞发现指向的题，题号与审核原文记进 `config.retired` 和 notes「删题（脚本兜底）」，删空的主题连登记一起删、矩阵行去掉 `topic_id` 并注明本期不出；删前题库存 `out/bank.before-drop.json`；再跑校验和导出，通过即交付，`review.status=dropped`、`review.dropped` 列明删题。删完仍没过或发现没写题号，照旧判生词失败。
+- `online-runner.md` 审核环与 `review` 块状态说明同步；脚本退出码说明同步。
+- 验证：`evals/e2e_review_loop.py` 14/14 通过（场景 6 改为删题后交付，新增 6b 主题级阻塞仍失败）。
+- 改前快照：项目根 `.snapshots/run_selection_mode.py.*`、`e2e_review_loop.py.*`、`online-runner.md.*`。
+
 ## 3.3.2（2026-11-10）补 requirements.txt
 
 触发依据：Suda 2026-11-10 指出选词 skill 的脚本缺依赖清单，仓库里也没有。只补清单和文档指向，不改任何规则和脚本。

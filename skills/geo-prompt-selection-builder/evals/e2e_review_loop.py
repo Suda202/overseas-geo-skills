@@ -11,7 +11,8 @@
      warning 两条，题库恢复成审核前
   4. review.json 结构不对（对象不是数组） → success，status=review_failed
   5. --review-rounds 0 → success，status=skipped，不生成 REVIEW.md
-  6. 复核仍有阻塞、额度用完 → 退出码 1，status=failed，review.status=review_failed
+  6. 复核仍有阻塞、额度用完 → 脚本删掉那道题再查 → success，review.status=dropped，题号进 config.retired
+  6b. 复核仍有阻塞但发现没写题号（删不了） → 退出码 1，status=failed，review.status=review_failed
   7. 审核 agent 超时 → success，status=review_failed
 
 产物：reports/review-loop-e2e.md；工作目录建在系统临时目录，跑完删除。
@@ -82,6 +83,8 @@ elif task.startswith("REVIEW"):
         review([BLOCK, NOTE] if task == "REVIEW.md" else [])
     elif mode == "stuck":
         review([BLOCK])
+    elif mode == "stuck_topic":
+        review([dict(BLOCK, question_id="")])
     elif mode == "broken":
         bank_path.write_text("{}", encoding="utf-8")  # 违规改题库，runner 应恢复
         review("not json {")
@@ -180,13 +183,26 @@ check("--review-rounds 0 → 跳过审核",
       rc == 0 and res.get("status") == "success" and rv.get("status") == "skipped" and rv.get("rounds") == 0
       and not (ws / "REVIEW.md").exists(), brief(rc, res))
 
-# 6. 额度用完仍有阻塞
+# 6. 额度用完仍有阻塞：脚本删题兜底
 rc, res, ws = run_case("stuck", "stuck")
 rv = res.get("review") or {}
-check("复核仍有阻塞、额度用完 → failed",
-      rc == 1 and res.get("status") == "failed" and rv.get("status") == "review_failed"
-      and any(e.get("stage") == "review" for e in res.get("errors", [])) and rv.get("blocking_unresolved")
+bank = json.loads((ws / "out/bank.json").read_text(encoding="utf-8"))
+ids = {q["question_id"] for q in bank["questions"]}
+retired = {r.get("question_id") for r in bank["config"].get("retired") or []}
+check("复核仍有阻塞、额度用完 → 脚本删掉 US-902 后交付",
+      rc == 0 and res.get("status") == "success" and rv.get("status") == "dropped"
+      and [d["question_id"] for d in rv.get("dropped") or []] == ["US-902"] and "US-902" not in ids
+      and "US-902" in retired and len(ids) == FIXTURE_COUNT and (ws / "out/bank.before-drop.json").exists()
+      and "删题（脚本兜底）" in (ws / "out/notes.md").read_text(encoding="utf-8")
       and not (ws / "REVIEW-REPAIR-2.md").exists(), brief(rc, res))
+
+# 6b. 阻塞发现没写题号，删不了
+rc, res, ws = run_case("stuck-topic", "stuck_topic")
+rv = res.get("review") or {}
+check("复核仍有阻塞且没有题号 → failed",
+      rc == 1 and res.get("status") == "failed" and rv.get("status") == "review_failed"
+      and any(e.get("stage") == "review" for e in res.get("errors", [])) and rv.get("blocking_unresolved"),
+      brief(rc, res))
 
 # 7. 审核 agent 超时
 rc, res, ws = run_case("timeout", "timeout", timeout=5)

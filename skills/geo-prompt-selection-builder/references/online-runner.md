@@ -40,10 +40,10 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 校验和导出第一次都通过后，脚本再新开一个审核 agent（不带生成时的上下文），按 [review-rubric.md](review-rubric.md) 八条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`，只写这一个文件。
 
 - 审核模型：`--agent sdk` 时读环境变量 `AGENT_REVIEW_MODEL`，没设用 `AGENT_MODEL`；`--agent-cmd` 时照常执行宿主命令（`TASK_FILE` 指向 `REVIEW.md`），模型由宿主定。
-- 阻塞发现（`blocking: true`）按返修的报错格式写成 `REVIEW-REPAIR-<n>.md`（stage 记 `review`）回喂 agent 返修，再跑校验和导出，然后 `REVIEW-<n>.md` 只复核上一轮报过的题号；复核仍有阻塞就继续返修，`--review-rounds` 轮（默认 1＝审一轮＋复核一轮，0 关闭审核）用完才判生词失败。最后一轮审核返修同样授权丢题不丢库。审核返修把校验改坏了，下一轮把校验报错和没修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 的额度。
+- 阻塞发现（`blocking: true`）按返修的报错格式写成 `REVIEW-REPAIR-<n>.md`（stage 记 `review`）回喂 agent 返修，再跑校验和导出，然后 `REVIEW-<n>.md` 只复核上一轮报过的题号；复核仍有阻塞就继续返修，`--review-rounds` 轮（默认 1＝审一轮＋复核一轮，0 关闭审核）。最后一轮审核返修同样授权丢题不丢库；轮次用完仍有阻塞时，脚本自己把这些题删掉（删前题库存 `out/bank.before-drop.json`，题号和审核原文记进 `config.retired` 与 notes「删题（脚本兜底）」，删空的主题连登记一起删、挂在上面的矩阵行注明本期不出），再跑一遍校验和导出，通过就交付。删完仍没过，或阻塞发现没写题号删不了，才判生词失败。审核返修把校验改坏了，下一轮把校验报错和没修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 的额度。
 - 非阻塞发现不触发返修，记进 `out/result.json` 的 `review.nonblocking`；本来就要审核返修时，顺带让返修 agent 写进 `notes.md`「评审意见」一节。
 - 审核是增强，validator 才是闸门：`review.json` 缺失、不是合法 JSON、结构不对，或审核 agent 超时、出错时，只在 `review.warnings` 记一条，照常交付已过校验的题库。审核 agent 改了 `bank.json` 时脚本恢复审核前的题库并记 warning。
-- `out/result.json` 的 `review` 块：`rounds`（审核加复核跑了几轮）、`blocking_found` / `nonblocking_found`（各轮累计）、`status`（`passed` 无阻塞发现；`repaired` 返修后复核通过；`skipped` 关闭审核；`review_failed` 审核没产出可用结果或阻塞没修完，看 `reason` 和总的 `status` 区分）、`review_repair_rounds`、`warnings`、`nonblocking`、`blocking_unresolved`。每轮原件存 `logs/review-<n>.json`；审核和审核返修的 agent 记录（`logs/agent-run-review*.json`）进 `costs.llm` 加总。
+- `out/result.json` 的 `review` 块：`rounds`（审核加复核跑了几轮）、`blocking_found` / `nonblocking_found`（各轮累计）、`status`（`passed` 无阻塞发现；`repaired` 返修后复核通过；`dropped` 轮次用完后脚本删题交付，删了哪些看 `dropped`；`skipped` 关闭审核；`review_failed` 审核没产出可用结果或阻塞没修完，看 `reason` 和总的 `status` 区分）、`review_repair_rounds`、`warnings`、`nonblocking`、`blocking_unresolved`。每轮原件存 `logs/review-<n>.json`；审核和审核返修的 agent 记录（`logs/agent-run-review*.json`）进 `costs.llm` 加总。
 
 ### 每轮记账
 

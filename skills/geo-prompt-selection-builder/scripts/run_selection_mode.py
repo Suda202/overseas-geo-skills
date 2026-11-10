@@ -54,8 +54,8 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   REVIEW.md、REVIEW-<n>.md、REVIEW-REPAIR-<n>.md  审核、复核、审核返修的任务；out/review.json 是最近一轮
                        审核的发现，logs/review-<n>.json 存每轮原件
 
-退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现，
-原因见 result.json）；
+退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现且
+删掉这些题后检查仍没过、或发现没写题号删不了，原因见 result.json）；
 2 输入或环境有错（品牌资料归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
@@ -90,12 +90,12 @@ SKILLS = SKILL.parent
 # geo-monitoring 不拷（3.0.0）：选词文档里指向它的链接是锁版阶段规则，线上不读。
 SKILL_DIRS = ("geo-prompt-selection-builder", "shared")
 # 只拷一部分的 skill（3.0.0）：研究预跑只用 geo-presales-report-builder/scripts/collect_answers.py，
-# 它在导入时还要 geo-presales-report-editor 的 geo_presales_core 包和 geo-presales-crawl-integrity 的
+# 它在导入时还要 geo-metrics 的 geo_presales_core 包和 geo-presales-crawl-integrity 的
 # audit_crawl_integrity.py（后者读同 skill 的 references/platform-contract.json 覆盖平台合同）。
 # 这是让 collect_answers.py 能在工作目录里跑起来的最小集合。
 PARTIAL_COPIES = (
     ("geo-presales-report-builder", "scripts"),
-    ("geo-presales-report-editor", "scripts/geo_presales_core"),
+    ("geo-metrics", "scripts/geo_presales_core"),
     ("geo-presales-crawl-integrity", "scripts/audit_crawl_integrity.py"),
     ("geo-presales-crawl-integrity", "references/platform-contract.json"),
 )
@@ -621,6 +621,49 @@ def write_review_block(ws: Path, market: str, review: dict, fail: str = "") -> N
     write_json(path, result)
 
 
+def drop_blocked_questions(ws: Path, blocking: list[dict]) -> list[dict]:
+    """把阻塞发现指向的题从 out/bank.json 删掉、记进 config.retired；删空的主题连登记一起删，
+    挂在它上面的矩阵行去掉 topic_id 并注明本期不出。返回删掉的 [{question_id, reason}]；
+    主题级发现（没写题号）删不了，不处理。删前的题库存成 out/bank.before-drop.json。"""
+    path = ws / "out/bank.json"
+    bank = json.loads(path.read_text(encoding="utf-8"))
+    config = bank.setdefault("config", {})
+    questions = bank.get("questions") or []
+    reasons: dict[str, list[str]] = {}
+    for f in blocking:
+        for qid in _finding_ids(f):
+            reasons.setdefault(qid, []).append(f"审核第 {f.get('check', '?')} 条：{str(f.get('problem') or '').strip()}")
+    present = {str(q.get("question_id")) for q in questions}
+    targets = [qid for qid in reasons if qid in present]
+    if not targets:
+        return []
+    shutil.copy2(path, ws / "out/bank.before-drop.json")
+    dropped, kept = [], []
+    for q in questions:
+        qid = str(q.get("question_id"))
+        if qid in targets:
+            reason = "审核返修轮次用完仍有阻塞，脚本删除；" + "；".join(reasons[qid])
+            config.setdefault("retired", []).append({"question_id": qid, "query": q.get("user_question") or q.get("query", ""), "reason": reason})
+            dropped.append({"question_id": qid, "reason": reason})
+        else:
+            kept.append(q)
+    bank["questions"] = kept
+    live_topics = {q.get("topic_id") for q in kept}
+    empty = {t.get("topic_id") for t in config.get("topics") or []} - live_topics
+    if empty:
+        config["topics"] = [t for t in config["topics"] if t.get("topic_id") not in empty]
+        for s in config.get("slices") or []:
+            if s.get("topic_id") in empty:
+                s.pop("topic_id")
+                s["priority_basis"] = (str(s.get("priority_basis") or "") + "；本期不出：题被审核删光").lstrip("；")
+    write_json(path, bank)
+    notes = ws / "out/notes.md"
+    lines = ["", "## 删题（脚本兜底）", ""] + [f"- {d['question_id']}：{d['reason']}" for d in dropped]
+    with notes.open("a", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return dropped
+
+
 def review_loop(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
                 max_rounds: int, repair_rounds: int, market: str) -> int:
     """首次 finalize 通过后跑：审核 → 阻塞发现回喂返修 → finalize → 只复核报过的题。返回最终退出码。"""
@@ -677,8 +720,17 @@ def review_loop(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int
         pending_errors = [{"stage": "review", "message": finding_message(f)} for f in blocking]
         while True:
             if used >= max_rounds:
-                review.update(status="review_failed", reason="审核返修轮次用完仍有阻塞发现", blocking_unresolved=blocking)
-                write_review_block(ws, market, review, fail=f"审核返修 {max_rounds} 轮后仍有 {len(blocking)} 条阻塞发现："
+                # 丢题不丢库：轮次用完仍有阻塞的题由脚本删掉再查一遍，不靠 agent 自觉删
+                dropped = drop_blocked_questions(ws, blocking)
+                if dropped and finalize(ws, None, repair_rounds=repair_rounds) == 0:
+                    review.update(status="dropped", reason=f"审核返修 {max_rounds} 轮后仍有阻塞，脚本删掉 {len(dropped)} 道题后交付",
+                                  dropped=dropped, blocking_unresolved=[])
+                    write_review_block(ws, market, review)
+                    return 0
+                review.update(status="review_failed", reason="审核返修轮次用完仍有阻塞发现", blocking_unresolved=blocking,
+                              dropped=dropped)
+                write_review_block(ws, market, review, fail=f"审核返修 {max_rounds} 轮后仍有 {len(blocking)} 条阻塞发现"
+                                   + ("，删题后检查仍没过" if dropped else "，且没有可删的题号") + "："
                                    + "；".join(finding_message(f) for f in blocking))
                 return 1
             used += 1
