@@ -1,3 +1,13 @@
+## 3.1.0（2026-11-10）每轮自动记账
+
+触发依据：Suda 2026-11-10 要求每轮自动记账，统计口径为每客户平均花费。估算见 `30-选Topic与生词/方案/研究与评审/生词单轮成本估算-20261110.md` 末节「怎么把估算换成实测」。
+
+1. **runner 记 LLM 用量**（`scripts/run_selection_mode.py`）：`_run_sdk` 从 `ResultMessage` 取 `usage` 四个计费字段、`duration_ms`、`duration_api_ms` 和 `total_cost_usd`，写进 `logs/agent-run{tag}.json`（主跑和每轮返修各一份）；`total_cost_usd` 改名 `total_cost_usd_anthropic_price_unreliable` 原样留存，因为 SDK 按 Anthropic 价算，网关后面是别家模型时不可信。每份记录加 `started_at`，`out/result.json` 加 `prepared_at`。
+2. **`out/result.json` 加 `costs` 块**：`brand`、`market`、`llm`（各轮 usage 加总和次数）、`scrapeless_requests`（预跑 attempt 行数和成功数、`research/**/serp*/raw/*.json` 数、`logs/net_cache/` 里经 Scrapeless 代理的页数和搜索次数）、`dataforseo`（服务端流水按 `DATAFORSEO_CASE` 和本轮时间窗过滤，不含沙盒）。只记数量和用量，不乘单价；每次 finalize 重数一遍，返修后的结果包含全部轮次。
+3. **网页缓存按工作目录隔离**：`shared/scripts/net.py` 加环境变量 `NET_CACHE_DIR`（不设时仍是 `/tmp/hb_net_cache`），runner 设成 `logs/net_cache`，代理页数才能按轮归集。代价：不同 Case 之间不共享网页缓存和直连被拦域名记录，同一页面在两个 Case 各付一次。
+4. **报表脚本** `shared/scripts/cost_report.py`：扫描选词工作目录和采集目录，读 `costs` 块、数 `_collector/events.jsonl` 的 attempt 行（客户取路径里「评测数据/<客户>/」，取不到的归「未归集」并列出）、按 case 汇总 DataForSEO 流水，输出每客户花费和平均每客户；`--since` 按日期过滤，`--alias` 合并同一客户的不同写法，名字带 test / 测试的记账测试单列不进平均。单价只读本机 `~/.geo-cost/prices.json`，脚本里不写任何单价；`--write-example` 生成示例配置（内部单价留 0）。
+5. 文档：online-runner.md「怎么跑」加「每轮记账」小节；SKILL.md 脚本表加 `cost_report.py`。
+
 ## 3.0.0（2026-11-10）定稿冻结版
 
 触发依据：`30-选Topic与生词/方案/生词方法论定稿-20261110.md` 第四节「定稿前最后一批减法」8 条、四b「门禁严度排查」和第四节表格后的「两处文字修正」。本版之后正文按定稿第五节「改动协议」冻结：改正文只认线上真实失败、品牌方或销售书面反馈、试跑或基线证明产出错题三类触发，CHANGELOG 每条记触发证据。

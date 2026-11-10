@@ -36,8 +36,11 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
 产物（都在工作目录里）：
   out/bank.json        题库 JSON（内部底稿）
   out/upload/*.csv     交给线上的 9 字段题（每个市场一份）
-  out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, errors…}
-  logs/                agent 记录（返修轮带 -repair<n> 后缀）、两个检查与导出的原始输出
+  out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, costs, errors…}
+                       costs 是本轮记账（3.1.0）：LLM usage 加总、Scrapeless 请求数、DataForSEO 流水，只记数量
+                       不乘单价；按客户算钱用 shared/scripts/cost_report.py（单价读本机 ~/.geo-cost/prices.json）
+  logs/                agent 记录（返修轮带 -repair<n> 后缀；agent-run*.json 含 SDK 的 usage）、两个检查与导出的原始输出
+  logs/net_cache/      本轮 net.py 缓存（NET_CACHE_DIR），代理页数和搜索次数从这里数
   REPAIR-<n>.md        每轮返修回喂 agent 的任务（报错原文在里面）
 
 退出码：0 生词成功；1 生词失败（agent 出错、超时，或返修轮次用完检查仍没过，原因见 result.json）；
@@ -192,7 +195,7 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         print(f"--platforms 要填采集器认识的平台名 {sorted(KNOWN_PLATFORMS)}，收到 {platforms!r}", file=sys.stderr)
         return 2
     ws.mkdir(parents=True)
-    for sub in ("inputs", "research", "out", "logs"):
+    for sub in ("inputs", "research", "out", "logs", "logs/net_cache"):
         (ws / sub).mkdir()
     try:
         payload = json.loads(case_path.read_text(encoding="utf-8"))
@@ -223,15 +226,26 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
                                                                                   reddit_max=os.environ.get("NET_REDDIT_MAX", "10"))
     (ws / "TASK.md").write_text(task, encoding="utf-8")
     write_json(ws / "out/result.json", {"status": "prepared", "market": market, "locale": locale,
-                                         "platforms": names,
+                                         "platforms": names, "prepared_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                                          "warnings": result["warnings"]})
     return 0
 
 
 def net_env(ws: Path) -> dict:
-    """net.py 的线上限量：Reddit RSS 约每分钟 1 次，是线上调研最慢的一环，默认每个工作目录最多 10 次联网请求。"""
+    """net.py 的线上限量：Reddit RSS 约每分钟 1 次，是线上调研最慢的一环，默认每个工作目录最多 10 次联网请求。
+    缓存目录按工作目录隔离（3.1.0），代理页数和搜索次数才能按轮归集；代价是不同 Case 之间不共享网页缓存。"""
     return {"NET_REDDIT_MAX": os.environ.get("NET_REDDIT_MAX", "10"),
-            "NET_REDDIT_COUNTER": str(ws / "logs/reddit_calls")}
+            "NET_REDDIT_COUNTER": str(ws / "logs/reddit_calls"),
+            "NET_CACHE_DIR": str(ws / "logs/net_cache")}
+
+
+USAGE_KEYS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+
+
+def _usage(raw) -> dict:
+    """ResultMessage.usage 可能是 dict 也可能是对象；只取四个计费字段，缺的记 0。"""
+    get = raw.get if isinstance(raw, dict) else (lambda k, d=None: getattr(raw, k, d))
+    return {k: int(get(k, 0) or 0) for k in USAGE_KEYS}
 
 
 async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
@@ -257,7 +271,14 @@ async def _run_sdk(ws: Path, task: str, timeout: int, tag: str = "") -> dict:
                     record["tool_calls"] += sum(1 for b in m.content if type(b).__name__ == "ToolUseBlock")
                 if isinstance(m, ResultMessage):
                     record.update(finish=getattr(m, "subtype", None), turns=getattr(m, "num_turns", None),
-                                  final=getattr(m, "result", None))
+                                  final=getattr(m, "result", None), model=model,
+                                  duration_ms=getattr(m, "duration_ms", None),
+                                  duration_api_ms=getattr(m, "duration_api_ms", None),
+                                  # SDK 按 Anthropic 模型价算的；网关后面是别家模型（如 DeepSeek）时不可信，
+                                  # 算钱用 usage × 网关单价（cost_report.py），这个数只原样留存
+                                  total_cost_usd_anthropic_price_unreliable=getattr(m, "total_cost_usd", None))
+                    if getattr(m, "usage", None) is not None:
+                        record["usage"] = _usage(m.usage)
                 log.write(json.dumps({"type": type(m).__name__, "repr": repr(m)[:2000]}, ensure_ascii=False) + "\n")
         await asyncio.wait_for(consume(), timeout)
     return record
@@ -268,7 +289,8 @@ def run_agent(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int,
     task_path = task_path or ws / "TASK.md"
     task = task_path.read_text(encoding="utf-8")
     started = time.time()
-    record: dict = {"agent": "sdk" if agent == "sdk" else "cmd", "task_file": task_path.name}
+    record: dict = {"agent": "sdk" if agent == "sdk" else "cmd", "task_file": task_path.name,
+                    "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")}
     try:
         if agent == "sdk":
             record.update(asyncio.run(_run_sdk(ws, task, timeout, tag)))
@@ -310,7 +332,8 @@ def finalize(ws: Path, agent_record: dict | None = None, repair_rounds: int | No
     prior = json.loads((ws / "out/result.json").read_text(encoding="utf-8")) if (ws / "out/result.json").exists() else {}
     market, locale = prior.get("market", ""), prior.get("locale", "")
     result = {"status": "failed", "market": market, "locale": locale, "platforms": prior.get("platforms", []), "errors": [],
-              "warnings": prior.get("warnings", [])}
+              "warnings": prior.get("warnings", []), "prepared_at": prior.get("prepared_at", "")}
+    result["costs"] = collect_costs(ws, market, result["prepared_at"])
     if repair_rounds is not None:
         result["repair_rounds"] = repair_rounds
     if agent_record and agent_record.get("error"):
@@ -362,6 +385,108 @@ def finalize(ws: Path, agent_record: dict | None = None, repair_rounds: int | No
     print(json.dumps({k: result[k] for k in ("status", "market", "prompt_count", "topics", "upload_files")},
                      ensure_ascii=False))
     return 0 if result["status"] == "success" else 1
+
+
+def _ledger_path() -> Path:
+    """和 shared/scripts/collect_keyword_data.py 的 ledger_path 同一规则。"""
+    return Path(os.environ.get("DATAFORSEO_LEDGER", "").strip() or Path.home() / ".dataforseo" / "ledger.jsonl")
+
+
+def dataforseo_case(ws: Path, market: str) -> str:
+    """run 给 agent 设的 DATAFORSEO_CASE；没设时同样按「品牌 市场」推。"""
+    case = os.environ.get("DATAFORSEO_CASE", "").strip()
+    if case:
+        return case
+    try:
+        brand = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]["brand_name"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        brand = ""
+    return f"{brand} {market}".strip()
+
+
+def collect_costs(ws: Path, market: str, since: str) -> dict:
+    """本轮记账：只记数量和 usage，不乘单价（单价在 cost_report.py 读本机配置）。
+
+    每次 finalize 都从工作目录重新数一遍，所以返修轮之后的结果包含主跑和全部返修。
+    """
+    try:
+        brand = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]["brand_name"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        brand = ""
+    until = time.strftime("%Y-%m-%dT%H:%M:%S")
+    # LLM：主跑 logs/agent-run.json，返修 logs/agent-run-repair<n>.json
+    llm = {"runs": 0, "runs_with_usage": 0, "turns": 0, "duration_ms": 0, "model": "",
+           **{k: 0 for k in USAGE_KEYS}, "total_cost_usd_anthropic_price_unreliable": 0.0, "files": []}
+    starts: list[str] = []
+    for path in sorted((ws / "logs").glob("agent-run*.json")):
+        try:
+            rec = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        llm["runs"] += 1
+        llm["files"].append(path.name)
+        if rec.get("started_at"):
+            starts.append(rec["started_at"])
+        llm["turns"] += int(rec.get("turns") or 0)
+        llm["duration_ms"] += int(rec.get("duration_ms") or 0)
+        llm["model"] = llm["model"] or rec.get("model") or ""
+        llm["total_cost_usd_anthropic_price_unreliable"] += float(rec.get("total_cost_usd_anthropic_price_unreliable") or 0)
+        if isinstance(rec.get("usage"), dict):
+            llm["runs_with_usage"] += 1
+            for k in USAGE_KEYS:
+                llm[k] += int(rec["usage"].get(k) or 0)
+    if not since and starts:  # 3.1.0 之前 prepare 的目录没有 prepared_at，用最早一次 agent 启动时间
+        since = min(starts)
+    llm["total_cost_usd_anthropic_price_unreliable"] = round(llm["total_cost_usd_anthropic_price_unreliable"], 6)
+    # Scrapeless：预跑尝试（失败重试也算一次）、SERP 原始返回、本轮 net.py 缓存里的代理页和搜索
+    prerun = {"attempts": 0, "ok": 0, "files": []}
+    for ev in sorted((ws / "research").glob("**/_collector/events.jsonl")):
+        prerun["files"].append(str(ev.relative_to(ws)))
+        for line in ev.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if e.get("event") == "attempt":
+                prerun["attempts"] += 1
+                prerun["ok"] += 1 if e.get("ok") else 0
+    serp = sum(1 for _ in (ws / "research").glob("**/serp*/raw/*.json"))
+    cache = ws / "logs/net_cache"
+    proxy = search = 0
+    if cache.is_dir():
+        for f in cache.glob("fetch_*.json"):
+            try:
+                proxy += 1 if "Scrapeless" in json.loads(f.read_text(encoding="utf-8")).get("src", "") else 0
+            except (OSError, json.JSONDecodeError):
+                continue
+        search = sum(1 for f in cache.glob("*.json") if len(f.stem) == 32 and all(c in "0123456789abcdef" for c in f.stem))
+    scrapeless = {"prerun_attempts": prerun["attempts"], "prerun_ok": prerun["ok"], "prerun_event_files": prerun["files"],
+                  "serp_requests": serp, "net_search_requests": search, "proxy_pages": proxy,
+                  "note": "proxy_pages 只数成功并写进缓存的代理页（Scrapeless 网页代理按成功请求计费）；"
+                          "logs/net_cache 不在时记「不可归集」"}
+    if not cache.is_dir():
+        scrapeless["proxy_pages"] = scrapeless["net_search_requests"] = "不可归集"
+    # DataForSEO：服务端流水按 case 与本轮时间窗过滤，不含沙盒
+    case = dataforseo_case(ws, market)
+    dfs = {"case": case, "since": since, "until": until, "calls": 0, "cost_usd": 0.0, "ledger": str(_ledger_path())}
+    try:
+        lines = _ledger_path().read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+        dfs["note"] = "流水文件不存在"
+    for line in lines:
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        t = str(e.get("time", ""))
+        if e.get("sandbox") or (e.get("case") or "").strip() != case or (since and t < since) or t > until:
+            continue
+        dfs["calls"] += 1
+        dfs["cost_usd"] += float(e.get("cost_usd") or 0)
+    dfs["cost_usd"] = round(dfs["cost_usd"], 6)
+    return {"brand": brand, "market": market, "since": since, "until": until,
+            "llm": llm, "scrapeless_requests": scrapeless, "dataforseo": dfs}
 
 
 def repair_task(ws: Path, round_no: int, max_rounds: int) -> Path:

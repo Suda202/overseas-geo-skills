@@ -33,6 +33,19 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 
 脚本先归一化 Case，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
+### 每轮记账
+
+每轮自动记账，统计口径是每个客户平均花多少钱。脚本每次 finalize 都往 `out/result.json` 写一个 `costs` 块，只记数量和用量，不乘单价：
+
+| 键 | 内容 | 从哪数 |
+|-|-|-|
+| `brand`、`market` | 客户和市场 | `inputs/case-normalized.json` |
+| `llm` | 主跑和各返修轮的 token 用量加总（`input_tokens`、`output_tokens`、`cache_read_input_tokens`、`cache_creation_input_tokens`）、轮次、turns、耗时；`total_cost_usd_anthropic_price_unreliable` 是 SDK 按 Anthropic 价算的，网关后面是别家模型时不可信，只留存不用 | `logs/agent-run*.json`（`--agent sdk` 才有 usage；`--agent-cmd` 记 `runs_with_usage: 0`） |
+| `scrapeless_requests` | 研究预跑尝试次数（失败重试也算）和成功次数、SERP 请求数、网页代理页数、`net.py search` 次数 | `research/**/_collector/events.jsonl` 的 attempt 行、`research/**/serp*/raw/*.json`、`logs/net_cache/`（runner 设 `NET_CACHE_DIR`，每轮一份缓存） |
+| `dataforseo` | 本轮时间窗内这个 case 的调用次数和花费 | `~/.dataforseo/ledger.jsonl`，按 `DATAFORSEO_CASE`（默认「品牌 市场」）过滤，不含沙盒 |
+
+按客户汇总、算平均：`python3 -I .agents/skills/shared/scripts/cost_report.py <工作目录或评测数据目录> … [--since 2026-11-01]`。单价只读本机 `~/.geo-cost/prices.json`（`--write-example` 生成示例），不写进任何仓库文件。
+
 ## 线上没有浏览器
 
 signal-sources.md 有三处写了「用本地浏览器」。服务器上没有带登录态的浏览器，这三处按下面换：

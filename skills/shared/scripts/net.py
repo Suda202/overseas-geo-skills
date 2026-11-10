@@ -18,13 +18,13 @@
                                                         未登录约每分钟 1 次，按 x-ratelimit-reset 自动等待（.json/无头/Scrapeless 都被拦，2026-10-27 实测）；
                                                         设了环境变量 NET_REDDIT_MAX 时联网请求到上限就停（线上选词默认 10 次）
 
-缓存目录 /tmp/hb_net_cache。Scrapeless key 先读环境变量 SCRAPELESS_API_KEY（服务器上用），没有再读 macOS 钥匙串同名项。
+缓存目录 /tmp/hb_net_cache，环境变量 NET_CACHE_DIR 可改（线上 runner 设成工作目录的 logs/net_cache，按轮数付费请求）。Scrapeless key 先读环境变量 SCRAPELESS_API_KEY（服务器上用），没有再读 macOS 钥匙串同名项。
 render 用的 Chrome 默认是 macOS 路径，服务器上用环境变量 CHROME_PATH 指定。
 """
 import hashlib, html, json, os, re, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
-CACHE = Path("/tmp/hb_net_cache"); CACHE.mkdir(exist_ok=True)
+CACHE = Path(os.environ.get("NET_CACHE_DIR", "").strip() or "/tmp/hb_net_cache"); CACHE.mkdir(parents=True, exist_ok=True)
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
 API = "https://api.scrapeless.com"
 CHROME = os.environ.get("CHROME_PATH") or "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
