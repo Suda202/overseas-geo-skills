@@ -51,7 +51,8 @@ HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parent.parent
 CORE_DIR = SKILLS / "geo-metrics" / "scripts"
 INTEGRITY = SKILLS / "geo-presales-crawl-integrity" / "scripts" / "audit_crawl_integrity.py"
-BASE_URL = os.environ.get("SCRAPELESS_BASE_URL", "https://api.scrapeless.com")  # 覆盖仅供本地假服务测试
+BASE_URL = (os.environ.get("SCRAPELESS_BASE_URL", "").strip() or "https://api.scrapeless.com").rstrip("/")  # 平台网关或本地假服务
+GATEWAY = bool(os.environ.get("SCRAPELESS_BASE_URL", "").strip())
 CREATE_PATH = "/api/v2/scraper/request"
 RESULT_PATH = "/api/v2/scraper/result/"
 DEFAULT_PLATFORMS = "chatgpt,gemini,aimode,overview"
@@ -156,6 +157,14 @@ def judge_file(path: Path, platform: str, query: str, contract: dict) -> tuple[b
         return False, "BAD_JSON"
     return judge_payload(payload, platform, query, contract)
 
+def gateway_headers() -> dict:
+    """研发网关要求的额外请求头（环境变量 GEO_GATEWAY_HEADERS，JSON 对象），只加在发给厂商接口的请求上。"""
+    try:
+        h = json.loads(os.environ.get("GEO_GATEWAY_HEADERS", "") or "{}")
+    except ValueError:
+        return {}
+    return {str(k): str(v) for k, v in h.items()} if isinstance(h, dict) else {}
+
 
 def cell_path(out: Path, platform: str, region: str, qid: str) -> Path:
     return out / f"scraper.{platform}" / region / f"{qid}.json"
@@ -165,7 +174,7 @@ def http_json(method: str, path: str, payload, timeout: float):
     request = urllib.request.Request(
         BASE_URL + path, method=method,
         data=json.dumps(payload).encode("utf-8") if payload is not None else None,
-        headers={"x-api-token": API_KEY, "Content-Type": "application/json"})
+        headers={"x-api-token": API_KEY, "Content-Type": "application/json", **gateway_headers()})
     try:
         with urllib.request.urlopen(request, timeout=min(45.0, max(timeout, 1.0))) as response:
             status, content = response.status, response.read()
@@ -390,7 +399,7 @@ def main() -> int:
         return 0
 
     API_KEY = _read_key()
-    if not API_KEY:
+    if not API_KEY and not GATEWAY:  # 走平台网关时密钥由网关注入，本机可以没有
         print("缺少 SCRAPELESS_API_KEY：环境变量和 macOS 钥匙串（服务名 SCRAPELESS_API_KEY）里都没有"
               "（不要把 Key 写进脚本或命令行参数）", file=sys.stderr)
         return 2

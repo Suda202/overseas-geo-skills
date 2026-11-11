@@ -64,7 +64,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-LIVE = "https://api.dataforseo.com/v3/"
+LIVE = (os.environ.get("DATAFORSEO_BASE_URL", "").strip().rstrip("/") or "https://api.dataforseo.com") + "/v3/"  # 平台网关（3.6.4）
+GATEWAY = bool(os.environ.get("DATAFORSEO_BASE_URL", "").strip())
 SANDBOX = "https://sandbox.dataforseo.com/v3/"
 VOLUME_PATH = "keywords_data/google_ads/search_volume/live"
 SUGGEST_PATH = "dataforseo_labs/google/keyword_suggestions/live"
@@ -103,6 +104,8 @@ def credential(name: str) -> str:
 
 def auth_header() -> str:
     login, password = credential("DATAFORSEO_LOGIN"), credential("DATAFORSEO_PASSWORD")
+    if (not login or not password) and GATEWAY:
+        return ""  # 走平台网关时凭据由网关注入
     if not login or not password:
         raise Fatal("缺少 DataForSEO 凭据：设环境变量 DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD，或存进钥匙串（服务名同名）")
     return "Basic " + base64.b64encode(f"{login}:{password}".encode()).decode()
@@ -179,10 +182,19 @@ def show_ledger(args) -> int:
           + (f"；{bad} 行读不了，已跳过" if bad else ""))
     return 0
 
+def gateway_headers() -> dict:
+    """研发网关要求的额外请求头（环境变量 GEO_GATEWAY_HEADERS，JSON 对象），只加在发给厂商接口的请求上。"""
+    try:
+        h = json.loads(os.environ.get("GEO_GATEWAY_HEADERS", "") or "{}")
+    except ValueError:
+        return {}
+    return {str(k): str(v) for k, v in h.items()} if isinstance(h, dict) else {}
+
 
 def call(base: str, path: str, auth: str, payload=None, timeout=120):
     req = urllib.request.Request(base + path, method="POST" if payload is not None else "GET",
-                                 headers={"Authorization": auth, "Content-Type": "application/json"},
+                                 headers={**({"Authorization": auth} if auth else {}), "Content-Type": "application/json",
+                                          **gateway_headers()},
                                  data=json.dumps(payload).encode() if payload is not None else None)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:

@@ -6,6 +6,7 @@
     原始页面 HTML 按 data-q 解析（2026-10-15 及更早的旧缓存属于这种）。
   * 相关搜索：同一次调用 JSON 的 related_searches。
   * 自动补全：Google 公开建议接口，不计费；从本机 IP 发出，只靠 hl/gl 指定市场，可信度记低。
+    境内模式（GEO_NET_DOMESTIC=1）改经 Scrapeless 目标国代理取，每个种子词多付费 1 次。
 
 默认走本脚本，不用本地浏览器：本机 IP 不在目标市场、浏览器带登录与历史会被个性化、
 PAA 模块不一定渲染。本地浏览器只用于需登录或强反爬的社区与评价站，以及本脚本对某个
@@ -53,10 +54,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-BASE_URL = "https://api.scrapeless.com"
+BASE_DEFAULT = "https://api.scrapeless.com"
+BASE_URL = (os.environ.get("SCRAPELESS_BASE_URL", "").strip() or BASE_DEFAULT).rstrip("/")  # 平台网关（3.6.4）
 CREATE_PATH = "/api/v1/scraper/request"
 RESULT_PATH = "/api/v1/scraper/result/"
 SUGGEST_URL = "https://suggestqueries.google.com/complete/search"
+# 境内模式（GEO_NET_DOMESTIC=1）：服务器只连得上 api.scrapeless.com，自动补全改经 Scrapeless 代理取，见 net.py 说明
+DOMESTIC = os.environ.get("GEO_NET_DOMESTIC", "").strip().lower() in ("1", "true", "yes", "on")
 PAA_TAG = re.compile(r"<div[^>]*\brelated-question-pair\b[^>]*>")
 DATA_Q = re.compile(r'\bdata-q="([^"]+)"')
 FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "目标客户", "约束条件",
@@ -65,6 +69,14 @@ KINDS = {"paa": "Google People Also Ask",
          "paa2": "Google People Also Ask 第 2 层",
          "related": "Google 相关搜索",
          "autocomplete": "Google 自动补全"}
+
+def gateway_headers() -> dict:
+    """研发网关要求的额外请求头（环境变量 GEO_GATEWAY_HEADERS，JSON 对象），只加在发给厂商接口的请求上。"""
+    try:
+        h = json.loads(os.environ.get("GEO_GATEWAY_HEADERS", "") or "{}")
+    except ValueError:
+        return {}
+    return {str(k): str(v) for k, v in h.items()} if isinstance(h, dict) else {}
 
 
 class Fatal(Exception):
@@ -126,7 +138,7 @@ def check_auth(status, data):
 
 
 def fetch_serp(seed, gl, hl, key, timeout):
-    hdr = {"x-api-token": key, "Content-Type": "application/json"}
+    hdr = {"x-api-token": key, "Content-Type": "application/json", **gateway_headers()}
     body = {"actor": "scraper.google.search",
             "input": {"q": seed, "gl": gl, "hl": hl, "google_domain": "google.com"}}
     status, raw = http("POST", BASE_URL + CREATE_PATH, body, hdr)
@@ -144,7 +156,7 @@ def fetch_serp(seed, gl, hl, key, timeout):
     if "related_questions" not in data:
         raw_url = (data.get("metadata") or {}).get("rawUrl")
         if raw_url:
-            s, b = http("GET", raw_url, None, {"x-api-token": key})
+            s, b = http("GET", raw_url.replace(BASE_DEFAULT, BASE_URL, 1), None, {"x-api-token": key, **gateway_headers()})
             if s == 200:
                 page = b.decode("utf-8", "replace")
         return data, page, "" if page else "JSON 无 PAA 字段，且原始 HTML 未取到，PAA 无法解析"
@@ -166,7 +178,7 @@ def parse_paa(data, page) -> list[str]:
 
 def expand_paa(token, key, timeout, retries=2):
     """用第 1 层某条 PAA 的 next_page_token 取第 2 层；返回 (响应, 错误)。偶发 20500 时重试。"""
-    hdr = {"x-api-token": key, "Content-Type": "application/json"}
+    hdr = {"x-api-token": key, "Content-Type": "application/json", **gateway_headers()}
     err = ""
     for attempt in range(retries + 1):
         status, raw = http("POST", BASE_URL + CREATE_PATH,
@@ -202,14 +214,26 @@ def parse_related(data) -> list[str]:
     return list(dict.fromkeys(str(r.get("query")).strip() for r in items if isinstance(r, dict) and r.get("query")))
 
 
-def autocomplete(seed, gl, hl):
+def autocomplete(seed, gl, hl, key=""):
     url = SUGGEST_URL + "?" + urllib.parse.urlencode({"client": "firefox", "hl": hl, "gl": gl, "q": seed})
-    status, body = http("GET", url, timeout=20)
+    if DOMESTIC:  # 境内服务器连不上 Google，经 Scrapeless 目标国代理取（付费 1 次，2026-11-11 实测 4 秒）
+        if not key:
+            return None
+        status, body = http("POST", BASE_URL + "/api/v1/unlocker/request",
+                            {"actor": "unlocker.webunlocker", "proxy": {"country": gl.upper()},
+                             "input": {"url": url, "method": "GET", "redirect": True, "js_render": False}},
+                            {"x-api-token": key, "Content-Type": "application/json", **gateway_headers()}, timeout=90)
+        d = as_json(body)
+        body = str(d.get("data") or "").encode() if status == 200 and isinstance(d, dict) else b""
+    else:
+        status, body = http("GET", url, timeout=20)
     if status != 200:
         return None
     try:
         arr = json.loads(body.decode("utf-8", "replace"))
     except ValueError:
+        return None
+    if not (isinstance(arr, list) and len(arr) > 1 and isinstance(arr[1], list)):
         return None
     norm = seed.strip().lower()
     return [s for s in dict.fromkeys(arr[1]) if s.strip().lower() != norm]
@@ -257,6 +281,8 @@ def main() -> int:
     out, raw_dir = Path(args.out), Path(args.out) / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     key = "" if args.cache_only else api_key()
+    if not key and os.environ.get("SCRAPELESS_BASE_URL", "").strip():
+        key = "via-gateway"  # 平台网关注入密钥，本机没有 key 也照常发请求（网关会覆盖这个占位值）
     if not args.cache_only and not key:
         print("缺少 SCRAPELESS_API_KEY：环境变量和钥匙串里都没有", file=sys.stderr)
         return 2
@@ -316,7 +342,23 @@ def main() -> int:
                     if text.lower() not in {x.lower() for x in found["paa"]} and text not in parents:
                         parents[text] = parent
                         found["paa2"].append(text)
-        ac = None if args.no_autocomplete else autocomplete(seed, args.gl, args.hl)
+        ac = None
+        if not args.no_autocomplete:
+            # 境内模式经 Scrapeless 代理取，付费：结果存 raw/<种子词>.autocomplete.json（证据，也是 runner 记账依据），
+            # 重跑直接复用；本地直连免费，不落盘
+            af = raw_dir / f"{stem}.autocomplete.json"
+            if DOMESTIC and af.exists() and not args.refresh:
+                ac = json.loads(af.read_text(encoding="utf-8")).get("suggestions")
+            elif DOMESTIC and args.cache_only:
+                ac = None
+            else:
+                if DOMESTIC and key and not fatal:
+                    paid_calls += 1
+                ac = autocomplete(seed, args.gl, args.hl, "" if fatal else key)
+                if DOMESTIC and ac is not None:
+                    af.write_text(json.dumps({"request": {"q": seed, "gl": args.gl, "hl": args.hl, "via": "Scrapeless 网页代理"},
+                                              "collected": today, "suggestions": ac}, ensure_ascii=False, indent=2),
+                                  encoding="utf-8")
         found["autocomplete"] = ac or []
         if ac is None and not args.no_autocomplete:
             rec["error"] = (rec["error"] + "；" if rec["error"] else "") + "自动补全接口失败"

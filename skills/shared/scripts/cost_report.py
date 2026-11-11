@@ -42,7 +42,8 @@ PRICE_KEYS = {
     "llm_cache_read_usd_per_m": "大模型缓存读取，美元 / 百万 token",
     "llm_cache_write_usd_per_m": "大模型缓存写入，美元 / 百万 token",
     "serp_usd_per_k": "Scrapeless Google 搜索，美元 / 千次（collect_serp_signals、net.py search）",
-    "proxy_usd_per_k": "Scrapeless 网页代理，美元 / 千次（net.py fetch 走代理）",
+    "proxy_usd_per_k": "Scrapeless 网页代理，美元 / 千次（net.py fetch 走代理、reddit --proxy、境内模式的自动补全）",
+    "render_usd_per_k": "Scrapeless 网页代理开 JS 渲染，美元 / 千次（net.py pantip）；没填按 proxy_usd_per_k 算，按后台账单核实后填",
     "usd_cny": "美元兑人民币汇率",
 }
 EXAMPLE = {
@@ -55,6 +56,7 @@ EXAMPLE = {
     "llm_cache_write_usd_per_m": 0,
     "serp_usd_per_k": 1.0,
     "proxy_usd_per_k": 1.0,
+    "render_usd_per_k": 1.0,
     "usd_cny": 7.1,
 }
 UNASSIGNED = "未归集"
@@ -66,9 +68,12 @@ def load_prices(path: Path) -> tuple[dict, str]:
         return {k: 0 for k in PRICE_KEYS} | {"bill_failed_attempts": True}, (
             f"[提示] 没有单价配置 {path}，全部按 0 计价。先运行 --write-example，复制成 prices.json 再填单价。")
     data = json.loads(path.read_text(encoding="utf-8"))
-    missing = [k for k in PRICE_KEYS if k not in data]
+    fallback = {"render_usd_per_k": data.get("proxy_usd_per_k", 0)}  # 3.6.3 新增的键，旧配置没有时按普通代理页价
+    missing = [k for k in PRICE_KEYS if k not in data and k not in fallback]
     note = f"[提示] {path} 缺 {', '.join(missing)}，按 0 计" if missing else ""
-    return {k: data.get(k, True if k == "bill_failed_attempts" else 0) for k in PRICE_KEYS}, note
+    if "render_usd_per_k" not in data:
+        note = (note + "\n" if note else "") + f"[提示] {path} 没有 render_usd_per_k，JS 渲染页暂按普通代理页价算"
+    return {k: data.get(k, fallback.get(k, True if k == "bill_failed_attempts" else 0)) for k in PRICE_KEYS}, note
 
 
 def brand_from_path(path: Path) -> str:
@@ -141,7 +146,8 @@ def main() -> int:
             attempts = sc.get("prerun_attempts", 0) if prices["bill_failed_attempts"] else sc.get("prerun_ok", 0)
             num = lambda v: v if isinstance(v, (int, float)) else 0  # noqa: E731 -「不可归集」按 0
             sel_usd = ((num(sc.get("serp_requests")) + num(sc.get("net_search_requests"))) * prices["serp_usd_per_k"]
-                       + num(sc.get("proxy_pages")) * prices["proxy_usd_per_k"]) / 1000
+                       + (num(sc.get("proxy_pages")) + num(sc.get("autocomplete_proxy"))) * prices["proxy_usd_per_k"]
+                       + num(sc.get("render_pages")) * prices["render_usd_per_k"]) / 1000
             name = canon(costs.get("brand") or "")
             r = rows[name]
             r["rounds"] += 1
