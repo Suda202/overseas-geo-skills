@@ -1,3 +1,12 @@
+## 3.10.0（2026-11-11）对客表不再限发现行；「只出发现」只管线上
+
+触发依据：Suda 2026-11-11「多维表格没有这个限制啊，只是线上有限制而已」。Dbrand 按品牌方要求出了对比、替代、评估、验证四类，`check_client_base.py` 却要求把这几行从对客表删掉。
+
+- selection-rules.md → 1、5、7，type-branches.md，client-facing-base.md，output-contract.md `slices`，SKILL.md：线上一条命令跑只出发现题；本地选词按品牌方在 `config.business_goals` 选的目标开放对应类型（判档、进对客表、出题、聚主题），没选的目标照旧只登记。
+- `check_client_base.py` 不再把非发现行当问题，这些行照常查业务优先级和依据。
+- `verify_workflow.py` 对应用例改期望；`check_skill_terms.py` 撤掉 3.0.0「非发现行不进对客表」那条，改扫「对客表只放发现行」「本期只开放发现」。
+- validator、online-runner.md、上传 CSV 不变（后端没有的题型照旧不导出）。
+
 ## 3.9.4（2026-11-11）行业知识档案：品牌标识去掉盐；恢复「Tecno/Infinix 用户」
 
 触发依据：Suda 2026-11-11「去掉盐再推送」「『Tecno/Infinix 用户』这条没必要拦截」。档案里本来就写着品类和市场，盐只挡住「拿品牌名一算就确认」这一步，不值得让研发多配一个密钥。

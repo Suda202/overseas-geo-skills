@@ -623,8 +623,8 @@ def run_checks() -> list[dict]:
     import check_client_base as ccb
     from validate_after_sales_set import legacy_markers
     # check_client_base, one row per Prompt type (2026-11-05): a 低 Discovery row with no Prompt needs 本期不出;
-    # non-Discovery rows (对比, 替代) are reported — since 3.0.0 they stay in the bank JSON and out of the client
-    # Base; two rows with the same audience, task, type and constraints, and a 对比 Prompt on a 发现 row are reported.
+    # non-Discovery rows (对比, 替代) are allowed in the client Base since 3.10.0 (only the online runner is
+    # Discovery-only); two rows with the same audience, task, type and constraints, and a 对比 Prompt on a 发现 row are reported.
     typed_rows_base = [
         {"record_id": "t1", "切片编号": "M-201", "业务优先级": "低", "意图类型": "发现",
          "目标客户": "中小企业财务", "使用场景": "临时出差", "主题": [], "业务优先级依据": "低：不是本期重点"},
@@ -639,7 +639,7 @@ def run_checks() -> list[dict]:
     ]
     typed_prompts = [{"编号": "Q1", "意图类型": "对比", "所属切片": ["t3"]}]
     got = ccb.check_matrix_v2(typed_rows_base, typed_prompts)
-    want = [("M-201", "本期不出"), ("M-202", "非发现行只在题库 JSON 登记"), ("M-205", "非发现行只在题库 JSON 登记"),
+    want = [("M-201", "本期不出"),
             ("M-203", "另开一行对比行"), ("M-203、M-204", "意图类型「发现」、约束条件「预算控制」都相同")]
     ok = len(got) == len(want) and all(any(sid in g and needle in g for g in got) for sid, needle in want)
     results.append(

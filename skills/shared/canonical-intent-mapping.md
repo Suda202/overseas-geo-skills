@@ -11,11 +11,11 @@
 | 题库标签 | 后端 diagnostic_intent | 中文客户标签 | 统计指标 | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
 | `Prompt Type: Discovery` | `discovery` | 发现 | 提及率、情感 | `true` | M01 数据总览、M02 竞品表现、M03 引用来源、M05 品牌进入、M07 平台一致 |
-| `Prompt Type: Alternatives` | `alternatives`（后端尚未支持；接入前按 `competitor` 上传，`tags` 第一个写「替代」） | 替代 | 提及率、情感 | `false` | 点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
-| `Prompt Type: Competitor` | `competitor` | 对比 | 胜负、情感 | `false` | M02 竞品表现（决胜与情感） |
+| `Prompt Type: Alternatives` | `alternatives`（导出直接传此值；后端枚举上线前线上读不到替代题） | 替代 | 提及率、情感 | `false` | 点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
+| `Prompt Type: Competitor` | `competitor` | 对比 | 胜负、情感（线上目前没有统计胜率，本地基线照算） | `false` | M02 竞品表现（决胜与情感） |
 | `Prompt Type: Evaluation` | `sentiment` | 评估（问本品适不适合、有没有某能力） | 情感 | `false` | M04 品牌表达 |
 | `Prompt Type: Trust` | `trust`（后端尚未支持） | 验证（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | 本期不出，不导出上传 CSV |
-| `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 提及率 | `false` | AI 多给步骤和建议，多数回答不提品牌，提及率基数小；品牌出现在解决步骤里（「用 X 查」）是这类题里最有价值的位置 |
+| `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 引用 | `false` | AI 多给步骤和建议，多数回答不提品牌，提及率基数小，不统计提及率（2026-11-11 Suda 定，推翻 11-06 改看提及率）；看 AI 引用了哪些来源，用来给内容计划找方向 |
 | `Prompt Type: Transactional` | `transactional`（后端尚未支持） | 交易（点名本品问哪里买、价格、库存） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
 | `Prompt Type: Support` | `support`（后端尚未支持） | 售后（点名本品问安装、使用、故障、维修、退换） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
 | `Prompt Type: Category Awareness` | `market_perception` | 品类认知 | —（M08 自有读法） | `true` | M08 购买框架（品类认知 / Market Perception）；只用于调研预跑，不进选词题库 |
@@ -24,10 +24,10 @@
 
 **统计指标由意图类型决定，不另设字段。** 每道题统计什么只看上表「统计指标」列，提示词库和题库都不另设分析维度字段。另有两条对所有类型都适用：
 
-- **引用所有类型都统计**（引用份额、引用率、引用来源），按意图类型分开看。售前 HTML 报告的引用模块默认合并全部意图类型，核心洞察的引用份额、引用率只看发现＋替代、和提及率同一批题（2026-11-07）；监测基线 HTML 的「全部类型」仍只合并题面不点名品牌的类型（2026-10-22，`geo-monitoring/scripts/build_baseline_html.py`）。两处口径见 `geo-metrics/references/metric-scope-and-copy-contract.md`「样本范围」。
+- **引用所有类型都统计**（引用份额、引用率、引用来源；线上目前只有引用份额，没有引用率，这次不加，我们本地基线和售前 HTML 照算），按意图类型分开看。售前 HTML 报告的引用模块默认合并全部意图类型，核心洞察的引用份额、引用率只看发现＋替代、和提及率同一批题（2026-11-07）；监测基线 HTML 的「全部类型」仍只合并题面不点名品牌的类型（2026-10-22，`geo-monitoring/scripts/build_baseline_html.py`）。两处口径见 `geo-metrics/references/metric-scope-and-copy-contract.md`「样本范围」。
 - **提及只数正文里的品牌**：先去掉引用标记（「([RivalH1][5])」这类脚注、引用卡片标题）再识别，口径同 `geo-metrics/scripts/de_cite_crawl.py` 的 `strip_citations`。正文里写出来的品牌都算提及，包括被当作数据来源点名的（「Source: SRX Property Index」「According to rival-h2.example」）；提及不等于推荐。
 
-**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本按 `diagnosis_intent` 自动填（发现 `visibility,sentiment`，对比、评估 `sentiment`），不手填。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，然后从上传模板删掉这一列。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。这五个英文值（`alternatives`、`trust`、`information`、`transactional`、`support`）和售后数据看板的「意图类型」筛选已写进研发需求《售前诊断：线上生词改用选词 skill，研发需要改的地方》第 4 节（2026-11-09）。
+**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本 2026-11-11 起不再导出这一列。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，上传模板已删掉这一列和 `purchase_intent`、`persona_name`、`scene_name` 三个留空列（旧模板带的照收、忽略）。线上目前没有统计胜率和准确性，这次都不加；引用对所有类型都算，历史数据不回算（研发需求第 4 节，2026-11-11）。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。这五个英文值（`alternatives`、`trust`、`information`、`transactional`、`support`）和售后数据看板的「意图类型」筛选已写进研发需求《售前诊断：线上生词改用选词 skill，研发需要改的地方》第 4 节（2026-11-09）。
 
 **准确性怎么判。** 交易、售后和准确性题读的是 AI 说的事实对不对。
 
@@ -41,7 +41,7 @@
 
 **报告模块按事实来源划分，不按意图类型划分，两者不是一一对应。** 一个模块可以消费多种意图类型的样本（M02 同时用 Discovery 的竞争位置与 Competitor 的决胜结果），一种意图也可能不进任何模块（验证与准确性只作为诊断输入）。上表的模块归属只说明「该意图的样本最终进入哪些模块」，不要把它读成「该意图等于某个模块」。
 
-*重要：`formal_visibility_eligible = true` 表示进入后端可见度处理管线，**不等于**进入正式 Visibility 指标（品牌进入率、平均提及位置、声量、问题机会）。正式 Visibility 指标**只使用 Discovery**；替代、问题解决的提及率按类型单独看。售前报告的主要引用生态只用 Discovery（售前只出发现题）；Competitor 只统计情感并进入独立的 M02 竞品表现；Category Awareness 进入独立的 M08 购买框架。
+*重要：`formal_visibility_eligible = true` 表示进入后端可见度处理管线，**不等于**进入正式 Visibility 指标（品牌进入率、平均提及位置、声量、问题机会）。正式 Visibility 指标**只使用 Discovery**；替代的提及率按类型单独看；问题解决不统计提及率。售前报告的主要引用生态只用 Discovery（售前只出发现题）；Competitor 只统计情感并进入独立的 M02 竞品表现；Category Awareness 进入独立的 M08 购买框架。
 
 情绪适用范围与 Discovery 独立判断：后端已标记为 Sentiment 的样本必须进入 M04 品牌表达聚合，不得因为该记录不属于 Discovery 或同时带有其他意图类型而删除；它仍不得进入正式 Visibility。
 

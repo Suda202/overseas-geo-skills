@@ -9,9 +9,9 @@
 ## 输入与输出
 
 - 输入：一份品牌资料 JSON，可以是线上表单收集的数据，也可以是本地文件，字段见 [input-contract.md](input-contract.md)。先过 `scripts/normalize_case.py`，`ok=false` 时把 `errors` 原样交回上游，不替上游补字段。
-- 输出：每个市场一份 `bank.json`（内部底稿）、`notes.md`，和导出的 9 字段上传行：
+- 输出：每个市场一份 `bank.json`（内部底稿）、`notes.md`，和导出的 5 字段上传行：
 
-`query, question_zh, topic, diagnosis_intent, tags, question_types, purchase_intent, persona_name, scene_name`
+`query, question_zh, topic, diagnosis_intent, tags`
 
 研发可以走上传 CSV，也可以走接口传入，字段相同：走 CSV 就直接上传文件，走接口就把每一行当作一条记录。题库 JSON 不传给线上。
 
@@ -21,9 +21,7 @@
 | `question_zh` | `zh_translation` |
 | `topic` | 题目的 `topic`；没有就按 `topic_id` 去 `config.topics` 查。需要换显示名时导出加 `--topic-label "题库主题=显示名"` |
 | `diagnosis_intent` | 由 `prompt_type` 换成后端枚举（发现 `discovery`） |
-| `tags` | 切片标签（selection-rules.md → 6「切片标签」），可以为空；只有替代题在第一个写「替代」（后端没有 alternatives 枚举，临时按 competitor 上传），其他类型不重复写 `diagnosis_intent` 已经表达的类型；总长不到 200 字 |
-| `question_types` | 由 `diagnosis_intent` 定：发现 `visibility,sentiment`。过渡字段，后端改为按意图类型决定统计什么之后删掉（shared/canonical-intent-mapping.md） |
-| `purchase_intent`、`persona_name`、`scene_name` | 留空 |
+| `tags` | 切片标签（selection-rules.md → 6「切片标签」），可以为空；不重复写 `diagnosis_intent` 已经表达的类型；总长不到 200 字 |
 
 每个市场 × 产品线单独出一份，一份不超过 60 条（导出脚本查）。线上一份品牌资料只有一条产品线，所以就是每个市场一份；本地题库一个市场有几条产品线时，文件名带 `.line<n>`，导出时打印每份对应哪条产品线。
 

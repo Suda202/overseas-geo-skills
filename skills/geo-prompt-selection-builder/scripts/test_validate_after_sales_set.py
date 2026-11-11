@@ -953,8 +953,8 @@ class SliceTagTests(unittest.TestCase):
         tags = {r["tags"] for r in rows}
         self.assertEqual(tags, {"租房者", ""}, tags)  # 发现和 diagnosis_intent 重复，不写进 tags
 
-    def test_export_type_in_tags_only_for_alternatives(self) -> None:
-        """Suda 2026-11-07: only 替代 (uploaded as competitor) carries its type name in tags."""
+    def test_export_alternatives_uses_own_intent_and_no_type_in_tags(self) -> None:
+        """2026-11-11: 替代 uploads as alternatives; no type name in tags; only 5 columns."""
         data = tag_bank([])
         data["questions"][0]["prompt_type"] = "Alternatives"
         data["questions"][1]["prompt_type"] = "Competitor"
@@ -964,8 +964,9 @@ class SliceTagTests(unittest.TestCase):
             subprocess.run([sys.executable, "-I", str(EXPORT), str(bank), "--out", tmp],
                            text=True, capture_output=True, check=False)
             rows = list(csv.DictReader((Path(tmp) / "bank.United States.upload.csv").open(encoding="utf-8-sig")))
+        self.assertEqual(list(rows[0].keys()), ["query", "question_zh", "topic", "diagnosis_intent", "tags"])
         by = {r["query"]: (r["diagnosis_intent"], r["tags"]) for r in rows}
-        self.assertEqual(by[data["questions"][0]["user_question"]], ("competitor", "替代"))
+        self.assertEqual(by[data["questions"][0]["user_question"]], ("alternatives", ""))
         self.assertEqual(by[data["questions"][1]["user_question"]], ("competitor", ""))
         self.assertEqual(by[data["questions"][2]["user_question"]], ("discovery", ""))
 

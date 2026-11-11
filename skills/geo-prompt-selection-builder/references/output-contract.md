@@ -42,7 +42,7 @@
 | `business_goals` | `{selected: [...], information_named: true / false}`，`selected` 取 发现型可见度 / 竞争定位 / 品牌呈现 / 声誉与信任。目前只做发现，可以不写，validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充；写了就要写对（W49）。开放其他目标时恢复必填（type-branches.md） |
 | `shopping_cards` | 选填，每条产品线 `{product_line, status: 开 / 关 / 试跑后定, basis}`（selection-rules.md → 1）；没写按关 |
 | `topics` | `{topic_id, topic, priority, priority_basis}`；`priority` 是主题优先级，高 / 中 / 低 |
-| `slices` | 矩阵行 `{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`。`scene` 存使用场景；单市场可省 `market`；`prompt_type` 是这一行唯一的意图类型，英文键 Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support；`priority` 是业务优先级，只有发现行写。本期不出题的行也写，不带 `topic_id`：非发现行不写 `priority`、依据写在 `priority_basis`；低档发现行在 `priority_basis` 末尾写「本期不出：……」 |
+| `slices` | 矩阵行 `{slice_id, topic_id, product_line, market, audience, scene, prompt_type, attributes, priority, priority_basis}`。`scene` 存使用场景；单市场可省 `market`；`prompt_type` 是这一行唯一的意图类型，英文键 Discovery / Information / Evaluation / Competitor / Alternatives / Trust / Transactional / Support；`priority` 是业务优先级，发现行和已开放目标对应类型的行写。本期不出题的行也写，不带 `topic_id`：没开放的类型不写 `priority`、依据写在 `priority_basis`；低档发现行在 `priority_basis` 末尾写「本期不出：……」 |
 | `attribute_plan` | 约束条件名单 `{attribute, no_carrier_reason}`，`attribute` 是三张表「约束条件」的选项名 |
 | `tag_dimensions` | 跨主题切片标签 `{dimension, basis, values}`：`dimension` 为目标客户 / 使用场景 / 属性（或约束条件）/ 自定义；属性维度和自定义必须列 `values`。不需要就写 `[]`（selection-rules.md → 6「切片标签」） |
 | `buyer_quotes` | 需求信号 `{输入编号, 原话, 目标客户, 约束条件}`，约束那一列键名就是 `约束条件`（也认 `constraint`、旧键 `约束`），W36 按它核对题面条件。线上必填；不填时 W36、W37 跳过并告警一次 |
@@ -75,12 +75,11 @@
 
 ## 上传 CSV
 
-九列：`query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`。用 `python3 -I scripts/export_upload_csv.py <bank.json> --out <dir> [--topic-label "<主题>=<显示名>"]` 导出，导出后自动跑上传检查：
+五列：`query,question_zh,topic,diagnosis_intent,tags`（2026-11-11 起删掉 `question_types`、`purchase_intent`、`persona_name`、`scene_name` 四列，后端按意图类型决定统计什么）。用 `python3 -I scripts/export_upload_csv.py <bank.json> --out <dir> [--topic-label "<主题>=<显示名>"]` 导出，导出后自动跑上传检查：
 
-- 一个市场一个文件；`diagnosis_intent` 填后端枚举，`question_types` 脚本自动填（过渡字段，统计口径以 shared/canonical-intent-mapping.md 为准）。
-- `tags` 写按 `tag_dimensions` 派生的标签，不合格的值不出并打印原因。替代题暂按 `competitor` 上传、`tags` 第一个写「替代」（后端还没有 `alternatives` 枚举）。
+- 一个市场一个文件；`diagnosis_intent` 填后端枚举（`discovery`、`alternatives`、`competitor`、`evaluation`），统计口径以 shared/canonical-intent-mapping.md 为准。
+- `tags` 写按 `tag_dimensions` 派生的标签，不合格的值不出并打印原因。替代题直接传 `alternatives`，`tags` 不写类型名。
 - 问题解决、验证、交易、售后没有后端枚举，不导出并打印题号；停测、需修改的不导出；旧结构题库退出码 2。
-- 后三列留空（线上后端读不读未确认）。
 
 交付说明要告诉品牌方：替代题和问题解决题的读数现在只在基线 HTML 报告里看得到。
 

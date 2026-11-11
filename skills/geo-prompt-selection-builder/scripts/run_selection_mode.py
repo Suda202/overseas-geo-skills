@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""选词的线上一条命令入口：品牌资料（表单数据或文件）→ 每个市场一批 9 字段的题（Suda 2026-10-29；
+"""选词的线上一条命令入口：品牌资料（表单数据或文件）→ 每个市场一批 5 字段的题（Suda 2026-10-29；
 2026-11-06 随售前生词并入选词 skill）。参数名 --case、文件名 case-normalized.json、normalize_case.py
 里的 case 是历史命名，正文一律叫品牌资料（3.3.0）。
 
@@ -60,7 +60,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
 
 产物（都在工作目录里）：
   out/bank.json        题库 JSON（内部底稿）
-  out/upload/*.csv     交给线上的 9 字段题（每个市场一份）
+  out/upload/*.csv     交给线上的 5 字段题（每个市场一份）
   research/precollect/ precollect 产物：serp/、reviews/、community/ 各类原始产物，summary.json（每类
                        {status: ok|failed|skipped, reason, rows, out_dir}），signals.csv（三类去重合并，加「采集类别」列）
   out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, precollect, review,
