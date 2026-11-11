@@ -1,0 +1,2506 @@
+{
+ "schema": 5,
+ "industry": "消费电子与智能家居",
+ "items": {
+  "constraints": {
+   "ai翻译": {
+    "label": "AI 翻译",
+    "by": {
+     "fceb945e449f|KE": "AI 翻译",
+     "fceb945e449f|NG": "AI 翻译"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "AI 翻译": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "gan": {
+    "label": "GaN",
+    "by": {
+     "fceb945e449f|KE": "GaN",
+     "fceb945e449f|NG": "GaN"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "GaN": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "佩戴": {
+    "label": "佩戴",
+    "by": {
+     "fceb945e449f|KE": "佩戴",
+     "fceb945e449f|NG": "佩戴"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "佩戴": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "充电速度功率": {
+    "label": "充电速度与功率",
+    "by": {
+     "fceb945e449f|KE": "充电速度与功率",
+     "fceb945e449f|NG": "充电速度与功率"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "充电速度与功率": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "外观": {
+    "label": "外观",
+    "by": {
+     "fceb945e449f|KE": "外观"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "外观": 1
+    },
+    "markets": [
+     "KE"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "多口多设备": {
+    "label": "多口与多设备",
+    "by": {
+     "fceb945e449f|KE": "多口与多设备",
+     "fceb945e449f|NG": "多口与多设备"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "多口与多设备": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "安全发热": {
+    "label": "安全与发热",
+    "by": {
+     "fceb945e449f|KE": "安全与发热",
+     "fceb945e449f|NG": "安全与发热"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "安全与发热": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "屏显": {
+    "label": "屏显",
+    "by": {
+     "fceb945e449f|KE": "屏显",
+     "fceb945e449f|NG": "屏显"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "屏显": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "录音创作": {
+    "label": "录音创作",
+    "by": {
+     "fceb945e449f|KE": "录音创作",
+     "fceb945e449f|NG": "录音创作"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "录音创作": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "无线充电盒": {
+    "label": "无线充电盒",
+    "by": {
+     "fceb945e449f|KE": "无线充电盒"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "无线充电盒": 1
+    },
+    "markets": [
+     "KE"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "机型协议兼容": {
+    "label": "机型与协议兼容",
+    "by": {
+     "fceb945e449f|KE": "机型与协议兼容",
+     "fceb945e449f|NG": "机型与协议兼容"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "机型与协议兼容": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "正品": {
+    "label": "正品",
+    "by": {
+     "fceb945e449f|KE": "正品"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "正品": 1
+    },
+    "markets": [
+     "KE"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "续航": {
+    "label": "续航",
+    "by": {
+     "fceb945e449f|KE": "续航",
+     "fceb945e449f|NG": "续航"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "续航": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "耐用": {
+    "label": "耐用",
+    "by": {
+     "fceb945e449f|KE": "耐用",
+     "fceb945e449f|NG": "耐用"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "耐用": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "运动防水": {
+    "label": "运动防水",
+    "by": {
+     "fceb945e449f|KE": "运动防水",
+     "fceb945e449f|NG": "运动防水"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "运动防水": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "连接兼容": {
+    "label": "连接与兼容",
+    "by": {
+     "fceb945e449f|KE": "连接与兼容",
+     "fceb945e449f|NG": "连接与兼容"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "连接与兼容": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "通话": {
+    "label": "通话",
+    "by": {
+     "fceb945e449f|KE": "通话",
+     "fceb945e449f|NG": "通话"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "通话": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "降噪": {
+    "label": "降噪",
+    "by": {
+     "fceb945e449f|KE": "降噪",
+     "fceb945e449f|NG": "降噪"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "降噪": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "音质": {
+    "label": "音质",
+    "by": {
+     "fceb945e449f|KE": "音质",
+     "fceb945e449f|NG": "音质"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "音质": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "价格": {
+    "label": "价格",
+    "by": {
+     "fceb945e449f|NG": "价格"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "价格": 1
+    },
+    "markets": [
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "低延迟": {
+    "label": "低延迟",
+    "by": {
+     "fceb945e449f|NG": "低延迟"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "低延迟": 1
+    },
+    "markets": [
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "购买渠道": {
+    "label": "购买渠道",
+    "by": {
+     "fceb945e449f|NG": "购买渠道"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "购买渠道": 1
+    },
+    "markets": [
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "防丢": {
+    "label": "防丢",
+    "by": {
+     "fceb945e449f|NG": "防丢"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "防丢": 1
+    },
+    "markets": [
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "价格预算": {
+    "label": "价格预算",
+    "by": {
+     "774eab175c3b|US": "价格与预算",
+     "ba34d649c710|US": "价格预算"
+    },
+    "clients": [
+     "774eab175c3b",
+     "ba34d649c710"
+    ],
+    "names": {
+     "价格与预算": 1,
+     "价格预算": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam",
+     "motorcycle carplay screen"
+    ]
+   },
+   "供电接线": {
+    "label": "供电与接线",
+    "by": {
+     "774eab175c3b|US": "供电与接线"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "供电与接线": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "保修退换": {
+    "label": "保修与退换",
+    "by": {
+     "774eab175c3b|US": "保修与退换"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "保修与退换": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "原厂底座wonderwheel兼容": {
+    "label": "原厂底座与 Wonder Wheel 兼容",
+    "by": {
+     "774eab175c3b|US": "原厂底座与 Wonder Wheel 兼容"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "原厂底座与 Wonder Wheel 兼容": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "可装导航app离线导航": {
+    "label": "可装导航 App 与离线导航",
+    "by": {
+     "774eab175c3b|US": "可装导航 App 与离线导航"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "可装导航 App 与离线导航": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "头盔耳机音频": {
+    "label": "头盔耳机音频",
+    "by": {
+     "774eab175c3b|US": "头盔耳机音频"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "头盔耳机音频": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "屏幕尺寸安装位置": {
+    "label": "屏幕尺寸与安装位置",
+    "by": {
+     "774eab175c3b|US": "屏幕尺寸与安装位置"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "屏幕尺寸与安装位置": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "支架牢固抗振": {
+    "label": "支架牢固与抗振",
+    "by": {
+     "774eab175c3b|US": "支架牢固与抗振"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "支架牢固与抗振": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "无线连接稳定": {
+    "label": "无线连接稳定",
+    "by": {
+     "774eab175c3b|US": "无线连接稳定"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "无线连接稳定": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "给手机充电防过热": {
+    "label": "给手机充电与防过热",
+    "by": {
+     "774eab175c3b|US": "给手机充电与防过热"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "给手机充电与防过热": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "胎压监测": {
+    "label": "胎压监测",
+    "by": {
+     "774eab175c3b|US": "胎压监测"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "胎压监测": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "行车记录前后摄像头": {
+    "label": "行车记录（前后摄像头）",
+    "by": {
+     "774eab175c3b|US": "行车记录（前后摄像头）"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "行车记录（前后摄像头）": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "运行稳定可靠性": {
+    "label": "运行稳定与可靠性",
+    "by": {
+     "774eab175c3b|US": "运行稳定与可靠性"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "运行稳定与可靠性": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "防水耐候": {
+    "label": "防水与耐候",
+    "by": {
+     "774eab175c3b|US": "防水与耐候"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "防水与耐候": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "防盗快拆": {
+    "label": "防盗与快拆",
+    "by": {
+     "774eab175c3b|US": "防盗与快拆"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "防盗与快拆": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "阳光下可读性": {
+    "label": "阳光下可读性",
+    "by": {
+     "774eab175c3b|US": "阳光下可读性"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "阳光下可读性": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "appwifi传输": {
+    "label": "App 与 Wi-Fi 传输",
+    "by": {
+     "ba34d649c710|US": "App 与 Wi-Fi 传输"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "App 与 Wi-Fi 传输": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "gps记录": {
+    "label": "GPS 记录",
+    "by": {
+     "ba34d649c710|US": "GPS 记录"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "GPS 记录": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "体积隐蔽安装": {
+    "label": "体积与隐蔽安装",
+    "by": {
+     "ba34d649c710|US": "体积与隐蔽安装"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "体积与隐蔽安装": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "侧面全车覆盖": {
+    "label": "侧面与全车覆盖",
+    "by": {
+     "ba34d649c710|US": "侧面与全车覆盖"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "侧面与全车覆盖": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "停车监控": {
+    "label": "停车监控",
+    "by": {
+     "ba34d649c710|US": "停车监控"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "停车监控": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "停车耗电保护": {
+    "label": "停车耗电保护",
+    "by": {
+     "ba34d649c710|US": "停车耗电保护"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "停车耗电保护": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "前后双路": {
+    "label": "前后双路",
+    "by": {
+     "ba34d649c710|US": "前后双路"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "前后双路": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "可靠性保修": {
+    "label": "可靠性与保修",
+    "by": {
+     "ba34d649c710|US": "可靠性与保修"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "可靠性与保修": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "后摄线长": {
+    "label": "后摄线长",
+    "by": {
+     "ba34d649c710|US": "后摄线长"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "后摄线长": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "后摄防水": {
+    "label": "后摄防水",
+    "by": {
+     "ba34d649c710|US": "后摄防水"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "后摄防水": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "后方视野遮挡": {
+    "label": "后方视野遮挡",
+    "by": {
+     "ba34d649c710|US": "后方视野遮挡"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "后方视野遮挡": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "后视镜屏幕可视性": {
+    "label": "后视镜屏幕可视性",
+    "by": {
+     "ba34d649c710|US": "后视镜屏幕可视性"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "后视镜屏幕可视性": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "品牌背景数据隐私": {
+    "label": "品牌背景与数据隐私",
+    "by": {
+     "ba34d649c710|US": "品牌背景与数据隐私"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "品牌背景与数据隐私": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "夜间画质": {
+    "label": "夜间画质",
+    "by": {
+     "ba34d649c710|US": "夜间画质"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "夜间画质": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "存储卡可靠性": {
+    "label": "存储卡可靠性",
+    "by": {
+     "ba34d649c710|US": "存储卡可靠性"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "存储卡可靠性": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "安装布线": {
+    "label": "安装与布线",
+    "by": {
+     "ba34d649c710|US": "安装与布线"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "安装与布线": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "无订阅本地存储": {
+    "label": "无订阅与本地存储",
+    "by": {
+     "ba34d649c710|US": "无订阅与本地存储"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "无订阅与本地存储": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "画质分辨率": {
+    "label": "画质与分辨率",
+    "by": {
+     "ba34d649c710|US": "画质与分辨率"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "画质与分辨率": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "画面反光": {
+    "label": "画面反光",
+    "by": {
+     "ba34d649c710|US": "画面反光"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "画面反光": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "耐高温": {
+    "label": "耐高温",
+    "by": {
+     "ba34d649c710|US": "耐高温"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "耐高温": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪法规": {
+    "label": "行车记录仪法规",
+    "by": {
+     "ba34d649c710|US": "行车记录仪法规"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪法规": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "车内摄像头": {
+    "label": "车内摄像头",
+    "by": {
+     "ba34d649c710|US": "车内摄像头"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "车内摄像头": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   }
+  },
+  "audiences": {
+   "iphone用户": {
+    "label": "iPhone 用户",
+    "by": {
+     "fceb945e449f|KE": "iPhone 用户",
+     "fceb945e449f|NG": "iPhone 用户"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "iPhone 用户": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "发电机停电家庭": {
+    "label": "发电机/停电家庭",
+    "by": {
+     "fceb945e449f|KE": "发电机/停电家庭",
+     "fceb945e449f|NG": "发电机/停电家庭"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "发电机/停电家庭": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "城市青年": {
+    "label": "城市青年",
+    "by": {
+     "fceb945e449f|KE": "城市青年",
+     "fceb945e449f|NG": "城市青年"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "城市青年": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "通勤族": {
+    "label": "通勤族",
+    "by": {
+     "fceb945e449f|KE": "通勤族",
+     "fceb945e449f|NG": "通勤族"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "通勤族": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "专业安装商经销商": {
+    "label": "专业安装商与经销商",
+    "by": {
+     "774eab175c3b|US": "专业安装商与经销商"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "专业安装商与经销商": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "哈雷巡航车主": {
+    "label": "哈雷/巡航车主",
+    "by": {
+     "774eab175c3b|US": "哈雷/巡航车主"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "哈雷/巡航车主": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "宝马原厂导航底座车主": {
+    "label": "宝马原厂导航底座车主",
+    "by": {
+     "774eab175c3b|US": "宝马原厂导航底座车主"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "宝马原厂导航底座车主": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "日常通勤骑手": {
+    "label": "日常通勤骑手",
+    "by": {
+     "774eab175c3b|US": "日常通勤骑手"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "日常通勤骑手": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "长途旅行探险骑手": {
+    "label": "长途旅行与探险骑手",
+    "by": {
+     "774eab175c3b|US": "长途旅行与探险骑手"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "长途旅行与探险骑手": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "皮卡suv房车车主": {
+    "label": "皮卡、SUV 与房车车主",
+    "by": {
+     "ba34d649c710|US": "皮卡、SUV 与房车车主"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "皮卡、SUV 与房车车主": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "私家车车主": {
+    "label": "私家车车主",
+    "by": {
+     "ba34d649c710|US": "私家车车主"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "私家车车主": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "网约车司机": {
+    "label": "网约车司机",
+    "by": {
+     "ba34d649c710|US": "网约车司机"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "网约车司机": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   }
+  },
+  "scenes": {
+   "选手机充电器": {
+    "label": "选手机充电器",
+    "by": {
+     "fceb945e449f|KE": "选手机充电器",
+     "fceb945e449f|NG": "选手机充电器"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "选手机充电器": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "选真无线耳机": {
+    "label": "选真无线耳机",
+    "by": {
+     "fceb945e449f|KE": "选真无线耳机",
+     "fceb945e449f|NG": "选真无线耳机"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "选真无线耳机": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "选能充笔记本或多设备的充电器": {
+    "label": "选能充笔记本或多设备的充电器",
+    "by": {
+     "fceb945e449f|KE": "选能充笔记本或多设备的充电器",
+     "fceb945e449f|NG": "选能充笔记本或多设备的充电器"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "选能充笔记本或多设备的充电器": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "选运动或开放式耳机": {
+    "label": "选运动或开放式耳机",
+    "by": {
+     "fceb945e449f|KE": "选运动或开放式耳机",
+     "fceb945e449f|NG": "选运动或开放式耳机"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "选运动或开放式耳机": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "为客户的车批量采购安装carplay屏": {
+    "label": "为客户的车批量采购、安装 CarPlay 屏",
+    "by": {
+     "774eab175c3b|US": "为客户的车批量采购、安装 CarPlay 屏"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "为客户的车批量采购、安装 CarPlay 屏": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "想自己把carplay屏装到摩托车上接电": {
+    "label": "想自己把 CarPlay 屏装到摩托车上、接电",
+    "by": {
+     "774eab175c3b|US": "想自己把 CarPlay 屏装到摩托车上、接电"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "想自己把 CarPlay 屏装到摩托车上、接电": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "手机放车把上怕被震坏过热或掉落想换成专用屏": {
+    "label": "手机放车把上怕被震坏、过热或掉落，想换成专用屏",
+    "by": {
+     "774eab175c3b|US": "手机放车把上怕被震坏、过热或掉落，想换成专用屏"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "手机放车把上怕被震坏、过热或掉落，想换成专用屏": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "日常通勤看导航路况停车频繁": {
+    "label": "日常通勤看导航和路况，停车频繁",
+    "by": {
+     "774eab175c3b|US": "日常通勤看导航和路况，停车频繁"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "日常通勤看导航和路况，停车频繁": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "替换宝马原厂navigator插原厂导航底座用wonderwheel操作": {
+    "label": "替换宝马原厂 Navigator，插原厂导航底座、用 Wonder Wheel 操作",
+    "by": {
+     "774eab175c3b|US": "替换宝马原厂 Navigator，插原厂导航底座、用 Wonder Wheel 操作"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "替换宝马原厂 Navigator，插原厂导航底座、用 Wonder Wheel 操作": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "越野偏远无信号路段要能导航": {
+    "label": "越野、偏远无信号路段要能导航",
+    "by": {
+     "774eab175c3b|US": "越野、偏远无信号路段要能导航"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "越野、偏远无信号路段要能导航": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "车上没有原厂carplay想给哈雷加装": {
+    "label": "车上没有原厂 CarPlay，想给哈雷加装",
+    "by": {
+     "774eab175c3b|US": "车上没有原厂 CarPlay，想给哈雷加装"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "车上没有原厂 CarPlay，想给哈雷加装": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "长途或雨天骑行要一台专用的摩托车导航设备": {
+    "label": "长途或雨天骑行要一台专用的摩托车导航设备",
+    "by": {
+     "774eab175c3b|US": "长途或雨天骑行要一台专用的摩托车导航设备"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "长途或雨天骑行要一台专用的摩托车导航设备": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "长途摩旅时用carplayandroidauto屏看导航听音乐接电话": {
+    "label": "长途摩旅时用 CarPlay / Android Auto 屏看导航、听音乐、接电话",
+    "by": {
+     "774eab175c3b|US": "长途摩旅时用 CarPlay / Android Auto 屏看导航、听音乐、接电话"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "长途摩旅时用 CarPlay / Android Auto 屏看导航、听音乐、接电话": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "骑行要录前后视频留证据": {
+    "label": "骑行要录前后视频留证据",
+    "by": {
+     "774eab175c3b|US": "骑行要录前后视频留证据"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "骑行要录前后视频留证据": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "后方视野不好后窗被挡夜里看不清想用后视镜屏幕看清后方并录像": {
+    "label": "后方视野不好（后窗被挡、夜里看不清），想用后视镜屏幕看清后方并录像",
+    "by": {
+     "ba34d649c710|US": "后方视野不好（后窗被挡、夜里看不清），想用后视镜屏幕看清后方并录像"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "后方视野不好（后窗被挡、夜里看不清），想用后视镜屏幕看清后方并录像": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "开特斯拉想补足自带哨兵模式的录像": {
+    "label": "开特斯拉，想补足自带哨兵模式的录像",
+    "by": {
+     "ba34d649c710|US": "开特斯拉，想补足自带哨兵模式的录像"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "开特斯拉，想补足自带哨兵模式的录像": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "日常开车要留下事故证据": {
+    "label": "日常开车要留下事故证据",
+    "by": {
+     "ba34d649c710|US": "日常开车要留下事故证据"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "日常开车要留下事故证据": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "皮卡suv车身长常拉货露营后摄要装到车尾或车外": {
+    "label": "皮卡和 SUV 车身长、常拉货露营，后摄要装到车尾或车外",
+    "by": {
+     "ba34d649c710|US": "皮卡和 SUV 车身长、常拉货露营，后摄要装到车尾或车外"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "皮卡和 SUV 车身长、常拉货露营，后摄要装到车尾或车外": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "装好后日常使用中出故障存储卡app录像中断": {
+    "label": "装好后日常使用中出故障（存储卡、App、录像中断）",
+    "by": {
+     "ba34d649c710|US": "装好后日常使用中出故障（存储卡、App、录像中断）"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "装好后日常使用中出故障（存储卡、App、录像中断）": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "跑网约车要记录车内乘客纠纷": {
+    "label": "跑网约车要记录车内乘客和纠纷",
+    "by": {
+     "ba34d649c710|US": "跑网约车要记录车内乘客和纠纷"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "跑网约车要记录车内乘客和纠纷": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "车常停在烈日下暴晒": {
+    "label": "车常停在烈日下暴晒",
+    "by": {
+     "ba34d649c710|US": "车常停在烈日下暴晒"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "车常停在烈日下暴晒": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   }
+  },
+  "topics": {
+   "手机充电器选购": {
+    "label": "手机充电器选购",
+    "by": {
+     "fceb945e449f|KE": "手机充电器选购",
+     "fceb945e449f|NG": "手机充电器选购"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "手机充电器选购": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "真无线耳机选购": {
+    "label": "真无线耳机选购",
+    "by": {
+     "fceb945e449f|KE": "真无线耳机选购",
+     "fceb945e449f|NG": "真无线耳机选购"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "真无线耳机选购": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "笔记本多设备充电器": {
+    "label": "笔记本与多设备充电器",
+    "by": {
+     "fceb945e449f|KE": "笔记本与多设备充电器",
+     "fceb945e449f|NG": "笔记本与多设备充电器"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "笔记本与多设备充电器": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "运动开放式耳机": {
+    "label": "运动与开放式耳机",
+    "by": {
+     "fceb945e449f|KE": "运动与开放式耳机",
+     "fceb945e449f|NG": "运动与开放式耳机"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "运动与开放式耳机": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "摩托车carplay屏批发安装货源": {
+    "label": "摩托车 CarPlay 屏批发与安装货源",
+    "by": {
+     "774eab175c3b|US": "摩托车 CarPlay 屏批发与安装货源"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "摩托车 CarPlay 屏批发与安装货源": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "摩托车carplay屏选购": {
+    "label": "摩托车 CarPlay 屏选购",
+    "by": {
+     "774eab175c3b|US": "摩托车 CarPlay 屏选购"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "摩托车 CarPlay 屏选购": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "摩托车导航设备选购": {
+    "label": "摩托车导航设备选购",
+    "by": {
+     "774eab175c3b|US": "摩托车导航设备选购"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "摩托车导航设备选购": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "全车覆盖行车记录仪选购": {
+    "label": "全车覆盖行车记录仪选购",
+    "by": {
+     "ba34d649c710|US": "全车覆盖行车记录仪选购"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "全车覆盖行车记录仪选购": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪使用故障": {
+    "label": "行车记录仪使用与故障",
+    "by": {
+     "ba34d649c710|US": "行车记录仪使用与故障"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪使用与故障": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪品牌可信度": {
+    "label": "行车记录仪品牌可信度",
+    "by": {
+     "ba34d649c710|US": "行车记录仪品牌可信度"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪品牌可信度": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪品牌对比": {
+    "label": "行车记录仪品牌对比",
+    "by": {
+     "ba34d649c710|US": "行车记录仪品牌对比"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪品牌对比": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪替代选择": {
+    "label": "行车记录仪替代选择",
+    "by": {
+     "ba34d649c710|US": "行车记录仪替代选择"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪替代选择": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪适用性评估": {
+    "label": "行车记录仪适用性评估",
+    "by": {
+     "ba34d649c710|US": "行车记录仪适用性评估"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪适用性评估": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪选购": {
+    "label": "行车记录仪选购",
+    "by": {
+     "ba34d649c710|US": "行车记录仪选购"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪选购": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "行车记录仪选购前问题": {
+    "label": "行车记录仪选购前问题",
+    "by": {
+     "ba34d649c710|US": "行车记录仪选购前问题"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "行车记录仪选购前问题": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   }
+  },
+  "category_terms": {
+   "bluetoothearphones": {
+    "label": "Bluetooth earphones",
+    "by": {
+     "fceb945e449f|KE": "Bluetooth earphones",
+     "fceb945e449f|NG": "Bluetooth earphones"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "Bluetooth earphones": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "twsearbuds": {
+    "label": "TWS earbuds",
+    "by": {
+     "fceb945e449f|KE": "TWS earbuds",
+     "fceb945e449f|NG": "TWS earbuds"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "TWS earbuds": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "typeccharger": {
+    "label": "Type-C charger",
+    "by": {
+     "fceb945e449f|KE": "Type-C charger",
+     "fceb945e449f|NG": "Type-C charger"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "Type-C charger": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "usbccharger": {
+    "label": "USB-C charger",
+    "by": {
+     "fceb945e449f|KE": "USB-C charger",
+     "fceb945e449f|NG": "USB-C charger"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "USB-C charger": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "charger": {
+    "label": "charger",
+    "by": {
+     "fceb945e449f|KE": "charger",
+     "fceb945e449f|NG": "charger"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "charger": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "chargerhead": {
+    "label": "charger head",
+    "by": {
+     "fceb945e449f|KE": "charger head",
+     "fceb945e449f|NG": "charger head"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "charger head": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "earbuds": {
+    "label": "earbuds",
+    "by": {
+     "fceb945e449f|KE": "earbuds",
+     "fceb945e449f|NG": "earbuds"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "earbuds": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "earphones": {
+    "label": "earphones",
+    "by": {
+     "fceb945e449f|KE": "earphones",
+     "fceb945e449f|NG": "earphones"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "earphones": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "earpiece": {
+    "label": "earpiece",
+    "by": {
+     "fceb945e449f|KE": "earpiece",
+     "fceb945e449f|NG": "earpiece"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "earpiece": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "fastcharger": {
+    "label": "fast charger",
+    "by": {
+     "fceb945e449f|KE": "fast charger",
+     "fceb945e449f|NG": "fast charger"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "fast charger": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "phonecharger": {
+    "label": "phone charger",
+    "by": {
+     "fceb945e449f|KE": "phone charger",
+     "fceb945e449f|NG": "phone charger"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "phone charger": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "truewirelessearbuds": {
+    "label": "true wireless earbuds",
+    "by": {
+     "fceb945e449f|KE": "true wireless earbuds",
+     "fceb945e449f|NG": "true wireless earbuds"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "true wireless earbuds": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "wirelessearbuds": {
+    "label": "wireless earbuds",
+    "by": {
+     "fceb945e449f|KE": "wireless earbuds",
+     "fceb945e449f|NG": "wireless earbuds"
+    },
+    "clients": [
+     "fceb945e449f"
+    ],
+    "names": {
+     "wireless earbuds": 1
+    },
+    "markets": [
+     "KE",
+     "NG"
+    ],
+    "categories": [
+     "earbud and charger"
+    ]
+   },
+   "androidauto": {
+    "label": "Android Auto",
+    "by": {
+     "774eab175c3b|US": "Android Auto"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "Android Auto": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "applecarplay": {
+    "label": "Apple CarPlay",
+    "by": {
+     "774eab175c3b|US": "Apple CarPlay"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "Apple CarPlay": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "carplay": {
+    "label": "CarPlay",
+    "by": {
+     "774eab175c3b|US": "CarPlay"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "CarPlay": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "gps": {
+    "label": "GPS",
+    "by": {
+     "774eab175c3b|US": "GPS"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "GPS": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "navigationdevice": {
+    "label": "navigation device",
+    "by": {
+     "774eab175c3b|US": "navigation device"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "navigation device": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "navigationdisplay": {
+    "label": "navigation display",
+    "by": {
+     "774eab175c3b|US": "navigation display"
+    },
+    "clients": [
+     "774eab175c3b"
+    ],
+    "names": {
+     "navigation display": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "motorcycle carplay screen"
+    ]
+   },
+   "digitalrearviewmirror": {
+    "label": "digital rear view mirror",
+    "by": {
+     "ba34d649c710|US": "digital rear view mirror"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "digital rear view mirror": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "mirrordashcam": {
+    "label": "mirror dash cam",
+    "by": {
+     "ba34d649c710|US": "mirror dash cam"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "mirror dash cam": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "rearviewmirrorcamera": {
+    "label": "rear view mirror camera",
+    "by": {
+     "ba34d649c710|US": "rear view mirror camera"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "rear view mirror camera": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   },
+   "rearviewmirrordashcam": {
+    "label": "rear view mirror dash cam",
+    "by": {
+     "ba34d649c710|US": "rear view mirror dash cam"
+    },
+    "clients": [
+     "ba34d649c710"
+    ],
+    "names": {
+     "rear view mirror dash cam": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "dash cam"
+    ]
+   }
+  }
+ },
+ "channels": {},
+ "clients": {
+  "fceb945e449f|KE": {
+   "who": "fceb945e449f",
+   "market": "KE",
+   "category": "earbud and charger",
+   "updated": "2026-11-11"
+  },
+  "fceb945e449f|NG": {
+   "who": "fceb945e449f",
+   "market": "NG",
+   "category": "earbud and charger",
+   "updated": "2026-11-11"
+  },
+  "774eab175c3b|US": {
+   "who": "774eab175c3b",
+   "market": "US",
+   "category": "motorcycle carplay screen",
+   "updated": "2026-11-11"
+  },
+  "ba34d649c710|US": {
+   "who": "ba34d649c710",
+   "market": "US",
+   "category": "dash cam",
+   "updated": "2026-11-11"
+  }
+ },
+ "updated": "2026-11-11"
+}

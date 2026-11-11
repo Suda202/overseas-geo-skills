@@ -1,0 +1,2060 @@
+{
+ "schema": 5,
+ "industry": "工业品与零部件",
+ "items": {
+  "constraints": {
+   "便携": {
+    "label": "便携",
+    "by": {
+     "00eb03a926a2|UK": "便携"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "便携": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "全量程精度": {
+    "label": "全量程精度",
+    "by": {
+     "00eb03a926a2|UK": "全量程精度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "全量程精度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "分析技术": {
+    "label": "分析技术",
+    "by": {
+     "00eb03a926a2|UK": "分析技术"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "分析技术": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "切割质量": {
+    "label": "切割质量",
+    "by": {
+     "00eb03a926a2|UK": "切割质量"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "切割质量": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "可读性": {
+    "label": "可读性",
+    "by": {
+     "00eb03a926a2|UK": "可读性"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "可读性": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "合规": {
+    "label": "合规",
+    "by": {
+     "00eb03a926a2|UK": "合规"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "合规": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "售后备件": {
+    "label": "售后与备件",
+    "by": {
+     "00eb03a926a2|UK": "售后与备件"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "售后与备件": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "图像测量软件": {
+    "label": "图像与测量软件",
+    "by": {
+     "00eb03a926a2|UK": "图像与测量软件"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "图像与测量软件": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "基材类型": {
+    "label": "基材类型",
+    "by": {
+     "00eb03a926a2|UK": "基材类型"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "基材类型": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "孔径测量": {
+    "label": "孔径测量",
+    "by": {
+     "00eb03a926a2|UK": "孔径测量"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "孔径测量": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "工作距离": {
+    "label": "工作距离",
+    "by": {
+     "00eb03a926a2|UK": "工作距离"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "工作距离": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "弯曲探头": {
+    "label": "弯曲与探头",
+    "by": {
+     "00eb03a926a2|UK": "弯曲与探头"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "弯曲与探头": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "性价比": {
+    "label": "性价比",
+    "by": {
+     "00eb03a926a2|UK": "性价比"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "性价比": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "拍照录像": {
+    "label": "拍照录像",
+    "by": {
+     "00eb03a926a2|UK": "拍照录像"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "拍照录像": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "探头直径": {
+    "label": "探头直径",
+    "by": {
+     "00eb03a926a2|UK": "探头直径"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "探头直径": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "放大倍率": {
+    "label": "放大倍率",
+    "by": {
+     "00eb03a926a2|UK": "放大倍率"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "放大倍率": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "数据导出": {
+    "label": "数据导出",
+    "by": {
+     "00eb03a926a2|UK": "数据导出"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "数据导出": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "数据记录": {
+    "label": "数据记录",
+    "by": {
+     "00eb03a926a2|UK": "数据记录"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "数据记录": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "数据追溯": {
+    "label": "数据追溯",
+    "by": {
+     "00eb03a926a2|UK": "数据追溯"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "数据追溯": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "数控系统兼容": {
+    "label": "数控系统兼容",
+    "by": {
+     "00eb03a926a2|UK": "数控系统兼容"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "数控系统兼容": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "易操作": {
+    "label": "易操作",
+    "by": {
+     "00eb03a926a2|UK": "易操作"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "易操作": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "曲面测量": {
+    "label": "曲面测量",
+    "by": {
+     "00eb03a926a2|UK": "曲面测量"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "曲面测量": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "标准符合": {
+    "label": "标准符合",
+    "by": {
+     "00eb03a926a2|UK": "标准符合"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "标准符合": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "校准证书": {
+    "label": "校准与证书",
+    "by": {
+     "00eb03a926a2|UK": "校准与证书"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "校准与证书": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "校准方式": {
+    "label": "校准方式",
+    "by": {
+     "00eb03a926a2|UK": "校准方式"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "校准方式": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "校验": {
+    "label": "校验",
+    "by": {
+     "00eb03a926a2|UK": "校验"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "校验": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检测方法": {
+    "label": "检测方法",
+    "by": {
+     "00eb03a926a2|UK": "检测方法"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检测方法": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测试台": {
+    "label": "测试台",
+    "by": {
+     "00eb03a926a2|UK": "测试台"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测试台": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测试方法": {
+    "label": "测试方法",
+    "by": {
+     "00eb03a926a2|UK": "测试方法"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测试方法": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测量原理": {
+    "label": "测量原理",
+    "by": {
+     "00eb03a926a2|UK": "测量原理"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测量原理": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测量对象": {
+    "label": "测量对象",
+    "by": {
+     "00eb03a926a2|UK": "测量对象"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测量对象": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测量空间": {
+    "label": "测量空间",
+    "by": {
+     "00eb03a926a2|UK": "测量空间"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测量空间": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测量范围": {
+    "label": "测量范围",
+    "by": {
+     "00eb03a926a2|UK": "测量范围"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测量范围": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "精度": {
+    "label": "精度",
+    "by": {
+     "00eb03a926a2|UK": "精度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "精度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "耐用": {
+    "label": "耐用",
+    "by": {
+     "00eb03a926a2|UK": "耐用"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "耐用": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "耗材兼容": {
+    "label": "耗材兼容",
+    "by": {
+     "00eb03a926a2|UK": "耗材兼容"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "耗材兼容": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "自动化": {
+    "label": "自动化",
+    "by": {
+     "00eb03a926a2|UK": "自动化"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "自动化": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "自动化程度": {
+    "label": "自动化程度",
+    "by": {
+     "00eb03a926a2|UK": "自动化程度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "自动化程度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "补偿功能": {
+    "label": "补偿功能",
+    "by": {
+     "00eb03a926a2|UK": "补偿功能"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "补偿功能": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "计数": {
+    "label": "计数",
+    "by": {
+     "00eb03a926a2|UK": "计数"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "计数": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "试验类型": {
+    "label": "试验类型",
+    "by": {
+     "00eb03a926a2|UK": "试验类型"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "试验类型": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "车间型": {
+    "label": "车间型",
+    "by": {
+     "00eb03a926a2|UK": "车间型"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "车间型": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "软件易用": {
+    "label": "软件易用",
+    "by": {
+     "00eb03a926a2|UK": "软件易用"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "软件易用": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "软件标准库": {
+    "label": "软件标准库",
+    "by": {
+     "00eb03a926a2|UK": "软件标准库"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "软件标准库": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "运行成本": {
+    "label": "运行成本",
+    "by": {
+     "00eb03a926a2|UK": "运行成本"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "运行成本": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "采样精度": {
+    "label": "采样与精度",
+    "by": {
+     "00eb03a926a2|UK": "采样与精度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "采样与精度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "重复性": {
+    "label": "重复性",
+    "by": {
+     "00eb03a926a2|UK": "重复性"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "重复性": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "防冷却液": {
+    "label": "防冷却液",
+    "by": {
+     "00eb03a926a2|UK": "防冷却液"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "防冷却液": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "预算": {
+    "label": "预算",
+    "by": {
+     "00eb03a926a2|UK": "预算"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "预算": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   }
+  },
+  "audiences": {
+   "个人技工机械爱好者": {
+    "label": "个人技工与机械爱好者",
+    "by": {
+     "00eb03a926a2|UK": "个人技工与机械爱好者"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "个人技工与机械爱好者": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "工厂仓库": {
+    "label": "工厂与仓库",
+    "by": {
+     "00eb03a926a2|UK": "工厂与仓库"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "工厂与仓库": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "机加工车间": {
+    "label": "机加工车间",
+    "by": {
+     "00eb03a926a2|UK": "机加工车间"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "机加工车间": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "材料检测实验室": {
+    "label": "材料检测实验室",
+    "by": {
+     "00eb03a926a2|UK": "材料检测实验室"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "材料检测实验室": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "汽修技师": {
+    "label": "汽修技师",
+    "by": {
+     "00eb03a926a2|UK": "汽修技师"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "汽修技师": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "涂装表面处理质检": {
+    "label": "涂装与表面处理质检",
+    "by": {
+     "00eb03a926a2|UK": "涂装与表面处理质检"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "涂装与表面处理质检": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "生产装配线": {
+    "label": "生产装配线",
+    "by": {
+     "00eb03a926a2|UK": "生产装配线"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "生产装配线": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "电子制造车间": {
+    "label": "电子制造车间",
+    "by": {
+     "00eb03a926a2|UK": "电子制造车间"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "电子制造车间": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "线缆纺织产线": {
+    "label": "线缆与纺织产线",
+    "by": {
+     "00eb03a926a2|UK": "线缆与纺织产线"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "线缆与纺织产线": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "设备维护无损检测人员": {
+    "label": "设备维护与无损检测人员",
+    "by": {
+     "00eb03a926a2|UK": "设备维护与无损检测人员"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "设备维护与无损检测人员": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "质检计量部门": {
+    "label": "质检与计量部门",
+    "by": {
+     "00eb03a926a2|UK": "质检与计量部门"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "质检与计量部门": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "金属回收铸造": {
+    "label": "金属回收与铸造",
+    "by": {
+     "00eb03a926a2|UK": "金属回收与铸造"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "金属回收与铸造": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   }
+  },
+  "scenes": {
+   "不拆发动机看缸内状况": {
+    "label": "不拆发动机看缸内状况",
+    "by": {
+     "00eb03a926a2|UK": "不拆发动机看缸内状况"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "不拆发动机看缸内状况": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "买第一把扭矩扳手修车": {
+    "label": "买第一把扭矩扳手修车",
+    "by": {
+     "00eb03a926a2|UK": "买第一把扭矩扳手修车"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "买第一把扭矩扳手修车": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "做拉伸压缩弯曲试验": {
+    "label": "做拉伸、压缩、弯曲试验",
+    "by": {
+     "00eb03a926a2|UK": "做拉伸、压缩、弯曲试验"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "做拉伸、压缩、弯曲试验": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "分拣废金属或炉前控碳": {
+    "label": "分拣废金属或炉前控碳",
+    "by": {
+     "00eb03a926a2|UK": "分拣废金属或炉前控碳"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "分拣废金属或炉前控碳": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "在产线上测线材纱线张力": {
+    "label": "在产线上测线材、纱线张力",
+    "by": {
+     "00eb03a926a2|UK": "在产线上测线材、纱线张力"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "在产线上测线材、纱线张力": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "在现场测搬不动的大件硬度": {
+    "label": "在现场测搬不动的大件硬度",
+    "by": {
+     "00eb03a926a2|UK": "在现场测搬不动的大件硬度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "在现场测搬不动的大件硬度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "定期校验扭矩扳手螺丝刀": {
+    "label": "定期校验扭矩扳手和螺丝刀",
+    "by": {
+     "00eb03a926a2|UK": "定期校验扭矩扳手和螺丝刀"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "定期校验扭矩扳手和螺丝刀": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "实验室精密称量": {
+    "label": "实验室精密称量",
+    "by": {
+     "00eb03a926a2|UK": "实验室精密称量"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "实验室精密称量": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "拧紧关键螺栓并记录扭矩": {
+    "label": "拧紧关键螺栓并记录扭矩",
+    "by": {
+     "00eb03a926a2|UK": "拧紧关键螺栓并记录扭矩"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "拧紧关键螺栓并记录扭矩": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "新建或升级金相制样线": {
+    "label": "新建或升级金相制样线",
+    "by": {
+     "00eb03a926a2|UK": "新建或升级金相制样线"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "新建或升级金相制样线": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "替换老旧或校准不过的cmm": {
+    "label": "替换老旧或校准不过的 CMM",
+    "by": {
+     "00eb03a926a2|UK": "替换老旧或校准不过的 CMM"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "替换老旧或校准不过的 CMM": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "来料在制品核对合金牌号": {
+    "label": "来料和在制品核对合金牌号",
+    "by": {
+     "00eb03a926a2|UK": "来料和在制品核对合金牌号"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "来料和在制品核对合金牌号": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "核对铝铜等非铁金属的牌号热处理状态": {
+    "label": "核对铝、铜等非铁金属的牌号和热处理状态",
+    "by": {
+     "00eb03a926a2|UK": "核对铝、铜等非铁金属的牌号和热处理状态"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "核对铝、铜等非铁金属的牌号和热处理状态": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检查pcb焊点装配": {
+    "label": "检查 PCB 焊点和装配",
+    "by": {
+     "00eb03a926a2|UK": "检查 PCB 焊点和装配"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检查 PCB 焊点和装配": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检查发动机涡轮管道内部": {
+    "label": "检查发动机、涡轮、管道内部",
+    "by": {
+     "00eb03a926a2|UK": "检查发动机、涡轮、管道内部"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检查发动机、涡轮、管道内部": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检查车身漆面是否修补过": {
+    "label": "检查车身漆面是否修补过",
+    "by": {
+     "00eb03a926a2|UK": "检查车身漆面是否修补过"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检查车身漆面是否修补过": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检查零件表面缺陷并做尺寸测量": {
+    "label": "检查零件表面缺陷并做尺寸测量",
+    "by": {
+     "00eb03a926a2|UK": "检查零件表面缺陷并做尺寸测量"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检查零件表面缺陷并做尺寸测量": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检测焊缝锻铸件在役设备的裂纹": {
+    "label": "检测焊缝、锻铸件和在役设备的裂纹",
+    "by": {
+     "00eb03a926a2|UK": "检测焊缝、锻铸件和在役设备的裂纹"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检测焊缝、锻铸件和在役设备的裂纹": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "检验室配能通过校准的精密量具": {
+    "label": "检验室配能通过校准的精密量具",
+    "by": {
+     "00eb03a926a2|UK": "检验室配能通过校准的精密量具"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "检验室配能通过校准的精密量具": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测轴承轴类零件的圆度圆柱度": {
+    "label": "测轴承、轴类零件的圆度和圆柱度",
+    "by": {
+     "00eb03a926a2|UK": "测轴承、轴类零件的圆度和圆柱度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测轴承、轴类零件的圆度和圆柱度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "测零部件的推拉力弹簧力按键力": {
+    "label": "测零部件的推拉力、弹簧力和按键力",
+    "by": {
+     "00eb03a926a2|UK": "测零部件的推拉力、弹簧力和按键力"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "测零部件的推拉力、弹簧力和按键力": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "热处理后来料检验测硬度": {
+    "label": "热处理后和来料检验测硬度",
+    "by": {
+     "00eb03a926a2|UK": "热处理后和来料检验测硬度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "热处理后和来料检验测硬度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "第一次建检测室或把cmm放到机床旁": {
+    "label": "第一次建检测室或把 CMM 放到机床旁",
+    "by": {
+     "00eb03a926a2|UK": "第一次建检测室或把 CMM 放到机床旁"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "第一次建检测室或把 CMM 放到机床旁": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "给数控机床装测头减少找正对刀停机": {
+    "label": "给数控机床装测头、减少找正和对刀停机",
+    "by": {
+     "00eb03a926a2|UK": "给数控机床装测头、减少找正和对刀停机"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "给数控机床装测头、减少找正和对刀停机": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "给车间操作工配日常尺寸量具": {
+    "label": "给车间操作工配日常尺寸量具",
+    "by": {
+     "00eb03a926a2|UK": "给车间操作工配日常尺寸量具"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "给车间操作工配日常尺寸量具": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "自掏腰包配自己的量具": {
+    "label": "自掏腰包配自己的量具",
+    "by": {
+     "00eb03a926a2|UK": "自掏腰包配自己的量具"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "自掏腰包配自己的量具": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "观察金属显微组织": {
+    "label": "观察金属显微组织",
+    "by": {
+     "00eb03a926a2|UK": "观察金属显微组织"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "观察金属显微组织": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "调整传动皮带张力": {
+    "label": "调整传动皮带张力",
+    "by": {
+     "00eb03a926a2|UK": "调整传动皮带张力"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "调整传动皮带张力": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "车间或检验室测零件表面粗糙度": {
+    "label": "车间或检验室测零件表面粗糙度",
+    "by": {
+     "00eb03a926a2|UK": "车间或检验室测零件表面粗糙度"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "车间或检验室测零件表面粗糙度": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "车间计数称重": {
+    "label": "车间计数和称重",
+    "by": {
+     "00eb03a926a2|UK": "车间计数和称重"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "车间计数和称重": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "验收喷涂粉末涂层镀锌层": {
+    "label": "验收喷涂、粉末涂层和镀锌层",
+    "by": {
+     "00eb03a926a2|UK": "验收喷涂、粉末涂层和镀锌层"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "验收喷涂、粉末涂层和镀锌层": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   }
+  },
+  "topics": {
+   "万能材料试验机选购": {
+    "label": "万能材料试验机选购",
+    "by": {
+     "00eb03a926a2|UK": "万能材料试验机选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "万能材料试验机选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "三坐标测量机选购": {
+    "label": "三坐标测量机选购",
+    "by": {
+     "00eb03a926a2|UK": "三坐标测量机选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "三坐标测量机选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "圆度表面粗糙度测量仪选购": {
+    "label": "圆度与表面粗糙度测量仪选购",
+    "by": {
+     "00eb03a926a2|UK": "圆度与表面粗糙度测量仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "圆度与表面粗糙度测量仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "实验室天平工业秤选购": {
+    "label": "实验室天平与工业秤选购",
+    "by": {
+     "00eb03a926a2|UK": "实验室天平与工业秤选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "实验室天平与工业秤选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "工业内窥镜选购": {
+    "label": "工业内窥镜选购",
+    "by": {
+     "00eb03a926a2|UK": "工业内窥镜选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "工业内窥镜选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "工业扭矩扳手扭矩校验设备选购": {
+    "label": "工业扭矩扳手与扭矩校验设备选购",
+    "by": {
+     "00eb03a926a2|UK": "工业扭矩扳手与扭矩校验设备选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "工业扭矩扳手与扭矩校验设备选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "工业检测显微镜选购": {
+    "label": "工业检测显微镜选购",
+    "by": {
+     "00eb03a926a2|UK": "工业检测显微镜选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "工业检测显微镜选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "张力计选购": {
+    "label": "张力计选购",
+    "by": {
+     "00eb03a926a2|UK": "张力计选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "张力计选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "推拉力计选购": {
+    "label": "推拉力计选购",
+    "by": {
+     "00eb03a926a2|UK": "推拉力计选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "推拉力计选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "无损探伤仪选购": {
+    "label": "无损探伤仪选购",
+    "by": {
+     "00eb03a926a2|UK": "无损探伤仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "无损探伤仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "机床测头对刀仪选购": {
+    "label": "机床测头与对刀仪选购",
+    "by": {
+     "00eb03a926a2|UK": "机床测头与对刀仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "机床测头与对刀仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "涂层测厚涂层检测仪选购": {
+    "label": "涂层测厚与涂层检测仪选购",
+    "by": {
+     "00eb03a926a2|UK": "涂层测厚与涂层检测仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "涂层测厚与涂层检测仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "硬度计选购": {
+    "label": "硬度计选购",
+    "by": {
+     "00eb03a926a2|UK": "硬度计选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "硬度计选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "车间精密量具选购": {
+    "label": "车间精密量具选购",
+    "by": {
+     "00eb03a926a2|UK": "车间精密量具选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "车间精密量具选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "金属成分分析仪选购": {
+    "label": "金属成分分析仪选购",
+    "by": {
+     "00eb03a926a2|UK": "金属成分分析仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "金属成分分析仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "金属电导率仪选购": {
+    "label": "金属电导率仪选购",
+    "by": {
+     "00eb03a926a2|UK": "金属电导率仪选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "金属电导率仪选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "金相制样设备选购": {
+    "label": "金相制样设备选购",
+    "by": {
+     "00eb03a926a2|UK": "金相制样设备选购"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "金相制样设备选购": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   }
+  },
+  "category_terms": {
+   "borescope": {
+    "label": "borescope",
+    "by": {
+     "00eb03a926a2|UK": "borescope"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "borescope": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "calipers": {
+    "label": "calipers",
+    "by": {
+     "00eb03a926a2|UK": "calipers"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "calipers": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "callipers": {
+    "label": "callipers",
+    "by": {
+     "00eb03a926a2|UK": "callipers"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "callipers": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   },
+   "videoscope": {
+    "label": "videoscope",
+    "by": {
+     "00eb03a926a2|UK": "videoscope"
+    },
+    "clients": [
+     "00eb03a926a2"
+    ],
+    "names": {
+     "videoscope": 1
+    },
+    "markets": [
+     "UK"
+    ],
+    "categories": [
+     "precision measuring instrument"
+    ]
+   }
+  }
+ },
+ "channels": {},
+ "clients": {
+  "00eb03a926a2|UK": {
+   "who": "00eb03a926a2",
+   "market": "UK",
+   "category": "precision measuring instrument",
+   "updated": "2026-11-11"
+  }
+ },
+ "updated": "2026-11-11"
+}

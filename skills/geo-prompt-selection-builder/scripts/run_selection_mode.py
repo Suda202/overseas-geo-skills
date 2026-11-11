@@ -344,6 +344,7 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         elif src.is_file():
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
+    sync_industry_kb(ws)
     task = task_file.read_text(encoding="utf-8") if task_file else TASK.format(market=market, locale=locale, platforms=",".join(names),
                                                                                   reddit_max=os.environ.get("NET_REDDIT_MAX", "10"))
     if domestic() and not task_file:
@@ -965,6 +966,26 @@ def main() -> int:
     if code == 0:
         learn_industry(ws, testing=bool(a.task_file))
     return code
+
+
+def sync_industry_kb(ws: Path) -> None:
+    """服务器设了 GEO_INDUSTRY_KB（持久化目录）时：目录还空就从随 skill 的档案复制一份，再把这个目录的档案拷进
+    工作目录里的 skill，agent 读到的是持续积累的那份，不是随 skill 发布时的那份。出错只打印，不挡运行。"""
+    if not os.environ.get("GEO_INDUSTRY_KB", "").strip():
+        return
+    try:
+        import industry_kb  # noqa: PLC0415
+        industry_kb.seed_if_empty()
+        src = industry_kb.kb_dir()
+        dst = ws / ".agents/skills/geo-prompt-selection-builder/references/industry-knowledge"
+        dst.mkdir(parents=True, exist_ok=True)
+        for f in list(dst.glob("*.md")) + list(dst.glob("*.json")):  # 工作目录里的副本，换成持久化目录的最新档案
+            f.unlink()
+        for f in src.iterdir():
+            if f.is_file() and f.suffix in (".md", ".json"):
+                shutil.copy2(f, dst / f.name)
+    except Exception as exc:  # noqa: BLE001
+        print(f"行业知识档案没拷进工作目录：{type(exc).__name__}: {exc}", file=sys.stderr)
 
 
 def learn_industry(ws: Path, testing: bool = False) -> None:

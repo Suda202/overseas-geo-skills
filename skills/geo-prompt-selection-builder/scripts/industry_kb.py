@@ -5,7 +5,9 @@
 档案只存品类层面的东西，不存品牌名、竞品名、域名、买家原话和客户资料（skill 要推公开仓库、要交给研发平台化）：
   约束条件、目标客户、使用场景、主题名、品类叫法（来自题库 bank.json 的矩阵行和主题）
   渠道效果（来自线上 precollect：哪些评价站、社区采到了、哪些没采到）
-条目里含本客户品牌名、品牌别名或竞品名的整条跳过。客户只记品牌名的 SHA-1 前 10 位，用来数「出现在几个客户」。
+条目里含本客户品牌名、品牌别名或竞品名的整条跳过；和品牌资料（Case）里 12 字以上的原句一字不差的也跳过（原句能认出客户）。客户只记品牌名的加盐哈希（HMAC-SHA256 前 12 位，盐取环境变量
+GEO_INDUSTRY_KB_SALT 或 macOS 钥匙串同名项），用来数「出现在几个客户」；档案随 skill 公开，不加盐的哈希拿品牌名一算就能对上。
+没有盐不写档案。本地和服务器要用同一个盐，否则同一客户会被算成两个。
 同一客户同一市场重跑以最近一次为准：先把这次（品牌 × 市场）从所有行业档案里撤掉再并入，换了行业或品类也不会重复计；
 同一品牌不同市场分开记、合起来算 1 个客户。没有客户的「品类-」文件随之删除。
 写法只差连接词、标点、空格的算同一条（「价格与预算」「价格预算」）。
@@ -21,16 +23,23 @@
   python3 -I industry_kb.py add --bank <bank.json> --industry <行业> --category <英文品类词> [--market US] [--brand <品牌>] [--competitor <竞品> …]
   python3 -I industry_kb.py show --industry <行业> [--category <品类>]
 
-数据一个行业一份 <行业>.json；档案目录默认是本 skill 的 references/industry-knowledge/，环境变量 GEO_INDUSTRY_KB 可改。
+  python3 -I industry_kb.py seed                           GEO_INDUSTRY_KB 目录还没有档案时，从随 skill 发布的档案复制一份（runner prepare 自动做）
+
+数据一个行业一份 <行业>.json；档案目录默认是本 skill 的 references/industry-knowledge/（随 skill 发布，是积累的起点），
+服务器用环境变量 GEO_INDUSTRY_KB 指到持久化目录：第一次用时从随 skill 的档案复制，之后在那里继续积累；
+runner 每次 prepare 把这个目录的档案拷进工作目录，agent 读到的是最新的。
 线上判成「其他」的行业记「其他」，靠品类区分。
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -41,9 +50,43 @@ SECTIONS = {"constraints": "常见约束条件", "audiences": "目标客户", "s
 TOP_N = 20
 
 
+BUNDLED = SKILL / "references" / "industry-knowledge"
+SALT_ENV = "GEO_INDUSTRY_KB_SALT"
+
+
 def kb_dir() -> Path:
     raw = os.environ.get("GEO_INDUSTRY_KB", "").strip()
-    return Path(raw) if raw else SKILL / "references" / "industry-knowledge"
+    return Path(raw) if raw else BUNDLED
+
+
+def seed_if_empty() -> Path | None:
+    """GEO_INDUSTRY_KB 指的目录还没有档案时，从随 skill 发布的档案复制一份；已有档案或就是随 skill 的目录时不动。"""
+    d = kb_dir()
+    if d.resolve() == BUNDLED.resolve() or (d.is_dir() and any(d.glob("*.json"))):
+        return None
+    d.mkdir(parents=True, exist_ok=True)
+    for f in BUNDLED.iterdir():
+        if f.is_file():
+            shutil.copy2(f, d / f.name)
+    return d
+
+
+def _salt() -> str:
+    s = os.environ.get(SALT_ENV, "").strip()
+    if s:
+        return s
+    try:
+        return subprocess.run(["security", "find-generic-password", "-s", SALT_ENV, "-w"],
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return ""
+
+
+def client_id(brand: str) -> str:
+    salt = _salt()
+    if not salt:
+        raise RuntimeError(f"缺 {SALT_ENV}（环境变量或钥匙串）：档案随 skill 公开，品牌标识必须加盐，没有盐不写")
+    return hmac.new(salt.encode("utf-8"), brand.strip().lower().encode("utf-8"), hashlib.sha256).hexdigest()[:12]
 
 
 def _slug(text: str) -> str:
@@ -71,9 +114,27 @@ def _forbidden(names: list[str]):
     return lambda text: any(n in text.lower() for n in low)
 
 
-def extract(bank: dict, brand: str, competitors: list[str]) -> dict:
-    """从题库抽品类层面的条目；含品牌、竞品名的跳过。"""
-    bad = _forbidden([brand, *competitors])
+def case_sentences(obj) -> set[str]:
+    """品牌资料里 12 字以上的文字值：和它们一字不差的条目不进档案。"""
+    out: set[str] = set()
+    if isinstance(obj, str):
+        s = _clean(obj)
+        if len(s) >= 12 and not s.startswith("http"):
+            out.add(s)
+    elif isinstance(obj, list):
+        for x in obj:
+            out |= case_sentences(x)
+    elif isinstance(obj, dict):
+        for x in obj.values():
+            out |= case_sentences(x)
+    return out
+
+
+def extract(bank: dict, brand: str, competitors: list[str], case_text: set[str] | None = None) -> dict:
+    """从题库抽品类层面的条目；含品牌、竞品名的跳过，照抄品牌资料原句的跳过。"""
+    names = _forbidden([brand, *competitors])
+    quoted = case_text or set()
+    bad = lambda v: names(v) or (len(v) >= 12 and (v in quoted or any(q in v for q in quoted)))  # noqa: E731
     cfg = bank.get("config") or {}
     out: dict[str, set] = {k: set() for k in SECTIONS}
     for s in cfg.get("slices") or []:
@@ -106,20 +167,20 @@ def _add(lst: list, v) -> None:
 
 
 def merge(industry: str, category: str, market: str, brand: str, items: dict, channels: list[dict]) -> Path:
+    who = client_id(brand)  # 先取盐，没有盐什么都不写
     d = kb_dir()
     d.mkdir(parents=True, exist_ok=True)
     path = d / f"{_slug(industry)}.json"
     kb = _load(path)
-    if kb.get("schema") != 4:  # 旧结构不知道每个客户贡献了哪种写法，重建（回填脚本会重新并入）
-        kb = {"schema": 4, "industry": industry, "items": {k: {} for k in SECTIONS}, "channels": {}, "clients": {}}
+    if kb.get("schema") != 5:  # 旧结构的品牌标识没加盐，重建（回填脚本会重新并入）
+        kb = {"schema": 5, "industry": industry, "items": {k: {} for k in SECTIONS}, "channels": {}, "clients": {}}
     category = norm_category(category) or "未分品类"
-    who = hashlib.sha1(brand.strip().lower().encode("utf-8")).hexdigest()[:10]
     today = time.strftime("%Y-%m-%d")
     run = f"{who}|{market}"  # 一次 = 品牌 × 市场；同一品牌不同市场分开记，数客户时合并
     for other in d.glob("*.json"):  # 同一品牌同一市场重跑以最近一次为准：先从所有行业撤掉，换了行业也不重复计
         if other != path:
             okb = _load(other)
-            if okb.get("schema") == 4 and run in okb.get("clients", {}):
+            if okb.get("schema") == 5 and run in okb.get("clients", {}):
                 drop_run(okb, run)
                 _save(other, okb)
     drop_run(kb, run)
@@ -282,7 +343,8 @@ def add_from_ws(ws: Path) -> Path | None:
     category = plan.get("category_en") or ((bank.get("config") or {}).get("category_aliases") or [""])[0]
     if not bank or not brand:
         return None
-    return merge(industry, category, market, brand, extract(bank, brand, comps), channels_from_ws(ws))
+    quoted = case_sentences(_load(ws / "inputs/case.json")) | case_sentences(norm)
+    return merge(industry, category, market, brand, extract(bank, brand, comps, quoted), channels_from_ws(ws))
 
 
 def main() -> int:
@@ -296,10 +358,17 @@ def main() -> int:
     a1.add_argument("--market", default="")
     a1.add_argument("--brand", default="", help="本地题库用：品牌名（只用来去重和过滤，不写进档案）")
     a1.add_argument("--competitor", action="append", default=[], help="本地题库用：竞品名，含竞品名的条目不进档案")
+    a1.add_argument("--case", action="append", type=Path, default=[],
+                    help="本地题库用：品牌资料（Case JSON），照抄其中 12 字以上原句的条目不进档案；有几份给几份")
+    sub.add_parser("seed")
     a2 = sub.add_parser("show")
     a2.add_argument("--industry", required=True)
     a2.add_argument("--category", default="")
     a = ap.parse_args()
+    if a.cmd == "seed":
+        d = seed_if_empty()
+        print(f"已从随 skill 的档案复制到 {d}" if d else f"不用复制：{kb_dir()} 已有档案或就是随 skill 的目录")
+        return 0
     if a.cmd == "show":
         kb = _load(kb_dir() / f"{_slug(a.industry)}.json")
         if not kb:
@@ -307,6 +376,9 @@ def main() -> int:
         else:
             print(render_category(kb, norm_category(a.category)) if a.category else render_industry(kb))
         return 0
+    if not _salt():
+        print(f"没有并入：缺 {SALT_ENV}（环境变量或钥匙串），品牌标识必须加盐", file=sys.stderr)
+        return 2
     if a.ws:
         path = add_from_ws(a.ws.resolve())
         print(f"已并入 {path}" if path else "没有并入：行业没判出来、或缺题库 / 品牌名")
@@ -320,7 +392,10 @@ def main() -> int:
         ap.error("题库里没有 config.brand_name，用 --brand 给")
     market = (a.market or (cfg.get("collection_config") or {}).get("market") or "").upper()
     category = a.category or (cfg.get("category_aliases") or [""])[0]
-    print(f"已并入 {merge(a.industry, category, market, brand, extract(bank, brand, a.competitor), [])}")
+    quoted: set[str] = set()
+    for c in a.case:
+        quoted |= case_sentences(_load(c))
+    print(f"已并入 {merge(a.industry, category, market, brand, extract(bank, brand, a.competitor, quoted), [])}")
     return 0
 
 

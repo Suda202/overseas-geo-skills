@@ -12,8 +12,11 @@
   K6 行业写「其他」时记成「其他」，靠品类区分
   K7 本地题库 `add --bank --industry --brand --competitor` 能并入
   K7b 同一品牌另一个市场分开记，合起来仍算 1 个客户
+  K7c 照抄品牌资料（Case）12 字以上原句的条目不进档案
   K8 runner 钩子：learn_industry 在测试模式且没设 GEO_INDUSTRY_KB 时不写；设了就写，并在 result.json 记 industry_kb
   K9 prepare 写出的 TASK.md 让 agent 读 references/industry-knowledge/
+  K11 品牌标识加盐，没有盐不写
+  K12 服务器持久化目录：第一次从随 skill 的档案复制，之后的积累拷进工作目录
   K10 同一客户重跑换了行业和品类：从旧行业撤掉、不重复计；没有客户的旧品类文件删除
 
 产物：reports/industry-kb-e2e.md；临时目录跑完删除。
@@ -71,6 +74,7 @@ def make_ws(root: Path, name: str, brand: str, aliases: list[str], comps: list[s
 def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="e2e-kb-"))
     kbdir = tmp / "kb"
+    os.environ["GEO_INDUSTRY_KB_SALT"] = "e2e-test-salt"  # 测试用盐，不碰钥匙串里的正式盐
     env = {**os.environ, "GEO_INDUSTRY_KB": str(kbdir)}
 
     def add(*args):
@@ -161,6 +165,19 @@ def main() -> int:
               rc == 0 and len(e4b["clients"]) == 3 and {"TH", "VN"} <= set(e4b["markets"]) and len({c["who"] for c in kb4b["clients"].values()}) == len(kb4b["clients"]) - 1
               and "夜间画质（通用，3 个客户" in (kbdir / "品类-dash-cam.md").read_text(encoding="utf-8"), json.dumps(e4b, ensure_ascii=False))
 
+        # K7c 照抄品牌资料原句（12 字以上）的条目不进档案
+        case_c = tmp / "case-c.json"
+        case_c.write_text(json.dumps({"case": {"使用场景 1": "凌晨在地下车库停车被人划车要留证据"}}, ensure_ascii=False), encoding="utf-8")
+        bank_c = tmp / "bank_c.json"
+        bank_c.write_text(json.dumps({"config": {"brand_name": "Quovo", "slices": [
+            {"attributes": ["夜间画质"], "audience": "私家车车主", "scene": "凌晨在地下车库停车被人划车要留证据"},
+            {"attributes": [], "audience": "私家车车主", "scene": "长途自驾记录路况"}], "topics": []}}, ensure_ascii=False), encoding="utf-8")
+        rc, out = add("--bank", bank_c, "--industry", "消费电子与智能家居", "--category", "dash cam", "--market", "US", "--case", case_c)
+        kb7c = json.loads((kbdir / "消费电子与智能家居.json").read_text(encoding="utf-8"))
+        scenes = {e["label"] for e in kb7c["items"]["scenes"].values()}
+        check("K7c 照抄品牌资料原句的条目不进档案，短的照常进",
+              rc == 0 and "凌晨在地下车库停车被人划车要留证据" not in scenes and "长途自驾记录路况" in scenes, str(sorted(scenes)) + out)
+
         # K10 同一客户重跑换了行业和品类：从旧行业撤掉、不重复计；没有客户的旧品类文件删掉
         ws_a2 = make_ws(tmp, "a2", "Zorbo", ["ZorboCam"], ["Velor", "Nexo"],
                         ["夜间画质", "停车监控"], [], industry="其他", category_en="car camera")
@@ -171,7 +188,7 @@ def main() -> int:
         ot = json.loads((kbdir / "其他.json").read_text(encoding="utf-8"))
         zorbo = [w for w, c in ot["clients"].items() if c["category"] == "car camera"]
         check("K10 换行业换品类：旧行业撤掉、新行业记上；没客户的旧品类文件删除",
-              len(zorbo) == 1 and zorbo[0] not in ce["clients"] and len(ce["items"]["constraints"]["夜间画质"]["clients"]) == 2
+              len(zorbo) == 1 and zorbo[0] not in ce["clients"] and len(ce["items"]["constraints"]["夜间画质"]["clients"]) == 3
               and "停车监控" not in ce["items"]["constraints"] and "停车监控" in ot["items"]["constraints"]
               and len(ot["clients"]) == 2 and (kbdir / "品类-car-camera.md").exists() and (kbdir / "品类-dash-cam.md").exists()
               and not (kbdir / "品类-pet-feeder.md").exists() and (kbdir / "品类-automatic-pet-feeder.md").exists(),
@@ -204,6 +221,35 @@ def main() -> int:
         check("K9 TASK.md 让 agent 调研前读行业和最接近的品类档案", "references/industry-knowledge/" in task and "品类-" in task
               and "行业-" in task and "假设级线索" in task,
               p.stdout[-200:] + p.stderr[-200:])
+
+        # K11 品牌标识加盐：档案里搜不到不加盐的哈希；没有盐不写
+        import hashlib
+        plain = hashlib.sha1(b"zorbo").hexdigest()[:10]
+        blob_all = "".join(f.read_text(encoding="utf-8") for f in kbdir.glob("*.json"))
+        kbns = tmp / "kb-nosalt"
+        env_ns = {k: v for k, v in env.items() if k != "GEO_INDUSTRY_KB_SALT"}
+        env_ns.update(GEO_INDUSTRY_KB=str(kbns), GEO_INDUSTRY_KB_SALT="", PATH="/nonexistent")  # PATH 置空：钥匙串也读不到
+        pn = subprocess.run([sys.executable, "-I", str(KB), "add", "--ws", str(ws_a)], env=env_ns, capture_output=True, text=True)
+        check("K11 品牌标识加盐：不加盐的哈希不在档案里；没有盐不写、退出码 2",
+              plain not in blob_all and pn.returncode == 2 and "GEO_INDUSTRY_KB_SALT" in pn.stderr and not kbns.exists(),
+              f"rc={pn.returncode} {pn.stderr[-200:]}")
+
+        # K12 服务器持久化目录：第一次 prepare 从随 skill 的档案复制；之后积累的新档案拷进工作目录
+        persist = tmp / "kb-persist"
+        envp = {**os.environ, "GEO_INDUSTRY_KB": str(persist)}
+        bundled = sorted(f.name for f in (SKILL / "references/industry-knowledge").glob("*.json"))
+        pp = subprocess.run([sys.executable, str(RUNNER), "prepare", "--case", str(case), "--market", "US", "--platforms",
+                             "chatgpt", "--out", str(tmp / "ws-p1")], capture_output=True, text=True, env=envp)
+        seeded = sorted(f.name for f in persist.glob("*.json")) if persist.exists() else []
+        subprocess.run([sys.executable, "-I", str(KB), "add", "--ws", str(ws_d2)], env=envp, capture_output=True, text=True)
+        subprocess.run([sys.executable, str(RUNNER), "prepare", "--case", str(case), "--market", "US", "--platforms",
+                        "chatgpt", "--out", str(tmp / "ws-p2")], capture_output=True, text=True, env=envp)
+        kcopy = tmp / "ws-p2/.agents/skills/geo-prompt-selection-builder/references/industry-knowledge"
+        check("K12 持久化目录：空目录第一次 prepare 从随 skill 的档案复制，新并入的品类拷进下一次的工作目录",
+              pp.returncode == 0 and bundled and seeded == bundled and (persist / "品类-automatic-pet-feeder.md").exists()
+              and (kcopy / "品类-automatic-pet-feeder.md").exists()
+              and not (SKILL / "references/industry-knowledge/品类-automatic-pet-feeder.md").exists(),
+              f"bundled={bundled} seeded={seeded} {pp.stderr[-200:]}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

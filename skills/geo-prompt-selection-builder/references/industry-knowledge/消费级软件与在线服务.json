@@ -1,0 +1,728 @@
+{
+ "schema": 5,
+ "industry": "消费级软件与在线服务",
+ "items": {
+  "constraints": {
+   "中毒后断网修复": {
+    "label": "中毒后断网修复",
+    "by": {
+     "6a4a97cfaf73|US": "中毒后断网修复"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "中毒后断网修复": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "中毒后查杀清除": {
+    "label": "中毒后查杀清除",
+    "by": {
+     "6a4a97cfaf73|US": "中毒后查杀清除"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "中毒后查杀清除": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "价格续费": {
+    "label": "价格与续费",
+    "by": {
+     "6a4a97cfaf73|US": "价格与续费"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "价格与续费": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "免费版可商用": {
+    "label": "免费版可商用",
+    "by": {
+     "6a4a97cfaf73|US": "免费版可商用"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "免费版可商用": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "免费版自带清理加速": {
+    "label": "免费版自带清理加速",
+    "by": {
+     "6a4a97cfaf73|US": "免费版自带清理加速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "免费版自带清理加速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "勒索防护": {
+    "label": "勒索防护",
+    "by": {
+     "6a4a97cfaf73|US": "勒索防护"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "勒索防护": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "品牌可信度数据合规": {
+    "label": "品牌可信度与数据合规",
+    "by": {
+     "6a4a97cfaf73|US": "品牌可信度与数据合规"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "品牌可信度与数据合规": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "垃圾清理空间释放": {
+    "label": "垃圾清理与空间释放",
+    "by": {
+     "6a4a97cfaf73|US": "垃圾清理与空间释放"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "垃圾清理与空间释放": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "安全清理可选不误删": {
+    "label": "安全清理（可选、不误删）",
+    "by": {
+     "6a4a97cfaf73|US": "安全清理（可选、不误删）"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "安全清理（可选、不误删）": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "开机系统加速": {
+    "label": "开机与系统加速",
+    "by": {
+     "6a4a97cfaf73|US": "开机与系统加速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "开机与系统加速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "开机前救援扫描": {
+    "label": "开机前救援扫描",
+    "by": {
+     "6a4a97cfaf73|US": "开机前救援扫描"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "开机前救援扫描": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "支持旧版windows": {
+    "label": "支持旧版 Windows",
+    "by": {
+     "6a4a97cfaf73|US": "支持旧版 Windows"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "支持旧版 Windows": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "易卸载不捆绑": {
+    "label": "易卸载不捆绑",
+    "by": {
+     "6a4a97cfaf73|US": "易卸载不捆绑"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "易卸载不捆绑": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "比windows自带防护更强": {
+    "label": "比 Windows 自带防护更强",
+    "by": {
+     "6a4a97cfaf73|US": "比 Windows 自带防护更强"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "比 Windows 自带防护更强": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "注册表清理": {
+    "label": "注册表清理",
+    "by": {
+     "6a4a97cfaf73|US": "注册表清理"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "注册表清理": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "游戏加速": {
+    "label": "游戏加速",
+    "by": {
+     "6a4a97cfaf73|US": "游戏加速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "游戏加速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "独立实验室评测成绩": {
+    "label": "独立实验室评测成绩",
+    "by": {
+     "6a4a97cfaf73|US": "独立实验室评测成绩"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "独立实验室评测成绩": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "磁盘空间分析": {
+    "label": "磁盘空间分析",
+    "by": {
+     "6a4a97cfaf73|US": "磁盘空间分析"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "磁盘空间分析": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "轻量不拖慢": {
+    "label": "轻量不拖慢",
+    "by": {
+     "6a4a97cfaf73|US": "轻量不拖慢"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "轻量不拖慢": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "重复文件清理": {
+    "label": "重复文件清理",
+    "by": {
+     "6a4a97cfaf73|US": "重复文件清理"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "重复文件清理": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "隐私反追踪": {
+    "label": "隐私反追踪",
+    "by": {
+     "6a4a97cfaf73|US": "隐私反追踪"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "隐私反追踪": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   }
+  },
+  "audiences": {
+   "windows家庭用户": {
+    "label": "Windows 家庭用户",
+    "by": {
+     "6a4a97cfaf73|US": "Windows 家庭用户"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "Windows 家庭用户": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "小微商户": {
+    "label": "小微商户",
+    "by": {
+     "6a4a97cfaf73|US": "小微商户"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "小微商户": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "老旧低配pc用户": {
+    "label": "老旧低配 PC 用户",
+    "by": {
+     "6a4a97cfaf73|US": "老旧低配 PC 用户"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "老旧低配 PC 用户": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   }
+  },
+  "scenes": {
+   "上网担心被追踪": {
+    "label": "上网担心被追踪",
+    "by": {
+     "6a4a97cfaf73|US": "上网担心被追踪"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "上网担心被追踪": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "担心勒索病毒": {
+    "label": "担心勒索病毒",
+    "by": {
+     "6a4a97cfaf73|US": "担心勒索病毒"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "担心勒索病毒": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "玩游戏卡顿想给电脑游戏提速": {
+    "label": "玩游戏卡顿，想给电脑游戏提速",
+    "by": {
+     "6a4a97cfaf73|US": "玩游戏卡顿，想给电脑游戏提速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "玩游戏卡顿，想给电脑游戏提速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "现有杀毒到期或不满意想换一款": {
+    "label": "现有杀毒到期或不满意，想换一款",
+    "by": {
+     "6a4a97cfaf73|US": "现有杀毒到期或不满意，想换一款"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "现有杀毒到期或不满意，想换一款": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "电脑中毒后清除修复含断网": {
+    "label": "电脑中毒后清除修复（含断网）",
+    "by": {
+     "6a4a97cfaf73|US": "电脑中毒后清除修复（含断网）"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "电脑中毒后清除修复（含断网）": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "电脑变慢c盘快满想清理提速": {
+    "label": "电脑变慢、C 盘快满，想清理提速",
+    "by": {
+     "6a4a97cfaf73|US": "电脑变慢、C 盘快满，想清理提速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "电脑变慢、C 盘快满，想清理提速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "电脑断网或网络异常想自己修好": {
+    "label": "电脑断网或网络异常，想自己修好",
+    "by": {
+     "6a4a97cfaf73|US": "电脑断网或网络异常，想自己修好"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "电脑断网或网络异常，想自己修好": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "给windows电脑挑日常防护软件": {
+    "label": "给 Windows 电脑挑日常防护软件",
+    "by": {
+     "6a4a97cfaf73|US": "给 Windows 电脑挑日常防护软件"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "给 Windows 电脑挑日常防护软件": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   }
+  },
+  "topics": {
+   "电脑清理提速": {
+    "label": "电脑清理提速",
+    "by": {
+     "6a4a97cfaf73|US": "电脑清理提速"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "电脑清理提速": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "选择windows安全软件": {
+    "label": "选择 Windows 安全软件",
+    "by": {
+     "6a4a97cfaf73|US": "选择 Windows 安全软件"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "选择 Windows 安全软件": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   }
+  },
+  "category_terms": {
+   "pccleaner": {
+    "label": "PC cleaner",
+    "by": {
+     "6a4a97cfaf73|US": "PC cleaner"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "PC cleaner": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "pcoptimizer": {
+    "label": "PC optimizer",
+    "by": {
+     "6a4a97cfaf73|US": "PC optimizer"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "PC optimizer": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "pcsecuritysoftware": {
+    "label": "PC security software",
+    "by": {
+     "6a4a97cfaf73|US": "PC security software"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "PC security software": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "antivirus": {
+    "label": "antivirus",
+    "by": {
+     "6a4a97cfaf73|US": "antivirus"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "antivirus": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   },
+   "securitysuite": {
+    "label": "security suite",
+    "by": {
+     "6a4a97cfaf73|US": "security suite"
+    },
+    "clients": [
+     "6a4a97cfaf73"
+    ],
+    "names": {
+     "security suite": 1
+    },
+    "markets": [
+     "US"
+    ],
+    "categories": [
+     "antivirus software"
+    ]
+   }
+  }
+ },
+ "channels": {},
+ "clients": {
+  "6a4a97cfaf73|US": {
+   "who": "6a4a97cfaf73",
+   "market": "US",
+   "category": "antivirus software",
+   "updated": "2026-11-11"
+  }
+ },
+ "updated": "2026-11-11"
+}
