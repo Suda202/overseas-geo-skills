@@ -22,14 +22,14 @@ metadata:
 | --- | --- |
 | 只有品牌信息，没有 Case | 按 `geo-prompt-selection-builder/references/input-contract.md` 整理成 Case 文件（线上表单数据或本地 JSON 都行），再回到第 1 步 |
 | Case（`presales-case-input/v2` payload） | 第 1 步 |
-| 已导出的 9 字段题（上传 CSV） | 第 3 步 |
+| 已导出的 5 字段题（上传 CSV） | 第 3 步 |
 | 采集目录 `<collect>/scraper.<平台>/<REGION>/*.json` | 第 4 步（旧采集目录没有 manifest，第 4 步会跳过采集检查） |
 
 ## 第 1–2 步：生词
 
 1. 用 Skill 工具 invoke `geo-prompt-selection-builder`，读它的 SKILL.md 和 `references/online-runner.md`。
 2. 先归一化 Case：`python3 <skills>/geo-prompt-selection-builder/scripts/normalize_case.py <payload.json> -o normalized.json`。`ok=false` 时把 `errors` 原样交回 Case 上游，不替上游补字段。
-3. 按 online-runner.md 和 selection-rules.md 第 1–8 步生词，产出 `bank.json` 和每个市场一份 9 字段上传 CSV（`query,question_zh,topic,diagnosis_intent,tags,question_types,purchase_intent,persona_name,scene_name`）。无人值守时改用 `scripts/run_selection_mode.py` 一条命令跑完。
+3. 按 online-runner.md 和 selection-rules.md 第 1–8 步生词，产出 `bank.json` 和每个市场一份 5 字段上传 CSV（`query,question_zh,topic,diagnosis_intent,tags`）。无人值守时改用 `scripts/run_selection_mode.py` 一条命令跑完。
 4. 选词 validator `validate_after_sales_set.py` 与导出脚本 `export_upload_csv.py` 都要退出码 0，然后做一遍语义 review。检查通过只代表确定性门槛通过，不等于客户已批准。
 
 ## 第 3 步：采集（付费）

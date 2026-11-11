@@ -110,6 +110,18 @@ def _google_store_offers(stores) -> list[dict]:
     return offers
 
 
+def chatgpt_catalog_backed(raw: dict) -> bool:
+    """ChatGPT 的 ``products`` 条目是不是带商品目录的购物卡（2026-11-11 Suda 定：只有这种才算商品卡）。
+
+    ChatGPT 购物卡来自商品目录，条目带 ``id``、``cite``（turn0productN）、``offers`` 或 ``price``。
+    没有商品目录的市场（肯尼亚、尼日利亚实测）回答里也有带图的商品推荐，Scrapeless 照样放进
+    ``products``，但只有 ``title`` 和 ``query``：回答页上没有价格、商家和购买入口，图片是网页配图。
+    这类条目和「RivalH1」「Facebook Marketplace」这种非商品条目一样，不算商品卡。
+    全项目实测：美国 1,333 条带目录证据、2 条不带；肯尼亚、尼日利亚 10,822 条全不带。
+    """
+    return bool(_text(raw.get("id")) or _text(raw.get("cite")) or raw.get("offers") or _text(raw.get("price")))
+
+
 def extract_product_cards(platform: str | None, task_result: dict | None) -> list[dict] | None:
     """平台原始 `task_result` → 规范化商品卡列表；平台不支持购物字段时返回 None。
 
@@ -125,6 +137,8 @@ def extract_product_cards(platform: str | None, task_result: dict | None) -> lis
     if name == "chatgpt":
         for raw in result.get("products") or []:
             if not isinstance(raw, dict) or not _text(raw.get("title")):
+                continue
+            if not chatgpt_catalog_backed(raw):
                 continue
             offers = [
                 item for item in (

@@ -171,7 +171,7 @@ def iter_answers(collect_dirs: list[Path], stats: dict):
                 stats["duplicates"] += 1
                 continue
             seen.add(digest)
-            body = blank_merchant_columns(strip_citations(raw))
+            body = blank_merchant_columns(strip_citations(raw, task.get("follow_up_form")))
             valid, _ = answer_validity(body)
             if str(payload.get("status") or "success").lower() != "success" or not valid:
                 stats["invalid"] += 1

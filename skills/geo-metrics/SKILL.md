@@ -12,7 +12,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 能力 | 位置 |
 |---|---|
 | 品牌识别：别名匹配、拉丁词边界、非拉丁文字跨品牌最长优先消解、区分大小写的写法 | `scripts/geo_presales_core/util.py` 的 `find_alias_spans`、`resolve_alias_spans`、`case_sensitive_for` |
-| 识别前的正文清洗：去引用标记、图片、链接网址、HTML，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`、`blank_merchant_columns` |
+| 识别前的正文清洗：去引用标记、图片、链接网址、HTML，删 AI 反问用户的追问块，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`（传 `follow_up_form`）、`strip_follow_up_form`、`strip_choice_lists`、`blank_merchant_columns` |
 | 答案是否有效、商品卡抽取 | `scripts/geo_presales_core/crawler.py`、`shopping.py` |
 | 引用网址规范化：跟踪参数、平台站内域名、域名后缀表 | `util.py` 的 `normalize_url`、`strip_tracking_params`、`is_platform_internal`、`COMMON_MULTI_LABEL_SUFFIXES` |
 | 指标计算：提及率、声量份额、平均位置、引用份额、官网引用率、商品卡三项 | `scripts/geo_presales_core/metrics.py`、`deterministic.py`、`shopping.py` |

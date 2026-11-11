@@ -105,7 +105,7 @@ BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
 BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
 DISCOVERY_LABEL = "发现"
 # 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics.visibility_answers 同口径，按中文标签独立写一份）
-VISIBILITY_LABEL_GROUPS = [{"发现", "替代", "品类认知"}, {"问题解决"}]
+VISIBILITY_LABEL_GROUPS = [{"发现", "替代", "品类认知"}]
 TYPE_TOPIC_PREFIX = "类型:"
 
 TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
@@ -133,6 +133,7 @@ class Recomputer:
         self.platform_dirs = dict(self.meta.get("platform_dirs")
                                   or PLATFORM_DIR_BY_LABEL)
         self._text_cache: dict[tuple, str] = {}
+        self._form_cache: dict[tuple, object] = {}  # ChatGPT follow_up_form，删追问表单用
         self._resolved_spans_cache: dict[tuple, dict] = {}
         self._citations_cache: dict[tuple, list] = {}
         self._recompute_cache: dict[tuple, dict] = {}
@@ -184,12 +185,14 @@ class Recomputer:
         key = (region, platform_dir, qid, repeat)
         if key not in self._text_cache:
             paths = self.sample_files(region, platform_dir, qid)
-            text = ""
+            text, form = "", None
             if 0 < repeat <= len(paths):
                 payload = json.loads(paths[repeat - 1].read_text(encoding="utf-8"))
                 result = payload.get("task_result") or {}
                 text = str(result.get(answer_field(platform_dir)) or "")
+                form = result.get("follow_up_form")
             self._text_cache[key] = text
+            self._form_cache[key] = form
         return self._text_cache[key]
 
     def mentions(self, region: str, platform_dir: str, qid: int, object_id: str,
@@ -215,7 +218,8 @@ class Recomputer:
             text = self.answer_text(region, platform_dir, qid, repeat)
             if text.strip():
                 # 与数据层同口径：先剥引用标记与商品卡商家列，再匹配品牌
-                matching = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
+                matching = de_cite.blank_merchant_columns(
+                    de_cite.strip_citations(text, self._form_cache.get(key)))
                 candidates = [
                     {**span, "object_id": obj["object_id"]}
                     for obj in self.objects
@@ -368,7 +372,7 @@ class Recomputer:
 
     def _recompute(self, region: str, platform: str, topic: str) -> dict:
         question_ids = [q["qid"] for q in self.slice_questions(topic)]
-        # 变量名沿用 discovery：2026-11-07 起是提及类样本（发现＋替代，只剩问题解决时才是问题解决）
+        # 变量名沿用 discovery：2026-11-07 起是提及类样本（发现＋替代；问题解决不统计提及率，2026-11-11）
         discovery_ids = self.visibility_ids(region, platform, topic)
 
         discovery_answers = 0          # 有效提及类回答数（提及类分母）
@@ -389,6 +393,8 @@ class Recomputer:
         table_row_markers = 0
         unique_citation_urls: set[str] = set()
         target = next(o for o in self.objects if o["object_id"] == "target")
+        # 问题明细只列在当前切片里至少有一条有效回答的题（多市场题库：另一市场的题不进本市场明细，2026-11-11）
+        answered_qids: set = set()
 
         for platform_label in self.slice_platforms(platform):
             platform_dir = self.platform_dirs[platform_label]
@@ -398,6 +404,7 @@ class Recomputer:
                     for repeat in range(1, self.repeat_count(market, platform_dir, qid) + 1):
                         if not self.answer_text(market, platform_dir, qid, repeat).strip():
                             continue  # 空答案不进任何分母
+                        answered_qids.add(qid)
                         is_discovery = qid in discovery_ids
                         mentioned = [o["object_id"] for o in self.objects
                                      if self.mentions(market, platform_dir, qid,
@@ -495,7 +502,7 @@ class Recomputer:
             }
 
         return {
-            "records": len(question_ids),
+            "records": len(answered_qids),
             "mention_rate": _pct(target_mentions / discovery_answers) if discovery_answers else "—",
             "share_of_voice": _pct(target_mentions / total_mentions) if total_mentions else "—",
             "official_share": _pct(target_citations / raw_citations) if raw_citations else "—",
@@ -538,6 +545,10 @@ class Recomputer:
         cards = []
         for item in raw:
             if not str(item.get("title") or "").strip():
+                continue
+            # 只认带商品目录的 ChatGPT 购物卡（独立实现，与 core.chatgpt_catalog_backed 同一口径）
+            if platform_dir == "chatgpt" and not (str(item.get("id") or "").strip() or str(item.get("cite") or "").strip()
+                                                  or item.get("offers") or str(item.get("price") or "").strip()):
                 continue
             if platform_dir == "chatgpt":
                 merchants = [o.get("merchant_name") for o in item.get("offers") or [] if isinstance(o, dict)]

@@ -26,7 +26,9 @@ from pathlib import Path
 REF_DEF = re.compile(r"^\s*\[\d+\]:\s*\S+.*$", re.M)
 REF_MARKER_PAREN = re.compile(r"\(\[[^\]\n]{1,80}\]\[\d+\]\)")
 REF_MARKER_BARE = re.compile(r"\[[^\]\n]{1,80}\]\[\d+\]")
-IMAGE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
+# alt 里可能有转义方括号（`![\[Direct from Japan\] RivalO2 … | Shopee](<url>)`），旧写法 `[^\]]*` 在 `\]` 处断开，
+# 整段 alt 漏进正文被算成提及（2026-11-11 全库 10,276 条去重回答里 73 条，Obrand 13 条）
+IMAGE = re.compile(r"!\[(?:\\.|[^\]\\\n])*\]\([^)\n]*\)")
 MD_LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 # 标签名必须紧跟 `<`，免得把「< $100 … >」这类正文吃掉；不限长度：ChatGPT 的 <img> 常超 300 字，
 # 它的 title 是被引网页标题（「Bbrand dashcam Pro vs. …」），漏删就会被算成提及
@@ -65,13 +67,108 @@ def answer_text(payload: dict, platform: str) -> str:
     return answer_body(payload.get("task_result") or {}, platform)
 
 
-def strip_citations(text: str) -> str:
+# AI 反问用户、让用户选的追问块不算品牌提及（2026-11-11 Suda 定）：选项里的品牌只是 AI 在问
+# 「你用哪个牌子」，不是它推荐或评价了谁。Obrand 不扣时 Tecno、Infinix 提及率 32%，扣后 2%。
+# 两步，都只看结构和版式、不看行业：
+#   1. ChatGPT 表单：`follow_up_form` 字段渲染进了 result_text（问题标题、`- [x]` 选项、多选的纯文本
+#      选项行、`{#if}` 残留、提交按钮）。用字段定位这一段、按位置删，不按选项字符串全文替换——
+#      选项里的 Samsung 在正文推荐里也会出现。
+#   2. 没有表单字段的普通追问：向用户提问的句子后紧跟 2 条以上短列表项，连问句一起删。
+# 旧的「连续复选框行整段删」已撤回：没有表单的回答里它触发 19 次，全是正文自检清单
+# （Abrand、Hbrand、Nbrand、Ubrand 的 `- [ ] Confirm …`），表单那部分由第 1 步按字段删。
+LIST_ITEM = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.+?)\s*$")
+ASKS_USER = re.compile(r"\byou\b|\byour\b|\bwhich\b|\bwhat\b|你|您|哪", re.I)
+# Markdown 标题里的问句是小节名，后面的列表是正文（安全软件题的「### What problems can they help with?」）
+HEADING = re.compile(r"^\s*#")
+SHORT_ITEM_WORDS = 5
+SHORT_ITEM_CJK = 12
+
+
+def _is_short_item(text: str) -> bool:
+    text = text.replace("*", "").strip()
+    if re.search(r"[一-鿿]", text):
+        return len(text) <= SHORT_ITEM_CJK
+    return len(text.split()) <= SHORT_ITEM_WORDS
+
+
+def follow_up_form_span(text: str, form) -> tuple[int, int] | None:
+    """ChatGPT 追问表单在正文里的起止位置；字段缺失或定位不到时返回 None。
+
+    起点取第一个问题标题的最后一段（真正的提问句）：标题字段偶尔把前面的推荐语也解析进来
+    （Obrand 266 份里 16 份，如「My verdict: Get the RivalO2 30W …」），取整段会把推荐删掉。
+    终点是提交按钮那一行；按钮之后 ChatGPT 自己写的收尾句保留为正文。
+    """
+    if not isinstance(form, dict):
+        return None
+    questions = form.get("questions") or []
+    submit = str(form.get("submit_label") or "").strip()
+    if not questions or not submit:
+        return None
+    label = str((questions[0] or {}).get("label") or "")
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", label) if p.strip()]
+    if not paragraphs:
+        return None
+    end = text.rfind(submit)
+    if end < 0:
+        return None
+    # 先按整行找：标题可能很短（「Phone」），子串查找会落进后面的「iPhone」选项里
+    anchor = re.escape(paragraphs[-1])
+    whole_lines = list(re.finditer(rf"(?m)^[ \t]*{anchor}[ \t]*$", text[:end]))
+    start = whole_lines[-1].start() if whole_lines else text.rfind(paragraphs[-1], 0, end)
+    if start < 0:
+        return None
+    line_end = text.find("\n", end + len(submit))
+    return start, len(text) if line_end < 0 else line_end
+
+
+def strip_follow_up_form(text: str, form) -> str:
+    """删掉 ChatGPT 追问表单渲染进正文的那一段（在原始正文上用，清洗前调用）。"""
+    span = follow_up_form_span(text, form)
+    return text if span is None else text[:span[0]] + text[span[1]:]
+
+
+def strip_choice_lists(text: str) -> str:
+    """删掉没有表单字段的普通追问选项：向用户提问的句子后面紧跟 2 条以上很短的列表项，
+    问句连同列表整段删除。问句须以问号结尾、含 you/which/what/你/哪 等、不是 Markdown 标题。
+    只看版式，不看行业。
+    """
+    lines = text.split("\n")
+    drop = set()
+    i = 0
+    while i < len(lines):
+        q = lines[i].replace("*", "").strip()
+        if (q.endswith(("?", "？")) and ASKS_USER.search(q)
+                and not LIST_ITEM.match(lines[i]) and not HEADING.match(lines[i])):
+            j, items = i + 1, []
+            while j < len(lines):
+                m = LIST_ITEM.match(lines[j])
+                if m and _is_short_item(m.group(1)):
+                    items.append(j)
+                    j += 1
+                elif not lines[j].strip() and not items:
+                    j += 1
+                else:
+                    break
+            if len(items) >= 2:
+                drop.add(i)
+                drop.update(items)
+            i = max(j, i + 1)
+            continue
+        i += 1
+    return "\n".join(l for k, l in enumerate(lines) if k not in drop)
+
+
+def strip_citations(text: str, follow_up_form=None) -> str:
     """去掉引用标记与来源名称，保留正文与商品卡可见标题。
 
     商品卡形如 `| id | goods | price | rating | merchants | picture |`：
     `goods` 列是可见产品名，保留；`merchants` 列是销售渠道，由
     blank_merchant_columns 另行清空，避免渠道名被当成正文品牌。
+
+    follow_up_form 传 ChatGPT task_result 里的同名字段，有它才删得掉表单那一段；
+    拿得到 task_result 的调用方都要传，不传只剩普通追问那一步。
     """
+    text = strip_follow_up_form(text, follow_up_form)
     text = REF_DEF.sub("", text)
     text = REF_MARKER_PAREN.sub("", text)
     text = REF_MARKER_BARE.sub("", text)
@@ -83,6 +180,7 @@ def strip_citations(text: str) -> str:
     text = text.replace(PRODUCT_VIEWER_NOISE, " ")
     # 引用标记剥完再还原转义，免得 `\[` `\]` 还原后拼出假引用标记
     text = MD_ESCAPE.sub(r"\1", text)
+    text = strip_choice_lists(text)
     text = re.sub(r"[ \t]+\n", "\n", text)
     return re.sub(r"\n{4,}", "\n\n\n", text).strip()
 
@@ -163,7 +261,7 @@ def normalize(collect_dir: Path, bank_path: Path):
                 unknown.add(prompt)
                 continue
             source = answer_text(raw, platform)
-            body = strip_citations(source)
+            body = strip_citations(source, dig(raw, "follow_up_form"))
             valid, invalid_code = answer_validity(body)
             rows.append({
                 "answer_id": f"{platform}:{meta['question_id']}:{path.stem}",

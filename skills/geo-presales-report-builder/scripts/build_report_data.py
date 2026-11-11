@@ -21,7 +21,7 @@
    集，也不进任何比率分母。
 6. **重复采集全部进分母**：每题采多次时，每条有效回答都进指标分母；
    ``selected_for_report`` 只标记「明细展示哪一条」，不决定算哪几条。
-5. **开放品牌集**：``config["objects"]`` = 目标品牌 + 3 个配置竞品 + 开放品牌
+5. **开放品牌集**：``config["objects"]`` = 目标品牌 + 配置竞品（数量不限，可按产品线各挂 3 个）+ 开放品牌
    词表中的品牌。词表由另一任务生成，可能尚不存在；不存在时只用配置品牌跑通。
 
 用法::
@@ -320,10 +320,18 @@ def load_case(path: Path) -> dict:
     brand, domain = pick("品牌", "品牌名称"), pick("官方域名")
     category = pick("品类", "category_label", "产品线", "本期产品线")
     competitors = []
-    for index in (1, 2, 3):
+    # 竞品数量不设上限（2026-11-11 Suda）：可按产品线各挂 3 个，用「竞品 N 主题」限定
+    # 该竞品只在哪些主题的切片里展示；不写则所有主题都展示。
+    for index in range(1, 51):
         name, comp_domain = pick(f"竞品 {index}"), pick(f"竞品 {index} 官网域名")
-        if name and comp_domain:
-            competitors.append({"name": name, "domain": comp_domain})
+        if not name or not comp_domain:
+            continue
+        topics_raw = pick(f"竞品 {index} 主题") or ""
+        competitors.append({
+            "name": name,
+            "domain": comp_domain,
+            "topics": [t.strip() for t in topics_raw.replace("，", ",").split(",") if t.strip()],
+        })
     if not brand or not domain:
         raise SystemExit("Case JSON 缺少品牌（或品牌名称）或官方域名")
     # 主题映射（可选）：题库主题 → 报告展示名。多语言市场里题库主题是当地语言
@@ -333,6 +341,12 @@ def load_case(path: Path) -> dict:
         raise SystemExit("Case 的「主题映射」应为 {题库主题: 展示名} 对象")
     topic_labels = {str(k).strip(): str(v).strip()
                     for k, v in labels_raw.items() if str(k).strip() and str(v).strip()}
+    # 地区显示名（可选）：{市场代码: 中文名}。切片键与 state 仍用代码，只换下拉里的文字。
+    region_raw = raw.get("地区名称") or raw.get("region_labels") or {}
+    if not isinstance(region_raw, dict):
+        raise SystemExit("Case 的「地区名称」应为 {市场代码: 展示名} 对象")
+    region_labels = {str(k).strip().upper(): str(v).strip()
+                     for k, v in region_raw.items() if str(k).strip() and str(v).strip()}
     return {
         "brand": brand,
         "official_domain": domain,
@@ -340,6 +354,7 @@ def load_case(path: Path) -> dict:
         "competitors": competitors,
         "topics_raw": pick("主题") or "",
         "topic_labels": topic_labels,
+        "region_labels": region_labels,
     }
 
 
@@ -364,6 +379,33 @@ def load_domain_cache(path) -> dict:
         sample = ", ".join(f"{k}={v}" for k, v in list(unknown.items())[:3])
         raise SystemExit(f"域名类别缓存含未知类别（{sample}），允许值：{'/'.join(sorted(valid))}")
     return payload
+
+
+def shopping_detail_by_region(collect_dir: Path, regions: list[str]) -> dict:
+    """每个市场的商品卡是否带购物信息：{市场: {"cards": 卡数, "detailed": 带价格/评分/商家的卡数}}。
+
+    没有商品目录的 ChatGPT 条目已在 core.extract_product_cards 里排除，这里数到的都是购物卡。
+    """
+    from geo_presales_core.shopping import extract_product_cards
+    out: dict[str, dict] = {}
+    for platform_dir in DIR_TO_LABEL:
+        for market in regions:
+            folder = Path(collect_dir) / f"scraper.{platform_dir}" / market
+            if not folder.is_dir():
+                continue
+            row = out.setdefault(market, {"cards": 0, "detailed": 0})
+            for path in folder.glob("*.json"):
+                result = json.loads(path.read_text(encoding="utf-8")).get("task_result") or {}
+                for card in extract_product_cards(platform_dir, result) or []:
+                    row["cards"] += 1
+                    if card.get("offers") or card.get("price") or card.get("rating"):
+                        row["detailed"] += 1
+    return out
+
+
+def parse_regions(value) -> list[str]:
+    """题库 region 列 → 市场代码列表（「KE,NG」「KE，NG」都认）；空 = 所有市场都问。"""
+    return [r.strip().upper() for r in re.split(r"[,，、\s]+", str(value or "")) if r.strip()]
 
 
 def load_question_rows(path: Path) -> list[dict]:
@@ -397,14 +439,14 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
                  domain_cache: dict | None = None, case_sensitive=(), competitor_sites=()) -> dict:
     """构造 config（normalize_config 的内部产物形态）。
 
-    对象集 = 目标品牌 + Case 里的 3 个配置竞品 + 词表中的开放品牌。
+    对象集 = 目标品牌 + Case 里的配置竞品（数量不限）+ 词表中的开放品牌。
     词表中命中目标/配置竞品的条目只做别名与域名合并，不重复计入。
     别名按首次登记者归属，跨对象重名的别名被丢弃，避免同一写法记到两个品牌。
     """
     objects: list[dict] = []
     alias_owner: dict[str, str] = {}
 
-    def add(name, domains, aliases, role, order):
+    def add(name, domains, aliases, role, order, exclude_canonical=False):
         object_id = ("target" if role == "target"
                      else f"competitor-{order:02d}" if role == "competitor"
                      else f"open-{order:02d}")
@@ -416,17 +458,25 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
             "official_domains": [d for d in (normalize_host(x) for x in domains) if d],
             "aliases": [],
             "object_scope": "brand",
+            # 配置竞品可挂在指定主题上（Case competitor.topics）；空 = 所有主题都展示。
+            # 2026-11-11 Suda：不再限制 3 个配置竞品，每条产品线各挂 3 个。
+            "topics": [],
         }
         merge_lexicon(obj, aliases, domains, alias_owner)
-        if name not in obj["aliases"]:
+        # 规范名默认也当别名用（大多数品牌的名字本身就是识别词）。但有些品牌名是普通英文词
+        # （Nothing、One、Play），裸词会命中句首的普通用法（Nothing inserted into your ear canal），
+        # 这时用 exclude_canonical 只认词表里带型号的写法。
+        if not exclude_canonical and name not in obj["aliases"]:
             obj["aliases"].insert(0, name)
             alias_owner.setdefault(normalize_text(name), object_id)
         objects.append(obj)
         return obj
 
     add(case["brand"], [case["official_domain"]], [case["brand"]], "target", 0)
-    for index, comp in enumerate(case["competitors"][:3], 1):
-        add(comp["name"], [comp["domain"]], [comp["name"]], "competitor", index)
+    for index, comp in enumerate(case["competitors"], 1):
+        obj = add(comp["name"], [comp["domain"]], [comp["name"]], "competitor", index,
+                  bool(comp.get("exclude_canonical_alias")))
+        obj["topics"] = [str(t).strip() for t in (comp.get("topics") or []) if str(t).strip()]
 
     # 一遍：把词表条目并入已存在的目标 / 配置竞品（按 type、名称、域名匹配）
     unresolved = []
@@ -459,9 +509,11 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
             unresolved.append(entry)
 
     # 二遍：其余条目作为开放品牌，排在配置竞品之后
+    n_configured = len([o for o in objects if o["role"] == "competitor"])
     for entry in unresolved:
         add(entry["name"], entry["domains"], entry["aliases"], "open",
-            3 + len([o for o in objects if o["role"] == "open"]) + 1)
+            n_configured + len([o for o in objects if o["role"] == "open"]) + 1,
+            bool(entry.get("exclude_canonical_alias")))
 
     # 词表顶层 case_sensitive_aliases：每个品牌只挂属于自己的写法，识别时由 core 过滤
     for obj in objects:
@@ -486,7 +538,7 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
         "avoid_expressions": [],
         "objects": objects,
         # 售前 HTML 报告口径（Suda 2026-11-07）：核心洞察与可见度的提及类、引用类指标都看发现＋替代，
-        # 只剩问题解决题的切片才算问题解决；引用模块（sources）统计全部意图类型，由 build_sources 自己算。
+        # 问题解决不统计提及率（2026-11-11）；引用模块（sources）统计全部意图类型，由 build_sources 自己算。
         # core 缺省仍是只看 Discovery（上传 CSV 口径）。
         "visibility_intent_groups": VISIBILITY_INTENT_GROUPS,
         "competitor_site_domains": list(competitor_sites),
@@ -546,6 +598,9 @@ def build_question_bank(rows: list[dict], config: dict, topics: list[str]) -> di
             "generation_sequence": index,
             "question_text": str(row["query"]).strip(),
             "question_zh": str(row.get("question_zh") or "").strip() or None,
+            # 题在哪些市场问（region 列，可多值「KE,NG」）。同一句提示词在几个市场都问时只占一个题号，
+            # 采集文件在各市场目录下用同一个题号；留空 = 所有市场都问（旧题库口径）。
+            "regions": parse_regions(row.get("region")),
             "question_type": "generic" if backend_intent in {"discovery", "market_perception", "information"} else "branded",
             "funnel_intent": FUNNEL_OVERRIDE.get(backend_intent, "recommendation"),
             "diagnostic_intent": backend_intent,
@@ -624,9 +679,15 @@ def discover_sample_files(folder: Path, questions: list[dict]):
     if fallbacks:
         issues.extend(fallbacks)
 
+    # 运行次数按文件名里的 -rN 排，不能按字符串排：`0001-r2.json` 的 `-` 排在 `0001.json` 的 `.`
+    # 前面，按字符串排会把第 2 次当成第 1 次，facts 里的「第几次」和文件名对不上（2026-11-11 审计发现）。
+    def _run_number(path: Path) -> int:
+        match = re.search(r"-r(\d+)$", path.stem)
+        return int(match.group(1)) if match else 1
+
     files: list[tuple[Path, str, int]] = []
     for qid, paths in grouped.items():
-        for index, path in enumerate(sorted(paths), 1):
+        for index, path in enumerate(sorted(paths, key=lambda item: (_run_number(item), item.name)), 1):
             files.append((path, qid, index))
     files.sort(key=lambda item: (item[1], item[2]))
     return files, issues
@@ -643,14 +704,19 @@ def load_samples(collect_dir: Path, region: str, platform: str,
             "platform": platform, "region": region, "folder": str(folder),
         }], []
     text_field = ANSWER_FIELD[platform]
-    files, discover_issues = discover_sample_files(folder, questions)
+    # 题库按市场写时只匹配本市场问的题：其他市场独有的题不该出现在这个目录，也不该报缺文件。
+    # 同一句提示词在几个市场都问，要写成一行、region 填「KE,NG」，不要拆成两行——拆开后
+    # by_prompt 里后一道覆盖前一道，被覆盖的题显示「无答案」（2026-11-11 Obrand 实测 26 对）。
+    region_questions = [q for q in questions if not q.get("regions") or region in q["regions"]]
+    files, discover_issues = discover_sample_files(folder, region_questions)
     issues = [*discover_issues]
     order_issues: list[dict] = []
     repeat_totals = Counter(qid for _, qid, _ in files)
 
     # 把归属结果按题分组，供「缺文件」判定与题面顺序核对
     found_questions = {qid for _, qid, _ in files}
-    for question in questions:
+    # 只看本市场的题：题库按市场写，其他市场的题本来就不该出现在这个目录里
+    for question in region_questions:
         if question["question_id"] not in found_questions:
             issues.append({
                 "code": "MISSING_SAMPLE_FILE",
@@ -678,7 +744,8 @@ def load_samples(collect_dir: Path, region: str, platform: str,
             citation["raw_citation_id"] = f"C-{platform}-{region}-{qid}-r{repeat_index:02d}-{index:03d}"
 
         # 品牌匹配用去引用正文（剥引用标记 + 清商品卡商家列）；引用统计仍用原文。
-        ranking_text = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
+        ranking_text = de_cite.blank_merchant_columns(
+            de_cite.strip_citations(text, task_result.get("follow_up_form")))
         # 失败页判定走 core 的唯一实现，不在这里复刻签名表。
         # 只判空串会漏掉模型失败页（"I encountered an error doing what you asked.
         # Could you try again?" 之类），把失败页当成正常回答计入分母——静默稀释、不报错。
@@ -766,7 +833,7 @@ def is_discovery(answer: dict) -> bool:
 
 
 # 提及类指标的样本：按顺序取第一组有回答的意图（core metrics.visibility_answers 读 config 里这张表）
-VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives", "market_perception"], ["information"]]
+VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives", "market_perception"]]
 # 意图类型切片：放在 topic 位上，键写成「类型:发现」，前端选了意图类型、没选主题时用它
 TYPE_TOPIC_PREFIX = "类型:"
 
@@ -801,6 +868,7 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
         rows.append({
             "object_id": obj["object_id"],
             "role": obj["role"],
+            "topics": obj.get("topics") or [],
             "name": obj["canonical_name"],
             "domain": (obj["official_domains"] or [""])[0],
             "mention_rate": entry["mention_rate"]["raw"],
@@ -813,8 +881,21 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
         })
     row_by_id = {row["object_id"]: row for row in rows}
 
-    # 展示集合：目标 + 3 配置竞品 + 提及率最高的 1 个开放品牌
-    configured = [r for r in rows if r["object_id"] == "target" or r["role"] == "competitor"]
+    # 展示集合：目标 + 本主题所属产品线的配置竞品 + 提及率最高的 1 个开放品牌。
+    # 配置竞品挂了主题（Case competitor.topics）就只在对应主题的切片里展示；
+    # 全部主题切片与「类型:X」意图切片展示全部配置竞品（2026-11-11 放开 3 个上限）。
+    topic_filtered = bool(topic) and not topic.startswith(TYPE_TOPIC_PREFIX)
+
+    def _show_configured(row):
+        if row["object_id"] == "target":
+            return True
+        if row["role"] != "competitor":
+            return False
+        if not topic_filtered or not row["topics"]:
+            return True
+        return topic in row["topics"]
+
+    configured = [r for r in rows if _show_configured(r)]
     open_rows = sorted([r for r in rows if r["role"] == "open"],
                        key=lambda r: (-(r["mention_rate"] or 0), r["name"]))
     display = configured + open_rows[:1]
@@ -980,7 +1061,8 @@ def build_facts(index: dict, config: dict, regions: list[str]) -> dict:
     return {
         "schema": "geo-presales-report-facts/v1",
         "objects": [{"name": o["canonical_name"], "role": o["role"],
-                     "domain": (o.get("official_domains") or [""])[0]} for o in objects],
+                     "domain": (o.get("official_domains") or [""])[0],
+                     "topics": o.get("topics") or []} for o in objects],
         "domains": list(domains),
         "urls": list(urls),
         "source_types": [{"key": k, "bucket": SOURCE_BUCKET.get(k, ("其他", ""))[0]} for k in stypes],
@@ -1213,6 +1295,10 @@ def build_records(answers: list[dict], questions: list[dict], topic: str,
             continue
         qid = question["question_id"]
         valid = [a for a in by_question.get(qid, []) if is_valid(a)]
+        # 题库按市场写（同一句提示词可能只在某一个市场），选地区/平台后没有有效回答的题
+        # 不出现在明细里，否则筛选后条数不变（2026-11-11 实测）。
+        if not valid:
+            continue
         row = {
             "qid": int(qid),
             "en": question["question_text"],
@@ -1278,7 +1364,7 @@ def parse_args(argv=None):
     parser.add_argument("--questions", type=Path, required=True,
                         help="题库 CSV，至少含 query/question_zh/topic/diagnosis_intent/tags/question_types")
     parser.add_argument("--case", type=Path, required=True,
-                        help="Case 记录 JSON，含品牌、官网域名、3 个配置竞品及域名、品类")
+                        help="Case 记录 JSON，含品牌、官网域名、配置竞品及域名（可按「竞品 N 主题」限定产品线）、品类")
     parser.add_argument("--lexicon", type=Path, default=None,
                         help="开放品牌词表；缺省时只用 Case 里的配置品牌跑通")
     parser.add_argument("--domain-cache", type=Path, default=DEFAULT_DOMAIN_CACHE,
@@ -1335,6 +1421,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
             "intent": INTENT_LABEL.get(backend, ""),
             "diagnostic_intent": backend,
             "tag": "、".join(readable_tags(str(row.get("tags") or "").split(","))) or "—",
+            "regions": parse_regions(row.get("region")),
         })
 
     return {
@@ -1347,6 +1434,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         "category": case["category"],
         "generated_at": now_iso(),
         "regions": regions,
+        "region_labels": case.get("region_labels") or {},
         "platforms": list(PLATFORM_LABELS),
         # 展示名 → 采集目录名。平台是从目录发现的，校验侧据此还原，不各写一份清单。
         "platform_dirs": dict(LABEL_TO_DIR),
@@ -1363,7 +1451,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         "lexicon_uncertain": lexicon_uncertain,
         "objects": [{"object_id": o["object_id"], "role": o["role"],
                      "name": o["canonical_name"], "domains": o["official_domains"],
-                     "aliases": o["aliases"],
+                     "aliases": o["aliases"], "topics": o.get("topics") or [],
                      **({"case_sensitive_aliases": o["case_sensitive_aliases"]}
                         if o.get("case_sensitive_aliases") else {})}
                     for o in config["objects"]],
@@ -1381,7 +1469,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
             "configured_competitors": "以客户确认版 Case 为准："
                                       + " / ".join(o["canonical_name"] for o in config["objects"]
                                                    if o["role"] == "competitor"),
-            "object_set": "目标品牌 + 3 个配置竞品 + 词表 competitor_open；词表命中配置对象的条目只并入别名与域名",
+            "object_set": "目标品牌 + 配置竞品（数量不限，可按主题限定）+ 词表 competitor_open；词表命中配置对象的条目只并入别名与域名",
             "source_type_note": "开放品牌官网域名由后端规则归入「竞品网站」，与配置竞品官网同桶；"
                                 "后端已知域名表覆盖有限，评测站/媒体站多落入「其他」",
             "url_tracking_params": "入口侧补剥 srsltid 等跟踪参数（后端 normalize_url 同类行为），"
@@ -1461,6 +1549,28 @@ def _protect_card_images(value: str) -> str:
     return _CARD_IMG.sub(swap, value)
 
 
+# ChatGPT 的另一种卡片写法：整行 markdown 图 `![商品图标题](<https://images.openai.com/…>)`，
+# 下面跟 `` `Best overall` ``、`## 1. 名称`、描述。原来没处理，渲染成「!链接」，卡片也没出
+# （2026-11-11 Obrand 9 条回答 35 张图）。alt 里会有转义方括号（`\[Direct from Japan\]`）。
+_MD_CARD_IMG_LINE = re.compile(
+    r"^\s*!\[((?:\\.|[^\]\\\n])*)\]\(<?(https?://[^\s<>)]+)>?\)\s*$", re.M)
+_MD_ESCAPE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!|<>~])")
+
+
+def _protect_markdown_card_images(value: str) -> str:
+    """整行 markdown 图 → 与 `<img title>` 相同的卡片占位符；是不是卡仍由 _render_inline_card 判。"""
+    from urllib.parse import quote
+
+    def swap(match: "re.Match[str]") -> str:
+        title = _MD_ESCAPE.sub(r"\1", match.group(1)).strip()
+        if not title:
+            return ""
+        payload = "~".join(quote(part, safe="") for part in (match.group(2), "", title))
+        return f"__GEO_CARD_IMG_{payload}__"
+
+    return _MD_CARD_IMG_LINE.sub(swap, value)
+
+
 def _protect_product_table_images(value: str) -> str:
     """保护商品表 picture 列的远程图片，普通回答图片仍由清洗器移除。"""
     from urllib.parse import quote
@@ -1507,6 +1617,7 @@ def normalize_answer_html(text: str) -> str:
     # 先保护商品表中的图片，普通回答中的图片仍按原规则删除。
     value = _protect_product_table_images(value)
     value = _protect_card_images(value)
+    value = _protect_markdown_card_images(value)
     value = _HTML_IMG.sub("", value)
     value = _HTML_IMAGE_ALT.sub("", value)
     value = _HTML_PLATFORM_BLOCK.sub("", value)
@@ -1560,7 +1671,9 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
     import html as _html
     import re as _re
 
-    lines = _html.escape(normalize_answer_html(text)).replace("\r\n", "\n").split("\n")
+    # 回答原文里带 &#39; 这类字符引用（ChatGPT 的 ([Tom&#39;s Hardware][3])），先还原再整体转义，
+    # 否则 & 被转成 &amp;，页面上显示 Tom&#39;s Hardware。还原后的文本照样整体转义，不会注入标签。
+    lines = _html.escape(_html.unescape(normalize_answer_html(text))).replace("\r\n", "\n").split("\n")
     out: list[str] = []
     i = 0
     list_stack: list[str] = []
@@ -1595,6 +1708,10 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
         # 引用 pill：每个 ([名][N]) 标记各渲染一个 pill，不去重不折叠，便于核对引用次数。
         chunk = _re.sub(r"\(\[([^\]\[]+)\]\[(\d+)\]\)", _pill, chunk)
         chunk = _re.sub(r"\[([^\]\[]+)\]\[(\d+)\]", _pill, chunk)
+        # [文字](<url>) 写法：转义后尖括号是 &lt;/&gt;，不先处理会把 &lt; 带进 href，再被下面的裸网址
+        # 规则二次包成链接，渲染成嵌套的坏 <a>（2026-11-11 KE/0050-r2「Buy in Kenya」）
+        chunk = _re.sub(r"\[([^\]]+)\]\(&lt;(https?://.+?)&gt;\)",
+                        r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', chunk)
         # URL 里允许一层括号（如 .../product(tk-cs200-hma)?utm=...），否则链接在首个 ) 提前闭合，
         # 尾巴 `?utm_source=...)` 会漏成可见文本。
         chunk = _re.sub(r"\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)",
@@ -1774,12 +1891,22 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
                 close_lists()
                 out.append(f"<{tag}>")
                 list_stack.append(tag)
-            out.append(f"<li>{inline((bullet or ordered).group(1))}</li>")
+            item = (bullet or ordered).group(1)
+            # ChatGPT 追问表单的勾选项（- [x] Samsung / - [ ] iPhone）显示成勾选框，不留方括号
+            item = re.sub(r"^\[[xX]\]\s*", "☑ ", re.sub(r"^\[ \]\s*", "☐ ", item))
+            out.append(f"<li>{inline(item)}</li>")
             i += 1
             continue
 
         if not stripped:
             close_lists()
+            i += 1
+            continue
+
+        # 分隔线 ---（卡片之间、段落之间），渲染成 <hr>，不再当文字显示（2026-11-11 Suda）
+        if _CARD_RULE.match(stripped):
+            close_lists()
+            out.append('<hr class="answer-rule">')
             i += 1
             continue
 
@@ -1794,6 +1921,22 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
 
     close_lists()
     return "".join(out)
+
+
+_CARD_PRICE_RE = re.compile(
+    r"(?:US\$|S\$|A\$|C\$|KSh|Ksh|KES|NGN|₦|RM|\$|€|£|₹|¥)\s?\d|\d[\d,.]*\s?(?:KSh|KES|NGN|USD|EUR|GBP)\b",
+    re.IGNORECASE)
+
+
+def _card_price(text: str) -> str:
+    """一行是不是价格（KSh 899、$349.99、₦53,500、KSh 2,000–3,500）。
+
+    限 40 字以内，避免把「Typical Kenya price: KSh 2,000–3,500」这类卖点句、或带价格的推荐语认成价格行。
+    """
+    t = re.sub(r"\*\*", "", str(text or "")).strip()
+    if not t or len(t) > 40:
+        return ""
+    return t if _CARD_PRICE_RE.search(t) else ""
 
 
 def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]:
@@ -1812,34 +1955,71 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
     title_attr = unquote(parts[2]) if len(parts) > 2 else ""
 
     i = start + 1
-    badge = heading_text = price = rating_line = blurb = shop_url = shop_label = ""
+    badge = heading_text = price = rating_line = shop_url = shop_label = subtitle = ""
     bullets: list[str] = []
-    blank = 0
+    blurbs: list[str] = []
     while i < len(lines):
         text = lines[i].strip()
         if _CARD_IMG_TOKEN.fullmatch(text) or _CARD_RULE.match(text):
             break
         if not text:
-            blank += 1
-            if blank >= 2 and i + 1 < len(lines) and re.match(r"^#{1,6}\s", lines[i + 1].strip()):
-                break
             i += 1
             continue
-        blank = 0
+        m_heading = re.match(r"^#{1,6}\s*(.+)$", text)
+        m_bold = re.fullmatch(r"\*\*(.+?)\*\*", text)
         m_badge = re.fullmatch(r"`([^`]+)`", text)
-        m_title = re.match(r"^\*\*\d+\.\s*(.+?)\*\*$", text)
-        m_price = re.match(r"^##\s*(.+)$", text)
         m_rating = re.match(r"^([^·|]{1,40})\s*·\s*([\d.]+)\s*/\s*5", text)
         m_bullet = re.match(r"^[-*+]\s+(.+)$", text)
-        # 链接写成 [Shop RivalB2](<url>) 时，尖括号已被 escape 成 &lt;/&gt;，取完 URL 再剥掉。
         # 链接写成 [Shop RivalB2](<url>)，尖括号 escape 后是 &lt;/&gt;，URL 里的 & 是 &amp;；两种都要认。
         m_link = re.match(r"^\[([^\]]+)\]\(<?([^)\s]+?)>?\)$", text)
-        if m_badge and not badge and not heading_text:
+        if m_heading:
+            # 紧跟在标题后的 `## …` 是卡片的主读数位（## $349.99、## 4K + 2K、## Premium pricing、## 8 hours），
+            # 收进卡里；卖点或描述已经开始后再出现的标题（## Let me find the right one…）是下一段，卡片到此结束。
+            # 2026-11-11 先改成只认价格，Bbrand 0006-r2、0013-r2 的卡因此散掉，改回按位置判断。
+            heading_body = m_heading.group(1).strip()
+            if heading_text and not price and not bullets and not blurbs and not subtitle:
+                price = heading_body
+                i += 1
+                continue
+            if not heading_text and _card_price(heading_body) and not price:
+                price = _card_price(heading_body)
+                i += 1
+                continue
+            # markdown 图那种写法的卡，标题是 `## 1. 名称`；只认带编号的，免得把章节标题收进卡
+            m_numbered = re.match(r"^\d+[.)]\s+(.+)$", heading_body)
+            if m_numbered and not heading_text and not bullets and not blurbs and not subtitle:
+                heading_text = re.sub(r"\*\*", "", m_numbered.group(1)).strip()
+                i += 1
+                continue
+            break
+        if m_bullet and re.match(r"^\[[ xX]\]", m_bullet.group(1)):
+            break  # ChatGPT 追问表单的勾选项（- [x] Samsung），不是卖点
+        # 卡片在这些地方结束，后面的内容交回正文渲染（2026-11-11 NG/0007-r4：最后一张卡吞了
+        # 「**One question:** …」、机型清单、结尾句和脚注定义行）：
+        if re.match(r"^\[\d+\]:\s*\S", text):
+            break  # 脚注定义行，正文循环会把它删掉
+        if re.sub(r"\*\*", "", text).rstrip().endswith(("?", "？")):
+            break  # 向用户提问的句子
+        if heading_text and re.match(r"^\*\*[^*]+\*\*\s*\S", text) and not _card_price(text):
+            break  # 新的加粗引导段（**One question:** …、**我的推荐：** …）
+        if m_bullet and blurbs:
+            break  # 描述之后再出现的列表属于下一段；卡片的卖点列表在描述之前
+        if not m_bullet and not m_heading and re.sub(r"\*\*", "", text).rstrip().endswith((":", "：")):
+            break  # 引出下一段的句子（One question so I can recommend…: / You can also find it in Kenya:）
+        if m_bold:
+            inner = m_bold.group(1).strip()
+            if inner.endswith(("?", "？")):
+                break  # 追问句（**Which phone do you use?**）
+            bold_price = _card_price(inner)
+            if bold_price and not price:
+                price = bold_price
+            elif not heading_text and not bullets and not blurbs:
+                # 标题有编号（**1. 标题**）和无编号（**itel ICW-201 Fast Charger**）两种写法
+                heading_text = re.sub(r"^\d+\.\s*", "", inner)
+            else:
+                blurbs.append(text)
+        elif m_badge and not badge and not bullets:
             badge = m_badge.group(1)
-        elif m_title and not heading_text:
-            heading_text = re.sub(r"\*\*", "", m_title.group(1)).strip()
-        elif m_price and not price:
-            price = m_price.group(1).strip()
         elif m_rating and not rating_line:
             rating_line = f"{m_rating.group(1).strip()} · {m_rating.group(2)}/5"
         elif m_bullet:
@@ -1848,15 +2028,20 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
             shop_label = m_link.group(1)
             shop_url = (m_link.group(2).strip().strip("<>")
                         .replace("&lt;", "").replace("&gt;", "").replace("&amp;", "&"))
-        elif not blurb:
-            blurb = text
+        elif _card_price(text) and not price:
+            price = _card_price(text)
+        elif heading_text and not bullets and not blurbs and not subtitle:
+            subtitle = text  # 标题下的一句副标题（Premium option、18W-class charger…），卖点列表在它后面
+        else:
+            # 推荐语、「View at Digital Store」这类后续行都保留，旧版只留第一行、其余静默丢掉
+            blurbs.append(text)
         i += 1
 
     # 判定是不是商品卡：必须带价格或「x/5」评分，或同时有编号标题与 、 卖点/描述。
     # 文章配图（「XX Logo PNG Vector」这类带 title 的插图）也带 title，只凭 title 会认错；
     # 认不出就返回空串，调用方按普通内容继续渲染（2026-11-09 实测 0034 有两张插图混进卡片）。
     looks_like_card = bool(price) or bool(rating_line) or (
-        bool(heading_text) and bool(bullets or blurb))
+        bool(heading_text) and bool(bullets or blurbs or subtitle))
     if not looks_like_card:
         return "", start + 1
 
@@ -1871,6 +2056,8 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
         card.append(f'<span class="product-card-badge">{inline(badge)}</span>')
     if name:
         card.append(f'<div class="product-card-title">{inline(name)}</div>')
+    if subtitle:
+        card.append(f'<p class="product-card-blurb">{inline(subtitle)}</p>')
     meta = []
     if price:
         meta.append(f'<span class="product-card-price">{inline(price)}</span>')
@@ -1881,8 +2068,8 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
     if bullets:
         card.append('<ul class="product-card-points">' +
                     "".join(f"<li>{inline(item)}</li>" for item in bullets) + "</ul>")
-    if blurb:
-        card.append(f'<p class="product-card-blurb">{inline(blurb)}</p>')
+    for line in blurbs:
+        card.append(f'<p class="product-card-blurb">{inline(line)}</p>')
     if shop_url:
         card.append('<a class="product-card-shop" href="' + _html.escape(shop_url, quote=True) +
                     '" target="_blank" rel="noopener noreferrer">' +
@@ -1944,7 +2131,8 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                 # 品牌提及与指标层同口径：在去引用正文上匹配（剥引用标签/定义行/图片 alt + 清商品卡
                 # 商家列），否则 ([RivalH1][4]) 这类引用标签会被算成提及（2026-10-22）。
                 # answer 原文仍用于正文渲染与引用抽取。
-                ranking_text = de_cite.blank_merchant_columns(de_cite.strip_citations(answer))
+                ranking_text = de_cite.blank_merchant_columns(
+                    de_cite.strip_citations(answer, result.get("follow_up_form")))
                 ranked = []
                 for obj in display_objects:
                     spans = find_alias_spans(ranking_text, obj["aliases"], obj.get("case_sensitive_aliases"))
@@ -2225,6 +2413,9 @@ def main(argv=None) -> int:
         meta["type_topic_prefix"] = TYPE_TOPIC_PREFIX
         if args.shopping_cards:
             meta["shopping_cards"] = args.shopping_cards
+        # 商品卡都没带商家时不出「官网购买链接覆盖率」（只会是一排 0%）
+        detail = shopping_detail_by_region(args.collect, regions)
+        meta["shopping_offers_returned"] = any(row["detailed"] for row in detail.values())
         details = build_details(args.collect, config, regions, bank, all_objects(config))
         facts = build_facts(index, config, regions)
         facts["source_limit"] = args.source_limit

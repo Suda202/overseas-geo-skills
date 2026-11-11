@@ -17,9 +17,9 @@
 
 - 统计层默认原则（2026-11-10 Suda）：引用默认统计全部意图类型，各类型切片都算出来；展示哪一批由报告按需求决定。
 
-- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）默认统计发现＋替代（11-06 前的旧类型「品类认知」题面不点名品牌，并入这一组）；筛到只剩问题解决题时统计问题解决；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
+- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）只统计发现＋替代（11-06 前的旧类型「品类认知」题面不点名品牌，并入这一组）；问题解决不统计提及率（11-11 Suda 定），筛到只剩问题解决题时显示「当前筛选下不统计」；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
 - 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Bbrand H1 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
-- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"], ["information"]]`、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
+- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"]]`、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
 - 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）2026-11-10 起与售前同一套口径，不再打补丁：题库写真实意图类型，取代 10-22 的「所有题都计入提及率、全部类型引用只合并发现和品类认知」。
 
 执行两条独立判定，不使用互斥的“先按意图选一类”逻辑：
@@ -35,7 +35,7 @@
 
 | 客户名称 | 含义 | 不得混淆为 |
 |---|---|---|
-| 品牌提及率 | 去引用正文里出现品牌名或它的任一识别名称的 Discovery 回答数 ÷ Discovery 有效回答数。识别名称包括不含品牌名的自有产品名和子品牌名（LG 的 PuriCare）：只提产品也计入母品牌，与 Profound 子资产向上汇总一致（2026-11-10 Suda 定）。一条回答提到多个名称只计一次，产品本身不另出提及率 | 推荐率、引用率、产品级提及率 |
+| 品牌提及率 | 去引用正文里出现品牌名或它的任一识别名称的 Discovery 回答数 ÷ Discovery 有效回答数。识别名称包括不含品牌名的自有产品名和子品牌名（LG 的 PuriCare）：只提产品也计入母品牌，与 Profound 子资产向上汇总一致（2026-11-10 Suda 定）。AI 反问用户、让用户选的追问块里出现的品牌不计提及（2026-11-11 Suda 定）：ChatGPT 表单按 `follow_up_form` 字段定位、从第一个提问句删到提交按钮那一行（`strip_follow_up_form`）；没有表单的普通追问，向用户提问的句子（非 Markdown 标题）连同后面紧跟的 2 条以上短列表项一起删（`strip_choice_lists`）。正文里的自检清单（`- [ ] Confirm …`）照常计入。只看结构和版式，不看行业。一条回答提到多个名称只计一次，产品本身不另出提及率 | 推荐率、引用率、产品级提及率 |
 | 提及率排名 | 在同一 Discovery 样本和冻结品牌集合中，按品牌提及率比较得到的相对名次 | 正文首次出现顺序、推荐顺序 |
 | 平均提及位置 | 品牌在被提及的 Discovery 回答正文中的首次合格出现位置取平均；只在品牌被提及时成立 | 提及率排名、模型对品牌优劣的语义排序 |
 | 引用份额 | 某来源、域名、页面或来源类型被引用的次数 ÷ 同一 Discovery 样本的全部引用次数。分子分母都按未去重次数计：同一回答多次引用同一来源计多次；去重只用于统计「有多少个不同来源」，不进份额。分母必须随数值一起确认 | 可见度、推荐率、流量占比、官网引用率 |
@@ -62,6 +62,13 @@
 |---|---|---|
 | 回答是否触发购物 | 回答 | 至少一张商品卡即算触发 |
 | 商品卡（Product Card） | 卡 | ChatGPT / AI Mode / Gemini：`products[]`；AIO：`source[]` 中 `type=product` |
+
+**ChatGPT 只认带商品目录的购物卡**（2026-11-11 Suda 定）：`products[]` 条目带 `id`、`cite`（如 `turn0product7`）、`offers`、`price` 之一才算商品卡，判断在 `shopping.chatgpt_catalog_backed`。不带的条目不计，包括两类：
+
+- 没有商品目录的市场里，回答用卡片版式展示的商品推荐。肯尼亚、尼日利亚实测，回答页上的卡没有价格、商家、购买入口，图片是网页配图，`products` 只剩 `title` 和 `query`。OpenAI 原文 "Shopping is currently live for ChatGPT users in the U.S."（https://chatgpt.com/merchants/）。
+- 非商品条目，如「RivalH1」「Facebook Marketplace」。
+
+全项目实测：美国 1,333 条带目录证据、2 条不带；肯尼亚、尼日利亚 10,822 条全不带。一个市场全是这类条目时，该市场商品卡数为 0，报告按「本次采集没有商品卡」整块不出。
 
 AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的商品定义在 `source[]`（「products inside ai overview」），`products` 定义为「Google wale sponsored products」；实测 `products` 379 项里 371 项不在同一回答的 AI 概览商品中，`section_title` 是 People also ask、Popular products、Deals 等页面区块名。空占位卡（无标题）和广告卡（`ads product`、`ads`）不计。
 

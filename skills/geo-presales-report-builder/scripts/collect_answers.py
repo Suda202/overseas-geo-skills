@@ -218,6 +218,10 @@ def platform_input(platform: str, region: str, query: str, args) -> dict:
         payload["mode"] = args.grok_mode
     elif platform != "alexa":
         payload.update(web_search=args.web_search, shopping=args.shopping)
+    # 原平台回答页的 HTML（Scrapeless 文档只给 ChatGPT、Perplexity、Copilot 列了这个参数；
+    # AI Mode 默认就有 result_html）。默认不开：体积大，且是否另计费未确认。
+    if getattr(args, "fetch_html", False) and platform in ("chatgpt", "perplexity", "copilot"):
+        payload["should_fetch_html"] = True
     return payload
 
 
@@ -355,6 +359,8 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=300, help="单次尝试的轮询上限（秒）")
     parser.add_argument("--no-web-search", dest="web_search", action="store_false")
     parser.add_argument("--no-shopping", dest="shopping", action="store_false")
+    parser.add_argument("--fetch-html", action="store_true",
+                        help="ChatGPT / Perplexity / Copilot 请求带 should_fetch_html=true，取原平台回答页 HTML（默认不开）")
     parser.add_argument("--retry-unrecoverable", action="store_true", help="对 manifest 里已移出的格重新采集")
     parser.add_argument("--dry-run", action="store_true", help="只打印待采格与调用量，不调用")
     parser.add_argument("--check-only", action="store_true", help="只验收现有目录；有待采格时退出码 3")

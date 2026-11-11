@@ -23,7 +23,7 @@
 | `objects` | 全部纳入品牌（目标、配置竞品、开放品牌），顺序同 `all_objects(config)`；下文的对象下标指这里 |
 | `domains` / `urls` / `source_types` | 引用的域名、页面、来源类型字典；`source_types[i].bucket` 是 7 类展示类别 |
 | `answers[]` | 每条有效回答：`r` 市场、`p` 平台显示名、`q` 题号、`n` 第几次、`m` 提到的品牌 `[对象下标, 位置]`、`c` 每条引用 `[官网归属对象下标或 -1, 域名下标, 来源类型下标, 页面下标或 -1, 是否表格行]`、`s` 商品卡（平台不支持为 null）`{f 本条是否带商品字段, t 卡数, k [[对象下标或 -1, 卡位, 是否官网链接, SKU 下标或 -1]]}` |
-| `visibility_groups` / `shopping_scope` | 提及类样本的意图组（发现＋替代 → 问题解决）、商品卡统计的意图类型 |
+| `visibility_groups` / `shopping_scope` | 提及类样本的意图组（只有发现＋替代）、商品卡统计的意图类型 |
 | `sku_names` / `source_limit` / `bucket_order` / `bucket_fill` / `competition_fills` | 与 Python 侧同值的常量 |
 | `claims[]` | 每条 Claim：`r` `p`（平台内部名）`k`（回答键）`q` `b` 品牌 `t` 归一后的 claim 文本 `d` 方向 `a` Attribute `h` Theme，目标品牌带 `e` 证据句 |
 | `sentiment` | 展示品牌、目标品牌、明细情感列适用的题号、平台显示名 → 内部名 |
@@ -163,7 +163,7 @@
 **competition**
 
 - `mention` 每行 6 项：`[显示名, 域名, 百分比字符串, 条宽百分比字符串, fill 颜色, 原始排名数字]`。颜色取值 `""`（墨色）/`gold`/`blue`/`cyan`/`green`/`amber`/`red`。目标品牌必须是 `gold`。
-- 展示 **5 行**：目标品牌 + 3 个配置竞品 + 1 个开放竞品（按提及率从高到低取，若已在前面出现则顺延）。不足 5 行时按实际数量输出。
+- 展示行：目标品牌 + 本主题所属产品线的配置竞品 + 1 个开放竞品（按提及率从高到低取，若已在前面出现则顺延）。**配置竞品数量不设上限**：Case 的「竞品 N 主题」限定该竞品只在哪些主题的切片里展示，未限定则所有主题都展示；全部主题切片与「类型:X」意图切片展示全部配置竞品。不设固定行数，按实际数量输出。
 - `share` 是与 `mention` **同序**的数字数组，单位是百分比数值（如 `20` 表示 20%）。
 - `rank` 每行 3 或 4 项：`[显示名, 域名, 平均提及位置字符串]`，目标品牌行加第 4 项 `"target"`。品牌名必须与 `mention` 里逐字一致。
 - 三者的顺序：`mention` 按提及率降序，`rank` 按平均提及位置升序。
@@ -227,7 +227,7 @@
 
 - 可见度、声量、平均提及位置、引用、机会分档：复用 `geo-metrics/scripts/geo_presales_core` 的 `prepare_answers` 与 `compute_metrics`。
 - 正式可见度只用 Discovery 意图。情绪样本用 `analysis_type` 含 sentiment 的题。
-- 声量份额分母 = 全部纳入对象的提及次数之和；纳入对象 = 目标品牌 + 3 个配置竞品 + 开放品牌词表命中的品牌。
+- 声量份额分母 = 全部纳入对象的提及次数之和；纳入对象 = 目标品牌 + 全部配置竞品 + 开放品牌词表命中的品牌。
 - 空答案（正文为空）不进入任何分母。
 - `kpis.official_share`（引用份额）= 有效 Discovery 回答正文 pill 中指向目标品牌官网的次数 ÷ 同切片全部 pill 次数，分子分母都不去重；`sources.types`（来源类别）、`sources.domains`、`sources.pages`、`sources.official_pages` 的份额与它同分母、同样不去重。
 - `kpis.official_citation_rate`（官网引用率）= 正文至少有一个 pill 指向目标品牌官网的有效 Discovery 回答数 ÷ 有效 Discovery 回答数；`official_citation_counts` 以 `分子/分母` 给出，无回答时为 `—` 与 `0/0`。按回答计票，与 `official_share`（按次数）和 `linked_mention_rate`（分母是被提及的回答）都不同。只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。

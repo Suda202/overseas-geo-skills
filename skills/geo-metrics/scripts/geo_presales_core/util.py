@@ -33,6 +33,11 @@ COMMON_MULTI_LABEL_SUFFIXES = {
     "com.ph", "net.ph", "co.th", "or.th", "com.vn", "com.id", "co.id", "com.bn",
     # 新加坡政府、教育、个人站按机构拆开（hdb.gov.sg 与 ura.gov.sg 是两个来源），都是公共后缀表正式后缀
     "gov.sg", "edu.sg", "per.sg",
+    # 非洲与中东市场二级后缀；缺了会把 citygadgetskenya.co.ke 归成 "co.ke"、jumia.com.ng 归成 "com.ng"
+    "co.ke", "or.ke", "ne.ke", "go.ke", "ac.ke",
+    "com.ng", "org.ng", "net.ng", "gov.ng", "edu.ng",
+    "co.za", "org.za", "com.gh", "org.gh", "co.tz", "or.tz",
+    "com.eg", "com.sa", "com.ae", "co.zw", "co.ug", "co.mz",
 }
 
 # Google 等新跟踪参数：采集入口先剥掉（strip_tracking_params），避免同一页面被计成多条引用

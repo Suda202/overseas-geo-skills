@@ -87,12 +87,17 @@ def load_lexicon(path) -> tuple[list[dict], set[str], str]:
         domains = [normalize_host(str(d)) for d in as_list(
             item.get("official_domains") or item.get("domains") or item.get("domain"))]
         aliases = [str(a).strip() for a in as_list(item.get("aliases")) if str(a).strip()]
-        entries.append({
+        entry = {
             "name": name,
             "domains": [d for d in domains if d],
             "aliases": aliases or [name],
             "type": str(item.get("type") or "competitor_open").strip(),
             # 词表里实际写的类型；没写为 None（情感单元的 brand_type 照实记，不套默认值）
             "declared_type": str(item.get("type")).strip() if item.get("type") else None,
-        })
+        }
+        # 品牌名本身是普通英文词时（Nothing / One / Play），调用方可以要求不要把规范名当别名，
+        # 只认词表里带型号的写法。透传这个开关，否则 build_config 拿不到。
+        if item.get("exclude_canonical_alias"):
+            entry["exclude_canonical_alias"] = True
+        entries.append(entry)
     return entries, uncertain, "loaded"

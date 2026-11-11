@@ -175,20 +175,22 @@
 
   // show：这个维度在整份报告里有没有可选的（只有一个取值的维度整份报告都不出）；
   // 不按收窄后的选项数决定显隐，否则选了意图类型、主题只剩一个时下拉会突然消失
-  function fillSelect(id, values, active, allLabel, show) {
+  // labels：可选「代码 → 展示名」映射。value 始终保持代码（切片的键靠它），只换显示文本。
+  function fillSelect(id, values, active, allLabel, show, labels) {
     var el = document.getElementById(id);
     if (!el) return false;
     if (show === undefined ? values.length <= 1 : !show) { el.style.display = "none"; el.innerHTML = ""; return false; }
     el.style.display = "";
     el.innerHTML = '<option value="">' + esc(allLabel) + "</option>" + values.map(function (v) {
-      return '<option value="' + esc(v) + '"' + (v === active ? " selected" : "") + ">" + esc(v) + "</option>";
+      var text = labels && labels[v] ? labels[v] : v;
+      return '<option value="' + esc(v) + '"' + (v === active ? " selected" : "") + ">" + esc(text) + "</option>";
     }).join("");
     return true;
   }
 
   function renderTabs() {
     var shown = [];
-    if (fillSelect("regionSelect", META.regions || [], state.region, "全部地区")) shown.push("地区");
+    if (fillSelect("regionSelect", META.regions || [], state.region, "全部地区", undefined, META.region_labels || {})) shown.push("地区");
     if (fillSelect("platformSelect", META.platforms || [], state.platform, "全部平台")) shown.push("平台");
     var intentTopics = META.intent_topics || {};
     if (fillSelect("intentSelect", Object.keys(intentTopics), state.intent, "全部意图类型")) shown.push("意图类型");
@@ -201,7 +203,7 @@
 
   /* ---------- 核心洞察 KPI ---------- */
 
-  // 提及类指标只算发现、替代（只剩问题解决时算问题解决）。对比、评估、验证、交易、售后题面点名了品牌，
+  // 提及类指标只算发现、替代（问题解决不统计提及率，2026-11-11）。对比、评估、验证、交易、售后题面点名了品牌，
   // 提及率接近 100%，不算；这类切片的提及类指标是「—」，不代表品牌没出现。
   function isTypeOnlySlice(slice) {
     var c = slice._counts || {};
@@ -238,19 +240,18 @@
   }
 
   // 01 指标下面一行写清每个数统计哪几类意图（随筛选变：只列当前切片里有的类型）
-  // 核心洞察所有指标同一批题：发现、替代（只剩问题解决题时是问题解决）（Suda 2026-11-07）
+  // 核心洞察所有指标同一批题：发现、替代（Suda 2026-11-07；问题解决不算，2026-11-11）
   function kpiScopeLine(slice) {
     var present = [];
     (slice.records || []).forEach(function (r) { if (r.intent && present.indexOf(r.intent) < 0) present.push(r.intent); });
     function pick(types) { return types.filter(function (t) { return present.indexOf(t) >= 0; }); }
     var vis = pick(["发现", "替代"]);
-    if (!vis.length) vis = pick(["问题解决"]);
-    return "统计范围　" + (vis.length ? vis.join("、") : "当前筛选下不统计（点名品牌的问题）");
+    return vis.length ? vis.join("、") : "当前筛选下不统计（点名品牌的问题）";
   }
 
   // 各模块标题右侧：本模块统计哪几类意图（只列当前筛选下有的类型）
   var SECTION_SCOPE = {
-    competition: [["发现", "替代"], ["问题解决"]],
+    competition: [["发现", "替代"]],
     shopping: [["发现", "替代"]],
     sources: "all",
     distribution: [["发现", "替代", "对比", "评估", "验证"]]
@@ -400,6 +401,9 @@
     var rows = matrix[metric] || [];
     var el = document.getElementById("platformMatrix");
     if (!el) return;
+    // 只在数据本身只有一个平台时不出；用户筛到一个平台时矩阵照常显示单列
+    var panel = document.getElementById("platform-matrix");
+    if (panel) panel.style.display = (META.platforms || []).length < 2 ? "none" : "";
     if (!rows.length) { el.innerHTML = ""; return; }
     var head = "<thead><tr><th>品牌</th>" + platforms.map(function (p) { return "<th>" + esc(p) + "</th>"; }).join("") + "</tr></thead>";
     var body = "<tbody>" + rows.map(function (row) {
@@ -737,6 +741,18 @@
 
   /* ---------- 附录 问题明细 ---------- */
 
+  // 多市场报告里，题目在哪些市场问（只列当前地区筛选里的）；单市场返回空串、不显示
+  var MULTI_REGION = (META.regions || []).length > 1;
+  var Q_REGIONS = {};
+  (META.questions || []).forEach(function (q) { Q_REGIONS[Number(q.qid)] = q.regions || []; });
+  function qRegionsText(qid) {
+    if ((META.regions || []).length <= 1) return "";
+    var list = (Q_REGIONS[Number(qid)] || []).length ? Q_REGIONS[Number(qid)] : (META.regions || []);
+    var sel = state.sel && state.sel.regions && state.sel.regions.length ? state.sel.regions : null;
+    if (sel) list = list.filter(function (r) { return sel.indexOf(r) >= 0; });
+    return list.map(function (r) { return dimLabel("regions", r); }).join(" · ");
+  }
+
   function recordsForSlice() {
     var slice = currentSlice();
     var all = slice.records || [];
@@ -807,11 +823,12 @@
         (HAS_SENTIMENT ? cell(((ts.sentiment || {}).summary || {}).pos_rate, true) : "") +
         '<td class="center"></td></tr>';
       var items = rows.map(function (record) {
-        // 题面点名品牌的类型不算提及类读数
-        var named = ["发现", "替代", "问题解决"].indexOf(record.intent) < 0;
+        // 题面点名品牌的类型、问题解决不算提及类读数
+        var named = ["发现", "替代"].indexOf(record.intent) < 0;
         return '<tr class="q-row">' +
           '<td class="num">' + esc(record.qid) + "</td>" +
-          '<td class="q"><b>' + esc(record.en) + "</b><small>" + esc(record.zh) + "</small></td>" +
+          '<td class="q"><b>' + esc(record.en) + "</b><small>" + esc(record.zh) + "</small>" +
+          (qRegionsText(record.qid) ? '<small class="q-regions">' + esc(qRegionsText(record.qid)) + "</small>" : "") + "</td>" +
           cell(named ? "—" : record.mention_rate) + cell(named ? "—" : record.mention_rank) +
           cell(named ? "—" : record.share) + cell(named ? "—" : record.position) +
           cell(record.citation_share) + cell(record.citation_rate) +
@@ -917,7 +934,7 @@
     });
     function pct(v) { return v === null || v === undefined ? "—" : (v === 0 ? "0%" : (v * 100).toFixed(1) + "%"); }
     // 列同问题明细（排名不放：表本身按提及率排序）；点名类型的题不出提及类三列
-    var named = record && ["发现", "替代", "问题解决"].indexOf(record.intent) < 0;
+    var named = record && ["发现", "替代"].indexOf(record.intent) < 0;
     var bs = rec.brand_sentiment || {};
     var head = "<th>品牌</th>" + (named ? "" : "<th>提及率</th><th>声量份额</th><th>平均提及位置</th>") +
       "<th>引用份额</th><th>引用率</th>" + (HAS_SENTIMENT ? "<th>正向情感占比</th>" : "");
@@ -961,7 +978,8 @@
       var r = x.entry;
       var hit = (r.brands || []).some(function (b) { return b.target; });
       var names = (r.brands || []).map(function (b) { return displayBrand(b.name); }).join("、");
-      return "<tr><td>" + esc(x.platform) + '</td><td class="num">' + esc(x.run) + '</td><td class="num">' + esc(r.time || "—") + "</td>" +
+      return "<tr>" + (MULTI_REGION ? "<td>" + esc(dimLabel("regions", x.region)) + "</td>" : "") +
+        "<td>" + esc(x.platform) + '</td><td class="num">' + esc(x.run) + '</td><td class="num">' + esc(r.time || "—") + "</td>" +
         '<td class="' + (hit ? "hit" : "miss") + '">' + (hit ? "提及" : "未提及") + "</td><td>" + esc(names || "—") + "</td>" +
         '<td class="num">' + esc(r.citation_share || "—") + "</td>" +
         '<td class="center"><button class="detail-btn" type="button" data-run="' + esc(x.key) + '" data-run-qid="' + key + '">查看回答</button></td></tr>';
@@ -969,12 +987,14 @@
     return '<div class="drawer-overview">' +
       '<div class="drawer-overview-head"><div><p class="drawer-q">' + esc(record ? record.en : "") + "</p>" +
       '<p class="drawer-zh">' + esc(record ? record.zh : "") + "</p>" +
-      '<p class="drawer-tags"><span>' + esc(record ? record.topic : "—") + "</span><span>" + esc(record ? record.intent : "—") + "</span></p></div>" +
+      '<p class="drawer-tags"><span>' + esc(record ? record.topic : "—") + "</span><span>" + esc(record ? record.intent : "—") + "</span>" +
+      (record && qRegionsText(record.qid) ? "<span>" + esc(qRegionsText(record.qid)) + "</span>" : "") + "</p></div>" +
       "</div>" + filter + comp + plat +
       fan("fanout", "Query Fan-outs", "", "") +
       '<h4 class="drawer-sec">回答记录</h4>' +
-      (rows ? '<table class="drawer-table runs"><colgroup><col style="width:12%"><col style="width:7%"><col style="width:13%"><col style="width:9%"><col><col style="width:10%"><col style="width:12%"></colgroup>' +
-        "<thead><tr><th>平台</th><th>运行</th><th>采集时间</th><th>" + esc(META.brand || "本品") + "</th><th>提到的品牌</th><th>引用份额</th><th class=\"center\">操作</th></tr></thead><tbody>" +
+      (rows ? '<table class="drawer-table runs"><colgroup>' + (MULTI_REGION ? '<col style="width:10%">' : "") +
+        '<col style="width:12%"><col style="width:7%"><col style="width:13%"><col style="width:9%"><col><col style="width:10%"><col style="width:12%"></colgroup>' +
+        "<thead><tr>" + (MULTI_REGION ? "<th>地区</th>" : "") + "<th>平台</th><th>运行</th><th>采集时间</th><th>" + esc(META.brand || "本品") + "</th><th>提到的品牌</th><th>引用份额</th><th class=\"center\">操作</th></tr></thead><tbody>" +
         rows + "</tbody></table>" : '<p class="support-line">当前采集目录里没有这道题的原始回答。</p>') +
       "</div>";
   }
@@ -1000,7 +1020,8 @@
     }
     var entry = picked.entry;
     var variantTabs = '<div class="run-nav"><button class="variant-tab" type="button" data-run="" data-run-qid="' + key +
-      '">← 返回列表</button><span>' + esc(picked.platform) + " · 第 " + esc(picked.run) + " 次 · " + esc(entry.time || "") + "</span></div>";
+      '">← 返回列表</button><span>' + (MULTI_REGION ? esc(dimLabel("regions", picked.region)) + " · " : "") +
+      esc(picked.platform) + " · 第 " + esc(picked.run) + " 次 · " + esc(entry.time || "") + "</span></div>";
     var ranking = (entry.brands || []).map(function (row) {
       return '<div class="brand-rank-row' + (row.target ? " self-brand" : "") + '">' +
         '<span class="brand-name">' + logo(row.domain, 18, row.name) + esc(displayBrand(row.name)) + (row.target ? ' <span class="drawer-sentiment-star">★</span>' : '') + "</span><strong>" +
@@ -1177,6 +1198,11 @@
     var matrix = slice.matrix || {};
     var sentTarget = targetRow(matrix.mention || []);
     var platforms = matrix.platforms || [];
+    // 这段结论是跨平台比较，和平台 × 品牌矩阵同一规则：数据本身只有一个平台时不出（判据 META.platforms，
+    // 用户筛到一个平台时照常显示，走下面 vals.length === 1 的单平台说法）
+    var compEl = document.getElementById("competitionInsight");
+    var compNote = compEl && compEl.closest ? compEl.closest(".insight-note") : null;
+    if (compNote) compNote.style.display = (META.platforms || []).length < 2 ? "none" : "";
     if (sentTarget && platforms.length) {
       // 跨平台横切看共识：所有平台两两差距都 ≤10pt 才叫有共识；否则就是无共识，
       // 直接点名提及率最高的平台，并把单一平台高低和"优化目标"解耦。
@@ -1189,6 +1215,10 @@
         headline = "这个主题只有对比或评价题，不算提及率。";
       } else if (!vals.length) {
         headline = "当前切片下监测对象未进入任何平台回答。";
+      } else if (vals.length === 1) {
+        // 只有一个平台时不存在「跨平台」比较，强行套共识/差距文案会写出相差 0.0 的假结论
+        headline = "当前只有 " + vals[0].name + " 一个平台的数据，提及率 " + vals[0].value.toFixed(1) + "%。";
+        points.push("<strong>提及率：</strong>" + vals[0].name + " " + vals[0].value.toFixed(1) + "%。");
       } else {
         var sorted = vals.slice().sort(function (a, b) { return b.value - a.value; });
         var top = sorted[0];
@@ -1285,6 +1315,9 @@
     if (key === "topics") return (META.topics || []).length > 1;
     return mselValues(key).length > 1;
   }
+  function dimLabel(key, value) {
+    return key === "regions" ? ((META.region_labels || {})[value] || value) : value;
+  }
   function renderMultiFilters() {
     var shown = 0;
     MSEL_DIMS.forEach(function (d) {
@@ -1302,16 +1335,17 @@
       shown += 1;
       host.style.display = "";
       var chosen = state.sel[d.key];
-      var label = !chosen.length ? d.all : chosen.length <= 2 ? chosen.join("、") : chosen.length + " " + d.unit;
+      // 地区维度显示中文市场名（META.region_labels），value 仍是代码
+      var label = !chosen.length ? d.all : chosen.length <= 2 ? chosen.map(function (v) { return dimLabel(d.key, v); }).join("、") : chosen.length + " " + d.unit;
       var open = state.openMsel === d.key;
       host.classList.toggle("open", open);
       host.innerHTML = '<button type="button" class="multi-select-button' + (chosen.length ? " has-value" : "") +
-        '" data-msel-toggle="' + d.key + '" aria-expanded="' + open + '" title="' + esc(chosen.join("、") || d.all) + '">' + esc(label) + "</button>" +
+        '" data-msel-toggle="' + d.key + '" aria-expanded="' + open + '" title="' + esc(chosen.map(function (v) { return dimLabel(d.key, v); }).join("、") || d.all) + '">' + esc(label) + "</button>" +
         '<div class="multi-select-menu">' +
         '<button type="button" class="multi-select-option msel-all' + (chosen.length ? "" : " on") + '" data-msel-clear="' + d.key + '">' + esc(d.all) + "</button>" +
         mselValues(d.key).map(function (v) {
           return '<label class="multi-select-option"><input type="checkbox" data-msel="' + d.key + '" value="' + esc(v) + '"' +
-            (chosen.indexOf(v) >= 0 ? " checked" : "") + "><span>" + esc(v) + "</span></label>";
+            (chosen.indexOf(v) >= 0 ? " checked" : "") + "><span>" + esc(dimLabel(d.key, v)) + "</span></label>";
         }).join("") + "</div>";
     });
     var box = document.getElementById("sharedFilter");

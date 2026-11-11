@@ -137,8 +137,8 @@ def visibility_answers(config: dict, valid_answers: list[dict]) -> list[dict]:
     """提及类指标（提及率、排名、声量份额、平均提及位置、问题机会）的样本。
 
     缺省只用 Discovery（后端与上传 CSV 口径）。``config["visibility_intent_groups"]`` 给出按顺序回退的
-    意图组，取第一组有样本的：售前 HTML 报告传 ``[["discovery", "alternatives"], ["information"]]``——
-    默认看发现＋替代，只剩问题解决题的切片（筛到这一类时）才算问题解决的提及率（Suda 2026-11-07）。
+    意图组，取第一组有样本的：售前 HTML 报告传 ``[["discovery", "alternatives"]]``——
+    只看发现＋替代；问题解决不统计提及率（Suda 2026-11-11，推翻 11-07 的只剩问题解决题时回退）。
     """
     groups = config.get("visibility_intent_groups")
     if not groups:

@@ -111,6 +111,7 @@
       return OBJ.map(function (o, i) {
         return {
           index: i, role: o.role, name: o.name, domain: o.domain,
+          topics: o.topics || [],
           mention_rate: vis.length ? counts[i] / vis.length : null,
           share_of_voice: total ? counts[i] / total : null,
           average_rank: ranks[i].length ? ranks[i].reduce(function (s, v) { return s + v; }, 0) / ranks[i].length : null,
@@ -139,7 +140,16 @@
       var answers = pick(sel);
       var rows = objectRows(answers);
       var vis = visibility(answers);
-      var configured = rows.filter(function (r) { return r.role === "target" || r.role === "competitor"; });
+      // 配置竞品可挂在指定主题上（facts.objects[].topics）；选中的主题里只展示本线竞品。
+      // 没选主题（全部 / 只选了意图类型）时展示全部配置竞品（2026-11-11 放开 3 个上限）。
+      var selTopics = (sel.topics && sel.topics.length) ? sel.topics : [];
+      var configured = rows.filter(function (r) {
+        if (r.role === "target") return true;
+        if (r.role !== "competitor") return false;
+        if (!selTopics.length) return true;
+        if (!r.topics || !r.topics.length) return true;
+        return selTopics.some(function (t) { return r.topics.indexOf(t) >= 0; });
+      });
       var open = rows.filter(function (r) { return r.role === "open"; }).sort(function (a, b) {
         return ((b.mention_rate || 0) - (a.mention_rate || 0)) || cmp(a.name, b.name);
       });
@@ -401,7 +411,12 @@
       var sig = SENT ? signals().filter(function (x) {
         return inSel(sel.regions, x.c.r) && (!sel.platforms || !sel.platforms.length || sel.platforms.indexOf(INTERNAL_TO_LABEL[x.c.p]) >= 0);
       }) : [];
-      return (META.questions || []).filter(function (q) { return qOk(sel, Number(q.qid)); }).map(function (q) {
+      // 题库按市场写（同一句提示词可能只在某一个市场），选地区/平台后没有回答的题
+      // 不应出现在明细里，否则筛选后条数不变（2026-11-11 实测）。
+      return (META.questions || []).filter(function (q) {
+        var qid = Number(q.qid);
+        return qOk(sel, qid) && (byQ[qid] || []).length > 0;
+      }).map(function (q) {
         var qid = Number(q.qid);
         var valid = byQ[qid] || [];
         var row = { qid: qid, en: q.en, zh: q.zh, topic: q.topic, intent: q.intent, tag: q.tag === "—" ? "" : (q.tag || ""),

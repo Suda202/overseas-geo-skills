@@ -144,7 +144,9 @@ PRODUCT_VIEWER_NOISE = de_cite.PRODUCT_VIEWER_NOISE
 def answer_text(task: dict, platform: str) -> str:
     # 正文字段与报告数据层同一张表（geo-metrics core crawler.answer_body）。
     # 换成空格而非直接删：它粘在商品名后，删掉会把两个名字拼成一个词。
-    return answer_body(task, platform).replace(PRODUCT_VIEWER_NOISE, " ")
+    # ChatGPT 追问表单那一段与提及率同口径删掉（geo-metrics de_cite_crawl.strip_follow_up_form）。
+    body = de_cite.strip_follow_up_form(answer_body(task, platform), task.get("follow_up_form"))
+    return body.replace(PRODUCT_VIEWER_NOISE, " ")
 
 
 def answer_prompt(task: dict) -> str:

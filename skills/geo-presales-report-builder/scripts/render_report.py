@@ -204,7 +204,9 @@ def build_body(meta: dict) -> str:
             )
             body.append(shop_panel("商品卡提及率", "出现商品卡的回答里，有该品牌（SKU）商品卡的回答占比。只数商品卡，不含正文提及。", "shopVis"))
             body.append(shop_panel("商品卡平均位置", "该品牌（SKU）商品卡在每条回答里最靠前那张的位置取平均，数值越小越靠前。", "shopPos"))
-            body.append(shop_panel("官网购买链接覆盖率", "出现该品牌（SKU）商品卡的回答里，商品卡带官网购买链接的回答占比。", "shopLink"))
+            # offers 没返回时不出这一栏：全是 0% 是采集缺口，不是品牌表现（2026-11-11 Obrand）
+            if meta.get("shopping_offers_returned", True):
+                body.append(shop_panel("官网购买链接覆盖率", "出现该品牌（SKU）商品卡的回答里，商品卡带官网购买链接的回答占比。", "shopLink"))
             body.append("</div>")
         elif section_id == "sources":
             body.append('<div class="section-body">')

@@ -149,7 +149,7 @@ def collect(collect_dirs, questions, brands, types):
                             continue
                         seen[digest] = str(path)
                     status = str(payload.get("status") or "success").lower()
-                    body = blank_merchant_columns(strip_citations(raw))
+                    body = blank_merchant_columns(strip_citations(raw, task.get("follow_up_form")))
                     valid, _ = answer_validity(body)
                     if status != "success" or not valid:
                         continue
