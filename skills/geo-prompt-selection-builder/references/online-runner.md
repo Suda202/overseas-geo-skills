@@ -35,32 +35,11 @@ python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场
 
 脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
-### 审核环
-
-校验和导出第一次都通过后，脚本再新开一个审核 agent（不带生成时的上下文），按 [review-rubric.md](review-rubric.md) 九条核对 `out/bank.json` 和 `out/notes.md`，发现写进 `out/review.json`，只写这一个文件。
-
-- 审核模型：`--agent sdk` 时读环境变量 `AGENT_REVIEW_MODEL`，没设用 `AGENT_MODEL`；`--agent-cmd` 时照常执行宿主命令（`TASK_FILE` 指向 `REVIEW.md`），模型由宿主定。
-- 阻塞发现（`blocking: true`）按返修的报错格式写成 `REVIEW-REPAIR-<n>.md`（stage 记 `review`）回喂 agent 返修，再跑校验和导出，然后 `REVIEW-<n>.md` 只复核上一轮报过的题号；复核仍有阻塞就继续返修，`--review-rounds` 轮（默认 1＝审一轮＋复核一轮，0 关闭审核）。最后一轮审核返修同样授权丢题不丢库；轮次用完仍有阻塞时，脚本自己把这些题删掉（删前题库存 `out/bank.before-drop.json`，题号和审核原文记进 `config.retired` 与 notes「删题（脚本兜底）」，删空的主题连登记一起删、挂在上面的矩阵行注明本期不出），再跑一遍校验和导出，通过就交付。删完仍没过，或阻塞发现没写题号删不了，才判生词失败。审核返修把校验改坏了，下一轮把校验报错和没修的阻塞发现一起回喂。审核轮次不占 `--repair-rounds` 的额度。
-- 非阻塞发现不触发返修，记进 `out/result.json` 的 `review.nonblocking`；本来就要审核返修时，顺带让返修 agent 写进 `notes.md`「评审意见」一节。
-- 审核是增强，validator 才是闸门：`review.json` 缺失、不是合法 JSON、结构不对，或审核 agent 超时、出错时，只在 `review.warnings` 记一条，照常交付已过校验的题库。审核 agent 改了 `bank.json` 时脚本恢复审核前的题库并记 warning。
-- `out/result.json` 的 `review` 块：`rounds`（审核加复核跑了几轮）、`blocking_found` / `nonblocking_found`（各轮累计）、`status`（`passed` 无阻塞发现；`repaired` 返修后复核通过；`dropped` 轮次用完后脚本删题交付，删了哪些看 `dropped`；`skipped` 关闭审核；`review_failed` 审核没产出可用结果或阻塞没修完，看 `reason` 和总的 `status` 区分）、`review_repair_rounds`、`warnings`、`nonblocking`、`blocking_unresolved`。每轮原件存 `logs/review-<n>.json`；审核和审核返修的 agent 记录（`logs/agent-run-review*.json`）进 `costs.llm` 加总。
-
-### 每轮记账
-
-每轮自动记账，统计口径是每个客户平均花多少钱。脚本每次 finalize 都往 `out/result.json` 写一个 `costs` 块，只记数量和用量，不乘单价：
-
-| 键 | 内容 | 从哪数 |
-|-|-|-|
-| `brand`、`market` | 客户和市场 | `inputs/case-normalized.json` |
-| `llm` | 主跑和各返修轮的 token 用量加总（`input_tokens`、`output_tokens`、`cache_read_input_tokens`、`cache_creation_input_tokens`）、轮次、turns、耗时；`total_cost_usd_anthropic_price_unreliable` 是 SDK 按 Anthropic 价算的，网关后面是别家模型时不可信，只留存不用 | `logs/agent-run*.json`（`--agent sdk` 才有 usage；`--agent-cmd` 记 `runs_with_usage: 0`） |
-| `scrapeless_requests` | 研究预跑尝试次数（失败重试也算）和成功次数、SERP 请求数、网页代理页数、`net.py search` 次数 | `research/**/_collector/events.jsonl` 的 attempt 行、`research/**/serp*/raw/*.json`、`logs/net_cache/`（runner 设 `NET_CACHE_DIR`，每轮一份缓存） |
-| `dataforseo` | 本轮时间窗内这个 case 的调用次数和花费 | `~/.dataforseo/ledger.jsonl`，按 `DATAFORSEO_CASE`（默认「品牌 市场」）过滤，不含沙盒 |
-
-按客户汇总、算平均：`python3 -I .agents/skills/shared/scripts/cost_report.py <工作目录或评测数据目录> … [--since 2026-11-01]`。单价只读本机 `~/.geo-cost/prices.json`（`--write-example` 生成示例），不写进任何仓库文件。
+部署、环境变量、境内服务器、接平台网关、审核环、每轮记账和验收见 [runner-ops.md](runner-ops.md)（给研发，agent 不用读）。
 
 ## 线上没有浏览器
 
-signal-sources.md 有三处写了「用本地浏览器」。服务器上没有带登录态的浏览器，这三处按下面换：
+signal-sources.md 和本地调研写了几种用浏览器的情况。服务器上没有带登录态的浏览器，按下面换：
 
 | 原来用浏览器做的 | 线上怎么做 |
 |---|---|
@@ -68,11 +47,11 @@ signal-sources.md 有三处写了「用本地浏览器」。服务器上没有�
 | 读要登录或反爬强的社区、评价站 | 先查 community-channels.md 的通道表：评价站走 `collect_reviews.py`，Reddit 走 `net.py reddit`，Facebook 公开群帖子和 HardwareZone 走 `net.py fetch --proxy`，JS 页走 `net.py render`。表里标「不通」的站跳过 |
 | 打开 AI 引用的帖子核对原话 | 用同一套通道打开；打不开的帖子，原话不进 `config.buyer_quotes` |
 
-跳过的站和打不开的帖子写进 `out/notes.md` 的「未覆盖来源」，不另找办法绕过登录。
+Reddit 的 RSS 返回 403 时（2026-11-11 本机就是），precollect 自动改读网页版：先用 `net.py search "reddit <词>"` 拿帖子链接（Reddit 自己的搜索页经代理被拦），再逐帖 `net.py reddit <帖子 URL> --proxy`，一个渠道最多 2 帖付费，拿到的只有顶层评论。你在补采时同样用这两步，别反复试 RSS。跳过的站和打不开的帖子写进 `out/notes.md` 的「未覆盖来源」，不另找办法绕过登录。
 
 取网页一律 `net.py fetch <url> --country <市场代码>`：代理节点默认是 SG，和本次运行的市场不一致时常取不到（2026-11-09 topuniversities 用 SG 节点失败、US 节点 25 秒取到），一次失败要多花半分钟到一分钟。被拦的页面不要再试 `render`，它在被拦页面上基本超时；`render` 只在 `fetch` 提示「可能是 JS 渲染页」时用，服务器上要装 Chrome 并设 `CHROME_PATH`，没装就跳过、按未覆盖来源记。同一个 URL 成功取过一次有缓存，返修轮重复打开不再付费。要读的页面攒成一批一次传给 `fetch`（默认 5 路并发，按输入顺序输出）；Facebook、X、Instagram、Threads、HardwareZone 和 7 天内直连被拦过的域名脚本会自动跳过直连。Reddit 每个工作目录最多 10 次联网请求（环境变量 `NET_REDDIT_MAX`，runner 默认设好，约 10 分钟），先挑最相关的版块和帖子，到上限后读不到的写进「未覆盖来源」。Reddit 评论要给单帖 URL 才取得到，只给搜索词只返回主帖。
 
-**runner 先固定采一轮**：agent 启动前，runner 已经跑过搜索联想（`collect_serp_signals.py`）、竞品 Trustpilot 评价（`collect_reviews.py trustpilot`）和 Reddit 搜索加前 3 帖评论，合并在 `research/precollect/signals.csv`，各类成败和原因在 `research/precollect/summary.json`。agent 先读这两份，只对缺口补采，不重复采同样的来源；这份文件里与本产品线相关的信号要登记进 `config.buyer_quotes`。某一类采到了却一条没登记、`notes.md`「未覆盖来源」里也没说明这一类为什么全部无关，结束检查不通过、回喂返修。
+**runner 先判行业、再固定采一轮**：agent 启动前，runner 先跑一次短 agent（`PLAN.md`，约几分钟）：取品牌和竞品官网首页存到 `research/site/homepages.txt`（第 2 步官网调研从这份接着看），按 [precollect-channels.json](precollect-channels.json) 判出品牌属于哪个行业，填英文品类词、应用 ID、门店名这些参数，写 `research/precollect/plan.json`。runner 检查不过回喂一次，仍不过就退回默认渠道（竞品 Trustpilot + 市场社区）。要采哪些渠道由表定：行业那一行的评价站和社区，加上目标市场那一行的社区；agent 只能跳过缺应用或门店的渠道（Google Play、App Store、Google 地图），最多再补 3 个，不能删表里的渠道。然后脚本按计划采：搜索联想（`collect_serp_signals.py`）、评价（`collect_reviews.py` 的 Trustpilot / Google Shopping / 应用商店 / Google 地图，或 Capterra、Alibaba 这类评价站先用「站名 + 竞品名或品类词」搜出本站页面再取正文（Scrapeless 的 Google 搜索不认 `site:`，2026-11-11 实测））、社区（Reddit 搜索加最相关 3 帖评论，RSS 读不到时改读网页版、每类最多 2 帖付费；Hacker News 评论；Pantip 这类本地论坛的站内页；Pantip 只取帖子页，用 `net.py pantip` 取标题、主帖和评论）。原话合并在 `research/precollect/signals.csv`，页面正文在 `research/precollect/pages/`，计划和每个渠道成败在 `plan-checked.json`、`summary.json`。三类并行、同类渠道也并行，评价最多等 10 分钟、其余 6 分钟；DataForSEO 评价任务排队慢，超时的任务已提交，重跑 `research/precollect/reviews/<渠道>/rerun.txt` 里的命令能直接取结果、不重复付费。agent 先读这些，只对缺口补采，不重复采同样的来源；与本产品线相关的信号要登记进 `config.buyer_quotes`（页面里的买家原话由 agent 摘出来登记，出处写页面网址）。某一类采到了却一条没登记、`notes.md`「未覆盖来源」里也没说明这一类为什么全部无关，结束检查不通过、回喂返修。
 
 B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，不要试；Capterra、TrustRadius 用 `net.py fetch` 能取到完整评价，但要先用站内搜索确认产品有档案（2026-11-10 实测一家 GPU 云竞品两站都没有）。开发者和 AI 基础设施类品类，Hacker News 的 Algolia 接口直连可取评论全文（见 community-channels.md）。
 
@@ -104,9 +83,3 @@ B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，�
 ## 交给本地选词接着做
 
 本地选词接手线上题库时：需求信号、约束条件、矩阵行、主题照收；用品牌方填的业务范围重判业务优先级，用品牌方数据复核约束条件；`notes.md`「预跑答案」里的答案直接用，不重跑；「未覆盖来源」补采。
-
-## 验收
-
-- `python3 evals/e2e_input_contract.py`：品牌资料输入合同（示例 payload、飞书路径与接口路径一致、错误输入的错误码），结果写 `reports/input-contract-e2e.md`。
-- `python3 evals/e2e_repair_loop.py`：返修循环四条路径（修好、丢题保底、关闭返修、无 bank），结果写 `reports/repair-loop-e2e.md`。
-- `python3 evals/e2e_review_loop.py`：审核环七条路径（无发现、阻塞返修后复核通过、review.json 坏掉、结构不对、关闭审核、额度用完、审核超时），结果写 `reports/review-loop-e2e.md`。

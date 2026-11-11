@@ -1,0 +1,58 @@
+{
+  "_说明": "线上 runner 固定采集（precollect）按这张表决定采哪些评价站和社区。行业行与 signal-sources.md「按行业收评价和社区」一一对应，社区按市场选（signal-sources.md「按目标市场换成当地平台」、community-channels.md 市场表），行业行的「社区」只写所有市场都要加的站。改这里要同步改那两张表；能不能抓以 community-channels.md 为准，表上不通的站（G2、Gartner、Amazon 评价列表、Yelp、TripAdvisor、Shopee、Lazada、Dcard）不放进来。",
+  "review_channels": {
+    "trustpilot": {"collector": "trustpilot", "targets": "competitor_domains", "说明": "竞品官网域名的 Trustpilot 评价"},
+    "google-shopping": {"collector": "google-shopping", "targets": "category", "说明": "按品类词搜商品，取商品下汇总的零售站和评测站评价（代替 Amazon 评价）"},
+    "google-play": {"collector": "google-play", "targets": "app_ids", "说明": "plan.json 的 app_ids.google-play"},
+    "app-store": {"collector": "app-store", "targets": "app_ids", "说明": "plan.json 的 app_ids.app-store"},
+    "google-maps": {"collector": "google-maps", "targets": "maps_queries", "说明": "plan.json 的 maps_queries，竞品门店名＋城市"},
+    "capterra": {"site": "capterra.com", "query": "competitors", "说明": "产品要在站上有档案，站内搜不到就记没有"},
+    "trustradius": {"site": "trustradius.com", "query": "competitors"},
+    "clutch": {"site": "clutch.co", "query": "competitors"},
+    "sortlist": {"site": "sortlist.com", "query": "category"},
+    "designrush": {"site": "designrush.com", "query": "category"},
+    "alibaba": {"site": "alibaba.com", "query": "category"},
+    "made-in-china": {"site": "made-in-china.com", "query": "category"},
+    "globalsources": {"site": "globalsources.com", "query": "category", "render": true},
+    "rtings": {"site": "rtings.com", "query": "category", "render": true, "scope": "只覆盖它自己测的约 28 类（电视、显示器、耳机、音箱、吸尘器、床垫、路由器、打印机、相机、跑鞋等），客户品类不在其中就跳过，比如行车记录仪、GPU、工业品"},
+    "iherb": {"site": "iherb.com", "query": "category"}
+  },
+  "community_channels": {
+    "reddit": {"kind": "reddit", "说明": "先搜帖、再读最相关的帖子评论"},
+    "hackernews": {"kind": "hackernews", "说明": "Algolia 接口直连取评论全文"},
+    "hardwarezone": {"site": "hardwarezone.com.sg", "query": "local"},
+    "lowyat": {"site": "lowyat.net", "query": "local"},
+    "pantip": {"site": "pantip.com", "query": "local", "fetcher": "pantip"},
+    "clien": {"site": "clien.net", "query": "local"},
+    "ptt": {"site": "ptt.cc", "query": "local"},
+    "discuss-hk": {"site": "discuss.com.hk", "query": "local"},
+    "kakaku": {"site": "kakaku.com", "query": "local"},
+    "mydramalist": {"site": "mydramalist.com", "query": "category"}
+  },
+  "industries": {
+    "B2B 软件与 SaaS": {"评价": ["capterra", "trustradius"], "社区": []},
+    "开发者工具与云基础设施": {"评价": ["trustpilot", "capterra", "trustradius"], "社区": ["hackernews"]},
+    "B2B 服务与代理": {"评价": ["clutch", "sortlist", "designrush"], "社区": []},
+    "工业品与零部件": {"评价": ["alibaba", "made-in-china", "globalsources"], "社区": []},
+    "医疗器械": {"评价": ["google-shopping"], "社区": []},
+    "消费电子与智能家居": {"评价": ["google-shopping", "rtings"], "社区": []},
+    "美妆与保健品": {"评价": ["google-shopping", "trustpilot", "iherb"], "社区": []},
+    "教育与留学": {"评价": [], "社区": []},
+    "内容与流媒体": {"评价": ["google-play", "app-store"], "社区": ["mydramalist"]},
+    "消费级软件与在线服务": {"评价": ["trustpilot", "google-play", "app-store"], "社区": []},
+    "本地生活与门店": {"评价": ["google-maps"], "社区": []},
+    "其他实体消费品": {"评价": ["google-shopping", "trustpilot"], "社区": []}
+  },
+  "markets": {
+    "US": ["reddit"], "UK": ["reddit"], "GB": ["reddit"], "CA": ["reddit"], "AU": ["reddit"], "NZ": ["reddit"],
+    "IE": ["reddit"], "IN": ["reddit"], "PH": ["reddit"], "DE": ["reddit"], "FR": ["reddit"],
+    "SG": ["reddit", "hardwarezone"],
+    "MY": ["reddit", "lowyat"],
+    "TH": ["pantip"],
+    "KR": ["clien"],
+    "TW": ["ptt"],
+    "HK": ["discuss-hk"],
+    "JP": ["kakaku"],
+    "_default": ["reddit"]
+  }
+}

@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.3.8"
+  version: "3.9.2"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -55,9 +55,11 @@ metadata:
 | [references/client-facing-base.md](references/client-facing-base.md) | 建或改对客确认表；线上不建表，不用读 |
 | [references/output-contract.md](references/output-contract.md) | 写题库 JSON、跑 validator |
 | [references/signal-sources.md](references/signal-sources.md) | 第 1、2 步：我方自己去哪收搜索数据、评价和社区 |
-| [references/demand-side-signals.md](references/demand-side-signals.md) | 第 1、2 步：向品牌方要什么数据、拿到后怎么用；线上没有品牌方资料，不用读 |
+| [references/demand-side-signals.md](references/demand-side-signals.md) | 第 1、2 步：向品牌方要什么数据、拿到后怎么用（含 GSC 与搜索词报告怎么用）；线上没有品牌方资料，不用读 |
 | [references/community-channels.md](references/community-channels.md) | 第 2 步：每个站点用什么通道取数 |
 | [references/online-runner.md](references/online-runner.md) | 线上无人值守跑一份品牌资料：和本地不一样的几步、没有浏览器怎么办 |
+| [references/runner-ops.md](references/runner-ops.md) | 部署线上选词（给研发）：环境变量、服务器要连的地址、境内服务器、接平台网关、审核环、每轮记账、验收；agent 不读 |
+| [references/precollect-channels.json](references/precollect-channels.json) | 线上 runner 按行业 × 市场固定采哪些评价站和社区；改 signal-sources.md 的行业表、市场表时同步改 |
 | [references/input-contract.md](references/input-contract.md) | 品牌资料输入合同：字段、必填、错误码（给接入方） |
 
 | 脚本 | 用途 |
@@ -69,10 +71,11 @@ metadata:
 | `scripts/normalize_case.py <payload.json> [-o <out>]` | 品牌资料校验与归一化（线上表单数据或品牌资料文件，字段同《品牌资料收集》第一部分） |
 | `scripts/run_selection_mode.py run --case <payload.json> --market <市场> --platforms <平台> --out <新目录> --agent sdk` | 线上一条命令跑完一个品牌 × 市场，检查不过自动返修，过了再按 review-rubric.md 审核一轮，见 online-runner.md |
 | `scripts/export_upload_csv.py <bank.json> --out <dir>` | 导出上传 CSV |
+| `scripts/industry_kb.py add --ws <工作目录>` 或 `add --bank <bank.json> --industry <行业> --category <英文品类词> --brand <品牌>`；`show --industry <行业> [--category <品类>]` | 把一次选词的经验并进 `references/industry-knowledge/`：约束条件、目标客户、场景、主题按品类存，渠道效果按行业存（线上 runner 成功后自动跑），2 个以上客户出现的标「通用」 |
 | `scripts/write_tags.py --base <token> --bank <bank.json> [--write]` | 把切片标签写进提示词库「标签」列 |
 | `scripts/check_skill_terms.py` | 维护本 skill 时扫已退役说法 |
 | `../shared/scripts/cost_report.py <目录> … [--since <日期>]` | 按客户汇总选词轮、采集和 DataForSEO 花费，算平均每客户；单价读本机 `~/.geo-cost/prices.json` |
 
 ## 维护本 skill
 
-动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了品牌资料输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py`、`python3 evals/e2e_repair_loop.py` 和 `python3 evals/e2e_review_loop.py`；动了语种检查的，再跑 `python3 evals/e2e_language_check.py`。validator 的语种检查依赖 `lingua-language-detector`（在 `requirements.txt` 里），没装时跳过并给 W32 警告。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。
+动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了品牌资料输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py`、`python3 evals/e2e_repair_loop.py` 和 `python3 evals/e2e_review_loop.py`；动了 `net.py`、`collect_serp_signals.py` 或境内模式（`GEO_NET_DOMESTIC`）的，再跑 `python3 evals/e2e_domestic_network.py`（真实付费调用 Scrapeless 约 20 次）；动了任何采集脚本的厂商地址或请求头的，再跑 `python3 evals/e2e_gateway.py`（真实付费）；动了行业知识档案的，再跑 `python3 evals/e2e_industry_kb.py`；动了语种检查的，再跑 `python3 evals/e2e_language_check.py`。validator 的语种检查依赖 `lingua-language-detector`（在 `requirements.txt` 里），没装时跳过并给 W32 警告。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。

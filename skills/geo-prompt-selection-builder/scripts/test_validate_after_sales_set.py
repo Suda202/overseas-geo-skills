@@ -451,7 +451,7 @@ class OldStructureTests(unittest.TestCase):
 
 QUOTES = [
     {"输入编号": "Q01", "原话": "I want something that records continuously while parked.", "约束条件": "停车持续录像"},
-    {"输入编号": "Q04", "原话": "true 4K with a Sony STARVIS 2 sensor for plates at night", "约束条件": "STARVIS 2、夜间车牌、100 美元以内"},
+    {"输入编号": "Q04", "原话": "true 4K with a RivalO1 STARVIS 2 sensor for plates at night", "约束条件": "STARVIS 2、夜间车牌、100 美元以内"},
     {"输入编号": "Q08", "原话": "poor customer service despite good reviews", "约束条件": "客服、200 美元以内"},
     {"输入编号": "Q09", "原话": "4 channel dash cam with parking mode", "约束条件": "四路、停车模式"},
 ]
@@ -521,7 +521,7 @@ class ScopeGateTests(unittest.TestCase):
             self.assertEqual(self.outside([(query, "Condition", [], ["Q01"])]), "", query)
 
     def test_numbers_that_are_not_conditions_pass(self) -> None:  # F4
-        rows = [("Which dash cams use Sony STARVIS 2 sensors for 24/7 parking monitoring in 2026?", "Night", [], ["Q01"])]
+        rows = [("Which dash cams use RivalO1 STARVIS 2 sensors for 24/7 parking monitoring in 2026?", "Night", [], ["Q01"])]
         self.assertEqual(self.outside(rows), "")
 
     def test_declared_condition_outside_evidence_fails(self) -> None:  # F5, F10

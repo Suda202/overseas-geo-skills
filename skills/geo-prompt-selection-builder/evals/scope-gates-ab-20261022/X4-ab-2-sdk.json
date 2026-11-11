@@ -101,7 +101,7 @@
      "Q04",
      "Q05"
     ],
-    "note": "Buyers name Sony STARVIS 2; the brand page only says 'enhanced low-light capture' and names no sensor, so the position cannot be settled from the public layer."
+    "note": "Buyers name RivalO1 STARVIS 2; the brand page only says 'enhanced low-light capture' and names no sensor, so the position cannot be settled from the public layer."
    },
    {
     "attribute": "Warranty, returns and support",
@@ -282,12 +282,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
+    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
     "约束": "传感器"
    },
    {
@@ -919,9 +919,9 @@
   {
    "question_id": "T3-D04",
    "topic_id": "T3",
-   "user_question": "Which dash cams use a Sony STARVIS 2 sensor for clear footage in low light?",
+   "user_question": "Which dash cams use a RivalO1 STARVIS 2 sensor for clear footage in low light?",
    "zh_translation": "哪些行车记录仪用索尼 STARVIS 2 传感器，弱光下画面清楚？",
-   "monitoring_prompt": "Which dash cams use a Sony STARVIS 2 sensor for clear footage in low light?",
+   "monitoring_prompt": "Which dash cams use a RivalO1 STARVIS 2 sensor for clear footage in low light?",
    "region": "US",
    "prompt_type": "Discovery",
    "intent_key": "sensor_low_light",

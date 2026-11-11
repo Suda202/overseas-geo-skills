@@ -5,17 +5,19 @@
 ## 先查这几条
 
 1. **评价平台优先走 `collect_reviews.py`**：Trustpilot、Google Play、App Store、Google Shopping、Google 地图都走它，用法和单价见 signal-sources.md。
-2. **其余站先 `net.py fetch`**：直连（免费，15 秒超时）被拦时脚本自动改走 Scrapeless 不带 JS（付费，每页 1 次），再退 Wayback，`--country` 填目标市场。`net.py render` 无头 Chrome（免费）只用在直连 200 但正文是 JS 空壳的页面（Pantip 这类），被拦的页面上它基本超时（2026-11-09 实测 3/3、每次 68 秒）。不需要登录的页面不进 Suda 已登录的浏览器。
+2. **其余站先 `net.py fetch`**：直连（免费，15 秒超时）被拦时脚本自动改走 Scrapeless 不带 JS（付费，每页 1 次），再退 Wayback，`--country` 填目标市场。`net.py render` 无头 Chrome（免费）只用在直连 200 但正文是 JS 空壳的页面（Pantip 帖子改用 `net.py pantip`，见第 4 条），被拦的页面上它基本超时（2026-11-09 实测 3/3、每次 68 秒）。不需要登录的页面不进 Suda 已登录的浏览器。
 3. **Scrapeless 开 JS 渲染反而更差**：Reddit 弹人机验证，Facebook 报 `Navigating frame was detached`，X 报隧道连接失败，topuniversities 同样报 frame detached（2026-11-09）。`net.py fetch` 已不再开 JS 重试。
-4. **列表页能读不等于帖子能读**：下表多数站只测了版块页或列表页，真要收原话先拿一个帖子页再测。Pantip 静态 HTML 里的评论是模板占位符，必须走无头 Chrome。
+4. **列表页能读不等于帖子能读**：下表多数站只测了版块页或列表页，真要收原话先拿一个帖子页再测。Pantip 静态 HTML 里的评论是模板占位符，评论是页面加载后另请求评论接口取的：用 `net.py pantip <帖子 URL> --country TH`，本机能直连时调评论接口（免费），境内模式或直连失败时经 Scrapeless 网页代理 v2 的 JS 渲染、在页面里请求同一接口（每帖 1 次付费，约 17–48 秒，2026-11-11 实测一帖 30 条评论全拿到），不需要本机 Chrome。单纯开 JS 渲染取页面拿不到评论，给代理加请求头也不转发。
 5. **本机连不上的站只能走代理**：Facebook、X、Instagram、Threads、HardwareZone 直连都超时（本机没有系统代理）。`net.py fetch` 对这几个站和 7 天内直连被拦过的域名自动跳过直连；多个页面一次传给 `fetch` 并发取。
-6. **找不到入口就先搜帖子**：Facebook 群首页翻不了页，用 `net.py search 'site:域名 关键词'` 先拿帖子固定链接，再逐帖取。
+6. **找不到入口就先搜帖子**：Facebook 群首页翻不了页，用 `net.py search '站名 关键词'` 先拿帖子固定链接，再逐帖取。
+7. **`net.py search` 不认 `site:`**：Scrapeless 的 Google 搜索把 `site:` 当普通词，返回的大多是别的站（2026-11-11 实测 `site:rtings.com dash cam`、`site:capterra.com <竞品名>` 都没有本站结果）。要搜某个站的页面，把站名当关键词写进去（`capterra <竞品名> reviews`、`pantip ดูซีรีส์จีน`），再按结果里的「链接：」行筛本站域名。
+8. **境内服务器设 `GEO_NET_DOMESTIC=1`**：所有网页走 Scrapeless 代理；Reddit 只剩帖子网页版（`--proxy`）可取，Pantip 帖子走 `net.py pantip`（Scrapeless 渲染）照常可取，`net.py render` 改经代理不开 JS 取（RTINGS 能取到，GlobalSources 被 AWS WAF 拦），见 runner-ops.md「境内服务器」。下表「直连」一列在境内模式下都改走代理。
 
 ## 通用平台
 
 | 站点 | 通道 | 能拿到什么 | 备注 |
 |---|---|---|---|
-| Reddit | `net.py reddit <版块/帖子 URL 或搜索词> [--sub 版块]`（RSS 直连，免费） | 版块最新帖、全站搜索、版内搜索、单帖加评论（实测 1 帖 + 46 条评论） | **两步取**：给搜索词只返回主帖，评论要再给单帖 URL 才有。先搜出帖子 URL，挑最相关的 3–5 帖逐帖读评论（2026-11-10 一次调研只搜不读帖，评论层一条没拿到）。未登录约每分钟 1 次，脚本按 `x-ratelimit-reset` 自动等待，不要并发；评论是扁平列表，没有楼层和点赞数。`.json`、old.reddit、无头 Chrome、Scrapeless、PullPush、Wayback 都不通 |
+| Reddit | `net.py reddit <版块/帖子 URL 或搜索词> [--sub 版块]`（RSS 直连，免费） | 版块最新帖、全站搜索、版内搜索、单帖加评论（实测 1 帖 + 46 条评论） | **两步取**：给搜索词只返回主帖，评论要再给单帖 URL 才有。先搜出帖子 URL，挑最相关的 3–5 帖逐帖读评论（2026-11-10 一次调研只搜不读帖，评论层一条没拿到）。未登录约每分钟 1 次，脚本按 `x-ratelimit-reset` 自动等待，不要并发；评论是扁平列表，没有楼层和点赞数。`.json`、old.reddit、无头 Chrome、PullPush、Wayback 都不通。**RSS 返回 403 时改读网页版**：`net.py reddit <帖子 URL> --proxy`（Scrapeless 代理，每帖 1 次付费），从 `<shreddit-comment>` 解析作者、点赞、日期、单条链接和正文，一帖约 20–25 条顶层评论；折叠的「N more replies」和主帖正文取不到。Reddit 自己的搜索页经代理也被拦（返回 blocked），帖子链接先用 `net.py search "reddit <词>"` 搜。2026-11-11 本机两天 RSS 全部 403，网页版可用 |
 | Hacker News | `https://hn.algolia.com/api/v1/search?query=<词>&tags=comment` 与 `/api/v1/items/<id>`（直连 JSON，免费） | 评论全文、作者、时间；按 id 可逐条核对原话 | 开发者、AI 基础设施类品类的买家讨论多在这里（2026-11-10 一个 GPU 云客户拿到约 30 条相关评论，含具体卡型的租价）。出处写 `https://news.ycombinator.com/item?id=<id>` |
 | Facebook 公开群 | `net.py fetch <帖子URL> --country SG --proxy --raw` | 帖子正文和大部分评论（8 条拿到 6 条） | 直连返回 400 登录页，必须加 `--proxy`。正文在内嵌 JSON 的 `message.text`，评论在 `body.text`，要去重。群首页只显示 2 帖、品牌主页 1 帖，翻不了页。不经过 Suda 的账号 |
 | Google 地图评价 | `collect_reviews.py google-maps "<店名 分店 城市>" --country sg --lang en --match <品牌>`，或给 `place_id:<ID>` | 评价原文、星级、日期、单条评价链接；每 10 条计一次费（单价见 signal-sources.md） | 搜索词可能落到别的分店，脚本打印匹配到的商家名，`--match` 不符就记失败（这一次照样计费）；`--sort lowest` 先取差评找决策摩擦；只打星没写字的评价不收（新加坡一家店 20 条里有 8 条）；外语评价取原文不取机翻。Scrapeless 的地图采集器已下线（15002），无头 Chrome 只看到受限版页面，都不能用 |
@@ -55,7 +57,7 @@ Naver Cafe 列表框架直连能读，帖子正文多数要先加入 Cafe，没�
 
 ## 怎么测一个新站
 
-1. 拿一个真实的帖子或评价页 URL，用 `net.py search 'site:域名 关键词'` 搜出来，不要凭印象拼：价格.com、MyDramaList、App Store 第一轮都因为 URL 是猜的被误判成不通。
+1. 拿一个真实的帖子或评价页 URL，用 `net.py search '站名 关键词'` 搜出来，不要凭印象拼：价格.com、MyDramaList、App Store 第一轮都因为 URL 是猜的被误判成不通。
 2. 按第 2 条的顺序试三个通道。
 3. 判断「能读」看正文：里面要有那条帖子或评价原文，而且不是验证页、登录页、404 页。只看 HTTP 200 或关键词会误判：ThomasNet 的 404 曾被判成能读，PTT、Lowyat、DCinside、Danawa、Coinpan 曾被判成不通，直连复核都能读。
 4. 测完把结果补进上面的表，写明日期。

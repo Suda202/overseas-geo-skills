@@ -149,7 +149,7 @@
     "topic_id": "T3",
     "topic": "Accident Evidence",
     "parent_demand": "4 channel dash cam / dash cam night vision (autocomplete seed '4 channel dash cam with parking mode'; Reddit night plate-capture threads)",
-    "search_demand_note": "Parent demand anchored on 4-channel autocomplete plus two Reddit threads that name night plate capture and Sony STARVIS explicitly; volume unknown.",
+    "search_demand_note": "Parent demand anchored on 4-channel autocomplete plus two Reddit threads that name night plate capture and RivalO1 STARVIS explicitly; volume unknown.",
     "business_question": "When evidence quality is the job, does AI recommend multi-angle coverage and name the night/low-light proof needed to read a plate?",
     "possible_action": "Publish the sensor/HDR spec and real night plate footage, and comparison content that puts 3K front + three 1080p cameras next to dual-camera options; this is where the H1's four-camera lead can be made citable.",
     "role": "core",
@@ -422,12 +422,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
+    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
     "约束": "传感器"
    },
    {

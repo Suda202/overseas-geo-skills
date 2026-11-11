@@ -7,11 +7,17 @@
 确定性的部分包起来，中间的调研和写题交给 agent：
 
     prepare   归一化品牌资料，建独立工作目录（skill 拷贝、inputs/、TASK.md）
-    precollect agent 启动前由脚本固定采集三类公开信号，采不采、采多少不交给 agent（3.4.0）：
-              搜索联想（collect_serp_signals.py，2–3 个发现型种子词）、评价（collect_reviews.py trustpilot，
-              每个竞品官网域名约 40 条）、社区（net.py reddit，搜索 1–2 次再读最相关的 3 个帖子，最多占
-              NET_REDDIT_MAX 的一半、不超过 5 次）。每类单独超时（6 分钟）、单独失败，失败只记原因不中断 run；
-              产物在 research/precollect/，合并表 signals.csv 多一列「采集类别」
+    行业判断  precollect 前先跑一次短 agent（PLAN.md，3.5.0）：取品牌和竞品官网首页（存 research/site/，给后面
+              官网调研接着用），从 references/precollect-channels.json 选行业，填英文品类词、应用 ID、门店名等参数，
+              写 research/precollect/plan.json；runner 检查（check-plan）不过回喂一次，仍不过退回默认渠道。
+              要采哪些渠道由表决定（行业行 + 市场行），agent 只能跳过缺应用或门店的渠道、补渠道表里的站（最多 3 个，行业写「其他」时 5 个）和表外的站（add_sites，最多 2 个）
+    precollect agent 启动前由脚本按渠道计划固定采集三类公开信号，采不采、采多少不交给 agent（3.4.0）：
+              搜索联想（collect_serp_signals.py，2–3 个发现型种子词）；评价按行业（collect_reviews.py 的
+              Trustpilot / Google Shopping / 应用商店 / Google 地图，或评价站 site: 搜索后取页面正文）；
+              社区按市场（Reddit 搜索后读最相关的 3 帖、Hacker News 评论、本地论坛站内页）。每类单独超时
+              （评价 10 分钟、其余 6 分钟）、单独失败，三类之间和同类渠道之间并行；失败只记原因不中断 run；
+              产物在 research/precollect/，合并表 signals.csv
+              多一列「采集类别」，页面正文在 pages/
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
     finalize  跑选词 validator 和导出脚本，写 out/result.json；再做登记检查（runner 层，不是 validator 门禁）：
               precollect 采到（status=ok 且 ≥1 条）的类别，config.buyer_quotes 里一条该来源类型都没有、
@@ -28,6 +34,7 @@
     python3 run_selection_mode.py run --case payload.json --market US --platforms chatgpt --out <工作目录> --agent-cmd "<命令>"
     python3 run_selection_mode.py prepare  --case payload.json --market US --platforms chatgpt --out <工作目录>
     python3 run_selection_mode.py precollect --out <工作目录>     # 对已 prepare 的目录单独补跑采集
+    python3 run_selection_mode.py check-plan --out <工作目录>     # 检查行业判断写的 plan.json
     python3 run_selection_mode.py finalize --out <工作目录>
 
 run 带 --task-file（只用于测试）时不跑 precollect，除非设了 PRECOLLECT_SCRIPTS_DIR（测试用假采集脚本目录，
@@ -84,6 +91,8 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   8. 审核 agent 违规改了 bank.json → 恢复审核前的题库并记 warning
   9. 审核返修把检查改坏 → 下一轮审核返修把检查报错和未修的阻塞发现一起回喂，额度用完才失败
   10. agent 不采评价、社区只搜一两次就交题库 → precollect 由脚本固定采；采到了却一条没登记 → 登记检查回喂返修
+  11. 不分行业都采 Trustpilot、不分市场都搜 Reddit → 先判行业，渠道按表（行业 × 市场）定；行业判错或
+      plan.json 两次不过 → 退回默认渠道（竞品 Trustpilot + 市场社区），原因写进 plan-checked.json，agent 按表补采
   11. precollect 某类缺凭据、超时或被挡 → 该类 status=failed 带原因，其他类和 agent 照常跑，该类不做登记检查
 """
 from __future__ import annotations
@@ -91,19 +100,26 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import html
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import time
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SKILLS = SKILL.parent
+# 预采集（渠道计划检查、三类采集、登记检查）在 precollect.py（3.7.0 拆出）；python3 -I 下脚本目录不在 sys.path，显式加上
+sys.path.insert(0, str(HERE))
+from precollect import (PLAN_TIMEOUT, PRECOLLECT_DIR, check_plan, domestic, fallback_plan, load_channels,  # noqa: E402
+                        net_env, precollect, precollect_block, precollect_registration_errors)
 # 整个拷贝的 skill：选词本身、shared 的联网与信号脚本。
 # geo-monitoring 不拷（3.0.0）：选词文档里指向它的链接是锁版阶段规则，线上不读。
 SKILL_DIRS = ("geo-prompt-selection-builder", "shared")
@@ -122,7 +138,7 @@ PARTIAL_COPIES = (
 # demand-side-signals.md = signal-sources.md 里「客户提供什么」等品牌方数据小节，线上没有客户数据
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
                                 "*.local.json", "build", "legacy",
-                                "client-facing-base.md", "demand-side-signals.md",
+                                "client-facing-base.md", "demand-side-signals.md", "CHANGELOG*.md", "runner-ops.md",
                                 # lark-cli 在 skill 目录里落下的 Base 导出（客户数据），线上不需要
                                 "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
 DEFAULT_TIMEOUT = 120 * 60
@@ -133,9 +149,11 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 任务：给这个品牌生成一批提示词。先读 `.agents/skills/geo-prompt-selection-builder/references/online-runner.md`（线上和本地不一样的地方），再按 `.agents/skills/geo-prompt-selection-builder/references/selection-rules.md` 第 1–8 步逐步做。只做到校验与导出，不试跑、不写对客确认表。
 
+以前客户积累的经验：读 `.agents/skills/geo-prompt-selection-builder/references/industry-knowledge/` 里本行业的「行业-<行业>.md」（行业写在 `research/precollect/plan-checked.json` 的 `industry`），再挑一份和本客户品类最接近的「品类-<品类>.md」（看「行业-」文件里的已有品类列表，按英文品类词判断，没有接近的就不读）。约束条件、目标客户、场景、主题看品类那份，渠道效果看行业那份。它们只是假设级线索：帮你少漏，每条都要用本客户的买家信号核实，本客户没有信号的不硬加，不能写成依据。
+
 线上跳过不读：
 - 文档里指向 `geo-monitoring` 的链接是锁版阶段规则（试跑、挑正式题、锁版、基线），线上不读，工作目录里也没有这个 skill。
-- selection-rules.md 里这三类小节线上跳过：对客 Base 写法（第 8 步「写进对客表后回读行数」、「交付」里的对客确认表，以及所有指向 client-facing-base.md 的说明）；品牌方资料流程（第 1 步「品牌方先给，我们核对」「只要会改变选词判断的数据」，第 2 步「GSC 和搜索词报告分开用」）；售前主题重聚对账（第 6 步「报价与交付的先后」「品牌方售前点名的主题不重聚」）。
+- selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md、demand-side-signals.md 的说明，工作目录里没有这两份）；第 6 步「售后重聚」。
 
 题量硬限（超了导出脚本直接报错、要返修）：
 - 候选题一个市场 30–60 道（validator 对超出只告警，但导出对超 60 报错）；每个导出文件（市场 × 产品线）最多 60 条。写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。
@@ -146,7 +164,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 需求信号（必填）：
-- runner 在你启动前已把评价（竞品 Trustpilot）、社区（Reddit）、搜索联想（Google PAA、相关搜索、自动补全）采到 `research/precollect/signals.csv`（`采集类别` 列标明哪一类，各类状态和失败原因见 `research/precollect/summary.json`）。先读完这份再决定还要不要补采；不要重复采同样的来源（同一批竞品域名、同样的种子词、已读过的帖子）。
+- runner 在你启动前已判断品牌所在行业、按行业和市场选好评价站与社区并采了一轮：行业、依据和每个渠道采不采、为什么跳过在 `research/precollect/plan-checked.json`；评价、社区、搜索联想的原话合并在 `research/precollect/signals.csv`（`采集类别` 列标明哪一类）；评价站和本地社区的页面正文在 `research/precollect/pages/`，这一类没有拆成原话，读完把买家原话登记进去，出处写页面网址；各类状态和失败原因见 `research/precollect/summary.json`。品牌和竞品官网首页已取过，在 `research/site/homepages.txt`，第 2 步官网调研从这份接着看。先读完这些再决定还要不要补采；不要重复采同样的来源（同一批竞品域名、同样的种子词、已读过的帖子和页面）。计划里跳过或采失败的渠道，能补就按 signal-sources.md 补，补不了写进「未覆盖来源」；评价渠道超时的，任务已经提交过，在你写题前重跑 `research/precollect/reviews/<渠道>/rerun.txt` 里的命令就能取到结果、不重复付费。
 - 登记与本产品线相关的信号，写进 `config.buyer_quotes`；撑不起任何题的也可以登记，用来说明买家在意什么。`research/precollect/signals.csv` 里与本产品线相关的都要登记。一条一个对象：`{{"输入编号": "<市场前缀>-R001", "来源类型": "<评价 / 社区 / 搜索联想 等，precollect 来的照抄文件里的值>", "原话": "<买家原话原文，不要翻译>", "目标客户": "<谁在问，看不出留空>", "约束条件": "<这条信号能证明题面哪些条件，关键词写法>", "出处": "<完整 URL，不要写「同上帖」之类的简写>"}}`。
 - precollect 某类失败（summary.json 里 status 为 failed）的，写进 notes.md「未覆盖来源」并带上 summary.json 里的原因。某类采到了但全部与本产品线无关、一条不登记的，也在「未覆盖来源」写出类别名和理由；否则结束检查会要求返修。
 - 约束那一列的键名就是 `约束条件`，和对客 Base 列名、`signals.csv` 一致。
@@ -155,7 +173,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - 线上没有品牌方提供的资料（销售、客服、GSC、关键词工具），只收公开层（评价、社区、搜索联想）。
 
 联网：
-- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> [<url> ...] --country {market}`，要读的页面攒成一批一次传（脚本并发取），被拦的页面不要再试 `render`；Reddit 本次最多 {reddit_max} 次联网请求（`net.py reddit` 到上限会提示，precollect 已用掉一部分），先挑最相关的版块和帖子，读不到的记进未覆盖来源；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`（precollect 采过的种子词、竞品域名、帖子不要再采）。
+- 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> [<url> ...] --country {market}`，要读的页面攒成一批一次传（脚本并发取），被拦的页面不要再试 `render`；Pantip 帖子用 `net.py pantip <帖子 URL> --country TH`（取标题、主帖和评论）；Reddit 本次最多 {reddit_max} 次联网请求（`net.py reddit` 到上限会提示，precollect 已用掉一部分），先挑最相关的版块和帖子，读不到的记进未覆盖来源；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`（precollect 采过的种子词、竞品域名、帖子不要再采）。
 - 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
 - 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 online-runner.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
 - 调研过程文件都放 `research/`。只在本工作目录里读写，不要访问工作目录以外的路径。
@@ -168,6 +186,42 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
 `python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
 最后只回复一行：`DONE <validator 输出里的 readiness>`。
+"""
+
+PLAN_TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续。
+
+这一步只做一件事：判断品牌所在行业，决定 runner 去哪些评价站和社区预采买家原话，写出 `research/precollect/plan.json`。不写题，不做别的调研，10 分钟内完成。
+
+1. 读 `inputs/case-normalized.json`：品牌、产品线、竞品、核心目标客户与购买场景。
+2. 一次取完品牌官网首页和竞品官网首页，存下来给后面的官网调研接着用：
+   `python3 .agents/skills/shared/scripts/net.py fetch <品牌官网> <竞品官网 …> --country {market} > research/site/homepages.txt`
+3. 读 `.agents/skills/geo-prompt-selection-builder/references/precollect-channels.json` 和 `.agents/skills/geo-prompt-selection-builder/references/signal-sources.md`「按行业收评价和社区」。按品牌卖什么、卖给谁，从 `industries` 里选一个行业，键名原样照抄；行业看品牌本身，不看竞品。一个都不合适就写「其他」，按品牌卖什么、买家在哪里讨论和评价，自己推理该采哪些渠道：在 add 里挑渠道表里有的（最多 5 个），表里没有的站写进 add_sites（最多 2 个）。
+4. 本行业的「评价」「社区」，加上市场 {market} 在 `markets` 里的社区（没有这个市场就用 `_default`），就是 runner 要采的渠道，都会采，不能删。只有两种情况能写进 skip 并说明原因：要参数的三个渠道（google-play、app-store 要应用 ID，google-maps 要门店名）在品牌和竞品都没有 App、没有门店时；渠道表里写了 `scope` 的站（如 rtings 只测它自己的那些品类），品牌的品类不在 scope 里时。表里这一行没写、但这个品牌明显该采的，从 `review_channels`、`community_channels` 里挑，写进 add，最多 3 个，写原因；渠道表里没有的站（比如这个品类的专业评测站、垂直论坛），写进 add_sites，最多 2 个，runner 会用「站名 品类词」搜出本站页面再取正文。规则没写到的情况按这一步的目标自己推理，依据写进 industry_basis 或原因里。
+5. 要采 Google Play 或 App Store 的，找品牌和竞品的应用 ID：先看官网首页里的应用商店链接；没有再用 `python3 .agents/skills/shared/scripts/net.py search "site:apps.apple.com <名称>" --gl {gl} --hl {lang}`，搜索一共不超过 3 次。要采 Google 地图的，在 maps_queries 写竞品门店的「店名 城市」。
+
+plan.json 的格式（除 industry、industry_basis 外都可省略）：
+{{
+  "industry": "industries 里的一个键，或「其他」",
+  "industry_basis": "一两句：品牌卖什么、卖给谁，引官网原文并带网址",
+  "category_en": "买家搜这类产品用的英文品类词，2–4 个词，例如 cloud gpu rental",
+  "local_query": "市场语言的品类词，非英语市场才填",
+  "skip": {{"google-play / app-store / google-maps / 写了 scope 的站": "为什么不采"}},
+  "add": {{"渠道名": "为什么要加"}},
+  "add_sites": {{"域名": {{"category": "评价 或 社区", "why": "为什么要看这个站"}}}},
+  "app_ids": {{"google-play": ["com.example.app"], "app-store": ["123456789"]}},
+  "maps_queries": ["店名 城市"],
+  "reddit_queries": ["最多 2 条：买家比较或求推荐的说法，不填就用竞品名对比和品类推荐问法"],
+  "hn_queries": ["最多 3 条，不填就用竞品名"]
+}}
+
+写完运行 `python3 .agents/skills/geo-prompt-selection-builder/scripts/run_selection_mode.py check-plan --out .`，退出码 0 才算完，不是 0 就按报错改。最后只回复一行：`PLAN <行业>`。
+"""
+
+PLAN_REPAIR_TASK = """你在无人值守流水线的渠道计划返修环节。`research/precollect/plan.json` 没通过检查，报错原文：
+
+{errors}
+
+按 `PLAN.md` 的要求只改报错的地方；改完运行 `python3 .agents/skills/geo-prompt-selection-builder/scripts/run_selection_mode.py check-plan --out .`，退出码 0 才算完。最后只回复一行：`PLAN <行业>`。
 """
 
 REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max_rounds} 轮）。工作目录里已有 out/bank.json，{why}。
@@ -225,7 +279,9 @@ def write_json(path: Path, data: dict) -> None:
 
 
 def scrapeless_key_present() -> bool:
-    """和 shared/scripts/net.py 同一顺序：先环境变量，再 macOS 钥匙串。"""
+    """和 shared/scripts/net.py 同一顺序：先环境变量，再 macOS 钥匙串；接平台网关时 key 在网关上，本机不需要。"""
+    if os.environ.get("SCRAPELESS_BASE_URL", "").strip():
+        return True  # 密钥在平台网关上
     if os.environ.get("SCRAPELESS_API_KEY", "").strip():
         return True
     try:
@@ -261,7 +317,7 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         print(f"--platforms 要填采集器认识的平台名 {sorted(KNOWN_PLATFORMS)}，收到 {platforms!r}", file=sys.stderr)
         return 2
     ws.mkdir(parents=True)
-    for sub in ("inputs", "research", "out", "logs", "logs/net_cache"):
+    for sub in ("inputs", "research", "research/site", "research/precollect", "out", "logs", "logs/net_cache"):
         (ws / sub).mkdir()
     try:
         payload = json.loads(case_path.read_text(encoding="utf-8"))
@@ -290,420 +346,41 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
             shutil.copy2(src, dst)
     task = task_file.read_text(encoding="utf-8") if task_file else TASK.format(market=market, locale=locale, platforms=",".join(names),
                                                                                   reddit_max=os.environ.get("NET_REDDIT_MAX", "10"))
+    if domestic() and not task_file:
+        task += DOMESTIC_NOTE
     (ws / "TASK.md").write_text(task, encoding="utf-8")
+    (ws / "PLAN.md").write_text(PLAN_TASK.format(market=market, gl=market.lower(), lang=locale), encoding="utf-8")
     write_json(ws / "out/result.json", {"status": "prepared", "market": market, "locale": locale,
                                          "platforms": names, "prepared_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                                          "warnings": result["warnings"]})
     return 0
 
 
-def net_env(ws: Path) -> dict:
-    """net.py 的线上限量：Reddit RSS 约每分钟 1 次，是线上调研最慢的一环，默认每个工作目录最多 10 次联网请求。
-    缓存目录按工作目录隔离（3.1.0），代理页数和搜索次数才能按轮归集；代价是不同品牌 × 市场的运行之间不共享网页缓存。"""
-    return {"NET_REDDIT_MAX": os.environ.get("NET_REDDIT_MAX", "10"),
-            "NET_REDDIT_COUNTER": str(ws / "logs/reddit_calls"),
-            "NET_CACHE_DIR": str(ws / "logs/net_cache")}
+DOMESTIC_NOTE = """
+## 境内模式
+
+这台服务器没有海外直连（`GEO_NET_DOMESTIC=1`）：`net.py fetch` 全部经 Scrapeless 代理取，每页付费，缓存命中不付；`net.py reddit` 搜索不发请求、直接回「读不到」，不要重试；`net.py render` 改经 Scrapeless 代理不开 JS 取；Reddit 帖子用 `net.py search` 搜出链接后 `net.py reddit <帖子 URL> --proxy` 取网页版（每帖付费 1 次），Pantip 帖子照常用 `net.py pantip`（经 Scrapeless 渲染，每帖付费 1 次），其余要渲染的站点写进 `notes.md`「未覆盖来源」，注明「境内模式」。`collect_reviews.py`、`collect_keyword_data.py` 走 DataForSEO，报连接失败时同样记进未覆盖来源，不另找办法。
+"""
 
 
-# ---- precollect（3.4.0）：agent 启动前由脚本固定采集评价、社区、搜索联想 ---------------------------
-
-PRECOLLECT_DIR = "research/precollect"
-PRECOLLECT_TIMEOUT = 6 * 60          # 每类上限
-PRECOLLECT_REDDIT_CAP = 5            # precollect 最多用这么多次 Reddit 联网请求，其余留给 agent
-REVIEW_DEPTH = 40                    # 每个竞品域名约 40 条 Trustpilot 评价（20 条一个计费单位）
-# 采集类别 = 采集脚本写进 signals.csv 的「来源类型」值（collect_serp_signals.py 写「搜索联想」、
-# collect_reviews.py 写「评价」，社区由本脚本按 net.py reddit 的输出写「社区」）
-PRECOLLECT_CATEGORIES = {"搜索联想": "serp", "评价": "reviews", "社区": "community"}
-# 与 shared/scripts/collect_keyword_data.py 的 FIELDS 一致（三个采集脚本的 signals.csv 同一套列）
-SIGNAL_FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "目标客户", "约束条件",
-                 "出处", "引用它的问题"]
-_EN_WORD = re.compile(r"[A-Za-z][A-Za-z0-9'&+-]*")
-_STOP = {"best", "with", "from", "that", "this", "your", "for", "and", "the", "of", "to", "in", "on", "a", "an"}
 
 
-def _scripts_dir(ws: Path) -> Path:
-    override = os.environ.get("PRECOLLECT_SCRIPTS_DIR", "").strip()
-    return Path(override) if override else ws / ".agents/skills/shared/scripts"
-
-
-def _clean_domain(raw: str) -> str:
-    raw = str(raw or "").strip()
-    if not raw:
-        return ""
-    host = (urllib.parse.urlsplit(raw if "://" in raw else "https://" + raw).hostname or "").lower()
-    return host[4:] if host.startswith("www.") else host
-
-
-def precollect_terms(norm: dict) -> dict:
-    """从归一化品牌资料推品类词、人群词、种子词、竞品名和竞品域名。"""
-    brand_words = {w.lower() for name in [norm.get("brand_name", "")] + list(norm.get("brand_aliases") or [])
-                   for w in _EN_WORD.findall(str(name))}
-    product_line = str(norm.get("product_line") or "").strip()
-    category = str(norm.get("category_label") or "").strip()
-    if not category:
-        # 产品线常写成「短名：规格说明」，规格里的型号会把种子词带偏（Dbrand 实测：取全文前 6 个英文词得到
-        # 「gpu gpu instances nvidia rtx pro」，PAA 全是 4080 vs 4090、Reddit 选中联想笔记本帖）。只取冒号/分号前的短名，
-        # 英文词去重后最多 4 个；短名里没有英文词再退回全文。
-        head = re.split(r"[：:;；\n]", product_line, maxsplit=1)[0]
-        def _pick(text: str) -> list[str]:
-            seen, out = set(), []
-            for w in _EN_WORD.findall(text):
-                lw = w.lower()
-                if lw in brand_words or lw in seen:
-                    continue
-                seen.add(lw)
-                out.append(w)
-            return out[:4]
-        words = _pick(head) or _pick(product_line)
-        while words and words[-1].lower() in _STOP:
-            words.pop()
-        category = " ".join(words) if words else product_line
-    category = category.lower()
-    cf = norm.get("case_fields") or {}
-    first = str(cf.get("核心目标客户与购买场景 1") or "")
-    crowd_part = re.split(r"[：:]", first, maxsplit=1)[0]
-    crowd_part = re.split(r"[（(]", crowd_part, maxsplit=1)[0]  # 括号里多是角色说明（CTO / 决策人），不进种子词
-    crowd_words = [w for w in _EN_WORD.findall(crowd_part) if w.lower() not in brand_words]
-    # 人群写成中文、只夹着一个英文缩写（「AI 应用初创团队」）时拼不成英文人群词，不出这个种子
-    crowd = " ".join(crowd_words).lower() if len(crowd_words) >= 2 else ""
-    seeds = [f"best {category}"] + ([f"{category} for {crowd}"] if crowd else []) + [f"{category} recommendations"]
-    comps = (norm.get("competitor_selection") or {}).get("formal_competitors") or []
-    return {"category": category, "crowd": crowd, "seeds": list(dict.fromkeys(seeds)), "product_line": product_line,
-            "competitors": [str(c.get("name") or "").strip() for c in comps if str(c.get("name") or "").strip()],
-            "domains": list(dict.fromkeys(d for d in (_clean_domain(c.get("official_domain")) for c in comps) if d)),
-            "category_words": [w.lower() for w in _EN_WORD.findall(category)
-                               if len(w) >= 4 and w.lower() not in _STOP]}
-
-
-def _run_script(ws: Path, args: list[str], timeout: float, log: Path) -> tuple[int | None, str, str]:
-    """跑一个采集脚本；返回 (退出码，超时为 None；stdout；stderr)，原始输出追加进 log。"""
-    env = dict(os.environ, **net_env(ws))
-    cmd = [sys.executable, "-I", *args]
-    try:
-        p = subprocess.run(cmd, cwd=ws, env=env, capture_output=True, text=True, timeout=max(1.0, timeout))
-        rc, out, err = p.returncode, p.stdout, p.stderr
-    except subprocess.TimeoutExpired as exc:
-        dec = lambda b: b.decode("utf-8", "replace") if isinstance(b, bytes) else (b or "")  # noqa: E731
-        rc, out, err = None, dec(exc.stdout), dec(exc.stderr)
-    with log.open("a", encoding="utf-8") as fh:
-        fh.write(f"$ {' '.join(Path(a).name if i == 0 else a for i, a in enumerate(args))}\n"
-                 f"[exit {rc if rc is not None else 'timeout'}]\n{out}\n{err}\n")
-    return rc, out, err
-
-
-def _read_signals(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        return [r for r in csv.DictReader(f) if str(r.get("原话") or "").strip()]
-
-
-def _write_signals(path: Path, rows: list[dict], extra: tuple[str, ...] = ()) -> None:
-    fields = SIGNAL_FIELDS + [k for r in rows for k in r if k not in SIGNAL_FIELDS and k not in extra] + list(extra)
-    fields = list(dict.fromkeys(fields))
-    with path.open("w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        w.writeheader()
-        w.writerows(rows)
-
-
-def _last_line(*texts: str) -> str:
-    for text in texts:
-        lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
-        if lines:
-            return lines[-1][:300]
-    return ""
-
-
-def _collect_serp(ws: Path, terms: dict, market: str, locale: str, out: Path, log: Path) -> dict:
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "seeds.txt").write_text("\n".join(terms["seeds"]) + "\n", encoding="utf-8")
-    rc, so, se = _run_script(ws, [str(_scripts_dir(ws) / "collect_serp_signals.py"), "--seeds-file", str(out / "seeds.txt"),
-                                  "--gl", market.lower(), "--hl", locale, "--out", str(out),
-                                  "--product-line", terms["product_line"], "--id-prefix", "PS", "--timeout", "90"],
-                             PRECOLLECT_TIMEOUT, log)
-    rows = _read_signals(out / "signals.csv")
-    try:
-        failed = json.loads((out / "summary.json").read_text(encoding="utf-8")).get("failed_seeds") or []
-    except (OSError, json.JSONDecodeError):
-        failed = []
-    note = "；".join(f"{f.get('seed')}：{f.get('error')}" for f in failed)[:400]
-    if rc is None:
-        why = f"超时（{PRECOLLECT_TIMEOUT} 秒）"
-    elif rc not in (0, 1):
-        why = f"collect_serp_signals.py 退出码 {rc}：{_last_line(se, so)}"
-    else:
-        why = note
-    if rows:
-        return {"status": "ok", "reason": (f"部分失败：{why}" if why else ""), "rows": len(rows)}
-    return {"status": "failed" if (rc not in (0,) or failed) else "ok",
-            "reason": why or "采集完成但 0 条", "rows": 0}
-
-
-def _collect_reviews(ws: Path, terms: dict, market: str, locale: str, out: Path, log: Path) -> dict:
-    if not terms["domains"]:
-        return {"status": "skipped", "reason": "品牌资料没有竞品官网域名", "rows": 0}
-    out.mkdir(parents=True, exist_ok=True)
-    # 每个域名一个任务、顺序等结果；按域名数分摊 6 分钟，留 30 秒给脚本收尾
-    wait = max(60, min(300, int((PRECOLLECT_TIMEOUT - 30) / len(terms["domains"]))))
-    rc, so, se = _run_script(ws, [str(_scripts_dir(ws) / "collect_reviews.py"), "trustpilot", *terms["domains"],
-                                  "--depth", str(REVIEW_DEPTH), "--out", str(out), "--product-line", terms["product_line"],
-                                  "--id-prefix", "PR", "--wait", str(wait)],
-                             PRECOLLECT_TIMEOUT, log)
-    rows = _read_signals(out / "signals.csv")
-    try:
-        failed = json.loads((out / "summary.json").read_text(encoding="utf-8")).get("failed") or []
-    except (OSError, json.JSONDecodeError):
-        failed = []
-    note = "；".join(f"{f.get('target')}：{f.get('error')}" for f in failed)[:400]
-    if rc is None:
-        why = f"超时（{PRECOLLECT_TIMEOUT} 秒）"
-    elif rc == 2:  # Fatal：缺凭据、缺调用人等，整类没采
-        why = f"collect_reviews.py 停止：{_last_line(se, so).removeprefix('停止：')}"
-    elif rc not in (0, 1):
-        why = f"collect_reviews.py 退出码 {rc}：{_last_line(se, so)}"
-    else:
-        why = note
-    if rows:
-        return {"status": "ok", "reason": (f"部分失败：{why}" if why else ""), "rows": len(rows)}
-    return {"status": "failed" if (rc != 0 or failed) else "ok", "reason": why or "采集完成但 0 条", "rows": 0}
-
-
-_REDDIT_HEAD = re.compile(r"^(\d+)\. \[(帖子|评论|版块)\] ?(.*)$")
-_REDDIT_META = re.compile(r"^   (.*?) · (\S*) · (\S*)\s*$")
-_SUBMITTED = re.compile(r"\s*submitted by\s+/u/\S+(\s+to\s+r/\S+)?\s*$")
-
-
-def parse_reddit_output(text: str) -> tuple[list[dict], str]:
-    """解析 net.py reddit 的文本输出（每条：「n. [类别] 标题」、「   作者 · 日期 · 链接」、正文若干行）。
-    返回 (条目, 出错说明)；没有「[来源]」行就是没取到，出错说明取 net.py 打印的「读不到」那一行。"""
-    if "[来源]" not in text:
-        bad = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("读不到")]
-        return [], (bad[-1] if bad else _last_line(text) or "net.py reddit 没有输出")
-    items: list[dict] = []
-    cur: dict | None = None
-    for line in text.splitlines():
-        m = _REDDIT_HEAD.match(line)
-        if m:
-            cur = {"kind": m.group(2), "title": m.group(3).strip(), "author": "", "date": "", "url": "", "body": [],
-                   "meta": False}
-            items.append(cur)
-            continue
-        if cur is None:
-            continue
-        if not cur["meta"]:
-            mm = _REDDIT_META.match(line)
-            if mm:
-                cur.update(author=mm.group(1).strip(), date=mm.group(2), url=mm.group(3), meta=True)
-            continue
-        cur["body"].append(line[3:] if line.startswith("   ") else line)
-    for it in items:
-        it["body"] = _SUBMITTED.sub("", "\n".join(it.pop("body")).strip()).strip()
-        it.pop("meta")
-    return items, ""
-
-
-def _thread_key(url: str) -> str:
-    m = re.search(r"/r/([^/]+)/comments/([^/]+)", url)
-    return f"{m.group(1).lower()}/{m.group(2)}" if m else url
-
-
-def _subreddit(url: str) -> str:
-    m = re.search(r"/r/([^/]+)/", url)
-    return f"r/{m.group(1)}" if m else "r/?"
-
-
-def _collect_community(ws: Path, terms: dict, market: str, locale: str, out: Path, log: Path) -> dict:
-    out.mkdir(parents=True, exist_ok=True)
-    try:
-        total_max = int(os.environ.get("NET_REDDIT_MAX", "10"))
-    except ValueError:
-        total_max = 10
-    share = min(PRECOLLECT_REDDIT_CAP, total_max // 2)
-    if share < 2:
-        return {"status": "skipped", "reason": f"NET_REDDIT_MAX={total_max}，不够 precollect 分（至少要 4 次）", "rows": 0}
-    searches = 2 if share >= 5 else 1
-    deadline = time.time() + PRECOLLECT_TIMEOUT
-    net = str(_scripts_dir(ws) / "net.py")
-    # 只用品类词搜，泛词（gpu、instances）会搜进无关版块（Dbrand 实测命中 r/godot 游戏渲染帖）。
-    # 买家比较竞品的帖子最对口，先拿竞品名拼一条，再补一条品类推荐问法。
-    comps = terms["competitors"][:3]
-    vs_query = " vs ".join(comps) if len(comps) >= 2 else (f"{comps[0]} alternative" if comps else "")
-    queries = list(dict.fromkeys(q for q in [vs_query, f"best {terms['category']}", terms["category"]] if q))[:searches]
-    calls, problems, candidates = 0, [], {}
-    for q in queries:
-        if time.time() >= deadline:
-            problems.append(f"搜索「{q}」：时间用完")
-            break
-        calls += 1
-        rc, so, se = _run_script(ws, [net, "reddit", q, "--limit", "15"], deadline - time.time(), log)
-        items, err = parse_reddit_output(so)
-        if rc is None or err:
-            problems.append(f"搜索「{q}」：{'超时' if rc is None else err}")
-            continue
-        for it in items:
-            if it["kind"] != "帖子" or "/comments/" not in it["url"]:
-                continue
-            title, body = it["title"].lower(), it["body"].lower()
-            hit_words = {w for w in terms["category_words"] if w in title or w in body}
-            hit_comps = {c for c in terms["competitors"] if c.lower() in title or c.lower() in body}
-            score = sum(2 * (w in title) + (w in body) for w in hit_words) + 3 * len(hit_comps)
-            key = _thread_key(it["url"])
-            # 至少提到一个竞品，或命中两个以上不同的品类词；只撞上一个泛词（gpu）不算相关
-            relevant = bool(hit_comps) or len(hit_words) >= 2
-            if relevant and (key not in candidates or candidates[key][0] < score):
-                candidates[key] = (score, it["url"], len(candidates))
-    picked = sorted(candidates.values(), key=lambda x: (-x[0], x[2]))[:min(3, share - calls)]
-    rows: list[dict] = []
-    for _, url, _ in picked:
-        if time.time() >= deadline:
-            problems.append(f"{url}：时间用完")
-            break
-        calls += 1
-        rc, so, se = _run_script(ws, [net, "reddit", url, "--limit", "40"], deadline - time.time(), log)
-        items, err = parse_reddit_output(so)
-        if rc is None or err:
-            problems.append(f"{url}：{'超时' if rc is None else err}")
-            continue
-        comments = 0
-        for it in items:
-            is_post = it["kind"] == "帖子"
-            if not is_post:
-                if comments >= 40:
-                    break
-                comments += 1
-            text = (f"{it['title']}\n{it['body']}" if is_post else it["body"]).strip()
-            if not text or text in ("[deleted]", "[removed]") or it["author"].endswith("/AutoModerator"):
-                continue
-            link = it["url"] or url
-            row = dict.fromkeys(SIGNAL_FIELDS, "")
-            row.update({"产品线": terms["product_line"], "来源类型": "社区", "原话": text[:3000],
-                        "出处": f"Reddit {_subreddit(link)} {it['date'] or '日期未知'}，{link}"})
-            rows.append(row)
-    seen, uniq = set(), []
-    for r in rows:
-        k = r["原话"].strip().lower()
-        if k not in seen:
-            seen.add(k)
-            uniq.append(r)
-    for i, r in enumerate(uniq, 1):
-        r["输入编号"] = f"PC{i:03d}"
-    _write_signals(out / "signals.csv", uniq)
-    (out / "summary.json").write_text(json.dumps({"queries": queries, "threads": [u for _, u, _ in picked],
-                                                  "reddit_calls": calls, "reddit_cap": share, "rows": len(uniq),
-                                                  "problems": problems}, ensure_ascii=False, indent=1) + "\n",
-                                      encoding="utf-8")
-    note = f"Reddit 请求 {calls} 次（precollect 上限 {share}）"
-    if uniq:
-        return {"status": "ok", "reason": note + (f"；部分失败：{'；'.join(problems)[:400]}" if problems else ""),
-                "rows": len(uniq)}
-    if not picked and not problems:
-        why = f"搜索 {', '.join(queries)} 没有标题或正文含品类词、竞品名的帖子"
-    else:
-        why = "；".join(problems)[:400] or "帖子读到了但没有可用正文"
-    return {"status": "failed", "reason": f"{note}；{why}", "rows": 0}
-
-
-def precollect(ws: Path) -> dict:
-    """agent 启动前跑三类采集。每类单独 try，失败只记原因；写 summary.json 与合并的 signals.csv。"""
-    root = ws / PRECOLLECT_DIR
-    root.mkdir(parents=True, exist_ok=True)
-    prior = json.loads((ws / "out/result.json").read_text(encoding="utf-8")) if (ws / "out/result.json").exists() else {}
-    market, locale = prior.get("market", ""), prior.get("locale", "") or "en"
-    norm = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]
-    terms = precollect_terms(norm)
-    collectors = {"搜索联想": _collect_serp, "评价": _collect_reviews, "社区": _collect_community}
-    cats: dict[str, dict] = {}
-    merged: list[dict] = []
-    seen: set[tuple[str, str]] = set()
-    for cat, fn in collectors.items():
-        sub = PRECOLLECT_CATEGORIES[cat]
-        out = root / sub
-        started = time.time()
-        try:
-            info = fn(ws, terms, market, locale, out, ws / f"logs/precollect-{sub}.txt")
-        except Exception as exc:  # noqa: BLE001 - 一类出错不影响其他类和 agent
-            info = {"status": "failed", "reason": f"{type(exc).__name__}: {str(exc)[:300]}", "rows": 0}
-        rows = 0
-        if info["status"] == "ok":
-            for r in _read_signals(out / "signals.csv"):
-                key = (cat, " ".join(str(r.get("原话") or "").split()).lower())
-                if key in seen:
-                    continue
-                seen.add(key)
-                merged.append({**r, "采集类别": cat})
-                rows += 1
-        info["rows"] = rows
-        info["out_dir"] = str(out.relative_to(ws))
-        info["secs"] = round(time.time() - started, 1)
-        cats[cat] = info
-    _write_signals(root / "signals.csv", merged, extra=("采集类别",))
-    summary = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "terms": {k: terms[k] for k in
-               ("category", "crowd", "seeds", "competitors", "domains")},
-               "categories": cats, "total_rows": len(merged), "signals_csv": f"{PRECOLLECT_DIR}/signals.csv"}
-    write_json(root / "summary.json", summary)
-    if (ws / "out/result.json").exists():
-        prior["precollect"] = precollect_block(ws)
-        write_json(ws / "out/result.json", prior)
-    return summary
-
-
-def precollect_block(ws: Path) -> dict | None:
-    """result.json 里的 precollect 块：每类状态、原因、行数。没跑过 precollect 返回 None。"""
-    try:
-        s = json.loads((ws / PRECOLLECT_DIR / "summary.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return {"categories": {c: {k: v.get(k) for k in ("status", "reason", "rows")} for c, v in (s.get("categories") or {}).items()},
-            "total_rows": s.get("total_rows", 0), "signals_csv": s.get("signals_csv", "")}
-
-
-def _uncovered_section(ws: Path) -> str:
-    """notes.md「未覆盖来源」一节的文本：从含这几个字的那一行起，到下一个 Markdown 标题为止。"""
-    try:
-        lines = (ws / "out/notes.md").read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return ""
-    out, inside = [], False
-    for line in lines:
-        if "未覆盖来源" in line and not inside:
-            inside = True
-            out.append(line.split("未覆盖来源", 1)[1])
-            continue
-        if inside:
-            if line.lstrip().startswith("#"):
-                break
-            out.append(line)
-    return "\n".join(out)
-
-
-def precollect_registration_errors(ws: Path) -> list[str]:
-    """登记检查：precollect 采到（ok 且 ≥1 条）的类别，buyer_quotes 里至少要有 1 条同来源类型的信号，
-    或 notes.md「未覆盖来源」写了这一类。返回缺登记的报错；没跑过 precollect 或题库读不了返回 []。"""
-    try:
-        summary = json.loads((ws / PRECOLLECT_DIR / "summary.json").read_text(encoding="utf-8"))
-        bank = json.loads((ws / "out/bank.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    quotes = [q for q in ((bank.get("config") or {}).get("buyer_quotes") or []) if isinstance(q, dict)]
-    norm = lambda s: " ".join(str(s or "").split()).lower()  # noqa: E731
-    texts: dict[str, set[str]] = {}
-    for r in _read_signals(ws / PRECOLLECT_DIR / "signals.csv"):
-        texts.setdefault(str(r.get("采集类别") or ""), set()).add(norm(r.get("原话")))
-    uncovered = _uncovered_section(ws)
-    errors = []
-    for cat, info in (summary.get("categories") or {}).items():
-        n = int(info.get("rows") or 0)
-        if info.get("status") != "ok" or n < 1:
-            continue
-        hit = any(str(q.get("来源类型") or "").strip() == cat or norm(q.get("原话")) in texts.get(cat, set())
-                  for q in quotes)
-        if hit or cat in uncovered:
-            continue
-        errors.append(f"research/precollect/ 里已采到 {cat} {n} 条，buyer_quotes 里一条没有；读 "
-                      f"research/precollect/signals.csv 把相关的登记进去，或在 notes.md『未覆盖来源』说明为什么这一类"
-                      f"全部与本产品线无关（只需补登记或说明，不要为这条删题）")
-    return errors
+def plan_step(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int) -> dict:
+    """先让 agent 判行业、填渠道参数（PLAN.md），检查不过回喂一次；仍不过就退回默认计划，不卡住流水线。"""
+    t = min(timeout, PLAN_TIMEOUT)
+    rec = run_agent(ws, agent, agent_cmd, t, task_path=ws / "PLAN.md", tag="-plan")
+    errors, checked = check_plan(ws)
+    if errors:
+        (ws / "PLAN-REPAIR.md").write_text(PLAN_REPAIR_TASK.format(errors="\n".join(f"- {e}" for e in errors)),
+                                           encoding="utf-8")
+        rec = run_agent(ws, agent, agent_cmd, t, task_path=ws / "PLAN-REPAIR.md", tag="-plan-repair")
+        errors, checked = check_plan(ws)
+    if errors:
+        why = "行业判断两次没通过检查：" + "；".join(errors)[:400]
+        if rec.get("error"):
+            why += f"（agent：{rec['error'][:200]}）"
+        checked = fallback_plan(ws, why)
+    return checked
 
 
 USAGE_KEYS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
@@ -930,9 +607,12 @@ def collect_costs(ws: Path, market: str, since: str) -> dict:
             if e.get("event") == "attempt":
                 prerun["attempts"] += 1
                 prerun["ok"] += 1 if e.get("ok") else 0
-    serp = sum(1 for _ in (ws / "research").glob("**/serp*/raw/*.json"))
+    serp_raw = list((ws / "research").glob("**/serp*/raw/*.json"))
+    # 境内模式的自动补全经 Scrapeless 网页代理取（3.6.3），存成 raw/*.autocomplete.json，按代理页计
+    autocomplete = sum(1 for f in serp_raw if f.name.endswith(".autocomplete.json"))
+    serp = len(serp_raw) - autocomplete
     cache = ws / "logs/net_cache"
-    proxy = search = 0
+    proxy = search = render = 0
     if cache.is_dir():
         for f in cache.glob("fetch_*.json"):
             try:
@@ -940,12 +620,18 @@ def collect_costs(ws: Path, market: str, since: str) -> dict:
             except (OSError, json.JSONDecodeError):
                 continue
         search = sum(1 for f in cache.glob("*.json") if len(f.stem) == 32 and all(c in "0123456789abcdef" for c in f.stem))
+        for f in cache.glob("pantip_*.json"):  # 3.6.2：Pantip 经 Scrapeless JS 渲染的帖子
+            try:
+                render += 1 if "Scrapeless" in json.loads(f.read_text(encoding="utf-8")).get("src", "") else 0
+            except (OSError, json.JSONDecodeError):
+                continue
     scrapeless = {"prerun_attempts": prerun["attempts"], "prerun_ok": prerun["ok"], "prerun_event_files": prerun["files"],
-                  "serp_requests": serp, "net_search_requests": search, "proxy_pages": proxy,
-                  "note": "proxy_pages 只数成功并写进缓存的代理页（Scrapeless 网页代理按成功请求计费）；"
-                          "logs/net_cache 不在时记「不可归集」"}
+                  "serp_requests": serp, "net_search_requests": search, "proxy_pages": proxy, "render_pages": render,
+                  "autocomplete_proxy": autocomplete,
+                  "note": "proxy_pages 只数成功并写进缓存的代理页（Scrapeless 网页代理按成功请求计费）；render_pages 是"
+                          "开 JS 渲染的代理页（Pantip），单价可能高于普通代理页；logs/net_cache 不在时记「不可归集」"}
     if not cache.is_dir():
-        scrapeless["proxy_pages"] = scrapeless["net_search_requests"] = "不可归集"
+        scrapeless["proxy_pages"] = scrapeless["net_search_requests"] = scrapeless["render_pages"] = "不可归集"
     # DataForSEO：服务端流水按 case 与本轮时间窗过滤，不含沙盒
     case = dataforseo_case(ws, market)
     dfs = {"case": case, "since": since, "until": until, "calls": 0, "cost_usd": 0.0, "ledger": str(_ledger_path())}
@@ -1222,12 +908,23 @@ def main() -> int:
                                 "不占 --repair-rounds 额度）")
     p = sub.add_parser("finalize")
     p.add_argument("--out", type=Path, required=True)
-    p = sub.add_parser("precollect", help="对已 prepare 的工作目录单独跑 precollect")
+    p = sub.add_parser("precollect", help="对已 prepare 的工作目录单独跑 precollect（有 plan.json 先按它判行业，没有按默认渠道）")
+    p.add_argument("--out", type=Path, required=True)
+    p = sub.add_parser("check-plan", help="检查 research/precollect/plan.json（行业判断步骤里 agent 自己跑）")
     p.add_argument("--out", type=Path, required=True)
     a = ap.parse_args()
     ws = a.out.resolve()
     if a.cmd == "finalize":
         return finalize(ws)
+    if a.cmd == "check-plan":
+        errors, checked = check_plan(ws)
+        if errors:
+            print("plan.json 没通过：\n" + "\n".join(f"- {e}" for e in errors), file=sys.stderr)
+            return 1
+        print(json.dumps({"industry": checked["industry"],
+                          "channels": [f"{c['category']}:{c['name']}:{c['status']}" for c in checked["channels"]]},
+                         ensure_ascii=False))
+        return 0
     if a.cmd == "precollect":
         if not (ws / "inputs/case-normalized.json").exists():
             print(f"{ws} 不是 prepare 过的工作目录", file=sys.stderr)
@@ -1252,6 +949,7 @@ def main() -> int:
     dataforseo_env(ws, a.market.strip())
     # precollect：评价、社区、搜索联想由脚本固定采，在 agent 启动前跑完；--task-file（测试）时只在给了假采集脚本目录时跑
     if not a.task_file or os.environ.get("PRECOLLECT_SCRIPTS_DIR", "").strip():
+        plan_step(ws, a.agent, a.agent_cmd, a.timeout)  # 先判行业、定渠道，再按渠道采
         precollect(ws)
     record = run_agent(ws, a.agent, a.agent_cmd, a.timeout)
     code = finalize(ws, record, repair_rounds=0, precollect_final=a.repair_rounds <= 0)
@@ -1263,7 +961,31 @@ def main() -> int:
         code = finalize(ws, record, repair_rounds=rounds, precollect_final=rounds >= a.repair_rounds)
     if code != 0:
         return code
-    return review_loop(ws, a.agent, a.agent_cmd, a.timeout, a.review_rounds, rounds, a.market.strip())
+    code = review_loop(ws, a.agent, a.agent_cmd, a.timeout, a.review_rounds, rounds, a.market.strip())
+    if code == 0:
+        learn_industry(ws, testing=bool(a.task_file))
+    return code
+
+
+def learn_industry(ws: Path, testing: bool = False) -> None:
+    """成功交付后把品类层面的经验并进行业知识档案（3.8.0，industry_kb.py）。测试（--task-file）只在显式设了
+    GEO_INDUSTRY_KB 时写，免得假数据进正式档案；出错只记 warning，不影响交付。"""
+    if testing and not os.environ.get("GEO_INDUSTRY_KB", "").strip():
+        return
+    res_path = ws / "out/result.json"
+    try:
+        sys.path.insert(0, str(HERE))
+        import industry_kb  # noqa: PLC0415
+        path = industry_kb.add_from_ws(ws)
+        note = {"industry_kb": str(path) if path else "没有并入（行业没判出来或缺题库）"}
+    except Exception as exc:  # noqa: BLE001
+        note = {"industry_kb_warning": f"{type(exc).__name__}: {exc}"[:300]}
+    try:
+        res = json.loads(res_path.read_text(encoding="utf-8"))
+        res.update(note)
+        write_json(res_path, res)
+    except (OSError, ValueError):
+        pass
 
 
 if __name__ == "__main__":
