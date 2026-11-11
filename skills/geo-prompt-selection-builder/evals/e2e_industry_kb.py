@@ -15,7 +15,6 @@
   K7c 照抄品牌资料（Case）12 字以上原句的条目不进档案
   K8 runner 钩子：learn_industry 在测试模式且没设 GEO_INDUSTRY_KB 时不写；设了就写，并在 result.json 记 industry_kb
   K9 prepare 写出的 TASK.md 让 agent 读 references/industry-knowledge/
-  K11 品牌标识加盐，没有盐不写
   K12 服务器持久化目录：第一次从随 skill 的档案复制，之后的积累拷进工作目录
   K10 同一客户重跑换了行业和品类：从旧行业撤掉、不重复计；没有客户的旧品类文件删除
 
@@ -74,7 +73,6 @@ def make_ws(root: Path, name: str, brand: str, aliases: list[str], comps: list[s
 def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="e2e-kb-"))
     kbdir = tmp / "kb"
-    os.environ["GEO_INDUSTRY_KB_SALT"] = "e2e-test-salt"  # 测试用盐，不碰钥匙串里的正式盐
     env = {**os.environ, "GEO_INDUSTRY_KB": str(kbdir)}
 
     def add(*args):
@@ -221,18 +219,6 @@ def main() -> int:
         check("K9 TASK.md 让 agent 调研前读行业和最接近的品类档案", "references/industry-knowledge/" in task and "品类-" in task
               and "行业-" in task and "假设级线索" in task,
               p.stdout[-200:] + p.stderr[-200:])
-
-        # K11 品牌标识加盐：档案里搜不到不加盐的哈希；没有盐不写
-        import hashlib
-        plain = hashlib.sha1(b"zorbo").hexdigest()[:10]
-        blob_all = "".join(f.read_text(encoding="utf-8") for f in kbdir.glob("*.json"))
-        kbns = tmp / "kb-nosalt"
-        env_ns = {k: v for k, v in env.items() if k != "GEO_INDUSTRY_KB_SALT"}
-        env_ns.update(GEO_INDUSTRY_KB=str(kbns), GEO_INDUSTRY_KB_SALT="", PATH="/nonexistent")  # PATH 置空：钥匙串也读不到
-        pn = subprocess.run([sys.executable, "-I", str(KB), "add", "--ws", str(ws_a)], env=env_ns, capture_output=True, text=True)
-        check("K11 品牌标识加盐：不加盐的哈希不在档案里；没有盐不写、退出码 2",
-              plain not in blob_all and pn.returncode == 2 and "GEO_INDUSTRY_KB_SALT" in pn.stderr and not kbns.exists(),
-              f"rc={pn.returncode} {pn.stderr[-200:]}")
 
         # K12 服务器持久化目录：第一次 prepare 从随 skill 的档案复制；之后积累的新档案拷进工作目录
         persist = tmp / "kb-persist"

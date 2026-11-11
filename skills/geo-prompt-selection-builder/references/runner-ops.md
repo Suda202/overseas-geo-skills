@@ -19,7 +19,6 @@
 | `DATAFORSEO_LEDGER` | 否 | DataForSEO 流水位置，默认 `~/.dataforseo/ledger.jsonl` |
 | `NET_REDDIT_MAX` | 否 | 每个工作目录 Reddit 请求上限，默认 10 |
 | `GEO_INDUSTRY_KB` | 建议设 | 行业知识档案的持久化目录。第一次运行时从随 skill 发布的档案（`references/industry-knowledge/`）复制一份，之后每个客户跑完在这里积累；每次运行前拷进工作目录给 agent 读。不设就写在 skill 目录里，重新部署会丢 |
-| `GEO_INDUSTRY_KB_SALT` | 是（要积累档案时） | 档案里品牌标识的盐，必须和 Suda 本地钥匙串里的同一个值（找 Suda 要），否则同一客户会被算成两个；没设不写档案、不影响出题 |
 
 产物、退出码和全部参数见 `scripts/run_selection_mode.py` 开头说明；交给线上的是 `out/upload/*.csv`（9 字段），结果摘要在 `out/result.json`。
 

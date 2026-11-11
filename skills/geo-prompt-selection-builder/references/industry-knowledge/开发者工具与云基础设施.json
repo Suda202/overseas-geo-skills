@@ -1,15 +1,15 @@
 {
- "schema": 5,
+ "schema": 6,
  "industry": "开发者工具与云基础设施",
  "items": {
   "constraints": {
    "sshjupyter访问": {
     "label": "SSH与Jupyter访问",
     "by": {
-     "c5ecfae031c1|US": "SSH与Jupyter访问"
+     "63eecb0032dd|US": "SSH与Jupyter访问"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "SSH与Jupyter访问": 1
@@ -24,10 +24,10 @@
    "root权限自定义镜像": {
     "label": "root权限与自定义镜像",
     "by": {
-     "c5ecfae031c1|US": "root权限与自定义镜像"
+     "63eecb0032dd|US": "root权限与自定义镜像"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "root权限与自定义镜像": 1
@@ -42,10 +42,10 @@
    "免费额度信用卡要求": {
     "label": "免费额度与信用卡要求",
     "by": {
-     "c5ecfae031c1|US": "免费额度与信用卡要求"
+     "63eecb0032dd|US": "免费额度与信用卡要求"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "免费额度与信用卡要求": 1
@@ -60,10 +60,10 @@
    "单卡显存容量": {
     "label": "单卡显存容量",
     "by": {
-     "c5ecfae031c1|US": "单卡显存容量"
+     "63eecb0032dd|US": "单卡显存容量"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "单卡显存容量": 1
@@ -78,10 +78,10 @@
    "多卡互联带宽": {
     "label": "多卡互联带宽",
     "by": {
-     "c5ecfae031c1|US": "多卡互联带宽"
+     "63eecb0032dd|US": "多卡互联带宽"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "多卡互联带宽": 1
@@ -96,10 +96,10 @@
    "多卡配置": {
     "label": "多卡配置",
     "by": {
-     "c5ecfae031c1|US": "多卡配置"
+     "63eecb0032dd|US": "多卡配置"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "多卡配置": 1
@@ -114,10 +114,10 @@
    "存储读写速度": {
     "label": "存储读写速度",
     "by": {
-     "c5ecfae031c1|US": "存储读写速度"
+     "63eecb0032dd|US": "存储读写速度"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "存储读写速度": 1
@@ -132,10 +132,10 @@
    "安全合规认证": {
     "label": "安全与合规认证",
     "by": {
-     "c5ecfae031c1|US": "安全与合规认证"
+     "63eecb0032dd|US": "安全与合规认证"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "安全与合规认证": 1
@@ -150,10 +150,10 @@
    "实例可用性库存": {
     "label": "实例可用性与库存",
     "by": {
-     "c5ecfae031c1|US": "实例可用性与库存"
+     "63eecb0032dd|US": "实例可用性与库存"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "实例可用性与库存": 1
@@ -168,10 +168,10 @@
    "客服响应": {
     "label": "客服响应",
     "by": {
-     "c5ecfae031c1|US": "客服响应"
+     "63eecb0032dd|US": "客服响应"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "客服响应": 1
@@ -186,10 +186,10 @@
    "开机速度": {
     "label": "开机速度",
     "by": {
-     "c5ecfae031c1|US": "开机速度"
+     "63eecb0032dd|US": "开机速度"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "开机速度": 1
@@ -204,10 +204,10 @@
    "持久化存储数据保留": {
     "label": "持久化存储与数据保留",
     "by": {
-     "c5ecfae031c1|US": "持久化存储与数据保留"
+     "63eecb0032dd|US": "持久化存储与数据保留"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "持久化存储与数据保留": 1
@@ -222,10 +222,10 @@
    "按秒计费无最低消费": {
     "label": "按秒计费与无最低消费",
     "by": {
-     "c5ecfae031c1|US": "按秒计费与无最低消费"
+     "63eecb0032dd|US": "按秒计费与无最低消费"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "按秒计费与无最低消费": 1
@@ -240,10 +240,10 @@
    "数据隐私主机隔离": {
     "label": "数据隐私与主机隔离",
     "by": {
-     "c5ecfae031c1|US": "数据隐私与主机隔离"
+     "63eecb0032dd|US": "数据隐私与主机隔离"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "数据隐私与主机隔离": 1
@@ -258,10 +258,10 @@
    "服务稳定性sla": {
     "label": "服务稳定性与SLA",
     "by": {
-     "c5ecfae031c1|US": "服务稳定性与SLA"
+     "63eecb0032dd|US": "服务稳定性与SLA"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "服务稳定性与SLA": 1
@@ -276,10 +276,10 @@
    "每gpu小时价格": {
     "label": "每GPU小时价格",
     "by": {
-     "c5ecfae031c1|US": "每GPU小时价格"
+     "63eecb0032dd|US": "每GPU小时价格"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "每GPU小时价格": 1
@@ -294,10 +294,10 @@
    "渲染软件兼容性": {
     "label": "渲染软件兼容性",
     "by": {
-     "c5ecfae031c1|US": "渲染软件兼容性"
+     "63eecb0032dd|US": "渲染软件兼容性"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "渲染软件兼容性": 1
@@ -312,10 +312,10 @@
    "网络数据传输费用": {
     "label": "网络与数据传输费用",
     "by": {
-     "c5ecfae031c1|US": "网络与数据传输费用"
+     "63eecb0032dd|US": "网络与数据传输费用"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "网络与数据传输费用": 1
@@ -330,10 +330,10 @@
    "规格性能如实": {
     "label": "规格与性能如实",
     "by": {
-     "c5ecfae031c1|US": "规格与性能如实"
+     "63eecb0032dd|US": "规格与性能如实"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "规格与性能如实": 1
@@ -348,10 +348,10 @@
    "预留实例折扣": {
     "label": "预留实例折扣",
     "by": {
-     "c5ecfae031c1|US": "预留实例折扣"
+     "63eecb0032dd|US": "预留实例折扣"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "预留实例折扣": 1
@@ -366,10 +366,10 @@
    "预装模型部署模板": {
     "label": "预装模型与部署模板",
     "by": {
-     "c5ecfae031c1|US": "预装模型与部署模板"
+     "63eecb0032dd|US": "预装模型与部署模板"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "预装模型与部署模板": 1
@@ -386,10 +386,10 @@
    "3d渲染设计工作室": {
     "label": "3D 渲染与设计工作室",
     "by": {
-     "c5ecfae031c1|US": "3D 渲染与设计工作室"
+     "63eecb0032dd|US": "3D 渲染与设计工作室"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "3D 渲染与设计工作室": 1
@@ -404,10 +404,10 @@
    "ai应用初创团队": {
     "label": "AI 应用初创团队",
     "by": {
-     "c5ecfae031c1|US": "AI 应用初创团队"
+     "63eecb0032dd|US": "AI 应用初创团队"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "AI 应用初创团队": 1
@@ -422,10 +422,10 @@
    "ai视频图像创作者": {
     "label": "AI 视频与图像创作者",
     "by": {
-     "c5ecfae031c1|US": "AI 视频与图像创作者"
+     "63eecb0032dd|US": "AI 视频与图像创作者"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "AI 视频与图像创作者": 1
@@ -440,10 +440,10 @@
    "独立开发者个人开发者": {
     "label": "独立开发者与个人开发者",
     "by": {
-     "c5ecfae031c1|US": "独立开发者与个人开发者"
+     "63eecb0032dd|US": "独立开发者与个人开发者"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "独立开发者与个人开发者": 1
@@ -458,10 +458,10 @@
    "高校研究者学生": {
     "label": "高校研究者与学生",
     "by": {
-     "c5ecfae031c1|US": "高校研究者与学生"
+     "63eecb0032dd|US": "高校研究者与学生"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "高校研究者与学生": 1
@@ -478,10 +478,10 @@
    "3d渲染光线追踪赶工期": {
     "label": "3D 渲染与光线追踪赶工期",
     "by": {
-     "c5ecfae031c1|US": "3D 渲染与光线追踪赶工期"
+     "63eecb0032dd|US": "3D 渲染与光线追踪赶工期"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "3D 渲染与光线追踪赶工期": 1
@@ -496,10 +496,10 @@
    "ai视频图像生成工作流comfyuiwanflux": {
     "label": "AI 视频与图像生成工作流（ComfyUI、Wan、Flux）",
     "by": {
-     "c5ecfae031c1|US": "AI 视频与图像生成工作流（ComfyUI、Wan、Flux）"
+     "63eecb0032dd|US": "AI 视频与图像生成工作流（ComfyUI、Wan、Flux）"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "AI 视频与图像生成工作流（ComfyUI、Wan、Flux）": 1
@@ -514,10 +514,10 @@
    "临时租卡跑本地跑不动的大模型实验": {
     "label": "临时租卡跑本地跑不动的大模型实验",
     "by": {
-     "c5ecfae031c1|US": "临时租卡跑本地跑不动的大模型实验"
+     "63eecb0032dd|US": "临时租卡跑本地跑不动的大模型实验"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "临时租卡跑本地跑不动的大模型实验": 1
@@ -532,10 +532,10 @@
    "团队协作实例访问方式sshjupyter自定义镜像": {
     "label": "团队协作与实例访问方式（SSH、Jupyter、自定义镜像）",
     "by": {
-     "c5ecfae031c1|US": "团队协作与实例访问方式（SSH、Jupyter、自定义镜像）"
+     "63eecb0032dd|US": "团队协作与实例访问方式（SSH、Jupyter、自定义镜像）"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "团队协作与实例访问方式（SSH、Jupyter、自定义镜像）": 1
@@ -550,10 +550,10 @@
    "在自己租的实例上做loraqlora微调": {
     "label": "在自己租的实例上做 LoRA / QLoRA 微调",
     "by": {
-     "c5ecfae031c1|US": "在自己租的实例上做 LoRA / QLoRA 微调"
+     "63eecb0032dd|US": "在自己租的实例上做 LoRA / QLoRA 微调"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "在自己租的实例上做 LoRA / QLoRA 微调": 1
@@ -568,10 +568,10 @@
    "持续运行开源大模型推理服务": {
     "label": "持续运行开源大模型推理服务",
     "by": {
-     "c5ecfae031c1|US": "持续运行开源大模型推理服务"
+     "63eecb0032dd|US": "持续运行开源大模型推理服务"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "持续运行开源大模型推理服务": 1
@@ -586,10 +586,10 @@
    "换掉正在用的gpu云": {
     "label": "换掉正在用的 GPU 云",
     "by": {
-     "c5ecfae031c1|US": "换掉正在用的 GPU 云"
+     "63eecb0032dd|US": "换掉正在用的 GPU 云"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "换掉正在用的 GPU 云": 1
@@ -604,10 +604,10 @@
    "科研课程实验集中用卡预算紧": {
     "label": "科研与课程实验集中用卡，预算紧",
     "by": {
-     "c5ecfae031c1|US": "科研与课程实验集中用卡，预算紧"
+     "63eecb0032dd|US": "科研与课程实验集中用卡，预算紧"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "科研与课程实验集中用卡，预算紧": 1
@@ -622,10 +622,10 @@
    "自托管嵌入重排对话模型的模型服务": {
     "label": "自托管嵌入、重排与对话模型的模型服务",
     "by": {
-     "c5ecfae031c1|US": "自托管嵌入、重排与对话模型的模型服务"
+     "63eecb0032dd|US": "自托管嵌入、重排与对话模型的模型服务"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "自托管嵌入、重排与对话模型的模型服务": 1
@@ -640,10 +640,10 @@
    "运行语音识别语音合成的推理任务": {
     "label": "运行语音识别、语音合成的推理任务",
     "by": {
-     "c5ecfae031c1|US": "运行语音识别、语音合成的推理任务"
+     "63eecb0032dd|US": "运行语音识别、语音合成的推理任务"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "运行语音识别、语音合成的推理任务": 1
@@ -660,10 +660,10 @@
    "3d渲染算力选择": {
     "label": "3D渲染算力选择",
     "by": {
-     "c5ecfae031c1|US": "3D渲染算力选择"
+     "63eecb0032dd|US": "3D渲染算力选择"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "3D渲染算力选择": 1
@@ -678,10 +678,10 @@
    "个人创作者按需租gpu": {
     "label": "个人与创作者按需租GPU",
     "by": {
-     "c5ecfae031c1|US": "个人与创作者按需租GPU"
+     "63eecb0032dd|US": "个人与创作者按需租GPU"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "个人与创作者按需租GPU": 1
@@ -696,10 +696,10 @@
    "初创团队gpu云选型": {
     "label": "初创团队GPU云选型",
     "by": {
-     "c5ecfae031c1|US": "初创团队GPU云选型"
+     "63eecb0032dd|US": "初创团队GPU云选型"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "初创团队GPU云选型": 1
@@ -714,10 +714,10 @@
    "换掉在用gpu云": {
     "label": "换掉在用 GPU 云",
     "by": {
-     "c5ecfae031c1|US": "换掉在用 GPU 云"
+     "63eecb0032dd|US": "换掉在用 GPU 云"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "换掉在用 GPU 云": 1
@@ -734,10 +734,10 @@
    "gpucloud": {
     "label": "GPU cloud",
     "by": {
-     "c5ecfae031c1|US": "GPU cloud"
+     "63eecb0032dd|US": "GPU cloud"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "GPU cloud": 1
@@ -752,10 +752,10 @@
    "gpuhosting": {
     "label": "GPU hosting",
     "by": {
-     "c5ecfae031c1|US": "GPU hosting"
+     "63eecb0032dd|US": "GPU hosting"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "GPU hosting": 1
@@ -770,10 +770,10 @@
    "gpuinstance": {
     "label": "GPU instance",
     "by": {
-     "c5ecfae031c1|US": "GPU instance"
+     "63eecb0032dd|US": "GPU instance"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "GPU instance": 1
@@ -788,10 +788,10 @@
    "gpurental": {
     "label": "GPU rental",
     "by": {
-     "c5ecfae031c1|US": "GPU rental"
+     "63eecb0032dd|US": "GPU rental"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "GPU rental": 1
@@ -806,10 +806,10 @@
    "cloudgpu": {
     "label": "cloud GPU",
     "by": {
-     "c5ecfae031c1|US": "cloud GPU"
+     "63eecb0032dd|US": "cloud GPU"
     },
     "clients": [
-     "c5ecfae031c1"
+     "63eecb0032dd"
     ],
     "names": {
      "cloud GPU": 1
@@ -825,8 +825,8 @@
  },
  "channels": {},
  "clients": {
-  "c5ecfae031c1|US": {
-   "who": "c5ecfae031c1",
+  "63eecb0032dd|US": {
+   "who": "63eecb0032dd",
    "market": "US",
    "category": "cloud gpu rental",
    "updated": "2026-11-11"

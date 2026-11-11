@@ -5,9 +5,8 @@
 档案只存品类层面的东西，不存品牌名、竞品名、域名、买家原话和客户资料（skill 要推公开仓库、要交给研发平台化）：
   约束条件、目标客户、使用场景、主题名、品类叫法（来自题库 bank.json 的矩阵行和主题）
   渠道效果（来自线上 precollect：哪些评价站、社区采到了、哪些没采到）
-条目里含本客户品牌名、品牌别名或竞品名的整条跳过；和品牌资料（Case）里 12 字以上的原句一字不差的也跳过（原句能认出客户）。客户只记品牌名的加盐哈希（HMAC-SHA256 前 12 位，盐取环境变量
-GEO_INDUSTRY_KB_SALT 或 macOS 钥匙串同名项），用来数「出现在几个客户」；档案随 skill 公开，不加盐的哈希拿品牌名一算就能对上。
-没有盐不写档案。本地和服务器要用同一个盐，否则同一客户会被算成两个。
+条目里含本客户品牌名、品牌别名或竞品名的整条跳过；和品牌资料（Case）里 12 字以上的原句一字不差的也跳过（原句能认出客户）。客户只记品牌名的 SHA-256 前 12 位，用来数「出现在几个客户」
+（不加盐，Suda 2026-11-11 定：档案里本来就有品类和市场，盐挡不了多少，不值得让研发多配一个密钥）。
 同一客户同一市场重跑以最近一次为准：先把这次（品牌 × 市场）从所有行业档案里撤掉再并入，换了行业或品类也不会重复计；
 同一品牌不同市场分开记、合起来算 1 个客户。没有客户的「品类-」文件随之删除。
 写法只差连接词、标点、空格的算同一条（「价格与预算」「价格预算」）。
@@ -34,12 +33,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import hmac
 import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -51,7 +48,6 @@ TOP_N = 20
 
 
 BUNDLED = SKILL / "references" / "industry-knowledge"
-SALT_ENV = "GEO_INDUSTRY_KB_SALT"
 
 
 def kb_dir() -> Path:
@@ -71,22 +67,8 @@ def seed_if_empty() -> Path | None:
     return d
 
 
-def _salt() -> str:
-    s = os.environ.get(SALT_ENV, "").strip()
-    if s:
-        return s
-    try:
-        return subprocess.run(["security", "find-generic-password", "-s", SALT_ENV, "-w"],
-                              capture_output=True, text=True, timeout=10).stdout.strip()
-    except (FileNotFoundError, subprocess.SubprocessError):
-        return ""
-
-
 def client_id(brand: str) -> str:
-    salt = _salt()
-    if not salt:
-        raise RuntimeError(f"缺 {SALT_ENV}（环境变量或钥匙串）：档案随 skill 公开，品牌标识必须加盐，没有盐不写")
-    return hmac.new(salt.encode("utf-8"), brand.strip().lower().encode("utf-8"), hashlib.sha256).hexdigest()[:12]
+    return hashlib.sha256(brand.strip().lower().encode("utf-8")).hexdigest()[:12]
 
 
 def _slug(text: str) -> str:
@@ -167,20 +149,20 @@ def _add(lst: list, v) -> None:
 
 
 def merge(industry: str, category: str, market: str, brand: str, items: dict, channels: list[dict]) -> Path:
-    who = client_id(brand)  # 先取盐，没有盐什么都不写
+    who = client_id(brand)
     d = kb_dir()
     d.mkdir(parents=True, exist_ok=True)
     path = d / f"{_slug(industry)}.json"
     kb = _load(path)
-    if kb.get("schema") != 5:  # 旧结构的品牌标识没加盐，重建（回填脚本会重新并入）
-        kb = {"schema": 5, "industry": industry, "items": {k: {} for k in SECTIONS}, "channels": {}, "clients": {}}
+    if kb.get("schema") != 6:  # 旧结构的品牌标识算法不同，重建（回填脚本会重新并入）
+        kb = {"schema": 6, "industry": industry, "items": {k: {} for k in SECTIONS}, "channels": {}, "clients": {}}
     category = norm_category(category) or "未分品类"
     today = time.strftime("%Y-%m-%d")
     run = f"{who}|{market}"  # 一次 = 品牌 × 市场；同一品牌不同市场分开记，数客户时合并
     for other in d.glob("*.json"):  # 同一品牌同一市场重跑以最近一次为准：先从所有行业撤掉，换了行业也不重复计
         if other != path:
             okb = _load(other)
-            if okb.get("schema") == 5 and run in okb.get("clients", {}):
+            if okb.get("schema") == 6 and run in okb.get("clients", {}):
                 drop_run(okb, run)
                 _save(other, okb)
     drop_run(kb, run)
@@ -376,9 +358,6 @@ def main() -> int:
         else:
             print(render_category(kb, norm_category(a.category)) if a.category else render_industry(kb))
         return 0
-    if not _salt():
-        print(f"没有并入：缺 {SALT_ENV}（环境变量或钥匙串），品牌标识必须加盐", file=sys.stderr)
-        return 2
     if a.ws:
         path = add_from_ws(a.ws.resolve())
         print(f"已并入 {path}" if path else "没有并入：行业没判出来、或缺题库 / 品牌名")
