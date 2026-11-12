@@ -39,7 +39,7 @@ def current_bank(count: int, lifecycle: str) -> dict[str, object]:
             "evidence_status": "customer_confirmed",
             "customer_confirmation": {"status": "confirmed"},
             "prompt_version": "v1",
-            "topics": [{"topic_id": "topic_1", "topic": "Example Topic"}],
+            "topics": [{"topic_id": "topic_1", "topic": "Example Topic", "priority": "高", "priority_basis": "高：测试造数"}],
             "slices": [{"slice_id": "M-001", "topic_id": "topic_1", "prompt_type": "Discovery", "priority": "高",
                         "priority_basis": "核心目标客户与使用场景（1）"}],
             "expected_total": count,
@@ -58,7 +58,7 @@ def spread_topics(data: dict, sizes: list[int] | None = None) -> dict:
     topics, slices, start = [], [], 0
     for index, size in enumerate(sizes, 1):
         topic_id, slice_id = f"topic_{index}", f"M-{index:03d}"
-        topics.append({"topic_id": topic_id, "topic": f"Example Topic {index}"})
+        topics.append({"topic_id": topic_id, "topic": f"Example Topic {index}", "priority": "高", "priority_basis": "高：测试造数"})
         slices.append({"slice_id": slice_id, "topic_id": topic_id, "prompt_type": "Discovery", "priority": "高",
                        "priority_basis": "核心目标客户与使用场景（1）"})
         for row in questions[start:start + size]:
@@ -123,47 +123,27 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(current_bank(4, "locked"))
         self.assertNotIn("at least 5 Prompts per Topic", result.stdout)
 
-    def test_after_sales_signal_confirmed_can_lock(self) -> None:  # Suda 2026-11-10：公开买家信号＋品牌方确认即可锁版
-        data = lockable_bank()
-        data["config"]["evidence_status"] = "after_sales_signal"
-        data["config"]["first_party_data"] = False
-        result = validate(data)
-        self.assertNotIn("cannot be marked formal-ready", result.stdout)
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("Usable", result.stdout)  # 没有一手数据：不挡锁版，只把就绪结论封顶在 Usable
-
-    def test_hypothesis_cannot_lock(self) -> None:
-        data = lockable_bank()
-        data["config"]["evidence_status"] = "hypothesis"
-        result = validate(data)
-        self.assertEqual(result.returncode, 1)
-        self.assertEqual(result.stdout.count("ERROR:"), 1, result.stdout)
-        self.assertIn("hypothesis evidence cannot be marked formal-ready", result.stdout)
-
-    def test_candidate_count_outside_30_to_60_warns(self) -> None:
-        # 门禁 47：单产品线 × 单市场候选题 30–60 道，超出告警；锁版后不查
+    def test_candidate_count_outside_30_to_60(self) -> None:
+        # 门禁 47（3.13.0）：单产品线 × 单市场候选题不到 30 告警、超过 60 报错（成本控制）；锁版后的检查在 geo-monitoring
+        short = "fewer than 30 candidate Prompts per product line × market"
+        over = "more than 60 candidate Prompts per product line × market"
         data = current_bank(5, "hypothesis")
-        self.assertIn("candidate Prompt count outside 30–60", validate(data).stdout)
-        data = current_bank(30, "hypothesis")
-        data["questions"] = [{**row, "user_question": f"Which cat litter box works best for setup number {i}?",
-                              "monitoring_prompt": f"Which cat litter box works best for setup number {i}?"}
-                             for i, row in enumerate(data["questions"])]
-        self.assertNotIn("candidate Prompt count outside 30–60", validate(data).stdout)
-        data = current_bank(5, "locked")
-        self.assertNotIn("candidate Prompt count outside 30–60", validate(data).stdout)
+        self.assertIn(short, validate(data).stdout)
 
-    def test_formal_baseline_metadata_cannot_bypass_lifecycle(self) -> None:
-        data = current_bank(5, "hypothesis")
-        data["config"]["baseline"] = {
-            "status": "formal",
-            "planned_runs": 5,
-            "conditions_key": "us-en-v1",
-            "valid_samples_only": True,
-            "failures_as_zero": False,
-        }
-        result = validate(data)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("requires a locked or formal lifecycle", result.stdout)
+        def numbered(count: int) -> dict:
+            data = current_bank(count, "hypothesis")
+            data["questions"] = [{**row, "user_question": f"Which cat litter box works best for setup number {i}?",
+                                  "monitoring_prompt": f"Which cat litter box works best for setup number {i}?"}
+                                 for i, row in enumerate(data["questions"])]
+            return data
+        for count in (30, 60):
+            out = validate(numbered(count)).stdout
+            self.assertNotIn(short, out)
+            self.assertNotIn(over, out)
+        result = validate(numbered(61))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn(over, result.stdout)
+
 
     def test_required_question_fields_and_bad_stage_fail_cleanly(self) -> None:
         data = current_bank(5, "hypothesis")
@@ -177,99 +157,13 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertIn("zh_translation is required", result.stdout)
 
 
-    def test_trial_run_range_rejects_plans_other_than_three(self) -> None:
-        for planned, valid in ((2, 2), (5, 5), (7, 7)):
-            with self.subTest(planned_runs=planned):
-                data = current_bank(5, "locked")
-                data["config"]["customer_confirmation"] = {
-                    "status": "confirmed",
-                    "scope_status": "confirmed",
-                    "prompt_set_status": "confirmed",
-                }
-                data["config"]["trial"] = {
-                    "status": "passed",
-                    "planned_runs": planned,
-                    "valid_runs": valid,
-                    "evidence_refs": ["trial/run-1.json"],
-                }
-                result = validate(data)
-                self.assertEqual(result.returncode, 1)
-                self.assertIn("trial.planned_runs must be 3", result.stdout)
-
-    def test_trial_accepts_three(self) -> None:
-        for planned, valid in ((3, 3),):
-            with self.subTest(valid_runs=valid):
-                data = current_bank(5, "locked")
-                data["config"]["customer_confirmation"] = {
-                    "status": "confirmed",
-                    "scope_status": "confirmed",
-                    "prompt_set_status": "confirmed",
-                }
-                data["config"]["trial"] = {
-                    "status": "passed",
-                    "planned_runs": planned,
-                    "valid_runs": valid,
-                    "evidence_refs": ["trial/run-1.json"],
-                }
-                result = validate(data)
-                self.assertEqual(result.returncode, 0, result.stdout)
-
-    def test_formal_set_caps_each_product_line_at_sixty(self) -> None:
-        # 正式题每条产品线 × 国家 × 语言合计最多 60 道；每 10 道放一个主题，不碰售卖上限（2026-11-09）
-        def locked(count: int, lifecycle: str = "locked") -> dict:
-            data = spread_topics(current_bank(count, lifecycle))
-            data["config"]["customer_confirmation"] = {
-                "status": "confirmed",
-                "scope_status": "confirmed",
-                "prompt_set_status": "confirmed",
-            }
-            data["config"]["trial"] = {
-                "status": "passed",
-                "planned_runs": 3,
-                "valid_runs": 3,
-                "evidence_refs": ["trial/run-1.json"],
-            }
-            return data
-
-        self.assertEqual(validate(locked(11)).returncode, 0, validate(locked(11)).stdout)
-        self.assertEqual(validate(locked(60)).returncode, 0, validate(locked(60)).stdout)
-        result = validate(locked(61))
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("at most 60 Prompts per product line", result.stdout)
-        # 停测题不占额度
-        stopped = locked(61)
-        stopped["questions"][0]["status"] = "停测"
-        self.assertNotIn("at most 60 Prompts per product line", validate(stopped).stdout)
-        # 候选阶段不设上限
-        self.assertEqual(validate(locked(61, "customer_confirmed")).returncode, 0, validate(locked(61, "customer_confirmed")).stdout)
-
-    def test_formal_set_caps_each_topic_at_ten(self) -> None:
-        # 2026-11-09：售卖以一个主题 10 道为上限；混合选择时单个主题可以超过 10 道，合计不超过 10 × 主题数
-        def locked(sizes: list[int], lifecycle: str = "locked") -> dict:
-            data = spread_topics(current_bank(sum(sizes), lifecycle), sizes)
-            data["config"]["customer_confirmation"] = {
-                "status": "confirmed", "scope_status": "confirmed", "prompt_set_status": "confirmed"}
-            data["config"]["trial"] = {"status": "passed", "planned_runs": 3, "valid_runs": 3,
-                                       "evidence_refs": ["trial/run-1.json"]}
-            return data
-
-        message = "sold as at most 10 Prompts per Topic"
-        self.assertNotIn(message, validate(locked([10])).stdout)
-        result = validate(locked([11]))
-        self.assertEqual(result.returncode, 1)
-        self.assertIn(message, result.stdout)
-        self.assertNotIn(message, validate(locked([4, 16])).stdout)  # 混合选择
-        self.assertIn(message, validate(locked([4, 17])).stdout)
-        stopped = locked([11])
-        stopped["questions"][0]["status"] = "停测"
-        self.assertNotIn(message, validate(stopped).stdout)
-        self.assertNotIn(message, validate(locked([11], "customer_confirmed")).stdout)  # 候选阶段不设上限
-
     def test_bare_category_prompt_warns(self) -> None:
         # 2026-10-29 起不写宽泛品类题：全条件化不告警，无限定条件的发现题逐条告警
+        # 3.13.0：按合同字段判——attribute_ref 留空且没有条件关键词的发现题；旧的 constraint_type 标记照读
         data = current_bank(2, "hypothesis")
         for row in data["questions"]:
             row["constraint_type"] = "约束"
+            row["constraints"] = ["多猫"]
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertNotIn("no-condition Discovery Prompts", result.stdout)
@@ -277,6 +171,10 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(data)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("no-condition Discovery Prompts (1)", result.stdout)
+        data["questions"][0]["constraint_type"] = "约束"
+        data["questions"][1]["constraints"] = []
+        result = validate(data)
+        self.assertIn("no-condition Discovery Prompts (1): topic_1-1", result.stdout)
 
     def test_matrix_rows_carry_the_priority(self) -> None:
         data = current_bank(5, "hypothesis")
@@ -342,7 +240,7 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
 
     def test_topic_needs_prompts(self) -> None:
         data = current_bank(2, "hypothesis")
-        data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Brand check"})
+        data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Brand check", "priority": "高", "priority_basis": "高：测试造数"})
         self.assertIn("Topics with no Prompt", validate(data).stdout)
 
     def test_selection_topic_holds_one_prompt_type(self) -> None:
@@ -366,8 +264,11 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
     def test_topic_priority_has_a_basis(self) -> None:
         data = current_bank(2, "hypothesis")
         topic = data["config"]["topics"][0]
-        topic["priority"] = "高"
+        topic.pop("priority_basis")
         self.assertIn("priority_basis is empty", validate(data).stdout)
+        topic.pop("priority")  # 3.14.3：主题优先级必填（门禁 43）
+        self.assertIn("topic topic_1: priority is empty", validate(data).stdout)
+        topic["priority"] = "高"
         topic["priority_basis"] = "核心目标客户与购买场景（1）落在本主题"
         self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
         topic["priority"] = "中"
@@ -377,15 +278,18 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
 
     def test_warning_decisions_and_capped_readiness(self) -> None:
         data = current_bank(2, "hypothesis")
+        data["config"]["first_party_data"] = True
         result = validate(data)
         self.assertIn("Usable", result.stdout)
         warnings = [line for line in result.stdout.splitlines() if line.startswith("WARNING")]
         self.assertTrue(warnings)
         data["config"]["warning_decisions"] = [{"match": w.split(": ", 1)[1][:40], "decision": "保留：测试"} for w in warnings]
         result = validate(data)
-        self.assertIn("Ready for the next lifecycle stage", result.stdout)
+        self.assertIn('"readiness": "Ready"', result.stdout)
         self.assertIn("WARNING (handled)", result.stdout)
         data["config"]["first_party_data"] = False
+        self.assertIn("public data only", validate(data).stdout)
+        data["config"].pop("first_party_data")  # 3.14.3：没写一手数据也按只有公开数据封顶
         self.assertIn("public data only", validate(data).stdout)
 
 class OldStructureTests(unittest.TestCase):
@@ -481,12 +385,15 @@ def scoped_bank(rows: list[tuple[str, str, list[str], list[str]]]) -> dict[str, 
         "config": {
             "generation_stage": "selection",
             "lifecycle_status": "hypothesis",
-            "topics": [{"topic_id": "topic_1", "topic": "Dash Cams"}],
+            "topics": [{"topic_id": "topic_1", "topic": "Dash Cams", "priority": "高", "priority_basis": "高：测试造数"}],
             "slices": [{"slice_id": "M-001", "topic_id": "topic_1", "prompt_type": "Discovery", "priority": "高",
                         "priority_basis": "核心目标客户与使用场景（1）"}],
             "expected_total": len(questions),
             "buyer_quotes": QUOTES,
             "base_conditions": ["私家车"],
+            # 3.13.0: Prompts naming a constraint need the 约束条件 table
+            "attribute_plan": [{"attribute": a, "brand_status": "有", "brand_status_basis": "官网规格页"}
+                               for a in sorted({row[1] for row in rows if row[1]})],
         },
         "questions": questions,
     }
@@ -744,7 +651,7 @@ def add_typed(data: dict[str, object], prompt_type: str) -> None:
     row = {**question(topic, 90 + len(data["questions"])), "prompt_type": prompt_type, "user_question": text,
            "monitoring_prompt": text, "audience": "通用", "attribute_ref": "", "constraints": ["小户型"]}
     row.pop("tags")
-    data["config"]["topics"].append({"topic_id": topic, "topic": prompt_type})
+    data["config"]["topics"].append({"topic_id": topic, "topic": prompt_type, "priority": "高", "priority_basis": "高：测试造数"})
     if prompt_type != "Accuracy":
         data["config"]["slices"].append({"slice_id": f"M-{prompt_type}", "topic_id": topic, "prompt_type": prompt_type,
                                          "priority": "中", "priority_basis": "测试造数"})
@@ -863,7 +770,8 @@ class WarningCodeTests(unittest.TestCase):
             {"gate": "W49", "decision": "保留：测试"}, {"gate": "[W8b]", "decision": "保留：测试"},
             {"gate": "36", "decision": "保留：测试"},
             {"gate": "W59", "decision": "任务覆盖已复核"},
-            {"match": "candidate Prompt count outside 30–60", "decision": "保留：测试"}]
+            {"match": "fewer than 30 candidate Prompts", "decision": "保留：测试"},
+            {"gate": "W54", "decision": "保留：测试"}]
         out = validate(data).stdout
         self.assertNotIn("WARNING: [W", out)
         self.assertNotIn("without a decision", out)
@@ -884,7 +792,7 @@ EXPORT = Path(__file__).with_name("export_upload_csv.py")
 def tag_bank(dimensions: list[dict]) -> dict[str, object]:
     """Two Topics, 12 Discovery Prompts: 租房者 spans both Topics (6), 购房者 only topic_1, 外派家庭 only topic_2."""
     data = goal_bank(["发现型可见度"])
-    data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Second Topic"})
+    data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Second Topic", "priority": "高", "priority_basis": "高：测试造数"})
     rows = []
     for topic in ("topic_1", "topic_2"):
         for n in range(6):

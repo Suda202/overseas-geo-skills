@@ -1,14 +1,14 @@
 ---
 name: geo-prompt-selection-builder
-description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (currently Discovery-visibility only), validate and export — as a Feishu client-confirmation Base, as 9-field upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for the 3-run trial, picking or locking the formal set, retiring formal Prompts, baselines, collection or reports (geo-monitoring), defining metric calibers, or written report conclusions.
+description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (online runs Discovery only; locally the types of the goals the brand party picked), validate and export — as a Feishu client-confirmation Base, as 5-column upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for trial runs, baselines, collection or reports (geo-monitoring) — the brand party picks the formal set in the client Base — defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.9.4"
+  version: "3.14.3"
 ---
 
 # GEO Prompt Selection Builder（选词）
 
-选词生成要测的题：从业务范围（或一份品牌资料）和买家调研出发，梳理约束条件、从核心目标客户与购买场景里拆出目标客户和使用场景，画提示词矩阵，聚出主题（我们卖的购买意图），写题，校验后导出；签约后补题、并题。售前生词也用本 skill。到导出为止：试跑判读、品牌方挑正式题、锁版、正式题停测，以及跑基线、按期采集、出报告，都归 `geo-monitoring`。
+选词生成要测的题：从业务范围（或一份品牌资料）和买家调研出发，梳理约束条件、从核心目标客户与购买场景里拆出目标客户和使用场景，画提示词矩阵，聚出主题（我们卖的购买意图），写题，校验后导出；签约后补题、并题。售前生词也用本 skill。到导出为止：试跑、跑基线、按期采集、出报告归 `geo-monitoring`；品牌方在对客确认表上挑正式题。
 
 **规则全文在 [references/selection-rules.md](references/selection-rules.md)，按下面 8 步分节；下表只是索引，判断标准以对应一节为准，开始任何一步前先读那一节。线上无人值守跑一份品牌资料时，先读 [references/online-runner.md](references/online-runner.md)，它只写和本地不一样的地方。**
 
@@ -16,18 +16,18 @@ metadata:
 
 | 步 | 做什么 | 按什么判断 | 产出 |
 |-|-|-|-|
-| 1 | 确认业务范围 | 品牌方先填，我们核对（线上用品牌资料代替，见 online-runner.md）；目前只做发现型可见度 | 业务范围表 |
-| 2 | 调研 | 先预跑品类认知（品牌、竞品评估按需补跑），再收外部三类需求信号（线上由 runner 先固定采一轮），看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案、品牌能力清单 |
-| 3 | 约束条件 | 收得宽、统一粒度；不判重要性和相对竞品，只记品牌可核实的明显劣势；写题前确认硬条件 | 三张表共用的「约束条件」选项、品牌明显劣势记录 |
+| 1 | 确认业务范围 | 品牌方先填，我们核对（线上用品牌资料代替，见 online-runner.md）；线上只出发现题，本地按对话里定的目标开放其他类型 | 业务范围表 |
+| 2 | 调研 | 先预跑品类认知（品牌、竞品评估按需补跑），再收外部三类需求信号（线上由 runner 先固定采一轮），看品牌官网和 3 家竞品官网；官网和模型联想只开假设级候选 | 需求信号表、预跑答案 |
+| 3 | 约束条件 | 收得宽、统一粒度；不判重要性；每条判品牌情况（有 / 没有 / 待确认，没有和待确认都不出题；每家都有、只分高低的条件填有，高低在相对竞品判），相对竞品只判公开硬事实；写题前确认硬条件 | 三张表共用的「约束条件」选项、约束条件表 |
 | 4 | 目标客户与使用场景 | 从业务范围「核心目标客户与购买场景」拆出来，按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 矩阵行的目标客户列和场景列，品牌方确认后冻结 |
-| 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每个发现行判一次业务优先级，这是全流程唯一的档位判断；其他类型品牌方选了对应目标才判档出题（本地），没选的只登记 | 提示词矩阵表 |
+| 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每个发现行和已开放类型的行判一次业务优先级，这是全流程唯一的档位判断；没开放的类型只登记 | 提示词矩阵表 |
 | 6 | 主题与主题优先级 | 主题 ＝ 值得独立监测的一组买家需求；先按候选类别初聚，再按竞争格局、评价标准、优化方向三问判断要不要按目标客户或使用场景拆；按主题售卖，每个发现主题至少 10 题；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
-| 7 | 写题 | 在高、中档发现行和已开放目标的行上出题；按决策差异定题数；问不出发现题的行改类型 | 提示词库、题库 JSON |
-| 8 | 校验与导出 | validator 错误全改、告警逐条记处理；按场景导出。试跑、挑题、锁版归 `geo-monitoring` | 题库 JSON、对客确认表和 / 或上传 CSV |
+| 7 | 写题 | 在高、中档发现行和已开放目标的行上出题；按决策差异定题数，每条产品线 × 每个市场 30–60 道（超 60 报错，控制成本；主题个数不限）；问不出发现题的行改类型 | 提示词库、题库 JSON |
+| 8 | 校验与导出；试跑后回写 | validator 错误全改、告警逐条记处理；按场景导出。试跑和采集归 `geo-monitoring`，跑完回来改题、补竞品、定商品卡开关、复核主题；挑正式题在对客确认表上 | 题库 JSON、对客确认表和 / 或上传 CSV |
 
 **接手线上生成的题库时**：线上每个市场留一份 `bank.json` 和 `notes.md`（`run_selection_mode.py` 工作目录的 `out/`），按 online-runner.md「交给本地选词接着做」继续。
 
-**维护已有题集**：本 skill 只管加题和并题，保留旧题号和证据（selection-rules.md → 维护）；正式题停测、改措辞开新题号见 `geo-monitoring/references/trial-and-lock.md`。
+**维护已有题集**：本 skill 只管加题和并题，保留旧题号和证据（selection-rules.md → 维护）。
 
 ## 交付
 
@@ -40,9 +40,9 @@ metadata:
 
 ## 边界
 
-- 不试跑、不挑正式题、不锁版、不停测正式题，不采集、不跑基线、不出报告（都归 `geo-monitoring`）；不定义指标口径（`geo-metrics`）、情感规则（`geo-presales-sentiment-judge`）。
-- 竞品用品牌方在品牌资料里填的，不冻结、不自己增删；试跑后按答案补哪几家归 `geo-monitoring`。
-- 没有任何买家信号时，可以先出一版标明「假设」的题集，列出还要品牌方确认的证据；不能进正式基线，不能把模型联想说成高频需求。这条说的是整份题集都没有买家信号；单个标了假设的矩阵行上的题，经品牌方批准可以进正式题，见 selection-rules.md → 5。
+- 不试跑、不采集、不跑基线、不出报告（`geo-monitoring`）；不定义指标口径（`geo-metrics`）、情感规则（`geo-presales-sentiment-judge`）。
+- 竞品用品牌方在品牌资料里填的，不冻结、不自己增删；不足 3 个的在试跑后回写时补（selection-rules.md → 8）。
+- 没有任何买家信号时，可以先出一版标明「假设」的题集（`evidence_status: hypothesis`），列出还要品牌方确认的证据；不能把模型联想说成高频需求。单个标了假设的矩阵行照常出题，出题原因写明假设（selection-rules.md → 5）。
 
 ## 参考与脚本
 
@@ -64,7 +64,7 @@ metadata:
 
 | 脚本 | 用途 |
 |-|-|
-| `scripts/validate_after_sales_set.py <bank.json> [--previous <旧版>]` | 题库门禁，输出就绪结论；旧结构题库报「不支持」并退出 |
+| `scripts/validate_after_sales_set.py <bank.json>` | 生词门禁，输出就绪结论；旧结构题库报「不支持」并退出。锁版不查 JSON，正式题额度在对客表上由 `check_client_base.py` 查 |
 | `scripts/write_prompt_reasons.py --base <token> --bank <bank.json> --brand <品牌> --noun <品类名词>` | 往提示词库写出题原因和提示词优先级 |
 | `scripts/check_client_base.py --base <token> [--template]` | 对客确认表发出前检查 |
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |

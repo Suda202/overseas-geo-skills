@@ -19,6 +19,8 @@
   6. 需求信号：目标客户叫法在提示词矩阵里有（问题）；另打印提示，不算问题：没有信号支撑的矩阵行
      （目标客户相同、约束条件也相同的信号为 0）、没有信号的目标客户、有信号却没挂在任何矩阵行上的约束条件。
   7. 约束条件：需求信号、提示词矩阵、提示词库三处选项一致。
+  8. 约束条件表（3.11.0；3.12.0）：一行一个选项、和三处选项一致；品牌情况（有 / 没有 / 待确认）、相对竞品（明显优势 /
+     明显劣势 / 持平 / 未知）取值合法，不是未知的写依据；提示词库不挂品牌情况为「没有」「待确认」的条件。
 
 用法（在客户目录下跑，lark-cli 只能写当前目录）：
     python3 -I check_client_base.py --base <base_token> [--template] [--json out.json]
@@ -193,7 +195,7 @@ def check_prompts_v2(rows, matrix):
             if got != want:
                 problems.append(f"提示词库「{code}」提示词优先级是「{got or '空'}」，按所属切片和出题原因应为「{want}」："
                                 f"重跑 write_prompt_reasons.py")
-    # 正式题总额度（2026-11-05）：每条产品线 × 每个国家 × 每种语言合计最多 60 道，单个主题不设上限。
+    # 正式题总额度（2026-11-05）：每条产品线 × 每个国家 × 每种语言合计最多 60 道。
     # 市场多选的题每个市场各算一次；Base 没有「语言」字段时按产品线 × 市场数（同一市场两种语言会合并计数，偏严）。
     quota = {}
     for r in rows:
@@ -249,6 +251,13 @@ def check_signals_v2(sig_rows, matrix_rows):
     return problems, notes
 
 
+def matrix_options(base, tables):
+    """提示词矩阵「约束条件」字段的选项名。"""
+    fl = (lark("base", "+field-list", "--base-token", base, "--table-id", tables["提示词矩阵"]).get("data") or {}).get("fields") or []
+    f = next((x for x in fl if x.get("name") == "约束条件"), None)
+    return [o.get("name") for o in (f or {}).get("options") or []]
+
+
 def check_constraint_options(base, tables):
     """三张表的「约束条件」选项是同一份名单（2026-11-04 起）。"""
     opts = {}
@@ -267,6 +276,37 @@ def check_constraint_options(base, tables):
             if t != "提示词矩阵":
                 for name in sorted(opts["提示词矩阵"] - o):
                     problems.append(f"提示词矩阵「约束条件」有选项「{name}」，{t}里没有（三张表的选项要一致）")
+    return problems
+
+
+BRAND_STATUS = ("有", "没有", "待确认")
+VS_COMPETITORS = ("明显优势", "明显劣势", "持平", "未知")
+
+
+def check_constraint_table(rows, matrix_options, prompt_rows):
+    """约束条件表（3.11.0；3.12.0）：一行一个约束条件选项，和三张表的选项名单一致；品牌情况、相对竞品取值合法；
+    相对竞品不是「未知」的写了依据；提示词库里没有挂「品牌情况：没有 / 待确认」的条件的题。"""
+    problems = []
+    names = {text(r.get("约束条件")).strip(): r for r in rows if text(r.get("约束条件")).strip()}
+    for name in sorted(set(matrix_options) - set(names)):
+        problems.append(f"约束条件表缺「{name}」这一行（三张表的选项每个都要有一行）")
+    for name in sorted(set(names) - set(matrix_options)):
+        problems.append(f"约束条件表有「{name}」，提示词矩阵的「约束条件」选项里没有（名字要一字不差）")
+    lacking = {}
+    for name, r in names.items():
+        status, vs = text(r.get("品牌情况")), text(r.get("相对竞品"))
+        if status not in BRAND_STATUS:
+            problems.append(f"约束条件「{name}」：「品牌情况」要填 {' / '.join(BRAND_STATUS)}，现在是「{status or '空'}」")
+        if vs not in VS_COMPETITORS:
+            problems.append(f"约束条件「{name}」：「相对竞品」要填 {' / '.join(VS_COMPETITORS)}，现在是「{vs or '空'}」")
+        elif vs != "未知" and not text(r.get("相对竞品依据")).strip():
+            problems.append(f"约束条件「{name}」：相对竞品为{vs}，没写「相对竞品依据」（公开数字、对哪几家）")
+        if status in ("没有", "待确认"):
+            lacking[name] = status
+    for r in prompt_rows:
+        hit = [f"{c}（{lacking[c]}）" for c in text(r.get("约束条件")).split("/") if c in lacking]
+        if hit:
+            problems.append(f"提示词 {text(r.get('编号'))} 挂了品牌没有或待确认的条件「{'、'.join(hit)}」：去掉这个条件或删题")
     return problems
 
 
@@ -337,6 +377,10 @@ def main():
     matrix = {r["record_id"]: r for r in matrix_rows}
     topic_rows = records(a.base, "主题") if "主题" in tables else []
     problems = check_fields_v2(fields) + check_constraint_options(a.base, tables)
+    if "约束条件" not in tables:
+        problems.append("没有「约束条件」表（3.11.0 起一行一个约束条件，记品牌情况和相对竞品，见 client-facing-base.md）")
+    elif not a.template:
+        problems += check_constraint_table(records(a.base, "约束条件"), matrix_options(a.base, tables), prompt_rows)
     if a.template:
         problems += [f"{t} 缺字段「{n}」" for t, names in NEW_NAMES.items() for n in names if n not in fields.get(t, [])]
     notes = []

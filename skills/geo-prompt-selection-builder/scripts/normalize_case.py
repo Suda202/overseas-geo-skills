@@ -25,7 +25,6 @@ from urllib.parse import urlparse
 
 INPUT_VERSION = "presales-case-input/v2"
 RETIRED_VERSIONS = ("presales-case-input/v1",)
-LOCALE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "references" / "locale-templates.json"
 
 # 与《品牌资料收集》第一部分一一对应（市场、语言是采集配置：市场走 --market，语言走 options.locale）。
 SCALAR_REQUIRED = ("品牌", "产品线")
@@ -76,14 +75,6 @@ class Report:
 
     def warn(self, code: str, field: str, message: str) -> None:
         self.warnings.append({"code": code, "field": field, "message": message})
-
-
-def _registered_locales() -> set[str]:
-    try:
-        registry = json.loads(LOCALE_REGISTRY_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"en"}
-    return {key for key in registry if not key.startswith("_")}
 
 
 def _clean(value) -> str:
@@ -313,10 +304,8 @@ def normalize(payload: dict) -> dict:
     unknown_options = sorted(set(options) - {"locale"})
     if unknown_options:
         report.error("unknown_field", "options", f"options 含未定义字段 {unknown_options}")
+    # 语言以表单选的为准，不设白名单（Suda 2026-11-12）；题面语种由 validator 门禁 32 查。
     locale = str(options.get("locale") or "en").strip().casefold()
-    locales = _registered_locales()
-    if locale not in locales:
-        report.error("invalid_enum", "options.locale", f"locale 只接受已登记语言 {sorted(locales)}")
 
     handoff = _handoff(payload, report)
     normalized = {

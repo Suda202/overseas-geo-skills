@@ -1,6 +1,6 @@
 # 线上无人值守生成
 
-线上（销售用的售前诊断、或任何没有人在旁边的场景）用一条命令把一份品牌资料（一个品牌 × 一个市场）跑成一批题。规则和本地选词完全一样，都在 [selection-rules.md](selection-rules.md)；本文只写线上和本地不一样的地方：输入换成品牌资料、没有品牌方数据、没有浏览器登录态、只交上传行。生成到导出为止，试跑、挑题、锁版都不在这里（归 `geo-monitoring`）。
+线上（销售用的售前诊断、或任何没有人在旁边的场景）用一条命令把一份品牌资料（一个品牌 × 一个市场）跑成一批题。规则和本地选词完全一样，都在 [selection-rules.md](selection-rules.md)；本文只写线上和本地不一样的地方：输入换成品牌资料、没有品牌方数据、没有浏览器登录态、只交上传行。生成到导出为止，试跑和采集归 `geo-monitoring`。
 
 2026-11-06 由已退役的 `geo-presales-prompt-builder` 并入。
 
@@ -31,7 +31,7 @@
 python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
-脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，文档里指向它的链接是锁版阶段规则，线上不读），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
+脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，线上不试跑、不采集），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
 部署、环境变量、境内服务器、接平台网关、审核环、每轮记账和验收见 [runner-ops.md](runner-ops.md)（给研发，agent 不用读）。
 
@@ -57,23 +57,24 @@ B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，�
 
 | 步 | 线上怎么做 |
 |---|---|
-| 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的品牌资料代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 可以不写（validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充）。品类名 `config.category_label` 从「产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
+| 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的品牌资料代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌（`brand_name`）、品牌别名（`brand_aliases`）、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 可以不写（validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充）。品类名 `config.category_label` 从「产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
 | 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节；没有品牌方提供的资料，`demand-side-signals.md`（客户提供什么）不读，工作目录里也没有这个文件 |
-| 4. 目标客户与使用场景 | 从品牌资料里的「核心目标客户与购买场景」拆出目标客户（排在前面的业务优先级高），不改写业务范围那几行；按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
-| 5. 业务优先级 | 业务重点从品牌资料里的核心目标客户与购买场景（按填写顺序）和差异化优势取，依据里写明出处；这几项都空时，主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「品牌资料无业务重点，按主要目标客户的核心使用场景定」。没开的行和原因写进 `notes.md`「没开的格子」 |
+| 3. 约束条件 | 照 selection-rules.md 第 3 步写 `config.attribute_plan`：每条判品牌情况（官网和公开资料判不出的填待确认，不出题）和公开硬事实上的相对竞品，三种取值都写 `brand_status_basis`。矩阵行或题挂了约束条件就必须有这张表（门禁 67），线上同样「宁可少出几道题」 |
+| 4. 目标客户与使用场景 | 从品牌资料里的「核心目标客户与购买场景」拆出目标客户，不改写业务范围那几行；按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
+| 5. 业务优先级 | 品牌资料「核心目标客户与购买场景」里写了的条目就是品牌方点名，对应的行判高，我们补充的判中（同 selection-rules.md 第 5 步；填写顺序只用于主题同档排序）；差异化优势写进依据，写明出处；这几项都空时按官网主推判（同 selection-rules.md 第 5 步）：主推产品的主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「推断：品牌资料无业务重点，按官网主推定」。没开的行和原因写进 `notes.md`「没开的格子」 |
 | 6. 主题 | 和选词一样聚，个数不限。拿不准候选类别时按推理的候选类别归类，在主题的 `priority_basis` 里写「候选类别为推理，待验证」。能满足、但回答里基本不会出现品牌这一类的行照开、本期不出 |
-| 7. 写题 | 和选词一样，本期只出发现题。候选题一个市场 30–60 道，每个导出文件最多 60 条（导出对超 60 报错） |
+| 7. 写题 | 和选词一样，本期只出发现题。题量按 selection-rules.md 第 7 步：超过 60 道 validator 和导出都报错；不到 30 道不凑题，检查通过后 runner 会写 `TOPUP.md` 让你补一轮（先开业务优先级为中的我方补充行和假设行，再用业务优先级为低的行，不许同义改写），补不到照常交付，`out/notes.md`「假设」里写一句为什么题少。补题在审核之前，审核删掉阻塞题后可能又不到 30 道，不再补；`--repair-rounds 0` 时不补题 |
 | 8. 校验与导出 | 依次跑 `scripts/validate_after_sales_set.py <bank.json>`、`scripts/export_upload_csv.py <bank.json> --out <目录>`，都退出码 0 才算完成。不写对客确认表 |
 
-`config` 另写固定值：`generation_stage: "selection"`、`lifecycle_status: "hypothesis"`、`evidence_status: "hypothesis"`；根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`（validator 要求的固定值）。题的字段按 output-contract.md。
+`config` 另写固定值：`generation_stage: "selection"`；`evidence_status` 按 output-contract.md 的定义写：`config.buyer_quotes` 里有评价、社区或搜索数据的买家信号写 `after_sales_signal`，一条都没有写 `hypothesis`；根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`（`mode` 是 validator 要求的固定值，`schema_version` 照写备查）。题的字段按 output-contract.md。
 
 `notes.md` 分这几节：「预跑答案」「目标客户」「使用场景候选」「约束条件」「需求信号」「没开的格子」「主题」「假设」「未覆盖来源」「validator 告警」，返修丢过题的再加「删题」。
 
 ## 需求信号必须填
 
-线上没有品牌方提供的数据，但公开层收得到买家原话（评价、社区）、搜索词和 AI 检索词，这些要登记进 `config.buyer_quotes`，否则 W36（题面条件没有依据）、W37（同一决策问两遍）两道门禁会整段跳过，validator 报「0 错误 0 告警」其实是没查。
+线上没有品牌方提供的数据，但公开层收得到买家原话（评价、社区）、搜索词和 AI 检索词，这些要登记进 `config.buyer_quotes`，否则 W36（题面条件没有依据）、W37（同一决策问两遍）两道门禁会整段跳过，validator 只给一条 W36 告警，其实两道都没查。
 
-- 只登记**撑起某道题**的那几条，一条一个对象：`{输入编号, 原话, 目标客户, 约束条件}`。原话写原文不翻译，目标客户看不出留空。
+- 登记哪些照 selection-rules.md 第 2 步「脚本产物按目录收齐再登记」：与本产品线、本期市场相关、会改变选词判断的都登记，不只登记撑起题的几条；带条件的题至少挂一条。一条一个对象：`{输入编号, 来源类型, 原话, 目标客户, 约束条件, 出处}`。来源类型 precollect 来的照抄 `signals.csv` 里的值（runner 按它查每类有没有登记），出处写完整网址；原话写原文不翻译，目标客户看不出留空。
 - 约束那一列的键名就是 `约束条件`，和对客 Base 的列名、采集脚本的 `signals.csv` 一致。英文别名 `constraint` 也认；2.65.0 之前的旧键名 `约束` 仍兼容，但新写的题库一律用 `约束条件`。
 - 题的 `evidence_refs` 填信号编号（`["US-R003"]`），不填别的题的题号。题面带条件却挂不上原话的，用 `condition_basis` 写清依据，不许留空。
 - 输入编号带市场前缀（`US-R001`），线上一次运行只跑一个市场，不跑就别编号。

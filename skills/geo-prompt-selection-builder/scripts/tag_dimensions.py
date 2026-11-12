@@ -27,9 +27,13 @@ def _items(value):
     return [_text(v) for v in items if _text(v)]
 
 
+# 不导出上传 CSV 的类型（export_upload_csv.py 的 INTENT 没有它们），不算进标签门槛（3.14.3）
+NOT_UPLOADED = {"Information", "Trust", "Transactional", "Support"}
+
+
 def counted(q):
     """会进上传 CSV 的题才计数。"""
-    return _text(q.get("status")) not in SKIP_STATUS and _text(q.get("prompt_type")) != "Information"
+    return _text(q.get("status")) not in SKIP_STATUS and _text(q.get("prompt_type")) not in NOT_UPLOADED
 
 
 def handwritten(q):

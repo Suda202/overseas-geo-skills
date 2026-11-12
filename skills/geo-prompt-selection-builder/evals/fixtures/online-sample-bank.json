@@ -61,16 +61,24 @@
   ],
   "attribute_plan": [
    {
-    "attribute": "宠物毛发清理"
+    "attribute": "宠物毛发清理",
+    "brand_status": "有",
+    "brand_status_basis": "官网产品规格页"
    },
    {
-    "attribute": "自动集尘"
+    "attribute": "自动集尘",
+    "brand_status": "有",
+    "brand_status_basis": "官网产品规格页"
    },
    {
-    "attribute": "拖地效果"
+    "attribute": "拖地效果",
+    "brand_status": "有",
+    "brand_status_basis": "官网产品规格页"
    },
    {
-    "attribute": "避障"
+    "attribute": "避障",
+    "brand_status": "有",
+    "brand_status_basis": "官网产品规格页"
    }
   ],
   "slices": [
@@ -106,7 +114,9 @@
   "topics": [
    {
     "topic_id": "t_rv",
-    "topic": "Robot Vacuums"
+    "topic": "Robot Vacuums",
+    "priority": "高",
+    "priority_basis": "高：测试造数"
    }
   ],
   "business_goals": {

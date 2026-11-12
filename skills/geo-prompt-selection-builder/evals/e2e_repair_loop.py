@@ -10,6 +10,8 @@
      → success，repair_rounds=2，题数回到夹具原量
   3. 关闭返修：--repair-rounds 0 → failed，报错指向 validator，不生成 REPAIR-1.md
   4. agent 没写出 bank.json → failed，不返修
+  5. 补题（3.13.0）：通过检查但不到 30 道 → 写 TOPUP.md 补一轮；补了题 → top_up.status=added；
+     补坏了（发现题带品牌名）→ 退回补题前的题库，top_up.status=reverted，照常 success；--repair-rounds 0 不补
 
 产物：reports/repair-loop-e2e.md；工作目录建在系统临时目录，跑完删除。
 
@@ -61,10 +63,22 @@ def write(questions: list) -> None:
     (ws / "out/bank.json").write_text(json.dumps(bank, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-if mode == "none":
+if task == "TOPUP.md":
+    topup = os.environ.get("TOPUP_MODE", "none")
+    current = json.loads((ws / "out/bank.json").read_text(encoding="utf-8"))
+    bank = current
+    if topup == "add":
+        extra = clone(bad=False)
+        extra["question_id"] = "US-903"
+        extra["user_question"] = extra["monitoring_prompt"] = "Which robot vacuums keep cat litter from spreading on hard floors?"
+        extra["zh_translation"] = "哪些扫地机器人能清理硬地板上散落的猫砂？"
+        write(current["questions"] + [extra])
+    elif topup == "break":
+        write(current["questions"] + [clone(bad=True)])
+elif mode == "none":
     pass  # 不写 bank.json
 elif task == "TASK.md":
-    write(base_qs + [clone(bad=True)])  # 首轮：带一道坏题
+    write(base_qs + [clone(bad=mode != "good")])  # 首轮：带一道坏题（good 模式首轮就合格）
 elif mode == "fix":
     write(base_qs + [clone(bad=False)])  # 返修第 1 轮：改好坏题
 elif mode == "drop":
@@ -84,9 +98,9 @@ dummy_task = WS_ROOT / "dummy-task.md"
 dummy_task.write_text("测试任务：由假 agent 执行，内容不读。\n", encoding="utf-8")
 
 
-def run_case(name: str, mode: str, repair_rounds: int = 2) -> tuple[int, dict, Path]:
+def run_case(name: str, mode: str, repair_rounds: int = 2, topup: str = "none") -> tuple[int, dict, Path]:
     ws = WS_ROOT / f"ws-{name}"
-    env = dict(os.environ, FAKE_MODE=mode, FIXTURE=str(FIXTURE))
+    env = dict(os.environ, FAKE_MODE=mode, FIXTURE=str(FIXTURE), TOPUP_MODE=topup)
     cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(CASE), "--market", "US",
            "--platforms", "chatgpt", "--out", str(ws), "--task-file", str(dummy_task),
            "--repair-rounds", str(repair_rounds),
@@ -140,7 +154,30 @@ check("没有 bank.json：failed，不返修",
       and any("bank.json" in (e.get("message") or "") for e in res.get("errors", [])),
       f"exit={rc} status={res.get('status')} errors={[e.get('message') for e in res.get('errors', [])]}")
 
-# 5. 文档与默认值
+# 5. 补题（夹具只有 5 道，通过检查后都会进补题轮）
+rc, res, ws = run_case("topup-add", "fix", topup="add")
+top = res.get("top_up") or {}
+check("补题：不到 30 道补一轮，补了题 → added",
+      rc == 0 and res.get("status") == "success" and (ws / "TOPUP.md").exists()
+      and top.get("status") == "added" and top.get("after") == top.get("before", 0) + 1
+      and any("[top_up]" in w for w in res.get("warnings", [])),
+      f"exit={rc} status={res.get('status')} top_up={top}")
+check("补题：TOPUP.md 写了补题顺序和不许凑数",
+      "假设" in (ws / "TOPUP.md").read_text(encoding="utf-8")
+      and "同义改写" in (ws / "TOPUP.md").read_text(encoding="utf-8"), "")
+rc, res, ws = run_case("topup-break", "fix", topup="break")
+top = res.get("top_up") or {}
+bank = json.loads((ws / "out/bank.json").read_text(encoding="utf-8"))
+check("补题：补坏了退回原题库 → reverted，照常 success",
+      rc == 0 and res.get("status") == "success" and top.get("status") == "reverted"
+      and top.get("after") == top.get("before") and len(bank["questions"]) == FIXTURE_COUNT + 1,
+      f"exit={rc} status={res.get('status')} top_up={top} questions={len(bank['questions'])}")
+rc, res, ws = run_case("topup-off", "good", repair_rounds=0)
+check("补题：--repair-rounds 0 不补，首轮合格照常 success",
+      rc == 0 and res.get("status") == "success" and not (ws / "TOPUP.md").exists() and "top_up" not in res,
+      f"exit={rc} top_up={res.get('top_up')}")
+
+# 6. 文档与默认值
 runner_text = RUNNER.read_text(encoding="utf-8")
 check("runner 文档写了返修与丢题授权", "--repair-rounds" in runner_text and "丢题不丢库" in runner_text, "")
 

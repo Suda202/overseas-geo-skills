@@ -25,6 +25,9 @@
     返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
               finalize，默认最多 2 轮（--repair-rounds，0 关闭）；最后一轮授权 agent 丢题不丢库
               （改不好的题删掉、题号进 config.retired，每个主题仍只放一种意图类型）
+    补题      检查通过但导出不到 30 道时，写 TOPUP.md 让 agent 补一轮（3.13.0，--repair-rounds 0 时不补）：先开我方
+              补充的中档行和假设行，再用低档行，不许同义改写；补完没过检查就退回补题前的题库；仍不到 30 道照常交付，
+              result.json 记 top_up {before, after, status} 和一条 warning
     审核      首次 finalize 通过后，新开一个审核 agent 按 references/review-rubric.md 九条核对题库，
               发现写进 out/review.json；blocking 的发现写成 REVIEW-REPAIR-<n>.md 回喂返修、再 finalize、
               只复核报过的题，默认 1 轮（--review-rounds，0 关闭；不占 --repair-rounds 额度）。
@@ -89,6 +92,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   6. 没有 SCRAPELESS_API_KEY → agent 采不了研究预跑会凭空写题，启动前就停下
   7. 审核 agent 没写 review.json、写坏了、结构不对或超时 → review.status=review_failed，记 warning，照常交付
   8. 审核 agent 违规改了 bank.json → 恢复审核前的题库并记 warning
+  8b. 题太少（不到 30 道）→ 补一轮；补坏了退回原题库，补不到照常交付并记 warning
   9. 审核返修把检查改坏 → 下一轮审核返修把检查报错和未修的阻塞发现一起回喂，额度用完才失败
   10. agent 不采评价、社区只搜一两次就交题库 → precollect 由脚本固定采；采到了却一条没登记 → 登记检查回喂返修
   11. 不分行业都采 Trustpilot、不分市场都搜 Reddit → 先判行业，渠道按表（行业 × 市场）定；行业判错或
@@ -121,7 +125,7 @@ sys.path.insert(0, str(HERE))
 from precollect import (PLAN_TIMEOUT, PRECOLLECT_DIR, check_plan, domestic, fallback_plan, load_channels,  # noqa: E402
                         net_env, precollect, precollect_block, precollect_registration_errors)
 # 整个拷贝的 skill：选词本身、shared 的联网与信号脚本。
-# geo-monitoring 不拷（3.0.0）：选词文档里指向它的链接是锁版阶段规则，线上不读。
+# geo-monitoring 不拷（3.0.0）：线上不试跑、不采集。
 SKILL_DIRS = ("geo-prompt-selection-builder", "shared")
 # 只拷一部分的 skill（3.0.0）：研究预跑只用 geo-presales-report-builder/scripts/collect_answers.py，
 # 它在导入时还要 geo-metrics 的 geo_presales_core 包和 geo-presales-crawl-integrity 的
@@ -152,15 +156,16 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 以前客户积累的经验：读 `.agents/skills/geo-prompt-selection-builder/references/industry-knowledge/` 里本行业的「行业-<行业>.md」（行业写在 `research/precollect/plan-checked.json` 的 `industry`），再挑一份和本客户品类最接近的「品类-<品类>.md」（看「行业-」文件里的已有品类列表，按英文品类词判断，没有接近的就不读）。约束条件、目标客户、场景、主题看品类那份，渠道效果看行业那份。它们只是假设级线索：帮你少漏，每条都要用本客户的买家信号核实，本客户没有信号的不硬加，不能写成依据。
 
 线上跳过不读：
-- 文档里指向 `geo-monitoring` 的链接是锁版阶段规则（试跑、挑正式题、锁版、基线），线上不读，工作目录里也没有这个 skill。
+- 文档里指向 `geo-monitoring` 的链接是采集阶段（试跑、基线），线上不读，工作目录里也没有这个 skill。
 - selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md、demand-side-signals.md 的说明，工作目录里没有这两份）；第 6 步「售后重聚」。
 
-题量硬限（超了导出脚本直接报错、要返修）：
-- 候选题一个市场 30–60 道（validator 对超出只告警，但导出对超 60 报错）；每个导出文件（市场 × 产品线）最多 60 条。写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。
+题量（selection-rules.md 第 7 步「出几道」）：
+- 候选题一个市场 × 一条产品线 30–60 道。超过 60 是硬限（validator 门禁 47 和导出都报错，控制成本），写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。不到 30 不凑题；检查通过后脚本会补一轮题，补不到也照常交付。
+- 主题个数不限；发现主题每个至少 10 道，60 道里最多 6 个满额主题。
 
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌资料。竞品用品牌资料里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「产品线」和官网推出，写进 `config.category_label`。
-- 题型：只出发现题。品牌资料里的「核心目标客户与购买场景」按业务优先级排先后，只当业务优先级的线索。
+- 题型：只出发现题。品牌资料里的「核心目标客户与购买场景」是品牌方点名的处境，对应的行判高、我们补充的判中；填写先后只用于主题同档排序。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 需求信号（必填）：
@@ -197,7 +202,7 @@ PLAN_TASK = """你在一个无人值守的流水线里，没有人会回答问�
    `python3 .agents/skills/shared/scripts/net.py fetch <品牌官网> <竞品官网 …> --country {market} > research/site/homepages.txt`
 3. 读 `.agents/skills/geo-prompt-selection-builder/references/precollect-channels.json` 和 `.agents/skills/geo-prompt-selection-builder/references/signal-sources.md`「按行业收评价和社区」。按品牌卖什么、卖给谁，从 `industries` 里选一个行业，键名原样照抄；行业看品牌本身，不看竞品。一个都不合适就写「其他」，按品牌卖什么、买家在哪里讨论和评价，自己推理该采哪些渠道：在 add 里挑渠道表里有的（最多 5 个），表里没有的站写进 add_sites（最多 2 个）。
 4. 本行业的「评价」「社区」，加上市场 {market} 在 `markets` 里的社区（没有这个市场就用 `_default`），就是 runner 要采的渠道，都会采，不能删。只有两种情况能写进 skip 并说明原因：要参数的三个渠道（google-play、app-store 要应用 ID，google-maps 要门店名）在品牌和竞品都没有 App、没有门店时；渠道表里写了 `scope` 的站（如 rtings 只测它自己的那些品类），品牌的品类不在 scope 里时。表里这一行没写、但这个品牌明显该采的，从 `review_channels`、`community_channels` 里挑，写进 add，最多 3 个，写原因；渠道表里没有的站（比如这个品类的专业评测站、垂直论坛），写进 add_sites，最多 2 个，runner 会用「站名 品类词」搜出本站页面再取正文。规则没写到的情况按这一步的目标自己推理，依据写进 industry_basis 或原因里。
-5. 要采 Google Play 或 App Store 的，找品牌和竞品的应用 ID：先看官网首页里的应用商店链接；没有再用 `python3 .agents/skills/shared/scripts/net.py search "site:apps.apple.com <名称>" --gl {gl} --hl {lang}`，搜索一共不超过 3 次。要采 Google 地图的，在 maps_queries 写竞品门店的「店名 城市」。
+5. 要采 Google Play 或 App Store 的，找品牌和竞品的应用 ID：先看官网首页里的应用商店链接；没有再用 `python3 .agents/skills/shared/scripts/net.py search "<名称> app store" --gl {gl} --hl {lang}`（Scrapeless 的 Google 搜索不认 `site:`），搜索一共不超过 3 次。要采 Google 地图的，在 maps_queries 写竞品门店的「店名 城市」。
 
 plan.json 的格式（除 industry、industry_basis 外都可省略）：
 {{
@@ -239,6 +244,23 @@ REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max
 """
 
 REPAIR_WHY = "但结束检查没过"
+
+# 3.13.0（Suda 2026-11-12）：线上生成的题就是售前报告测的全部题，不到 30 道补一轮；补完仍不够照常交付。
+TOP_UP_FLOOR = 30
+TOP_UP_TASK = """你在无人值守流水线的补题环节。工作目录里的 out/bank.json 已通过检查，但只有 {count} 道题，不到 {floor} 道（选词 selection-rules.md 第 7 步「出几道」）。
+
+只补题，不改已有的题：
+1. 先看 `out/notes.md`「没开的格子」和已有矩阵行：我方补充、能写出合理推断的处境，开成业务优先级为中的行（没有买家原话的，`priority_basis` 写「假设：……」），在这些行上出题；
+2. 还不够，再在业务优先级为低的行上出题（W64 告警写处理记录：「补足题量」）；
+3. 不许用同义改写、调换语序、机械组合条件凑数：门禁 8、W8b、W37 照常拦。找不到真实的新购买决策就停，在 `out/notes.md`「假设」里写一句为什么题少（品类窄、场景少等），照常交付。
+
+规则照 online-runner.md 和 selection-rules.md；约束条件表、需求信号登记照常。合计不超过 60 道。不要重做调研，不要访问工作目录以外的路径。
+
+改完后依次运行，两条都要退出码 0：
+`python3 .agents/skills/geo-prompt-selection-builder/scripts/validate_after_sales_set.py out/bank.json`
+`python3 .agents/skills/geo-prompt-selection-builder/scripts/export_upload_csv.py out/bank.json --out out/upload`
+最后只回复一行：`DONE <validator 输出里的 readiness>`。
+"""
 REVIEW_REPAIR_WHY = "结束检查已过，但内容审核（[review]，判据见 `.agents/skills/geo-prompt-selection-builder/references/review-rubric.md`）报了阻塞问题"
 
 REVIEW_TASK = """你在无人值守流水线的审核环节，没有人会回答问题。工作目录里的题库已通过 validator 和导出检查，你按固定清单再核对一遍内容。你没有参与生成这份题库，只按清单判断，不要沿用生成时的理由。
@@ -962,9 +984,42 @@ def main() -> int:
         code = finalize(ws, record, repair_rounds=rounds, precollect_final=rounds >= a.repair_rounds)
     if code != 0:
         return code
+    if a.repair_rounds > 0 and top_up(ws, a.agent, a.agent_cmd, a.timeout, rounds) != 0:
+        return 1
     code = review_loop(ws, a.agent, a.agent_cmd, a.timeout, a.review_rounds, rounds, a.market.strip())
     if code == 0:
         learn_industry(ws, testing=bool(a.task_file))
+    return code
+
+
+def top_up(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int, rounds: int) -> int:
+    """题库已过检查但不到 TOP_UP_FLOOR 道时补一轮（3.13.0）。补完没过检查就退回补题前的题库，照常交付。
+
+    结果记在 result.json 的 top_up：{before, after, status: added / unchanged / reverted}。返回 finalize 的退出码（0）。
+    """
+    result_path = ws / "out/result.json"
+    before = json.loads(result_path.read_text(encoding="utf-8")).get("prompt_count") or 0
+    if before >= TOP_UP_FLOOR:
+        return 0
+    saved = {name: (ws / "out" / name).read_bytes() for name in ("bank.json", "notes.md") if (ws / "out" / name).exists()}
+    task = ws / "TOPUP.md"
+    task.write_text(TOP_UP_TASK.format(count=before, floor=TOP_UP_FLOOR), encoding="utf-8")
+    record = run_agent(ws, agent, agent_cmd, timeout, task_path=task, tag="-topup")
+    code = finalize(ws, record, repair_rounds=rounds, precollect_final=True)
+    status = "added"
+    if code != 0:
+        for name, data in saved.items():
+            (ws / "out" / name).write_bytes(data)
+        code = finalize(ws, None, repair_rounds=rounds, precollect_final=True)
+        status = "reverted"
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    after = result.get("prompt_count") or 0
+    if status == "added" and after <= before:
+        status = "unchanged"
+    result["top_up"] = {"before": before, "after": after, "status": status}
+    if after < TOP_UP_FLOOR:
+        result["warnings"].append(f"[top_up] 补题后仍只有 {after} 道，不到 {TOP_UP_FLOOR} 道，照常交付；原因见 out/notes.md")
+    write_json(result_path, result)
     return code
 
 

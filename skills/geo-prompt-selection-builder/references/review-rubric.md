@@ -27,6 +27,6 @@
 ## 约束
 
 - blocking 为 true 的发现由 runner 写成一轮返修回喂（`REVIEW-REPAIR-<n>.md`，报错格式同 validator，stage 记 `review`），返修后重跑 validator 和导出；false 的不触发返修，runner 记进 `out/result.json` 的 `review` 块，本来就要返修时顺带让返修 agent 写进 `out/notes.md`「评审意见」一节。
-- 整轮审核只跑一次；返修后只复核上次报过的题（复核任务里列出题号），不重开全量。返修轮数见 online-runner.md「审核环」。
+- 整轮审核只跑一次；返修后只复核上次报过的题（复核任务里列出题号），不重开全量。返修轮数由 runner 的 `--review-rounds` 定（默认 1）。
 - `out/review.json` 缺失、不是合法 JSON 或结构不对时，runner 只记 warning、照常交付；validator 才是闸门。
-- 发现为 0 不说明题库优秀，只说明这九条没查出问题；清单的增长方式是线下人工或强模型审出**新缺陷类别**后补条目（判据写得可核对才收，见选词 SKILL.md「维护本 skill」和定稿改动协议）。
+- 发现为 0 不说明题库优秀，只说明这九条没查出问题；清单的增长方式是线下人工或强模型审出**新缺陷类别**后补条目（判据写得可核对才收，见选词 SKILL.md「维护本 skill」）。

@@ -386,7 +386,7 @@ def slim_for_html(data: dict) -> dict:
     return slim
 
 
-SHOPPING_MIN_TRIGGER = 0.05  # 工业类产品线的开关门槛，和 geo-monitoring trial-and-lock 同一个数
+SHOPPING_MIN_TRIGGER = 0.05  # 工业类产品线的开关门槛，和选词 selection-rules.md 第 1 步同一个数
 
 
 def _rate(value) -> dict:

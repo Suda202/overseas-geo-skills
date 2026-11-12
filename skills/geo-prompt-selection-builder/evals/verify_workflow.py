@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""End-to-end checks for the selection handoff and baseline configuration (current bank structure only)."""
+"""End-to-end checks for the selection validator (current bank structure only). Lifecycle, trial, baseline and
+version gates were removed in 3.14.1: locking happens in the client Base, where check_client_base.py checks the quota."""
 
 from __future__ import annotations
 
@@ -46,13 +47,16 @@ def bank(market: str = "United States", version: str = "us-v1") -> dict:
         "mode": "after-sales-strategic-topics",
         "config": {
             "brand_name": "Example",
-            "topics": [{"topic_id": "travel", "topic": "Business Travel"}],
+            "topics": [{"topic_id": "travel", "topic": "Business Travel", "priority": "高", "priority_basis": "高：测试造数"}],
             "generation_stage": "selection",
             "business_goals": {"selected": ["发现型可见度"], "information_named": False},
             "slices": [{"slice_id": "M-000", "topic_id": "travel", "product_line": "差旅管理", "audience": "通用",
                         "prompt_type": "Discovery", "priority": "高", "priority_basis": "核心目标客户与使用场景（1）"}],
             # five Prompts that differ only by scenario number: W59 is expected and handled
-            "warning_decisions": [{"gate": "W59", "decision": "测试造数：只验证生命周期与版本门禁"}],
+            "warning_decisions": [{"gate": "W59", "decision": "测试造数：只验证生命周期与版本门禁"},
+                                  # 3.13.0: W54 reads attribute_ref / constraints; these Prompts carry neither
+                                  {"gate": "W54", "decision": "测试造数：题面不带条件"},
+                                  {"gate": "W47", "decision": "测试造数：5 道题只验证门禁"}],
             "lifecycle_status": "locked",
             "evidence_status": "customer_confirmed",
             "customer_confirmation": {
@@ -103,9 +107,9 @@ def selection_bank() -> dict:
             {"slice_id": "M-002", "topic_id": "travel_cmp", "product_line": "差旅管理", "audience": "中小企业财务",
              "scene": "控制差旅预算", "prompt_type": "Competitor", "attributes": ["预算控制"],
              "priority": "中", "priority_basis": "买家常拿 Navan 来比（销售记录）"},
-            {"slice_id": "M-009", "topic_id": "travel", "product_line": "差旅管理", "audience": "中小企业财务",
+            {"slice_id": "M-009", "topic_id": None, "product_line": "差旅管理", "audience": "中小企业财务",
              "scene": "合并差旅账单", "prompt_type": "Competitor", "attributes": ["账单合并"],
-             "priority": "高", "priority_basis": "高：品牌方列出账单合并是本期主推。开行依据：销售记录里常拿 Navan 比账单"},
+             "priority": "低", "priority_basis": "低：账单合并对比本期不争取。开行依据：销售记录里常拿 Navan 比账单。本期不出：业务优先级低"},
             {"slice_id": "M-003", "topic_id": None, "product_line": "差旅管理", "audience": "中小企业财务",
              "scene": "临时出差", "prompt_type": "Competitor", "attributes": ["账单合并"],
              "priority": "低", "priority_basis": "低：临时出差不是本期重点。开行依据：假设：临时出差会拿 Navan 比"},
@@ -113,7 +117,8 @@ def selection_bank() -> dict:
              "scene": "控制差旅预算", "prompt_type": "Alternatives", "attributes": ["预算控制"], "priority": "高",
              "priority_basis": "高：跟同任务的发现行。开行依据：社区里有想换掉 SAP Concur 的帖子"},
         ],
-        attribute_plan=[{"attribute": "预算控制"}, {"attribute": "账单合并"}, {"attribute": "全球覆盖"}],
+        attribute_plan=[{"attribute": a, "brand_status": "有", "brand_status_basis": "官网产品页"}
+                        for a in ("预算控制", "账单合并", "全球覆盖")],
         competitor_selection={"comparison_set": ["Navan", "SAP Concur"]},
         base_conditions=["企业差旅"],
         audience_terms={"中小企业财务": ["small business", "SME", "50-person"]},
@@ -123,7 +128,8 @@ def selection_bank() -> dict:
             {"输入编号": "S3", "原话": "one invoice at the end of the month please", "约束": "月结"},
         ],
         # the Alternatives and Competitor Topics hold one Prompt each by construction
-        warning_decisions=[{"match": "W59", "decision": "测试造数：类型主题各 1 道，只验证结构"}],
+        warning_decisions=[{"match": "W59", "decision": "测试造数：类型主题各 1 道，只验证结构"},
+                           {"gate": "W47", "decision": "测试造数：7 道题只验证结构"}],
     )
     rows = [
         ("q0", "Discovery", "travel", "M-001", "预算控制", ["每月预算"],
@@ -166,7 +172,7 @@ def validate(data: dict, previous: dict | None = None) -> subprocess.CompletedPr
 def run_checks() -> list[dict]:
     original = bank()
     cases: list[tuple[str, dict, dict | None, bool]] = [
-        ("locked_bank", original, None, True),
+        ("base_bank", original, None, True),
     ]
 
     def changed(name: str, edit, expected: bool, previous: dict | None = None) -> None:
@@ -174,67 +180,13 @@ def run_checks() -> list[dict]:
         edit(candidate)
         cases.append((name, candidate, previous, expected))
 
-    changed("two_trial_runs", lambda b: b["config"]["trial"].update(planned_runs=2), False)
-    changed("seven_trial_runs", lambda b: b["config"]["trial"].update(planned_runs=7, valid_runs=7), False)
-    changed("legacy_thirty_run_baseline", lambda b: b["config"]["baseline"].update(planned_runs=30), True)
-    changed("eight_run_baseline", lambda b: b["config"]["baseline"].update(planned_runs=8), False)
-    changed("two_run_baseline", lambda b: b["config"]["baseline"].update(planned_runs=2), False)
-
-    changed(
-        "missing_scope_confirmation",
-        lambda b: b["config"]["customer_confirmation"].pop("scope_status"),
-        False,
-    )
-    def trial_without_scope(b: dict) -> None:
-        b["config"]["lifecycle_status"] = "hypothesis"
-        b["config"]["customer_confirmation"]["scope_status"] = "pending"
-        b["config"]["baseline"]["status"] = "planned"
-
-    changed("trial_completed_without_scope", trial_without_scope, False)
-    changed(
-        "missing_final_set_confirmation",
-        lambda b: b["config"]["customer_confirmation"].pop("prompt_set_status"),
-        False,
-    )
-    changed(
-        "stale_baseline_version",
-        lambda b: b["config"]["baseline"].update(prompt_version="us-v0"),
-        False,
-    )
-    changed("wrong_market", lambda b: b["questions"][0].update(region="Singapore"), False)
-
-    def edit_query(b: dict) -> None:
-        b["questions"][0]["user_question"] = "Which travel providers fit a fixed monthly budget?"
-
-    changed("edited_query_same_version", edit_query, False, original)
-
-    def add_query(b: dict) -> None:
-        added = copy.deepcopy(b["questions"][0])
-        added.update(
-            question_id="q5",
-            intent_key="travel-buyer-need-5",
-            user_question="Which business travel providers support consolidated billing?",
-        )
-        b["questions"].append(added)
-
-    changed("added_query_same_version", add_query, False, original)
-    previous_six = copy.deepcopy(original)
-    add_query(previous_six)
-    changed("deleted_query_same_version", lambda b: None, False, previous_six)
-
-    def rebaseline(b: dict) -> None:
-        edit_query(b)
-        b["config"]["prompt_version"] = "us-v2"
-        b["config"]["baseline"]["prompt_version"] = "us-v2"
-
-    changed("edited_query_new_version", rebaseline, True, original)
+    # Trial, baseline, confirmation and version gates were removed (3.14.1); the formal quota is checked on the Base.
     singapore = bank("Singapore", "sg-v1")
     singapore["questions"][0]["user_question"] = (
         "Which business travel providers fit a monthly budget in SGD?"
     )
     singapore["questions"][0]["intent_key"] = "sg-business-travel-monthly-budget"
     cases.append(("market_specific_singapore_intent", singapore, None, True))
-    cases.append(("cross_market_previous_bank", singapore, original, False))
     france = bank("France", "fr-v1")
     france["config"]["collection_config"]["language"] = "fr"
     for number, row in enumerate(france["questions"]):
@@ -286,7 +238,8 @@ def run_checks() -> list[dict]:
             False)
 
     def attribute_plan(b: dict, statuses: list[str | None], via_tag: bool = False) -> None:
-        b["config"]["attribute_plan"] = [{"attribute": "预算控制"}, {"attribute": "账单合并"}]
+        b["config"]["attribute_plan"] = [{"attribute": a, "brand_status": "有", "brand_status_basis": "官网产品页"}
+                                         for a in ("预算控制", "账单合并")]
         carrier = b["questions"][0]
         if via_tag:
             carrier["tags"] = [*carrier.get("tags", []), "预算控制"]
@@ -306,35 +259,60 @@ def run_checks() -> list[dict]:
     changed("attribute_plan_without_status_counts_any_prompt",
             lambda b: attribute_plan(b, [None] * 5), True)
     changed("review_all_approved_on_locked_set", lambda b: attribute_plan(b, approved), True)
-    changed("review_unapproved_carrier_on_locked_set",
-            lambda b: attribute_plan(b, ["待审核", *approved[1:]]), False)
-    changed("review_needs_revision_carrier_via_tag_on_locked_set",
-            lambda b: attribute_plan(b, ["需修改", *approved[1:]], via_tag=True), False)
 
     def drafting(b: dict) -> None:
         attribute_plan(b, ["待审核"] * 4 + [None])
         as_hypothesis(b)
 
     changed("review_pending_while_drafting_warns", drafting, True)
-    def single_evidence_family(b: dict) -> None:
-        for row in b["questions"]:
-            row["evidence_refs"] = ["AI 答案层 distributor margin 22/70"]
 
-    changed("evidence_single_family_warns", single_evidence_family, True)
-
-    def three_evidence_families(b: dict) -> None:
-        families = [
-            "Reddit r/business 求推荐帖",
-            "G2 评价高频条件",
-            "GSC 搜索词 travel management",
-            "销售通话流失原因",
-            "AI 答案层当前差距",
+    # 约束条件表 (3.11.0; 3.11.2; 3.11.3; 3.12.0): brand status and position vs competitors on public hard facts.
+    def constraint_table(b: dict, **budget) -> None:
+        b["config"]["attribute_plan"] = [
+            {"attribute": "预算控制", **budget},
+            {"attribute": "账单合并", "brand_status": "待确认", "brand_status_basis": "官网计费页、帮助中心都没写",
+             "vs_competitors": "未知"},
+            {"attribute": "全球覆盖", "brand_status": "有", "brand_status_basis": "官网覆盖范围页", "vs_competitors": "持平",
+             "vs_competitors_basis": "都覆盖 190 个国家（官网）"},
         ]
-        for row, ref in zip(b["questions"], families):
-            row["evidence_refs"] = [ref]
+        b["questions"][0]["attribute_ref"] = "预算控制"
 
-    changed("evidence_three_families_no_warning", three_evidence_families, True)
+    changed("constraint_table_filled", lambda b: constraint_table(
+        b, brand_status="有", brand_status_basis="帮助中心预算设置页", vs_competitors="明显优势",
+        vs_competitors_basis="月度预算上限可按部门设，竞品 A 只能按公司设"), True)
+    changed("constraint_table_has_without_basis", lambda b: constraint_table(
+        b, brand_status="有", vs_competitors="未知"), False)
+    changed("constraint_table_prompt_on_missing_capability",
+            lambda b: constraint_table(b, brand_status="没有", brand_status_basis="文档写只能按公司设",
+                                       vs_competitors="未知"), False)
+    changed("constraint_table_prompt_on_unconfirmed_capability",
+            lambda b: constraint_table(b, brand_status="待确认", brand_status_basis="官网、文档都没写",
+                                       vs_competitors="未知"), False)
+    changed("constraint_table_unconfirmed_without_basis",
+            lambda b: (constraint_table(b, brand_status="有", brand_status_basis="帮助中心预算设置页",
+                                        vs_competitors="未知"),
+                       b["config"]["attribute_plan"][1].pop("brand_status_basis")), False)
+    changed("constraint_table_position_without_basis",
+            lambda b: constraint_table(b, brand_status="有", brand_status_basis="帮助中心预算设置页",
+                                       vs_competitors="明显劣势"), False)
+    changed("constraint_table_not_judged_is_not_a_status",
+            lambda b: constraint_table(b, brand_status="不判", brand_status_basis="每家都有",
+                                       vs_competitors="未知"), False)
+    changed("constraint_table_unknown_status_value",
+            lambda b: constraint_table(b, brand_status="不确定", vs_competitors="未知"), False)
+    # 3.13.0: brand_status is required, an empty table no longer skips gates 67 / 68, attribute_ref must be listed.
+    changed("constraint_table_status_missing",
+            lambda b: constraint_table(b, brand_status_basis="帮助中心预算设置页", vs_competitors="未知"), False)
 
+    def table_missing(b: dict) -> None:
+        b["config"]["attribute_plan"] = []
+        b["questions"][0]["attribute_ref"] = "预算控制"
+    changed("constraint_table_missing_while_prompts_name_constraints", table_missing, False)
+
+    def ref_not_listed(b: dict) -> None:
+        constraint_table(b, brand_status="有", brand_status_basis="帮助中心预算设置页", vs_competitors="未知")
+        b["questions"][1]["attribute_ref"] = "差旅审批流"
+    changed("constraint_table_ref_not_listed", ref_not_listed, False)
     # Gate 36: a condition is backed by the 约束 column of a cited quote, not by the quote text.
     def quote_table(b: dict, budget_cell: str) -> None:
         # The synthetic queries say "scenario {n}"; each quote carries its own number so
@@ -418,8 +396,22 @@ def run_checks() -> list[dict]:
     selection_case("selection_row_without_priority",
                    lambda b: b["config"]["slices"][0].update(priority=""), False)
     # 3.0.0: non-Discovery rows are registered without a tier this period
-    selection_case("selection_non_discovery_row_without_priority_passes",
-                   lambda b: b["config"]["slices"][3].update(priority="", priority_basis=""), True)
+    # 3.13.0: a row of a selected goal's type is tiered like a Discovery row; a type whose goal is not selected is not.
+    selection_case("selection_opened_type_row_without_priority_fails",
+                   lambda b: b["config"]["slices"][3].update(priority="", priority_basis=""), False)
+    selection_case("selection_unopened_type_row_without_priority_passes",
+                   lambda b: b["config"]["slices"].append(
+                       {"slice_id": "M-011", "topic_id": None, "product_line": "差旅管理", "audience": "中小企业财务",
+                        "scene": "核实差旅平台靠不靠谱", "prompt_type": "Trust", "attributes": ["账单合并"],
+                        "priority_basis": "开行依据：社区问口碑；声誉与信任没选，只登记"}), True)
+    # 3.13.0: an entry with product_line applies to that line's Prompts only.
+    def scoped_missing(line: str):
+        def edit(b: dict) -> None:
+            b["config"]["attribute_plan"].append({"attribute": "预算控制", "product_line": line, "brand_status": "没有",
+                                                  "brand_status_basis": "会议产品文档写不支持预算上限"})
+        return edit
+    selection_case("constraint_table_missing_on_other_line_passes", scoped_missing("会议管理"), True)
+    selection_case("constraint_table_missing_on_this_line_fails", scoped_missing("差旅管理"), False)
     selection_case("selection_prompt_on_weak_attribute",
                    lambda b: b["questions"][2].update(attribute_ref="全球覆盖"), True)
     selection_case("selection_topic_priority_mismatch_warns",
@@ -443,7 +435,8 @@ def run_checks() -> list[dict]:
 
     def selection_thin_topic_waived(b: dict) -> None:
         selection_thin_topic(b)
-        b["config"]["warning_decisions"] = [{"match": "W59", "decision": "品牌方点名单买本主题，已告知读数波动风险（2026-11-03）"}]
+        b["config"]["warning_decisions"] = [{"match": "W59", "decision": "品牌方点名单买本主题，已告知读数波动风险（2026-11-03）"},
+                                            {"gate": "W47", "decision": "测试造数：只验证 W59"}]
     selection_case("selection_topic_below_size_floor_waived", selection_thin_topic_waived, True)
 
     def selection_verification(b: dict) -> None:
@@ -507,34 +500,21 @@ def run_checks() -> list[dict]:
                lambda b: typed_slice(b, "M-009").update(prompt_type="Accuracy"), False)
 
     expected_errors = {
+        "selection_opened_type_row_without_priority_fails": "slice M-003: priority must be",
+        "constraint_table_status_missing": "brand_status '' must be one of",
+        "constraint_table_missing_while_prompts_name_constraints": "config.attribute_plan (the 约束条件 table) is missing",
+        "constraint_table_ref_not_listed": "attribute_ref is not in config.attribute_plan",
+        "constraint_table_missing_on_this_line_fails": "预算控制:没有",
         "spanish_query_in_english_bank": "q3: query reads as 'es', not the collection language 'en'",
         "verification_rejected_from_selection_bank": "Verification is retired (2026-11-06)",
 
-        "two_trial_runs": "READINESS: Not ready: 2 errors to fix",
-        "seven_trial_runs": "trial.planned_runs must be 3",
-        "eight_run_baseline": "baseline.planned_runs must be 7",
-        "two_run_baseline": "baseline.planned_runs must be 7",
-        "missing_scope_confirmation": "scope_status",
-        "trial_completed_without_scope": "scope_status",
-        "missing_final_set_confirmation": "prompt_set_status",
-        "stale_baseline_version": "baseline.prompt_version",
-        "wrong_market": "does not match collection_config.market",
-        "edited_query_same_version": "prompt_version must change",
-        "added_query_same_version": "prompt_version must change",
-        "deleted_query_same_version": "prompt_version must change",
-        "cross_market_previous_bank": "previous bank must use the same market and language",
         "competitor_named_in_discovery": "names a brand or competitor ['SAP Concur']",
         "target_brand_named_in_discovery": "names a brand or competitor ['Example']",
         "english_query_in_thai_bank": "q3: query is not written in the collection language 'thai'",
-        "review_unapproved_carrier_on_locked_set":
-            "ERROR: attributes carried only by Prompts not yet 已批准, so not counted as covered (1): 预算控制",
-        "review_needs_revision_carrier_via_tag_on_locked_set":
-            "ERROR: attributes carried only by Prompts not yet 已批准, so not counted as covered (1): 预算控制",
         "review_all_approved_on_locked_set": '"review_status": {"已批准": 5}',
         # 2 warnings: q0 / q4 share wording by construction, and the bank carries no
         # config.buyer_quotes, so gates 36–37 report that they were skipped.
-        "locked_bank": '"readiness": "Usable: 2 warnings without a decision"',
-        "evidence_three_families_no_warning": '"readiness": "Usable: 2 warnings without a decision"',
+        "base_bank": '"readiness": "Usable: 2 warnings without a decision"',
         "condition_outside_constraint_column":
             "WARNING: [W36] q1: condition outside the cited evidence ['数字 500']",
         "condition_without_cited_signal":
@@ -545,7 +525,7 @@ def run_checks() -> list[dict]:
         "audience_implicit_exempt": '"readiness": "Usable: 2 warnings without a decision"',
         "base_audience_not_checked": '"readiness": "Usable: 2 warnings without a decision"',
         "audience_terms_missing_is_manual_check": '"readiness": "Usable: 2 warnings without a decision"',
-        "selection_locked_bank": '"readiness": "Ready for the next lifecycle stage"',
+        "selection_locked_bank": '"readiness": "Ready"',
         "selection_row_without_priority": "ERROR: slice M-001: priority must be 高 / 中 / 低",
         "typed_prompt_on_wrong_type_row": "q4: prompt_type Competitor does not match row M-001 (Discovery)",
         "typed_mixed_type_topic_fails": "Gate 66: Topics mixing Prompt types (travel: Competitor + Discovery)",
@@ -569,27 +549,24 @@ def run_checks() -> list[dict]:
             "q2: uses currency ['GBP'] outside the market's ['USD']",
         ],
         "review_pending_while_drafting_warns": [
-            "review_status missing on 1 Prompts, counted as 待审核 (q4)",
+            "status missing on 1 Prompts, counted as 待审核 (q4)",
             "attributes carried only by Prompts not yet 已批准, so not counted as covered (2): 账单合并, 预算控制",
-        ],
-        "evidence_single_family_warns": [
-            "evidence spans only 1 source families (答案层)",
         ],
         "unused_audience_inputs_warn": [
             "audience inputs referenced by no Prompt (2): input-5, input-6",
         ],
         "constraint_column_backs_condition": [],
         "selection_topic_priority_mismatch_warns": ["topic travel: priority 中 but its highest row is 高"],
-        "typed_discovery_row_without_prompt_warns": ["高 / 中 Discovery rows with no Prompt (1): M-004"],
+        "typed_discovery_row_without_prompt_warns": ["高 / 中 rows with no Prompt (1): M-004"],
         "selection_malformed_business_goals_warns": ["config.business_goals malformed"],
         "selection_competitor_without_goal_warns": ["Competitor Prompts written without the goal 竞争定位 in business_goals (1): q4",
                                                     "Alternatives Prompts written without the goal 竞争定位 in business_goals (1): q3"],
-        "selection_topic_below_size_floor_warns": ["Topics below the default coverage target (travel: 4 KPI Prompts;"],
+        "selection_topic_below_size_floor_warns": ["Topics below the default coverage target (travel: 4 KPI Prompts)"],
     }
     absent_warnings = {
         "changeability_field_not_read_by_selection": ["differs from the expected tier", "[W55]", "changeability"],
         "selection_without_business_goals_defaults": ["[W49]"],
-        "selection_non_discovery_row_without_priority_passes": ["priority must be", "priority_basis is empty"],
+        "selection_unopened_type_row_without_priority_passes": ["priority must be", "priority_basis is empty"],
         "typed_non_discovery_row_stays_quiet": ["rows with no Prompt"],
         "selection_locked_bank": ["Gate 66", "its rows sit in different Topics"],
         "audience_terms_missing_is_manual_check": ["audience_terms", "[W39]"],

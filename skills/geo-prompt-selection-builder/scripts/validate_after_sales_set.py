@@ -38,13 +38,7 @@ INTENTS = {
 # Information (问题解决, after-sales only, Suda 2026-10-19; client label renamed and scope narrowed on 2026-10-26):
 # a buyer asking how to solve a problem or reach a goal; AI answers with advice, not a candidate
 # list; only own-domain citation is read. Pure knowledge questions are not this type.
-LIFECYCLE_STATES = {
-    "hypothesis",
-    "customer_confirmed",
-    "locked",
-    "formal_baseline",
-    "active",
-}
+# No lifecycle, trial, baseline or lock gates (3.14.1): locking happens in the client Base (check_client_base.py).
 
 
 def fail(message: str, errors: list[str]) -> None:
@@ -240,8 +234,15 @@ def similarity_units(text: str, script: str) -> set[str]:
 
 
 def entity_terms(config: dict) -> list[str]:
-    """Target brand, aliases and every competitor name in competitor_selection."""
-    terms = [config.get("brand_name"), *(config.get("aliases") or []), *(config.get("competitors") or [])]
+    """Target brand, aliases and every competitor name in competitor_selection.
+
+    Aliases come from config.brand_aliases (normalize_case output, 3.14.3), the older config.aliases, or the
+    「品牌别名 n」 entries of config.case_fields.
+    """
+    case_fields = config.get("case_fields") if isinstance(config.get("case_fields"), dict) else {}
+    aliases = [v for k, v in case_fields.items() if str(k).startswith("品牌别名") and str(v).strip() not in ("", "无")]
+    terms = [config.get("brand_name"), *(config.get("brand_aliases") or []), *(config.get("aliases") or []),
+             *aliases, *(config.get("competitors") or [])]
 
     def walk(node: object) -> None:
         if isinstance(node, dict):
@@ -512,10 +513,14 @@ REGISTERED_TYPES = {"Discovery", "Information", "Evaluation", "Competitor", "Alt
 # The mention-rate KPI reads these types (Suda 2026-11-02).
 KPI_INTENTS = {"Discovery"}
 # Sales unit (Suda 2026-11-09): one Discovery Topic is sold as 10 Prompts, each a distinct purchase decision.
-# 3.0.0 dropped the second threshold (8 distinct decision signatures): one number, 10.
-TOPIC_FLOOR, OTHER_TOPIC_FLOOR = 10, 5
-# Sales cap (Suda 2026-11-09): candidates are uncapped; a sold Topic carries at most 10 formal Prompts.
-TOPIC_SALES_CAP = 10
+# 3.0.0 dropped the second threshold (8 distinct decision signatures): one number, 10. Other types have no floor
+# (3.13.0): their counts come from type-branches.md (one per competitor, per product line …), which a floor of 5
+# could never meet.
+TOPIC_FLOOR = 10
+# W47 / gate 47 (3.13.0): per product line × market, under 30 candidates is a coverage review (warning, never pad);
+# over 60 is an error — the cost cap (Suda 2026-11-12): trial runs bill per candidate. Topics are not capped
+# by count; within 60, ten-Prompt Topics fit six.
+CANDIDATE_FLOOR, CANDIDATE_CAP = 30, 60
 PROMPT_FIELDS = ("attribute_ref", "constraint_type")
 # A Prompt states the constraint it tests (attribute_ref); target customer and use scenario are read from its
 # matrix row (config.slices).
@@ -523,7 +528,6 @@ REQUIRED_STAGED_FIELDS = ("attribute_ref",)
 # No-condition Discovery Prompts are not written by default (Suda 2026-10-29): a bare category
 # question is owned by category leaders. Judged from constraint_type.
 LOW_CONDITION_VALUES = {"无限定", "无限定条件", "低条件", "none", "unconstrained", "no_condition"}
-FORMAL_LIFECYCLES = {"locked", "formal_baseline", "active"}
 REVIEW_STATUSES = ("待审核", "已批准", "需修改")
 REVIEW_ALIASES = {
     **{status: status for status in REVIEW_STATUSES},
@@ -531,10 +535,6 @@ REVIEW_ALIASES = {
     "正式": "已批准", "停测": "已批准",
 }
 
-
-def lifecycle_after_review(config: dict) -> bool:
-    """The brand party has reviewed 提示词库 once the scope is confirmed."""
-    return config.get("lifecycle_status") in {"customer_confirmed", *FORMAL_LIFECYCLES}
 
 
 def is_blank(value: object) -> bool:
@@ -584,58 +584,27 @@ def field_contract_checks(
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    formal = config.get("lifecycle_status") in FORMAL_LIFECYCLES
     fields = {id(row): normalize_fields(row) for row in questions}
     for field in REQUIRED_STAGED_FIELDS:
         # attribute_ref may be empty on a category-baseline Prompt; it only has to be stated.
         missing = [r for r in questions if fields[id(r)][field] is None]
-        report_rows(f"missing {field} (required before lock)", missing, len(questions), formal, errors, warnings)
+        report_rows(f"missing {field}", missing, len(questions), False, errors, warnings)
 
     # Bare category questions are written only when the brand party asks for the head term
     # (Suda 2026-10-29; the per-Topic low-condition anchor of 2026-10-22 is retired).
+    # 3.13.0: judged from the contract field — a bare category Prompt leaves attribute_ref empty
+    # and has no constraint keywords (output-contract.md); the old constraint_type marker is still read.
     constraint_of = lambda r: str(fields[id(r)].get("constraint_type") or "").strip().casefold()
     bare = [str(r.get("question_id")) for r in questions
-            if intents.get(id(r)) == "Discovery" and constraint_of(r) in LOW_CONDITION_VALUES]
+            if intents.get(id(r)) == "Discovery"
+            and (constraint_of(r) in LOW_CONDITION_VALUES
+                 or (is_blank(r.get("attribute_ref")) and not r.get("constraints")))]
     if bare:
         warnings.append(
             f"[W54] no-condition Discovery Prompts ({len(bare)}): {', '.join(bare)}; a bare category question is "
-            "written only when the brand party asks for that head term — say so in its reason (selection-rules.md → 5. 两类不写的题)"
+            "written only when the brand party asks for that head term — say so in its reason (selection-rules.md → 5「宽泛品类题」)"
         )
 
-
-def monitored_set(data: dict) -> str:
-    config = data.get("config") or {}
-    topics = [
-        (topic.get("topic_id"), topic.get("topic"))
-        for topic in config.get("topics") or []
-    ]
-    fields = (
-        "question_id",
-        "topic_id",
-        "user_question",
-        "monitoring_prompt",
-        "zh_translation",
-        "region",
-        "prompt_type",
-        "intent_key",
-        "tags",
-        "analysis_type",
-        "formal_visibility_eligible",
-    )
-    questions = []
-    for row in data.get("questions") or []:
-        selected = {field: row.get(field) for field in fields}
-        if isinstance(selected["tags"], list):
-            selected["tags"] = sorted(selected["tags"], key=str)
-        questions.append(selected)
-    return json.dumps(
-        {
-            "topics": sorted(topics, key=lambda topic: (str(topic[0]), str(topic[1]))),
-            "questions": sorted(questions, key=lambda row: str(row["question_id"])),
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-    )
 
 
 # Row tiers: 高 / 中 / 低.
@@ -644,9 +613,29 @@ TOPIC_PRIORITIES = ("高", "中", "低")
 BUSINESS_GOALS = ("发现型可见度", "竞争定位", "品牌呈现", "声誉与信任")
 
 
-# Only 发现型可见度 is open (selection-rules.md → 1), so business_goals is a constant (3.0.0): a bank that leaves it
-# out is read as this default. Reopening other goals makes it required again (type-branches.md「开放时要改的地方」).
+# A bank that leaves business_goals out is read as this default (3.0.0): online runs write only Discovery. Local
+# selection opens the types of the goals the brand party picked (3.10.0; selection-rules.md → 1).
 DEFAULT_BUSINESS_GOALS = {"selected": ["发现型可见度"], "information_named": False}
+# Which goal opens which Prompt type (type-branches.md「对应哪个目标」). Transactional and Support belong to no goal
+# and stay registered-only (3.13.0).
+GOAL_TYPES = {"竞争定位": ("Competitor", "Alternatives"), "声誉与信任": ("Evaluation", "Trust")}
+
+
+def opened_types(config: dict) -> set[str]:
+    """Prompt types written this period: Discovery, plus the types of the goals in config.business_goals."""
+    goals = config.get("business_goals")
+    goals = DEFAULT_BUSINESS_GOALS if goals is None else goals
+    selected = goals.get("selected") if isinstance(goals, dict) else None
+    opened = {"Discovery"}
+    if isinstance(selected, list):
+        for goal in selected:
+            opened.update(GOAL_TYPES.get(str(goal).strip(), ()))
+    if isinstance(goals, dict) and goals.get("information_named") is True:
+        opened.add("Information")
+    return opened
+# 约束条件表 (3.11.0): what the brand has, and where it stands on public hard facts.
+BRAND_STATUS = ("有", "没有", "待确认")
+VS_COMPETITORS = ("明显优势", "明显劣势", "持平", "未知")
 
 
 def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], warnings: list[str]) -> None:
@@ -739,9 +728,8 @@ def legacy_markers(data: dict) -> list[str]:
 class BankValidator:
     """The gates over one bank (output-contract.md → validator 门禁), in report order."""
 
-    def __init__(self, data: dict, previous: dict | None = None) -> None:
+    def __init__(self, data: dict) -> None:
         self.data = data
-        self.previous = previous
         self.config: dict = data.get("config") or {}
         self.topics: list = self.config.get("topics") or []
         self.questions: list[dict] = data.get("questions") or []
@@ -769,7 +757,8 @@ class BankValidator:
         self.check_goals_and_tags()
         self.check_scope()
         self.check_attribute_coverage()
-        self.check_lifecycle()
+        self.check_constraint_table()
+        self.check_inputs()
         return self.finish()
 
     # ---------- bank root and Topics ----------
@@ -814,10 +803,10 @@ class BankValidator:
             by_id[sid] = row
             tier = str(row.get("priority") or "").strip()
             if not tier and not self.row_due(row):
-                pass  # non-Discovery rows are registered without a tier this period (3.0.0)
+                pass  # types whose goal is not selected are registered without a tier
             elif tier not in TIER_INDEX:
-                fail(f"slice {sid}: priority must be 高 / 中 / 低; a situation the brand cannot "
-                     "use or serve is not opened as a row", errors)
+                fail(f"slice {sid}: priority must be 高 / 中 / 低 (Discovery rows and rows of a selected goal's type "
+                     "are tiered); a situation the brand cannot use or serve is not opened as a row", errors)
             elif is_blank(row.get("priority_basis")):
                 fail(f"slice {sid}: priority_basis is empty — a priority with no written basis is not made", errors)
             tid = row.get("topic_id")
@@ -850,13 +839,13 @@ class BankValidator:
                 low_carried.append(f"{qid}({ref})")
             if not is_blank(row.get("topic_id")) and q.get("topic_id") != row.get("topic_id"):
                 fail(f"{qid}: topic_id {q.get('topic_id')!r} differs from its row {ref}'s {row.get('topic_id')!r}", errors)
-        # Gate 48: 高 and 中 Discovery rows with no Prompt are an omission or a deliberate skip that needs a warning
-        # decision; rows of the other types wait for their goals to open.
+        # Gate 48: 高 and 中 rows of an opened type with no Prompt are an omission or a deliberate skip that needs a
+        # warning decision; rows of the other types wait for their goals to open.
         bare = [sid for sid, row in by_id.items()
                 if TIER_INDEX.get(str(row.get("priority") or "").strip()) in (0, 1) and not per_row[sid]
                 and self.row_due(row)]
         if bare:
-            warnings.append(f"[W48] 高 / 中 Discovery rows with no Prompt ({len(bare)}): "
+            warnings.append(f"[W48] 高 / 中 rows with no Prompt ({len(bare)}): "
                             f"{', '.join(bare[:8])}{' …' if len(bare) > 8 else ''}; "
                             "write their Prompts, or record why this row gets none (banks without prompt_type: 方案考虑 rows)")
         if low_carried:
@@ -894,8 +883,8 @@ class BankValidator:
                  "open a row of that type for the same purchase task and move the Prompt there", self.errors)
 
     def row_due(self, row: dict) -> bool:
-        """Rows written this period: Discovery (only 发现型可见度 is open)."""
-        return str(row.get("prompt_type") or "").strip() == "Discovery"
+        """Rows judged and written this period: Discovery, plus the types of the selected goals (3.10.0 / 3.13.0)."""
+        return str(row.get("prompt_type") or "").strip() in opened_types(self.config)
 
     # ---------- Prompts (gates 2, 4, 8; Verification / Accuracy) ----------
 
@@ -937,32 +926,37 @@ class BankValidator:
     def check_retired_types(self, question_id: str, intent: str) -> None:
         if intent == "Verification":
             fail(f"{question_id}: Verification is retired (2026-11-06): a capability question is prompt_type Evaluation; "
-                 "zero-mention diagnosis checks crawlability and cited pages first (geo-monitoring/references/trial-and-lock.md)",
+                 "zero-mention diagnosis checks crawlability and cited pages first (geo-monitoring/references/gap-cause-action-table.md)",
                  self.errors)
         if intent == "Accuracy":
             fail(f"{question_id}: Accuracy probes sit outside the bank (fix acceptance / 品牌呈现); record them in the "
-                 "brand fact-check table (geo-monitoring/references/trial-and-lock.md)", self.errors)
+                 "brand fact-check table", self.errors)
 
     def check_candidate_count(self) -> None:
-        """Gate 47 (Suda 2026-11-02): a candidate bank for one product line in one market holds about 30–60 Prompts.
+        """Gate 47 (Suda 2026-11-02; 3.13.0): per product line × market, 30–60 candidate Prompts.
 
-        Outside that range something upstream is off (constraints too narrow or wide, too few or many rows, splits not
-        by decision). Warning only; never pad to reach 30. Verification Prompts take no slot.
+        Under 30 is a warning: something upstream may be off (rows not opened, constraints too narrow, splits not by
+        decision); never pad to reach 30. Over 60 is an error: the cost cap (Suda 2026-11-12) — cut the weakest-evidence
+        Prompts on 中 rows first. Verification and stopped Prompts take no slot.
         """
-        if self.config.get("lifecycle_status") in FORMAL_LIFECYCLES:
-            return
-        lines: Counter[str] = Counter()
+        cells: Counter[str] = Counter()
         slice_rows = slice_index(self.config)
         for row in self.questions:
             if self.intents.get(id(row)) == "Verification" or str(row.get("status") or "").strip() == "停测":
                 continue
-            line = row.get("product_line") or (slice_rows.get(str(row.get("slice_ref") or "").strip()) or {}).get("product_line")
-            lines[str(line or "").strip() or "—"] += 1
-        off = [f"{line}: {n}" for line, n in sorted(lines.items()) if not 30 <= n <= 60]
-        if off:
-            self.warnings.append(f"[W47] candidate Prompt count outside 30–60 per product line ({'; '.join(off)}); check whether "
-                                 "attributes are too narrow or wide, too few or many rows are open, or splits follow "
-                                 "decision differences — never pad to reach 30")
+            slice_row = slice_rows.get(str(row.get("slice_ref") or "").strip()) or {}
+            line = str(row.get("product_line") or slice_row.get("product_line") or "").strip() or "—"
+            market = str(row.get("region") or slice_row.get("market") or "").strip() or "—"
+            cells[f"{line} × {market}"] += 1
+        over = [f"{cell}: {n}" for cell, n in sorted(cells.items()) if n > CANDIDATE_CAP]
+        if over:
+            fail(f"more than {CANDIDATE_CAP} candidate Prompts per product line × market ({'; '.join(over)}); the cap "
+                 "controls cost — cut the weakest-evidence Prompts on 中 rows first (selection-rules.md → 7)", self.errors)
+        short = [f"{cell}: {n}" for cell, n in sorted(cells.items()) if n < CANDIDATE_FLOOR]
+        if short:
+            self.warnings.append(f"[W47] fewer than {CANDIDATE_FLOOR} candidate Prompts per product line × market "
+                                 f"({'; '.join(short)}); check whether rows were left unopened, constraints are too "
+                                 "narrow, or splits follow decision differences — never pad to reach 30")
 
     def check_fields(self) -> None:
         field_contract_checks(self.config, self.questions, self.intents, self.errors, self.warnings)
@@ -1002,9 +996,6 @@ class BankValidator:
                    and str(q.get("status") or "").strip() != "停测"]
             if kpi and len(kpi) < TOPIC_FLOOR:
                 floor.append(f"{tid}: {len(kpi)} KPI Prompts")
-            active = [q for q in items if str(q.get("status") or "").strip() != "停测"]
-            if not kpi and active and len(active) < OTHER_TOPIC_FLOOR:
-                floor.append(f"{tid}: {len(active)} non-Discovery Prompts")
         if floor:
             self.warnings.append(f"[W59] Topics below the default coverage target ({'; '.join(floor)}); "
                                  "in order: (1) add missed buyer constraints, scenes, audiences or limits; (2) build compound "
@@ -1024,7 +1015,8 @@ class BankValidator:
         for t in topics:
             tid, level = t.get("topic_id"), str(t.get("priority") or "").strip()
             if not level:
-                continue  # banks written before topic priority came back (2026-11-01)
+                fail(f"topic {tid}: priority is empty — take the highest 业务优先级 among its rows (gate 43)", self.errors)
+                continue
             if level not in TOPIC_PRIORITIES:
                 fail(f"topic {tid}: priority must be one of {'/'.join(TOPIC_PRIORITIES)}", self.errors)
             elif is_blank(t.get("priority_basis")):
@@ -1050,6 +1042,82 @@ class BankValidator:
                                  f"({listed}{' …' if len(unregistered) > 6 else ''}); export leaves them out")
 
     # ---------- conditions and audiences (gate 38; W36, W37, W39) ----------
+
+    # ---------- 约束条件表: brand status and position vs competitors (gates 67, 68; W67) ----------
+
+    def check_constraint_table(self) -> None:
+        """config.attribute_plan doubles as the client 约束条件 table (3.11.0; 3.11.2; 3.13.0).
+
+        brand_status 有 / 没有 / 待确认 is required on every entry (a dimension every candidate has is 有; how good
+        goes to vs_competitors), each with brand_status_basis (the evidence, or where we looked);
+        vs_competitors 明显优势 / 明显劣势 / 持平 / 未知, judged only on public hard facts. An entry may carry
+        product_line when the brand has the condition on some lines only; it then applies to that line's Prompts.
+        A bank whose rows or Prompts name constraints must have the table (3.13.0: an empty table no longer skips
+        gates 67 / 68). A Prompt must not carry a condition the brand does not have or that is still 待确认 (gate 68:
+        its attribute_ref, and constraint keywords that equal an option name); a clear advantage nobody measures is
+        a warning unless no_carrier_reason says why (W67).
+        """
+        plan = attribute_plan(self.config)
+        rows = slice_index(self.config)
+        named = [sid for sid, row in rows.items() if row.get("attributes")]
+        refs = [str(q.get("question_id")) for q in self.questions if not is_blank(q.get("attribute_ref"))]
+        if not plan:
+            if named or refs:
+                fail(f"config.attribute_plan (the 约束条件 table) is missing while matrix rows ({len(named)}) or "
+                     f"Prompts ({len(refs)}) name constraints; write one entry per constraint with brand_status and "
+                     "brand_status_basis (selection-rules.md → 3)", self.errors)
+            return
+        lacking: dict[str, list[tuple[str, str]]] = {}
+        ahead: list[str] = []
+        for entry in plan:
+            name = str(entry.get("attribute") or "").strip()
+            status = str(entry.get("brand_status") or "").strip()
+            vs = str(entry.get("vs_competitors") or "").strip()
+            line = str(entry.get("product_line") or "").strip()
+            if not name:
+                fail("config.attribute_plan: every entry needs attribute (the 约束条件 option name)", self.errors)
+                continue
+            if status not in BRAND_STATUS:
+                fail(f"约束条件 {name}: brand_status {status!r} must be one of {' / '.join(BRAND_STATUS)}", self.errors)
+            elif is_blank(entry.get("brand_status_basis")):
+                fail(f"约束条件 {name}: brand_status {status} needs brand_status_basis (the evidence, or where we "
+                     "looked and found nothing)", self.errors)
+            if vs and vs not in VS_COMPETITORS:
+                fail(f"约束条件 {name}: vs_competitors {vs!r} is not one of {' / '.join(VS_COMPETITORS)}", self.errors)
+            if vs in ("明显优势", "明显劣势", "持平") and is_blank(entry.get("vs_competitors_basis")):
+                fail(f"约束条件 {name}: vs_competitors {vs} needs vs_competitors_basis (the public figures and which "
+                     "competitors)", self.errors)
+            if status in ("没有", "待确认"):
+                lacking.setdefault(name, []).append((line, status))
+            if vs == "明显优势" and is_blank(entry.get("no_carrier_reason")):
+                ahead.append(name)
+        names = {str(entry.get("attribute") or "").strip() for entry in plan} - {""}
+        unknown = [f"{q.get('question_id')}（{q.get('attribute_ref')}）" for q in self.questions
+                   if not is_blank(q.get("attribute_ref")) and str(q.get("attribute_ref")).strip() not in names]
+        if unknown:
+            fail(f"Prompts whose attribute_ref is not in config.attribute_plan ({len(unknown)}): "
+                 f"{', '.join(unknown[:8])}{' …' if len(unknown) > 8 else ''}", self.errors)
+        carried: dict[str, set[str]] = {}
+        bad: list[str] = []
+        for q in self.questions:
+            q_id = str(q.get("question_id") or "").strip()
+            if not q_id:
+                continue
+            q_names = {str(c).strip() for c in (q.get("constraints") or [])} | {str(q.get("attribute_ref") or "").strip()}
+            carried[q_id] = q_names
+            q_line = str(q.get("product_line")
+                         or (rows.get(str(q.get("slice_ref") or "").strip()) or {}).get("product_line") or "").strip()
+            hits = [f"{n}:{status}" for n in sorted(q_names & lacking.keys())
+                    for line, status in lacking[n] if not line or line == q_line]
+            if hits:
+                bad.append(f"{q_id}（{'、'.join(hits)}）")
+        if bad:
+            fail(f"Prompts carry a condition the brand does not have or has not confirmed (brand_status 没有 / 待确认): "
+                 f"{', '.join(bad[:8])}{' …' if len(bad) > 8 else ''}; drop the condition or the Prompt", self.errors)
+        idle = [name for name in ahead if not any(name in names for names in carried.values())]
+        if idle:
+            self.warnings.append(f"[W67] clear advantages no Prompt measures ({len(idle)}): {', '.join(idle)}; write a "
+                                 "Prompt on it or say why in no_carrier_reason")
 
     def check_scope(self) -> None:
         scope_checks(self.config, self.questions, self.errors, self.warnings, self.intents)
@@ -1080,7 +1148,7 @@ class BankValidator:
                 if status == "已批准":
                     self.approved_rows.append(row)
             if unstated:
-                self.warnings.append(f"[W56] review_status missing on {len(unstated)} Prompts, counted as 待审核 "
+                self.warnings.append(f"[W56] status missing on {len(unstated)} Prompts, counted as 待审核 "
                                      f"({', '.join(unstated[:6])}{' …' if len(unstated) > 6 else ''})")
 
         def carried_by(rows: list[dict]) -> set[str]:
@@ -1104,20 +1172,12 @@ class BankValidator:
         if pending:
             message = ("attributes carried only by Prompts not yet 已批准, so not counted as covered "
                        f"({len(pending)}): " + ", ".join(sorted(pending)))
-            if lifecycle_after_review(self.config):
-                errors.append(message)
-            else:
-                self.warnings.append(f"[W57] {message}")
+            self.warnings.append(f"[W57] {message}")
 
-    # ---------- lifecycle, trial, baseline, version (gates 14, 26; W34, W35) ----------
+    # ---------- unused buyer inputs (W35) ----------
 
-    def check_lifecycle(self) -> None:
-        config, questions, errors = self.config, self.questions, self.errors
-        lifecycle = config.get("lifecycle_status")
-        if lifecycle is not None and lifecycle not in LIFECYCLE_STATES:
-            fail(f"config.lifecycle_status must be one of {sorted(LIFECYCLE_STATES)}", errors)
-        self.check_evidence_diversity()
-
+    def check_inputs(self) -> None:
+        config, questions = self.config, self.questions
         # Unused buyer-language inputs (warning only). When the bank carries the
         # collected 需求信号 index, every input should either back a Prompt or have
         # been consciously set aside; silently unused inputs are the cheapest
@@ -1139,153 +1199,6 @@ class BankValidator:
                     + ", ".join(unused[:8]) + (" …" if len(unused) > 8 else "")
                     + "; cite each in an attribute's evidence or a Prompt, or record why it was set aside"
                 )
-
-        self.check_formal_cap()
-
-        evidence_status = config.get("evidence_status")
-        # Only a hypothesis-grade set (no buyer signal at all) cannot lock (Suda 2026-11-10): public buyer signals
-        # (after_sales_signal) plus the brand party's confirmation are enough; missing first-party data only caps
-        # the readiness verdict at Usable.
-        if evidence_status == "hypothesis" and lifecycle in FORMAL_LIFECYCLES:
-            fail("hypothesis evidence cannot be marked formal-ready", errors)
-
-        confirmation = config.get("customer_confirmation") or {}
-        if lifecycle in {"customer_confirmed", *FORMAL_LIFECYCLES}:
-            if confirmation.get("status") not in {"confirmed", "locked"}:
-                fail("customer confirmation is required before formal-ready lifecycle states", errors)
-            if confirmation.get("scope_status") != "confirmed":
-                fail("customer_confirmation.scope_status must be confirmed before trial", errors)
-        if lifecycle in FORMAL_LIFECYCLES:
-            if confirmation.get("prompt_set_status") != "confirmed":
-                fail("customer_confirmation.prompt_set_status must be confirmed after trial", errors)
-
-        prompt_version = config.get("prompt_version")
-        if lifecycle in FORMAL_LIFECYCLES and not str(prompt_version or "").strip():
-            fail("prompt_version is required before formal baseline", errors)
-
-        trial = config.get("trial") or {}
-        if trial or lifecycle in FORMAL_LIFECYCLES:
-            # trial = 候选题质量试跑：每题在每个监测平台各 3 次（异常补到 5 次封顶）。
-            planned = trial.get("planned_runs")
-            if isinstance(planned, bool) or planned != 3:
-                fail("trial.planned_runs must be 3 (quality trial on each monitored platform)", errors)
-        if trial.get("status") in {"running", "passed"} and confirmation.get("scope_status") != "confirmed":
-            fail("customer_confirmation.scope_status must be confirmed before trial", errors)
-        if lifecycle in FORMAL_LIFECYCLES:
-            valid = trial.get("valid_runs")
-            ceiling = trial.get("planned_runs") if isinstance(trial.get("planned_runs"), int) else 5
-            if trial.get("status") != "passed" or not isinstance(valid, int) or not 3 <= valid <= ceiling:
-                fail("locked set requires 3 to 5 valid trial runs (planned 3; failures are not zeros)", errors)
-            if not trial.get("evidence_refs"):
-                fail("locked set requires trial.evidence_refs", errors)
-
-        baseline = config.get("baseline") or {}
-        formal_collection = baseline.get("status") in {"formal", "active"}
-        if formal_collection and lifecycle not in {"locked", "formal_baseline", "active"}:
-            fail("formal baseline metadata requires a locked or formal lifecycle", errors)
-        if formal_collection and evidence_status == "hypothesis":
-            fail("formal baseline metadata requires confirmed evidence", errors)
-        if formal_collection and (confirmation.get("status") not in {"confirmed", "locked"}):
-            fail("formal baseline metadata requires customer confirmation", errors)
-        if formal_collection and not str(prompt_version or "").strip():
-            fail("formal baseline metadata requires prompt_version", errors)
-        if lifecycle == "formal_baseline" and baseline.get("status") not in {"formal", "active"}:
-            fail("formal_baseline lifecycle requires baseline.status formal or active", errors)
-        if baseline or lifecycle == "formal_baseline":
-            # 正式基线：每个 query × 平台 × 国家 × 语言跑 7 次（Suda 2026-11-06）。是否跨天由项目约定，写在 collection_config。
-            # 当天早些时候写的 30 次照认（某车载品牌、Bbrand 选词题库），锁版前改成 7。
-            runs = baseline.get("planned_runs")
-            if isinstance(runs, bool) or runs not in {7, 30}:
-                fail("baseline.planned_runs must be 7 (per query x platform x country x language; 30 written before "
-                     "2026-11-06 still accepted)", errors)
-        if formal_collection:
-            if not str(baseline.get("conditions_key") or "").strip():
-                fail("formal baseline requires conditions_key", errors)
-            if baseline.get("valid_samples_only") is not True:
-                fail("formal baseline must compare valid samples only", errors)
-            if baseline.get("failures_as_zero") is True:
-                fail("collection failures must not be counted as zero", errors)
-            if not prompt_version or baseline.get("prompt_version") != prompt_version:
-                fail("baseline.prompt_version must match config.prompt_version", errors)
-
-        collection = config.get("collection_config") or {}
-        if baseline.get("status") in {"formal", "active"}:
-            for field in ("market", "language"):
-                if not str(collection.get(field) or "").strip():
-                    fail(f"formal baseline requires collection_config.{field}", errors)
-            if not collection.get("platforms"):
-                fail("formal baseline requires collection_config.platforms", errors)
-            for row in questions:
-                if row.get("region") != collection.get("market"):
-                    fail(
-                        f"{row.get('question_id')}: region does not match collection_config.market",
-                        errors,
-                    )
-
-        if self.previous is not None:
-            previous = self.previous
-            previous_collection = (previous.get("config") or {}).get("collection_config") or {}
-            if any(
-                collection.get(field) and previous_collection.get(field)
-                and collection[field] != previous_collection[field]
-                for field in ("market", "language")
-            ):
-                fail("previous bank must use the same market and language", errors)
-            if monitored_set(self.data) != monitored_set(previous):
-                old_version = (previous.get("config") or {}).get("prompt_version")
-                if not prompt_version or old_version == prompt_version:
-                    fail("prompt_version must change when the monitored set changes", errors)
-
-    def check_evidence_diversity(self) -> None:
-        """W34 (warning only, from customer_confirmed on): a formal set whose evidence all comes from one source family
-        usually means the signal pass skipped sources, not that buyers only speak there."""
-        if not lifecycle_after_review(self.config):
-            return
-        refs = [str(ref).strip() for row in self.approved_rows
-                for ref in (row.get("evidence_refs") or []) if str(ref).strip()]
-        if refs:
-            families = Counter(evidence_source_family(ref) for ref in refs)
-            unclassified = families.pop("未分类", 0)
-            if unclassified <= len(refs) / 2 and len(families) < 3:
-                found = "、".join(sorted(families)) or "none recognised"
-                self.warnings.append(
-                    f"[W34] evidence spans only {len(families)} source families ({found}); "
-                    "the signal pass covers search data, sales records, reviews and "
-                    "community — check whether the missing families were collected"
-                )
-
-    def check_formal_cap(self) -> None:
-        """Gate 14 (交付范围): a locked set holds at most 60 Prompts per product line × country × language (Suda
-        2026-11-05); one bank is one country × one language, so it counts per product line. Sales cap one Topic at 10
-        formal Prompts (Suda 2026-11-09), so a line holds at most 10 × the Topics carrying formal Prompts — mixed
-        selection may put more than 10 in one Topic. No cap while the set is still a candidate set."""
-        if self.config.get("lifecycle_status") not in FORMAL_LIFECYCLES:
-            return
-        formal_slices = slice_index(self.config)
-        per_line: Counter[str] = Counter()
-        line_topics: dict[str, set] = {}
-        for row in self.questions:
-            if self.intents.get(id(row)) == "Verification" or str(row.get("status") or "").strip() == "停测":
-                continue
-            line = row.get("product_line") or (formal_slices.get(str(row.get("slice_ref") or "").strip()) or {}).get("product_line")
-            key = str(line or "").strip() or "—"
-            per_line[key] += 1
-            line_topics.setdefault(key, set()).add(str(row.get("topic_id") or ""))
-        over_unit = {line: f"{n} Prompts / {len(line_topics[line])} Topics" for line, n in sorted(per_line.items())
-                     if n > TOPIC_SALES_CAP * len(line_topics[line])}
-        if over_unit:
-            fail(
-                f"formal set is sold as at most {TOPIC_SALES_CAP} Prompts per Topic, so a product line holds at most "
-                f"{TOPIC_SALES_CAP} × its Topics; move the rest out of the deliverable set: {over_unit}",
-                self.errors,
-            )
-        over = {line: n for line, n in sorted(per_line.items()) if n > 60}
-        if over:
-            fail(
-                "formal set allows at most 60 Prompts per product line × country × language; "
-                f"move the rest out of the deliverable set: {over}",
-                self.errors,
-            )
 
     # ---------- readiness ----------
 
@@ -1323,8 +1236,8 @@ class BankValidator:
 
         handled = [w for w in warnings if is_handled(w)]
         open_warnings = [w for w in warnings if w not in handled]
-        # Only public data, or a hypothesis-grade set, caps the verdict at Usable whatever the warnings.
-        capped = config.get("first_party_data") is False or config.get("evidence_status") == "hypothesis"
+        # Only public data (first_party_data not true), or a hypothesis-grade set, caps the verdict at Usable.
+        capped = config.get("first_party_data") is not True or config.get("evidence_status") == "hypothesis"
         plural = lambda n, word: f"{n} {word}{'s' if n != 1 else ''}"
         if errors:
             readiness = f"Not ready: {plural(len(errors), 'error')} to fix"
@@ -1333,7 +1246,7 @@ class BankValidator:
         elif capped:
             readiness = "Usable: public data only or hypothesis-grade evidence — list what the brand party still has to supply"
         else:
-            readiness = "Ready for the next lifecycle stage"
+            readiness = "Ready"
 
         for warning in warnings:
             print(f"WARNING{' (handled)' if warning in handled else ''}: {warning}")
@@ -1362,25 +1275,23 @@ class BankValidator:
         return 0
 
 
-def load_args(argv: list[str] | None, description: str | None) -> tuple[Path, dict, dict | None]:
+def load_args(argv: list[str] | None, description: str | None) -> tuple[Path, dict]:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("bank", type=Path)
-    parser.add_argument("--previous", type=Path, help="Previous monitoring set for version checks")
     args = parser.parse_args(argv)
     data = json.loads(args.bank.read_text(encoding="utf-8"))
-    previous = json.loads(args.previous.read_text(encoding="utf-8")) if args.previous else None
-    return args.bank, data, previous
+    return args.bank, data
 
 
 def main(argv: list[str] | None = None) -> int:
-    bank, data, previous = load_args(argv, __doc__)
+    bank, data = load_args(argv, __doc__)
     markers = legacy_markers(data)
     if markers:
         print(f"ERROR: unsupported old structure in {bank.name}: {'; '.join(markers)}. Old banks are not migrated "
               "and not validated; a bank written now follows references/output-contract.md")
         print("READINESS: Not ready: unsupported old structure")
         return 2
-    return BankValidator(data, previous).run()
+    return BankValidator(data).run()
 
 
 if __name__ == "__main__":

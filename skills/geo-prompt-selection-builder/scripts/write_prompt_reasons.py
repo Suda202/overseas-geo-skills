@@ -2,7 +2,8 @@
 """写出提示词库的「出题原因」和「提示词优先级」（对客确认 Base，任意客户通用）。
 
 规则见 references/selection-rules.md → 7「品牌明显劣势」「出题原因」和 client-facing-base.md → *提示词库*。
-提示词优先级不判，算出来：等于所属切片（矩阵行）的「业务优先级」；题库里这道题记了 `brand_weakness` 的降一档，
+提示词优先级不判，算出来：等于所属切片（矩阵行）的「业务优先级」；题上记了 `brand_weakness`、或挂的约束条件在
+约束条件表里「相对竞品」为明显劣势的降一档，
 低档不再降，验证题不降。出题原因一两句：有降档、假设的写在开头，再写哪类买家在什么处境下问什么、看 AI 什么，
 最后接题上的 `reason_note`。证据看「证据」列，行的依据看提示词矩阵，这里不重复。
 
@@ -122,11 +123,37 @@ def old_structure(pool, matrix) -> list[str]:
 
 
 def load_banks(paths):
-    """题库里每道题的 brand_weakness、reason_note，按题号。"""
+    """题库里每道题的降档理由、待核实条件、reason_note，按题号。
+
+    降档理由：题上手写的 `brand_weakness` 优先；没写时从约束条件表（`config.attribute_plan`）推：题的主约束
+    （`attribute_ref`）和条件关键词里有「相对竞品」为明显劣势的，用那条的依据（3.11.0；3.13.0 起也看主约束——
+    条件关键词是买家说法，很少和选项同名）。表里带 `product_line` 的条目只管那条产品线的题。
+    """
     notes = {}
     for p in paths:
-        for q in json.loads(Path(p).read_text(encoding="utf-8")).get("questions", []):
-            notes[q["question_id"]] = {"weakness": (q.get("brand_weakness") or "").strip().rstrip("。"),
+        data = json.loads(Path(p).read_text(encoding="utf-8"))
+        config = data.get("config") or {}
+        entries = [e for e in config.get("attribute_plan") or [] if isinstance(e, dict)]
+        row_line = {str(r.get("slice_id") or "").strip(): str(r.get("product_line") or "").strip()
+                    for r in config.get("slices") or [] if isinstance(r, dict)}
+
+        def entry_for(name: str, line: str) -> dict:
+            same = [e for e in entries if str(e.get("attribute") or "").strip() == name]
+            scoped = [e for e in same if str(e.get("product_line") or "").strip() == line]
+            general = [e for e in same if not str(e.get("product_line") or "").strip()]
+            return (scoped or general or [{}])[0]
+
+        for q in data.get("questions", []):
+            line = str(q.get("product_line") or row_line.get(str(q.get("slice_ref") or "").strip(), "")).strip()
+            conds = list(dict.fromkeys(c for c in [str(q.get("attribute_ref") or "").strip(),
+                                                   *(str(c).strip() for c in q.get("constraints") or [])] if c))
+            weak = (q.get("brand_weakness") or "").strip().rstrip("。")
+            if not weak:
+                behind = [(c, entry_for(c, line)) for c in conds]
+                behind = [(c, e) for c, e in behind if e.get("vs_competitors") == "明显劣势"]
+                weak = "；".join(f"品牌在「{c}」上不如竞品：{str(e.get('vs_competitors_basis') or '').strip().rstrip('。')}"
+                                for c, e in behind)
+            notes[q["question_id"]] = {"weakness": weak,
                                        "note": (q.get("reason_note") or "").strip().rstrip("。")}
     return notes
 
@@ -196,7 +223,7 @@ def main():
     src.add_argument("--base", help="对客确认 Base 的 token")
     src.add_argument("--from-dump", help="离线目录，含 提示词矩阵/提示词库 .ndjson；只能预览")
     ap.add_argument("--bank", action="append", default=[], required=True,
-                    help="题库 JSON（读 brand_weakness、reason_note）；多市场每份各给一次")
+                    help="题库 JSON（读 brand_weakness、reason_note 和约束条件表 attribute_plan）；多市场每份各给一次")
     ap.add_argument("--brand", required=True, help="题面里称呼的品牌或产品名，如 Nina")
     ap.add_argument("--alias", action="append", default=[], help="点名题里可能出现的其他名字（公司名等），可重复")
     ap.add_argument("--noun", default="产品", help="品类名词，写进句子：买家找「工具」时…")

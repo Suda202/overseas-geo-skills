@@ -1,3 +1,119 @@
+## 3.14.3（2026-11-12）第二轮审核 R1–R20：试跑后回写归选词；语言不设白名单；门禁 12 认品牌别名
+
+触发依据：Suda 2026-11-12 第二轮审核回复：「R1 线下 agent 对话的时候支持开就行了，线上目前默认是不开的」「线上录入什么语言就以线上选择什么语言为准，我们不用管」「对客表不加本期目标」「R4 归选词做『试跑后回写』一步」「其他的按照你的修」。清单在 `docs/exec-plans/active/selection-skill-audit-20261112-progress.md`「第二轮审核」。
+
+- **R1 目标开放**：selection-rules.md 第 1 步写明本地对话里定了开哪些目标就写进 `config.business_goals`，不需要品牌方在资料或对客表里填；线上不开。对客表不加「本期目标」行。
+- **R19 语言**：`normalize_case.py` 去掉语言白名单，表单选什么语言就用什么，题面语种由门禁 32 查；删掉只当白名单用的 `references/locale-templates.json`（快照在 `.snapshots/audit-R2-20261112-175100/`）。e2e_input_contract 改为「法语、日语照收」，42/42。
+- **R4 试跑后回写**：selection-rules.md 第 8 步新增「试跑后回写」：改或删问法有问题的题、竞品不足 3 个时补到 3 个（上限 5）、商品卡「试跑后定」按 5% 定开关、按答案复核主题、补约束条件和品牌事实核查。第 1 步竞品和商品卡、SKILL.md、client-facing-base.md 指过去；baseline-report.md 写明报告模板固定 3 个竞品位、题库最多 5 个。
+- **R2 门禁 12**：`entity_terms` 读 `config.brand_aliases`（normalize_case 的输出）、旧键 `aliases` 和 `case_fields` 里的「品牌别名 n」；output-contract.md 加 `brand_aliases` 字段，online-runner.md 要求照抄。
+- **R3 需求信号键**：output-contract.md、online-runner.md 的 `buyer_quotes` 加 `来源类型`、`出处`，和 runner 的 TASK、登记检查一致。
+- **R5 就绪结论**：`first_party_data` 不是 true（含没写）就封顶 Usable；结论文字只写「Ready」，去掉「lifecycle stage」。
+- **R6 主题优先级**：主题缺 `priority` 由跳过改为报错（门禁 43）；测试夹具补主题优先级。
+- **R7–R13 说法对齐**：demand-side-signals.md 的相对竞品判法和 Usable 出处；shared/prompt-generation-principles.md 的低档、题量、选词顺序整段（去掉锁版、停测、版本说法）；SKILL.md 第 1、5 步不再写「目前只做发现」；第 7 步拆题与第 6 步拆主题的分工（个别品牌进出名单不拆题，候选类别或竞争格局整体变了是拆主题的事）；canonical-intent-mapping.md 的验证（本地选了声誉与信任才出）、准确性（不出题）、上传值出处；问题解决题面不写品牌；「只开一行」的判定键加约束条件，和 `check_client_base.py` 一致。
+- **R14–R18、R20 残留与断链**：总纲第 5 条和阶段表删掉选正式题、正式基线、持续监测三行，试跑行改为试跑后回写；去掉「混合选择」一词；题 `status` 不再列「停测」；check_client_base.py 注释、review-rubric.md 两处链接、W54 提示、input-contract.md 的 `brand_object_type` 改正；`diff_base_against_spec.py` 默认主键加约束条件表、删三张退役表；runner PLAN 找 App ID 不再用 `site:`；切片标签计数排除不上传的问题解决、验证、交易、售后；online-runner.md 写明补题在审核之前、审核删题后不再补。
+- `check_skill_terms.py` 加这一轮的退役说法；旧的「selection-rules 第 8、9 步」扫描改为只扫第 9 步（第 8 步现在含试跑后回写）。
+- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_input_contract 42/42、e2e_precollect 33/33、语种与行业档案 e2e 通过；shared test_prompt_gates 2 passed。
+- 飞书《生词规则》同步（Suda「同步飞书」，rev 860 → 870）：新增 9.6「试跑后回写」；流程总览第 10 行、第 3 节分工说明指向 9.6；竞品补足指向 9.6；7.1 只开一行加约束条件；7.2 目标在对话里定；7.4 拆题与拆主题分工；9.1 问题解决不写品牌；9.5 校验清单补主题优先级没写、品牌别名。语言一节原本就写「国家和语种都不限」，没动。改前快照 `30-选Topic与生词/.snapshots/rules-full-20261112-181131.json`；改后回读只多了 1 个二级标题、5 条列表项、1 段，加粗成对。
+
+## 3.14.2（2026-11-12）geo-monitoring 精简成只管采集；选词里指向它的锁版说法同步
+
+触发依据：Suda 2026-11-12「爬虫就看爬虫的活，不用搞那么多限制和规则」「每主题 10 道上限不需要放到爬虫 skill」「按清单删」。
+
+- geo-monitoring 2.0.0：SKILL.md 只留跑几次（试跑每题每平台 3 次、正式基线每格 7 次、日常发现题每天 1 次、其他类型每月 1 次）、工具（采集、完整性、两个试跑读数脚本、基线报告）和交给内容团队；删掉 `references/trial-and-lock.md`（试跑判题表、信源与动作假设、商品卡开关、零提及诊断、准确性题、选正式题与锁版、停测与复查）以及 SKILL.md 里的版本规则、2–4 周复查、季节性、对照组、调研预跑、问题解决默认不出。快照在 `geo-monitoring/.snapshots/*20261112-170447*`。
+- 链接和说法同步：选词 SKILL.md、selection-rules.md、online-runner.md、client-facing-base.md、output-contract.md 不再说「挑正式题、锁版、停测归 geo-monitoring」，改为试跑和采集归监测、品牌方在对客确认表上挑正式题；type-branches.md 品牌呈现只留品牌事实核查记录；准确性题不再出。工业类商品卡「试跑后定」的 5% 判法搬进 selection-rules.md 第 1 步（`config.shopping_cards` 是选词写的字段，售前报告读它）。gap-cause-action-table.md、shared 两份文档、validator 报错文字、两个监测脚本说明、render_report.py 注释里的 trial-and-lock 链接改掉。`check_skill_terms.py` 把 trial-and-lock 列为退役说法。
+- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_input_contract 41/41、e2e_precollect 33/33、语种与行业档案 e2e 通过；监测三个脚本 `--help` 正常。
+- 飞书《生词规则》（Suda「删飞书 10–12 节」）：一次删掉第 10–12 节（试跑与回写、选正式题与锁版、正式基线与之后，3 个一级标题、10 个二级标题、3 张表），其余内容逐字未变；流程总览第 10–12 行、导读、第 3 节分工说明、9.1 和目标表里指向这几节和准确性题的说法改掉（8 处）。改前快照 `30-选Topic与生词/.snapshots/rules-full-20261112-171229.xml`，rev 843 → 852。随后（Suda「重排并删这段」）章节号 13–15 重排为 10–12，导读改为「第 1、3、12 节」；第 11 节「题库维护」删掉停测、另立题集版本、复核节奏三条（与 geo-monitoring 2.0.0 删掉的规则对应），rev 860。
+
+## 3.14.1（2026-11-12）删掉锁版检查脚本；没人读的题库字段拿掉
+
+触发依据：Suda 2026-11-12「geo-monitoring 为啥要管锁版门禁啊，就是默认跑 3 次或者 7 次而已」「ok」「没人读的字段就拿掉」「文字规则其实不用留吧」。核对过：项目里 19 份带生命周期字段的题库全部停在 hypothesis / planned，从没走到锁版；锁版在对客表上把状态改成「正式」，正式题 60 道额度 `check_client_base.py` 已在表上查。
+
+- 删掉 3.14.0 新建的 `geo-monitoring/scripts/check_locked_set.py`、`scripts/test_check_locked_set.py`、`evals/verify_lock_gates.py`（快照在 `geo-monitoring/.snapshots/`），trial-and-lock.md「锁版前跑门禁」改为锁版后用 `check_client_base.py` 查额度；monitoring 1.9.1。没有新加「每主题 10 道」的检查。
+- 题库字段只留有脚本读的：删 `lifecycle_status`、`customer_confirmation`、`trial`、`baseline`、`prompt_version`、`purchase_selection`、`assessment_scope`（config）和 `intent_key`、`market_decision`（题），写了也不读；output-contract.md 根结构改写 `collection_config`（语种门禁读）和 `retired`（基线报告读），删「试跑与基线元数据」一节。W33、W57 去掉锁版后报错的说法；validator 报错文字去掉「required before lock」。selection-rules.md 多市场、client-facing-base.md 编号规则、online-runner.md 固定值、shared/prompt-generation-principles.md 同步。
+- 回归：check_skill_terms 无命中，test_validate 56 passed，verify_workflow 62/62，e2e_repair_loop 11/11，e2e_review_loop 14/14。
+
+## 3.14.0（2026-11-12）锁版门禁搬到 geo-monitoring；审核 C 组；飞书《生词规则》同步
+
+触发依据：Suda 2026-11-12「选词 skill 不应该写锁版之类的规则，这个 skill 只负责生词」「同步飞书」「其他的继续做」。审核时还发现 geo-monitoring 的文档从没提过跑锁版门禁，这些门禁只在选词 validator 里，监测侧实际用不到。
+
+- **锁版门禁搬走**：新建 `geo-monitoring/scripts/check_locked_set.py`，继承选词 validator 的全部生词门禁，再查生命周期和两次确认、试跑 3 次与证据、正式基线元数据、正式题额度（门禁 14：每条产品线 × 国家 × 语言 60 道、10 × 主题数）、W34、`--previous` 改版检查；W33 锁版后、W57 客户确认后由告警升为报错。选词 validator 删掉这些代码和 `--previous`，W33、W57 在选词阶段只告警，W47 不再按锁版跳过。监测 trial-and-lock.md「选正式题与锁版」写明锁版前跑它，SKILL.md 工具节登记，monitoring 版本 1.9.0。
+- **测试跟着搬**：verify_workflow 的 20 个锁版用例搬到 `geo-monitoring/evals/verify_lock_gates.py`（另加假设证据不能锁版、锁版后缺主约束、60/61 道额度 4 例，24/24）；`test_validate_after_sales_set.py` 的 7 个锁版测试搬到 `geo-monitoring/scripts/test_check_locked_set.py`（加「锁版后不查候选题范围」，8 passed）。搬前用两套检查器跑全部 81 例对照，监测检查器 81/81，确认行为没变。选词 verify_workflow 62/62、test_validate 56 passed。
+- **C 组**：W54 改按合同字段判（`attribute_ref` 留空且没有条件关键词；旧的 `constraint_type` 标记照读），原来只读合同外字段、按文档写的题库永远不触发；W56 告警文字不再用已拒收的旧字段名 `review_status`；门禁 42（硬条件人工核实）没有实现，移到人工检查；output-contract.md 补上题号重复、切片编号、`slice_ref` 不存在等没写进文档的报错，写明门禁 12 的候选式问法只在英文市场查、门禁 38 只查对比题、旧字段 `intent` 在没写 `prompt_type` 时才拒收；online-runner.md 改正 `schema_version` 不是 validator 要求的；`check_client_base.py` 注释改正。
+- **飞书《生词规则》**（rev 821 起增量改 22 处）：3.13.0 的题量、约束条件表、业务优先级、7.2「哪些行出题」、需求信号登记、校验清单同步；顺带修了文档里早于 3.13 的旧口径：主题优先级取组内最高（原写多数行）、同档按点名条目序号排（原写先排发现类、再按搜索量）、提示词库有提示词优先级列、售后重聚不按主题个数差、问题解决看引用不看提及率。改前快照 `30-选Topic与生词/.snapshots/rules-full-20261112-162042.xml`；改后回读块数、表数、行数、加粗配对与改前一致。
+- `check_skill_terms.py` 加「validator --previous / 锁版门禁在本 validator」退役说法。
+
+## 3.13.0（2026-11-12）审核 A 组：规则冲突修复；题量 30–60 定死在一处，超 60 报错；线上不到 30 补一轮
+
+触发依据：Suda 2026-11-12 全面审核选词 skill（清单 `docs/exec-plans/active/selection-skill-audit-20261112-progress.md` A 组 14 条），「先修 A 组冲突」；同日口径：主题数量不限、单产品线 × 单市场至少 30 道、单产品线 × 单市场 60 道硬上限要保留（控制成本）；售前线上没有正式题和批准，生成即测量。
+
+- **题量只在 selection-rules.md 第 7 步定义**：每条产品线 × 每个市场候选题 30–60 道。超过 60 由告警改为报错（门禁 47，成本上限）；不到 30 仍是告警 W47，按产品线 × 市场计数（原来只按产品线）。删掉第 6 步、client-facing-base.md 里的「候选题不设上限」。主题个数不设限写进第 6 步。
+- **线上补题轮**：`run_selection_mode.py` 检查通过但不到 30 道时写 `TOPUP.md` 补一轮（先开中档我方补充行和假设行，再用低档行，不许同义改写；`--repair-rounds 0` 不补）；补完没过检查退回原题库；仍不够照常交付，`result.json` 记 `top_up` 和一条 warning。e2e_repair_loop 加 4 例（11/11）。
+- **约束条件表门禁不再能绕过**：`brand_status` 必填；矩阵行或题挂了约束条件却没有 `attribute_plan` 报错；题的 `attribute_ref` 必须在表里；表条目可带 `product_line`，只管那条产品线的题（门禁 67、68）。online-runner.md 补第 3 步。**影响**：3.11.0 之前写的题库（某制氧机客户、Ubrand、某车载品牌、Bbrand、brand-o）重跑 validator 会因缺品牌情况报错，维护这些题库时先补约束条件表。
+- **`write_prompt_reasons.py` 降档也看主约束**：原来只拿 `constraints`（买家说法关键词）去对约束条件表，关键词很少和选项同名，主约束明显劣势的题不降档；现在 `attribute_ref` 和关键词都看，带 `product_line` 的条目按产品线取。门禁 68 的范围在 output-contract.md 写明，其余条件列入人工检查。
+- **已开放类型的行要判档**：validator 按 `business_goals` 判哪些类型已开放（`opened_types`），这些行缺业务优先级报错、高中档没题给 W48（原来只查发现行）。W59 只管发现主题，删掉其他类型「至少 5 道」（替代每竞品 1 道、交易每线 1 道，结构上凑不满）。
+- **交易、售后**：没有对应目标，本期只登记、不判档不出题；删掉 type-branches.md「品牌方把官网直购、客服列为目标可提到中」。「开放时要改的地方」改写成「还没开放的部分」（线上非发现、交易售后、后端枚举三块）。
+- **需求信号登记只定义一处**（selection-rules.md 第 2 步）：相关且会改变选词判断的都登记，不只登记撑起题的；client-facing-base.md、online-runner.md 改为引用。
+- **业务优先级**：「有转化可提档」改为我方补充的行可从低提到中，高只认点名；劣势不构成排除理由补上第 5 步例外；起决定作用的条件品牌没有或待确认的，按第 3 步处理（不开行或不写进题面），不再写「可降为低」；线上「排在前面的判高」改为品牌资料写了的条目都判高，资料为空时按官网主推判。
+- **其他**：阶段表允许预跑答案作候选类别线索；低档行补了题随题进主题；client-facing-base.md 去掉 3.10.0 遗留的「对客表只有发现行」；差异化优势改指约束条件表；线上 `evidence_status` 按买家信号写；output-contract.md 上传文件改为「一个市场 × 一条产品线」、门禁 14 改为按产品线计。SKILL.md 版本号从 3.9.4 补到 3.13.0、description 改 5 列。
+- `check_skill_terms.py` 加 7 组退役说法；verify_workflow 81/81（新增 7 例），test_validate_after_sales_set 63 passed，e2e_review_loop 14/14、e2e_input_contract 41/41、e2e_precollect 33/33、e2e_language_check、e2e_industry_kb 通过。
+
+## 3.12.2（2026-11-12）撤回「不判」：品牌情况只判有没有，高低在相对竞品
+
+触发依据：Suda 2026-11-12「为啥是不判，我们不是评估品牌情况吗，有高低不是判断相对竞品吗」。
+
+- 品牌情况回到 有 / 没有 / 待确认。每家都有、只分高低的条件，品牌情况填有（依据写「每家都有」），好坏高低填在相对竞品；不再单设取值。口碑可信度、竞品缺点那两句随「不判」一起删。
+- validator、`check_client_base.py` 取值去掉「不判」，verify_workflow 改为「不判是非法取值」，75/75；`check_skill_terms.py` 把「有 / 没有 / 待确认 / 不判」「填不判照常出题」列为退役说法。selection-rules.md 第 3 步、client-facing-base.md、output-contract.md、SKILL.md、shared/prompt-generation-principles.md、模板 Base（删「不判」选项）、飞书《生词规则》同步。
+
+## 3.12.1（2026-11-12）品牌情况判法不罗列条件类别
+
+触发依据：Suda 2026-11-12「我觉得你不应该罗列这些」（指 3.12.0 列出的功能、资质认证、书面承诺、渠道地区、支付配送等类别和「还没上线算没有」）。
+
+- selection-rules.md 第 3 步只留判法：先看条件本身，同一品类里是有的品牌有、有的没有，还是每家都有、只分高低。前者调研品牌官网和其他渠道后判有 / 没有 / 待确认，后者填不判。删掉两组类别清单和「还没上线的算没有」。client-facing-base.md、SKILL.md、模板 Base 字段说明、飞书《生词规则》5.2 同步。
+
+## 3.12.0（2026-11-12）品牌情况加「不判」：每家都有、只分高低的条件照常出题；判法写成跨品类通用
+
+触发依据：Suda 2026-11-12「把质量维度设成例外」「规则需要通用，而不是只适用于这个品类」。
+
+- 判法先问「这个条件，品牌有没有可能没有」。可能没有的（功能、型号或配置选项、资质认证、书面承诺、销售渠道与覆盖地区、服务范围、支付和配送方式）判有 / 没有 / 待确认，还没上线的算没有；不可能没有的（质量、耐用、使用体验、服务表现、价格、常规规格数值）填不判、照常出题，高低看相对竞品和监测结果。问品牌本身口碑可信度的题、只描述竞品缺点的条件也填不判。能力和程度绑在一起的拆开判；只在部分型号、套餐、地区有的按产品线 × 市场判，题面不超出覆盖范围；要另签合同、加购或靠第三方的，公开写明算有，只能个案谈算待确认。
+- 门禁 67 取值加「不判」，四种都要写 `brand_status_basis`（不判写属于哪一类）；门禁 68 不拦不判。`check_client_base.py` 同口径。verify_workflow 75/75（新增「不判条件照常出题」）。
+- 规则和用例里的示例换成中性写法，不再用具体客户品类的竞品名。selection-rules.md 第 3 步、client-facing-base.md、output-contract.md、SKILL.md、shared/prompt-generation-principles.md 同步；模板 Base 加选项「不判」，飞书《生词规则》5.2 同步。
+
+## 3.11.3（2026-11-12）品牌情况写进总原则；「有」也必须写证据
+
+触发依据：Suda 2026-11-12「仅将已确认品牌具备或有充分证据支持的属性纳入后续生词。确认不具备的属性直接排除；能力未知或缺乏证据的属性默认不出题，保留待确认。品牌相对竞品存在劣势，不单独构成排除理由。核心是：宁可少出几道题，也不要把品牌可能不具备的能力纳入 GEO 优化目标。」
+
+- selection-rules.md 第 3 步「品牌情况」开头写这条原则；能力未知归待确认；写明劣势不单独构成排除理由。第 5 步「我们补充的行，起决定作用的条件是明显劣势或品牌没有的，可以降为低」保留（Suda 同日确认不去掉）。
+- 门禁 67：有 / 没有 / 待确认三种取值都要写 `brand_status_basis`（原来只要求没有、待确认）。output-contract.md 同步。verify_workflow 74/74（新增「有但没写证据」），test_validate_after_sales_set 63 passed，check_skill_terms 无退役说法。
+- 飞书《生词规则》5.2 同步。
+
+## 3.11.2（2026-11-12）品牌情况恢复「待确认」：待确认和没有都不出题
+
+触发依据：Suda 2026-11-12「其实可以是待确认，默认待确认的能力不出题就好了」。改写 3.11.1：没找到证据就填「没有」等于替品牌下结论，品牌方看到会认为我们没做功课，也分不出哪几行需要他们核对；出不出题和 3.11.1 一样。
+
+- 品牌情况 有 / 没有 / 待确认。有要有证据；没有要有明确证据（品牌方说过、文档和宣传页相反、在适用边界外）；查过但没找到证据的是待确认。没有、待确认都必须写 `brand_status_basis`（证据，或查过哪里），挂这两种条件的题都不出。对客字段说明：「待确认的请改成有或没有，改成有的我们补题」。
+- 门禁 67 加「没有 / 待确认写了 brand_status_basis」，门禁 68 扩到待确认；`check_client_base.py` 同口径。出题原因仍不写「待核实：品牌有没有 X」（这类题不出）。
+- 修复：14:50 selection-rules.md、client-facing-base.md、validate_after_sales_set.py、evals/verify_workflow.py 被写回 3.11.0 的「待确认照常出题」，本版一并改正。第 2 步官网和文档说法不一致的改为以文档等为准、判不出才填待确认。shared/prompt-generation-principles.md 第 11 条同步。
+- 验证：verify_workflow 73/73（新增「题挂待确认条件」「待确认无出处」两例），test_validate_after_sales_set 63 passed，check_skill_terms 无退役说法。
+
+## 3.11.1（2026-11-12）品牌情况只分有 / 没有：找不到证据的算没有，不出题
+
+触发依据：Suda 2026-11-12「没找到证据的证明都没有，不用出题」。推翻 3.11.0 的「待确认照常出题、出题原因写待核实」。
+
+- 约束条件表「品牌情况」只剩 有 / 没有。有证据（文档、控制台、条款、规格表、品牌方材料）才填有；找不到证据、在适用边界外、文档和宣传页相反的都是没有，挂这些条件的题不出。品牌方交付后把其实有的改成有并给出处，我们再补题。selection-rules.md 第 2、3、7 步，client-facing-base.md，output-contract.md，SKILL.md 同步。
+- validator、`check_client_base.py` 的取值只认 有 / 没有；`write_prompt_reasons.py` 去掉「待核实：品牌有没有 X 还没确认」那句。`verify_workflow.py` 用例改为「待确认」是非法取值，71/71。`check_skill_terms.py` 加退役说法「有 / 没有 / 待确认」「待确认的照常出题」。
+- 模板 Base 与飞书《生词规则》同步。
+
+## 3.11.0（2026-11-12）对客 Base 加「约束条件」表：品牌情况、公开硬事实上的相对竞品；业务优先级依据写赢面
+
+触发依据：Suda 2026-11-12。Dbrand 客户指出词库里有他们没有的能力（按秒计费、自带模型托管）。官网首页写了按秒计费，文档写的是按小时，我们按首页记成了品牌能力；品牌能力清单只在内部 notes，品牌方看不到也改不了。Suda 定：按约束条件逐条判品牌有没有、和竞品比的公开硬事实，放进对客表；参照 Value Proposition Canvas（匹配要按客群、要有证据）和 Playing to Win（赢面写进业务优先级依据）。
+
+- **约束条件表**（client-facing-base.md）：`约束条件 | 品牌情况 | 相对竞品 | 相对竞品依据 | 产品线 | 市场`，一个选项一行，第七张表。品牌情况 有 / 没有 / 待确认，「没有」要有明确证据，哪里都没写的是待确认、照常出题、出题原因写「待核实」；出处只记 JSON `brand_status_basis`，不进对客表。相对竞品 明显优势 / 明显劣势 / 持平 / 未知，只判价格、规格、数量、计费方式、区域这类公开硬事实，比不出来填未知。不判重要性、不放目标客户和场景。表名不叫属性池：名单就是三张表的约束条件选项，里面有品牌没有的条件，属性池又是 2.19.0 退役的旧口径。
+- selection-rules.md：第 2 步品牌官网的出处规则（文档、控制台、条款、规格表优先于首页和宣传页，冲突填待确认并记品牌事实核查）；第 3 步品牌情况、相对竞品只判硬事实，「品牌明显劣势」就是相对竞品为明显劣势的行；第 5 步业务优先级依据写赢面，品牌方点名的行不因赢面降档，我们补充的行起决定作用的条件明显劣势或品牌没有的可降为低；第 7 步降档由脚本从约束条件表推，题上手写 `brand_weakness` 只用于表达不了的情况。
+- 题库 JSON：`config.attribute_plan` 每条加 `brand_status`、`brand_status_basis`、`vs_competitors`、`vs_competitors_basis`（不用旧键 `relative_competitor`）。validator 门禁 67（取值合法、非未知要依据）、68（题挂了品牌没有的条件），告警 W67（明显优势没有题测）。
+- `write_prompt_reasons.py`：题挂的约束条件是明显劣势的自动降一档、依据写进出题原因开头；挂了待确认条件的写「待核实」。`check_client_base.py` 查约束条件表：缺表、和选项名单不一致、取值不合法、非未知没依据、提示词库挂了品牌没有的条件。
+- `verify_workflow.py` 加 4 个用例（71/71）；`check_skill_terms.py` 撤掉「相对竞品依据」退役，改扫「品牌能力清单」「约束条件不单设表」。geo-monitoring gap-cause-action-table.md、shared/prompt-generation-principles.md 同步一句。
+- 模板 Base 加约束条件表。
+
 ## 3.10.0（2026-11-11）对客表不再限发现行；「只出发现」只管线上
 
 触发依据：Suda 2026-11-11「多维表格没有这个限制啊，只是线上有限制而已」。Dbrand 按品牌方要求出了对比、替代、评估、验证四类，`check_client_base.py` 却要求把这几行从对客表删掉。

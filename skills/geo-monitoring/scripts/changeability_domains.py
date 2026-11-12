@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""试跑答案 → 每道题的可改变性预判（geo-monitoring/references/trial-and-lock.md「试跑」「可改变性」）。
+"""试跑答案 → 每道题的可改变性预判。
 
 脚本只做预判，档位由人复核后才算数。做法：
 

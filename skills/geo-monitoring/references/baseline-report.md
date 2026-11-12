@@ -32,7 +32,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 
 | Field | Meaning |
 |---|---|
-| `target`, `competitors` | `name / aliases / official_domains`. Exactly 3 competitors (the presales template's slots); take the answer layer's top three |
+| `target`, `competitors` | `name / aliases / official_domains`. Exactly 3 competitors (the presales template's slots; the bank may list up to 5): take the answer layer's top three |
 | `open_brands` | Every other brand in the answers. Agencies compete for the same buyer action: list them with their corporate domain so their pages count as 竞品网站 (an individual agent's own site stays 其他). Social groups (Facebook, Telegram) and media sites are not brands — leave them out (Suda 2026-10-21) |
 | `compare_brands` | Brands in each Prompt's comparison table (may include open brands) |
 | `runs`, `region` | Round directories and the region folder inside them |

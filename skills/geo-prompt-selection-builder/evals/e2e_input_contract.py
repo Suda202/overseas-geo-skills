@@ -131,11 +131,15 @@ FAILURES = [
     ("官网不是完整网址", lambda p: p["case"].__setitem__("官方域名", "brandy.example"), "invalid_url"),
     ("竞品带未定义字段", lambda p: p["case"]["竞品"][0].__setitem__("适用主题", [1]), "unknown_field"),
     ("字段名拼错", lambda p: p["case"].__setitem__("业务目的", "x"), "unknown_field"),
-    ("未登记语言", lambda p: p["options"].__setitem__("locale", "fr"), "invalid_enum"),
     ("options 带已停用的 generation_stage", lambda p: p["options"].__setitem__("generation_stage", "selection"), "unknown_field"),
     ("input_version 缺失", lambda p: p.pop("input_version"), "invalid_enum"),
     ("核心目标客户重复", lambda p: p["case"]["核心目标客户与购买场景"].append(p["case"]["核心目标客户与购买场景"][0]), "duplicate_item"),
 ]
+# 语言以表单选的为准，不设白名单（2026-11-12）：法语、日语照收。
+for loc in ("fr", "ja"):
+    result = normalize(mutate(lambda p, loc=loc: p["options"].__setitem__("locale", loc)))
+    check(f"任意语言照收：{loc}", result["ok"] and result["normalized"]["locale"] == loc, json.dumps(result["errors"], ensure_ascii=False))
+
 for label, fn, code in FAILURES:
     result = normalize(mutate(fn))
     check(f"失败输入：{label} → {code}", not result["ok"] and code in codes(result), f"实际错误码={codes(result)}")

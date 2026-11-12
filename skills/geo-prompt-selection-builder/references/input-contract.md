@@ -74,7 +74,7 @@
 
 | 字段 | 默认 | 可选值 |
 |---|---|---|
-| `locale` | `en` | 题面语言，对应表单的「语言」；必须是 `references/locale-templates.json` 已登记的键（当前为 `en`、`th`、`ru`） |
+| `locale` | `en` | 题面语言，对应表单的「语言」；以表单选的为准，不设白名单 |
 
 ## 5. `handoff`（可省略）
 
@@ -138,7 +138,7 @@
 | `invalid_type` | 类型不对，例如竞品不是对象数组 |
 | `invalid_item` | 数组里有空值或非字符串 |
 | `duplicate_item` | 列表项重复、竞品重名 |
-| `invalid_enum` | 枚举值不在允许范围（locale、input_version、确认状态） |
+| `invalid_enum` | 枚举值不在允许范围（input_version、确认状态） |
 | `invalid_url` | 网址不是完整的 http(s) 地址 |
 | `count_out_of_range` | 竞品不是 1–3 个 |
 | `invalid_reference` | confirmed_fields 引用了不存在的字段 |
@@ -156,7 +156,7 @@
 
 ## 7. skill 拿到 `normalized` 之后做什么
 
-`case_fields`、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：品类名 `category_label`（从产品线和官网推出）、`brand_object_type`、目标客户与使用场景、矩阵行、主题、全部题目（见 [online-runner.md](online-runner.md)）。
+`case_fields`、`competitor_selection`、`locale` 直接写进题库 `config`，skill 不改；`config.generation_stage` 固定写 `selection`。以下内容需要判断，按选词规则生成：品类名 `category_label`（从产品线和官网推出）、目标客户与使用场景、矩阵行、主题、全部题目（见 [online-runner.md](online-runner.md)）。
 
 ## 8. 验收
 
