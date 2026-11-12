@@ -2078,6 +2078,56 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
     return "".join(card), i
 
 
+
+def classify_source_host(host: str, config: dict) -> str:
+    """引用来源分类：自有网站 > 竞品网站 > 域名缓存 > 其他。
+
+    规则见 geo-metrics/references/metric-scope-and-copy-contract.md「引用来源分类」。
+    """
+    h = normalize_host(host or "")
+    if not h:
+        return "other"
+    bare = h[4:] if h.startswith("www.") else h
+
+    def norm(d):
+        x = normalize_host(str(d or ""))
+        return x[4:] if x.startswith("www.") else x
+
+    def hit(domains):
+        for d in domains:
+            c = norm(d)
+            if c and (bare == c or bare.endswith("." + c)):
+                return True
+        return False
+
+    own, comp = [], []
+    for obj in config.get("objects") or []:
+        if not isinstance(obj, dict):
+            continue
+        domains = obj.get("official_domains") or obj.get("domains") or []
+        kind = str(obj.get("role") or obj.get("type") or obj.get("object_id") or "")
+        if kind == "target" or str(obj.get("object_id")) == "target":
+            own.extend(domains)
+        elif kind in ("competitor", "open") or "competitor" in kind or "open" in kind:
+            comp.extend(domains)
+    own.extend([config.get("official_domain") or ""])
+    comp.extend(config.get("competitor_site_domains") or [])
+
+    if hit(own):
+        return "brand_official"
+    if hit(comp):
+        return "competitor_official"
+
+    cache = config.get("domain_category_cache") or {}
+    for key in (bare, h):
+        if key in cache:
+            return cache[key]
+    for k, v in cache.items():
+        if k and (bare.endswith("." + k) or bare == k):
+            return v
+    return "other"
+
+
 def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dict,
                   display_objects: list[dict]) -> dict:
     """逐「国家 × 平台 × 题号」准备抽屉所需的明细。
@@ -2175,6 +2225,7 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                         "url": canonical,
                         "host": normalized["host"],
                         "source_name": c.get("source_name"),
+                        "source_type": classify_source_host(normalized["host"], config),
                     })
                 # 平台原始引用字段：直接从 task_result 提取，去重后的 URL 列表
                 # AIO=source, Gemini=citations, ChatGPT=content_references, Perplexity=web_results

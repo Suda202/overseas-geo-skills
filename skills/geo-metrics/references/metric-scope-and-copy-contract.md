@@ -106,3 +106,20 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 | 商品卡提及率 | `brands[].shopping_visibility` | 正文提及率 |
 | 商品卡平均位置 | `brands[].average_card_position` | 平均提及位置（正文） |
 | 官网购买链接覆盖率 | `brands[].official_link_coverage` | 官网引用率（正文引用官网）、官网购买链接份额 |
+
+## 引用来源分类（引用类别）
+
+报告里的「引用类别」不是采回来的字段，是**我们自己判**的。采集结果只有 URL、host 和来源名（`content_references` / `citations` 里没有 `source_type`），不判就会全部落进「其他」——2026-11-11 某制氧机客户两份售前报告就是这样，305/373 条引用全是「其他」。
+
+判定顺序固定，先命中先返回：
+
+1. **自有网站**：host 等于或属于 `official_domain`（`example.com` 与 `*.example.com`）。
+2. **竞品网站**：host 命中词表的 `competitor_site_domains`（配置竞品官网 + 开放品牌官网，后端规则同桶）。
+3. **域名缓存**：`assets/domain-categories.json`，按 host 精确匹配，再按后缀匹配（`blog.example.com` 命中 `example.com`）。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`。
+4. 以上都不命中 → `other`。
+
+实现只有一处：`geo-presales-report-builder/scripts/build_report_data.py` 的 `classify_source_host()`，引用对象建好时就写入 `source_type`，报告端只读不重算。
+
+- **缓存要用起来**：`--domain-cache` 传的那份文件必须真的参与判定。它写进 `config.domain_category_cache` 之后没有消费方，等于没接（2026-11-11 修）。缓存本身随每次运行生长，新域名判过一次就进表。
+- **「其他」占比高先看两件事**：自有/竞品域名有没有传进来；缓存有没有命中。这两项都正常还有大量「其他」，才是真的判不出来，交付说明里要写清这一项的可信度。
+- 分类是展示口径，不参与提及率、声量份额、引用份额的计算，改分类不改那些数。
