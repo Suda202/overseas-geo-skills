@@ -126,8 +126,11 @@ FAILURES = [
     ("缺品牌", lambda p: p["case"].pop("品牌"), "missing_field"),
     ("缺产品线", lambda p: p["case"].pop("产品线"), "missing_field"),
     ("缺官方域名", lambda p: p["case"].pop("官方域名"), "missing_field"),
-    ("竞品 4 个", lambda p: p["case"]["竞品"].append({"名称": "Extra", "官网域名": "https://extra.example"}), "count_out_of_range"),
-    ("竞品重名", lambda p: p["case"]["竞品"][1].__setitem__("名称", "RivalY1"), "duplicate_item"),
+    # 不依赖样例里竞品的个数和名字（公开仓库的脱敏样例只有 2 个竞品、名字也换了）
+    ("竞品 4 个", lambda p: p["case"]["竞品"].extend(
+        {"名称": f"Extra {i}", "官网域名": f"https://extra-{i}.example"} for i in range(4 - len(p["case"]["竞品"]))),
+     "count_out_of_range"),
+    ("竞品重名", lambda p: p["case"]["竞品"][1].__setitem__("名称", p["case"]["竞品"][0]["名称"]), "duplicate_item"),
     ("官网不是完整网址", lambda p: p["case"].__setitem__("官方域名", "brandy.example"), "invalid_url"),
     ("竞品带未定义字段", lambda p: p["case"]["竞品"][0].__setitem__("适用主题", [1]), "unknown_field"),
     ("字段名拼错", lambda p: p["case"].__setitem__("业务目的", "x"), "unknown_field"),

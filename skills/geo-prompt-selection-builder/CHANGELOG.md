@@ -12,6 +12,7 @@
 - **R7–R13 说法对齐**：demand-side-signals.md 的相对竞品判法和 Usable 出处；shared/prompt-generation-principles.md 的低档、题量、选词顺序整段（去掉锁版、停测、版本说法）；SKILL.md 第 1、5 步不再写「目前只做发现」；第 7 步拆题与第 6 步拆主题的分工（个别品牌进出名单不拆题，候选类别或竞争格局整体变了是拆主题的事）；canonical-intent-mapping.md 的验证（本地选了声誉与信任才出）、准确性（不出题）、上传值出处；问题解决题面不写品牌；「只开一行」的判定键加约束条件，和 `check_client_base.py` 一致。
 - **R14–R18、R20 残留与断链**：总纲第 5 条和阶段表删掉选正式题、正式基线、持续监测三行，试跑行改为试跑后回写；去掉「混合选择」一词；题 `status` 不再列「停测」；check_client_base.py 注释、review-rubric.md 两处链接、W54 提示、input-contract.md 的 `brand_object_type` 改正；`diff_base_against_spec.py` 默认主键加约束条件表、删三张退役表；runner PLAN 找 App ID 不再用 `site:`；切片标签计数排除不上传的问题解决、验证、交易、售后；online-runner.md 写明补题在审核之前、审核删题后不再补。
 - `check_skill_terms.py` 加这一轮的退役说法；旧的「selection-rules 第 8、9 步」扫描改为只扫第 9 步（第 8 步现在含试跑后回写）。
+- e2e_input_contract 的「竞品 4 个」「竞品重名」两例不再写死样例里的竞品个数和名字（补到 4 个、复制第 1 个的名字），公开仓库的脱敏样例上也能过（Suda「修这个测试」）。
 - 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_input_contract 42/42、e2e_precollect 33/33、语种与行业档案 e2e 通过；shared test_prompt_gates 2 passed。
 - 飞书《生词规则》同步（Suda「同步飞书」，rev 860 → 870）：新增 9.6「试跑后回写」；流程总览第 10 行、第 3 节分工说明指向 9.6；竞品补足指向 9.6；7.1 只开一行加约束条件；7.2 目标在对话里定；7.4 拆题与拆主题分工；9.1 问题解决不写品牌；9.5 校验清单补主题优先级没写、品牌别名。语言一节原本就写「国家和语种都不限」，没动。改前快照 `30-选Topic与生词/.snapshots/rules-full-20261112-181131.json`；改后回读只多了 1 个二级标题、5 条列表项、1 段，加粗成对。
 
