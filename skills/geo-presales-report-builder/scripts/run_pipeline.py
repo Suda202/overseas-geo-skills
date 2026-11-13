@@ -34,7 +34,7 @@ SKILLS = HERE.parent.parent
 MONITORING = SKILLS / "geo-monitoring" / "scripts"
 CRAWL_INTEGRITY = MONITORING / "audit_crawl_integrity.py"
 COLLECTOR = MONITORING / "collect_answers.py"
-JUDGE = SKILLS / "geo-presales-sentiment-judge" / "scripts" / "sentiment_sentences.py"
+JUDGE = SKILLS / "geo-metrics" / "scripts" / "sentiment_sentences.py"
 
 
 class Pause(Exception):
@@ -169,7 +169,7 @@ def stage_sentiment(args, out: Path) -> None:
 
     if not claims_raw.exists():
         raise Pause(
-            f"请抽取 Claim：读 {units}，按 references/claim-layer-contract.md 逐单元拆出**原子 Claim**，"
+            f"请抽取 Claim：读 {units}，按 geo-metrics/references/claim-layer-contract.md 逐单元拆出**原子 Claim**，"
             f"每条只给 unit_index / brand / claim / sentiment。"
             f"claim 是**标准化后的语义判断**（例：价格高、未公开定价页），不是原文摘抄；"
             f"一句话含多个观点就拆多条；品牌未提及或无明确倾向的不生成 Claim。"

@@ -14,7 +14,7 @@ metadata:
 
 - 使用本 Skill 审核并修正 `brand_rankings` 等底层结构化结果；完成后再使用 `geo-presales-report-editor` 基于已确认的结果修改分析结论并生成上传 CSV。
 - **两层都管，原始层在上游**：报告 JSON 层（已有 `wordid` / `brand_rankings`）见 [结构化结果审计](references/structured-result-audit.md)；采集原始层（只有原始响应、品牌序列还没生成）见 [原始爬虫层品牌抽取](references/raw-crawl-extraction.md)。原始层的品牌序列做对之前，不要开始算任何指标。
-- 暂不审计、判断或修改后端 JSON 的 `sentiment` 字段。回答级情绪口径已冻结，本轮必须逐值保留原 `sentiment`。句子级情绪方案已由 `geo-presales-sentiment-judge` 承载（基于爬虫回答提取目标品牌正负句、计算正向率，产物独立于后端字段）；需要情绪指标时使用该 skill，不在本 Skill 内恢复字段级审计。
+- 暂不审计、判断或修改后端 JSON 的 `sentiment` 字段。回答级情绪口径已冻结，本轮必须逐值保留原 `sentiment`。句子级情绪方案已由 `geo-metrics` 承载（基于爬虫回答拆品牌 Claim、计算正向情感占比，产物独立于后端字段，见 `geo-metrics/references/sentiment.md`）；需要情绪指标时用它，不在本 Skill 内恢复字段级审计。
 - 不在本 Skill 修改客户报告的分析结论、客户文案或结论 CSV；底层数据确认后将这些工作交给 `geo-presales-report-editor`。
 - 仅在用户授权维护 Bad Case 时写入飞书；只要求检查、解释或复核时保持只读。
 - 不为凑数量找问题，不把第三方模型的正常推理自动归因成系统错误，不把某个 Task、品牌或品类结论固化为规则。
@@ -91,7 +91,7 @@ python3 scripts/annotate_evidence_screenshot.py --input <截图.png> --output <�
 | `geo-metrics/scripts/de_cite_crawl.py`（归 geo-metrics，本 skill 调用） | 把采集目录规范化为去引用正文，产出 `normalized-answers.jsonl`（含清空 merchants 列的 `body_ranking`） | 识别品牌、判情绪 |
 | `verify_brand_extraction.py` | 品牌抽取的独立复核：名称在正文、首现顺序、标准名一致性、词典召回 | 生成品牌序列本身 |
 
-标准品牌别名表放 `assets/brand_lexicon.<case>.json`，键为标准名、值为正文中出现的写法；`geo-presales-report-builder` 与 `geo-presales-sentiment-judge` 均可直接读取该 dict 格式（`_` 开头的键视为元数据）。**分片抽取回收后必须先归一标准名再算排名**，`verify_brand_extraction.py` 的第 3 项检查会拦截漏归一的写法。
+标准品牌别名表放 `assets/brand_lexicon.<case>.json`，键为标准名、值为正文中出现的写法；`geo-presales-report-builder` 与 `geo-metrics` 的情感抽取均可直接读取该 dict 格式（`_` 开头的键视为元数据）。**分片抽取回收后必须先归一标准名再算排名**，`verify_brand_extraction.py` 的第 3 项检查会拦截漏归一的写法。
 
 修改触发描述、审计规则或脚本后，重新运行 `evals/trigger_cases.json`、`evals/execution_cases.json`、`scripts/run_structured_result_evals.py` 和 `tests/test_scripts.py`，并把门禁结果更新到 `reports/`。
 

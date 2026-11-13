@@ -1,6 +1,6 @@
 ---
 name: geo-presales-pipeline
-description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-presales-report-builder, geo-presales-sentiment-judge) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
+description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-metrics for metrics and sentiment, geo-presales-report-builder) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
 metadata:
   author: 海外 GEO 项目
   version: "2.1.0"
@@ -13,8 +13,8 @@ metadata:
 把一条评测 Case 一路带到可交客户的单文件 HTML 报告。**本 skill 只编排、零新逻辑**：口径、校验、计算、渲染都在被调 skill 及其脚本里。这里只回答两个问题：下一步跑什么；停下来时请哪个 skill 出场。
 
 - 负责：阶段顺序、断点续跑、每个暂停点的分派。
-- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集与采集缺陷的判定规则（`geo-monitoring`）、Claim 判读规则（sentiment-judge）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
-- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过采集完整性检查，见 `geo-monitoring`）；只判情感用 `geo-presales-sentiment-judge`；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
+- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集与采集缺陷的判定规则（`geo-monitoring`）、Claim 判读规则（`geo-metrics` 的 sentiment.md）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
+- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过采集完整性检查，见 `geo-monitoring`）；只判情感用 `geo-metrics` 的 `sentiment_sentences.py`（做法见 references/sentiment.md）；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
 
 ## 从哪一段进
 
@@ -79,12 +79,12 @@ python3 scripts/run_pipeline.py \
 | 阶段 0 采集校验退出码 2（阻断）或 1（警告） | `geo-monitoring`（references/crawl-integrity.md） | 按缺陷目录逐条定位到平台和文件，修采集或显式降级口径后续跑；不许带着缺陷算指标 |
 | 阶段 1 词表不存在 | 人工（Suda 或授权人） | 脚本已挖出候选 CSV，由人工冻结成 `brands[].name/aliases/type`。机器分不清品牌名和品类词，**这步不能自动化**；已有同品类冻结词表可直接复用 |
 | 阶段 2 数据生成失败 | `geo-presales-report-builder` | 读数据接口契约排障；不要绕过 build_report_data 手写数据 |
-| 阶段 3b Claim 抽取 | `geo-presales-sentiment-judge` | 按 Claim 层契约逐单元拆原子 Claim；拿不准的进 review-queue 交 Suda 裁决 |
-| 阶段 3d / 3f 两趟聚类 | `geo-presales-sentiment-judge` | claim→attribute、attribute→theme；维度优先于极性，theme 必须中性；输入是去重清单，同一 claim 只判一次 |
+| 阶段 3b Claim 抽取 | `geo-metrics`（references/sentiment.md） | 按 Claim 层契约逐单元拆原子 Claim；拿不准的进 review-queue 交 Suda 裁决 |
+| 阶段 3d / 3f 两趟聚类 | `geo-metrics`（references/sentiment.md） | claim→attribute、attribute→theme；维度优先于极性，theme 必须中性；输入是去重清单，同一 claim 只判一次 |
 | 阶段 4 译文未齐 | 翻译（语义工作，派 haiku 子代理即可） | 按批次翻成 `<批次>-zh.json`：保留 markdown 结构、品牌名与型号留英文、URL 与数值原样、不增删内容、每翻完一条立即落盘。译文必做，报告是给中文读者看的 |
 | 阶段 6 渲染完成 | 浏览器验证 | 逐个切换国家、平台、主题，确认各模块有数、无空白、无变形；判据见 report-builder 的渲染规范 |
 
-阶段 3 的机器工序（3a 抽取、3c/3e 去重清单、3g 回装、3h 统计、3i 接入）由脚本自动跑，不需要分派。3h 与 3i 之间有 `--expected-metrics` 对账门禁，两处实现不一致会报错；报错时回 sentiment-judge 排查口径，不许改数硬过。
+阶段 3 的机器工序（3a 抽取、3c/3e 去重清单、3g 回装、3h 统计、3i 接入）由脚本自动跑，不需要分派。3h 和 3i 的正向占比都调 `geo-metrics` 的 `geo_presales_core/sentiment.py`，只有这一份计算。
 
 ## 完成与出口
 

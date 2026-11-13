@@ -261,6 +261,8 @@ RETIRED = [
      "3.14.3 第二轮审核清掉的断链和旧说法：宽泛品类题、export_upload_csv.py 的 INTENT、就绪结论只写 Ready、语言不设白名单", "strict"),
     (r"trial-and-lock", "geo-monitoring 2.0.0 删掉了 trial-and-lock.md：监测只管采集、基线报告和交内容团队（Suda 2026-11-12）", "strict"),
     (r"check_locked_set|verify_lock_gates", "锁版检查脚本 3.14.1 已删：真实项目从没把题库 JSON 走到锁版", "strict"),
+    (r"geo-presales-sentiment-judge|sentiment-judge",
+     "情感判读并进 geo-metrics：scripts/sentiment_sentences.py、references/sentiment.md（3.15.1）", "strict"),
     (r"geo-presales-crawl-integrity|geo-presales-report-builder/scripts/collect_answers",
      "采集程序和采集检查都在 geo-monitoring：scripts/collect_answers.py、scripts/audit_crawl_integrity.py、references/crawl-integrity.md（3.14.4）", "strict"),
     (r"只降题、不降行|低档和本期不出的行不进主题",

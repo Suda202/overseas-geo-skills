@@ -3,7 +3,7 @@
 流程：读分品牌判读标签 → 按报告切片（国家 / 平台 / 主题）统计正负句 → 写入每个切片的
 sentiment 字段。正向率口径为 正向句 ÷（正向句 + 负向句），排除中性。
 
-头部切片的数字会与 sentiment-judge 的 `compute` 对账一次，确保没有各自算各自的。
+头部切片的数字会与 geo-metrics sentiment_sentences.py 的 `compute` 对账一次，确保没有各自算各自的。
 
 用法：
     python3 attach_sentiment.py --report report-data.json \
@@ -28,7 +28,7 @@ from pathlib import Path
 # 脱离整套 skill 单独部署时，用 GEO_PRESALES_SKILLS_ROOT 指向 skills 根目录。
 SKILLS_ROOT = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
-JUDGE_SCRIPTS = SKILLS_ROOT / "geo-presales-sentiment-judge" / "scripts"
+JUDGE_SCRIPTS = SKILLS_ROOT / "geo-metrics" / "scripts"
 
 # 报告平台显示名 → 采集目录里的平台名
 PLATFORM_INTERNAL = {
@@ -120,7 +120,7 @@ def merge_labels(labels_dir: Path, brands: list[str]) -> dict:
 
 
 def verify_against_judge(units_path: Path, labels_dir: Path, target: str, expected: dict) -> None:
-    """用 sentiment-judge 的 compute 对账头部聚合，避免两处各算各的。
+    """用 geo-metrics sentiment_sentences.py 的 compute 对账头部聚合，避免两处各算各的。
 
     compute 拒绝跨品牌标签，所以这里传该品牌自己的标签文件，而不是合并后的。
     """
@@ -139,7 +139,7 @@ def verify_against_judge(units_path: Path, labels_dir: Path, target: str, expect
     for key in ("positive", "negative"):
         if int(authoritative.get(key) or 0) != expected[key]:
             raise SystemExit(
-                f"与 sentiment-judge 对账不一致：{target} {key} "
+                f"与 geo-metrics sentiment_sentences.py 对账不一致：{target} {key} "
                 f"本脚本 {expected[key]} vs compute {authoritative.get(key)}"
             )
 
@@ -285,7 +285,7 @@ def load_all_claim_groups(claims_dir: Path, sentences_path: Path, brands: list[s
 
 
 def load_claims_file(path) -> list[dict]:
-    """读 Claim 层产物（sentiment-judge 的 claims-assemble 输出）。"""
+    """读 Claim 层产物（geo-metrics sentiment_sentences.py claims-assemble 的输出）。"""
     if path is None:
         return []
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -302,7 +302,7 @@ def _norm_claim_text(text) -> str:
 
 def _verify_claim_metrics(claims: list[dict], brands: list[str], target: str,
                           expected: dict) -> None:
-    """把本 skill 的全局 Claim 统计与 sentiment-judge 的 claims-metrics 对账。
+    """把本 skill 的全局 Claim 统计与 geo-metrics sentiment_sentences.py 的 claims-metrics 对账。
 
     两处实现同一套口径（回答内按 semantic claim 去重、跨回答保留、跨平台等权不补 0），
     不一致说明有一侧被改动过——直接报错，不让它静默进入报告。
@@ -337,7 +337,7 @@ def _verify_claim_metrics(claims: list[dict], brands: list[str], target: str,
     if mismatches:
         for m in mismatches[:10]:
             print("口径对账不一致:", m, file=sys.stderr)
-        raise SystemExit("Claim 统计口径与 sentiment-judge claims-metrics 不一致，请先对齐口径")
+        raise SystemExit("Claim 统计口径与 geo-metrics claims-metrics 不一致，请先对齐口径")
     print(f"口径对账通过：{len(expected.get('by_brand') or {})} 个品牌与 claims-metrics 一致")
 
 
@@ -648,10 +648,10 @@ def main() -> int:
                              "缺省用内置的净水器品类词表，其他品类会整块落入「其他」不入矩阵。"
                              "仅在走句级降级路径时使用——Claim 层自带 attribute/theme，不需要关键词表")
     parser.add_argument("--claims", type=Path, default=None,
-                        help="Claim 层产物（sentiment-judge claims-assemble 输出）。"
+                        help="Claim 层产物（geo-metrics sentiment_sentences.py claims-assemble 输出）。"
                              "提供时按 Claim 信号口径聚合（推荐）；不提供则回落句级路径")
     parser.add_argument("--expected-metrics", type=Path, default=None,
-                        help="sentiment-judge claims-metrics 的产出；提供时逐品牌对账统计口径，不一致即报错")
+                        help="geo-metrics sentiment_sentences.py claims-metrics 的产出；提供时逐品牌对账统计口径，不一致即报错")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
@@ -687,7 +687,7 @@ def main() -> int:
     theme_keywords = load_theme_keywords(args.theme_keywords)
     if claims:
         print(f"Claim 层聚合：{len(claims)} 条 claim（Claim 信号口径，回答内按 semantic claim 去重 + 跨平台等权）")
-        # 口径对账：本 skill 出的是「每个切片」的统计，sentiment-judge 的
+        # 口径对账：本 skill 出的是「每个切片」的统计，geo-metrics claims-metrics 的
         # claims-metrics 出全局统计——两处实现同一套规则（回答内去重、跨回答保留、
         # 跨平台不补 0），必须一致。传了 --expected-metrics 时逐品牌核对，防止漂移。
         if args.expected_metrics:
@@ -769,7 +769,7 @@ def main() -> int:
 
     headline = report["slices"].get("||")
     if headline and not claims:
-        # 句级路径才用 sentiment-judge 的 compute 对账头部聚合；
+        # 句级路径才用 geo-metrics 的 compute 对账头部聚合；
         # Claim 层走 Claim 信号口径，与 compute 的句数口径本就不同，不能对账。
         by_brand = headline["sentiment"]["by_brand"]
         verify_against_judge(

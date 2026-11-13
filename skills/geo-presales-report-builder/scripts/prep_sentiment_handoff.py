@@ -1,6 +1,6 @@
 """情感判读交接的确定性辅助:拆批、回装、校验。
 
-填补 extract(sentiment-judge)与 attach_sentiment.py 之间三个此前靠人肉完成的环节:
+填补 extract(geo-metrics sentiment_sentences.py)与 attach_sentiment.py 之间三个此前靠人肉完成的环节:
 
   split        units.json 按品牌拆出判读批次视图 sentiment-batches/<品牌>.json,
                每条带全局 idx,判读代理只读自己品牌的批次,labels 仍按全局 idx 写。

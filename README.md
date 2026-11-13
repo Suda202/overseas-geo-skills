@@ -1,6 +1,6 @@
 # 海外 GEO Skills
 
-这个仓库有 8 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
+这个仓库有 7 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
@@ -11,7 +11,7 @@
 | 线上已交付的诊断报告要改 | `geo-presales-report-audit`，再 `geo-presales-report-editor` | 售前诊断 |
 | 签约前后定长期监测哪些题、出对客确认表，试跑后回写 | `geo-prompt-selection-builder`（选词，本地出口） | 选词 |
 | 签约后采集（试跑、正式基线、日常）、检查采集能不能用，出基线报告 | `geo-monitoring` | 监测 |
-| 指标统计（提及、引用、商品卡，品牌怎么识别） | `geo-metrics` | 全部阶段 |
+| 指标统计（提及、引用、商品卡、情感，品牌怎么识别） | `geo-metrics` | 全部阶段 |
 
 ## 每个 Skill 负责什么
 
@@ -19,9 +19,8 @@
 | --- | --- | --- |
 | `geo-prompt-selection-builder` | 选词：业务范围、调研、约束条件、提示词矩阵、主题、写题、校验与导出，试跑后回写 | 采集、报告（`geo-monitoring`、`geo-presales-pipeline`）；正式题由品牌方在对客确认表上挑 |
 | `geo-presales-pipeline` | 本地出售前 HTML 报告的总入口：排阶段顺序（生词 → 采集 → 采集检查 → 组装渲染 → 情感），到暂停点请对应 Skill 出场，零口径 | 每个阶段的规则（交给该阶段的 Skill） |
-| `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、提及率、声量、引用份额、官网引用率、商品卡，以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring）、情感判读（sentiment-judge） |
+| `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、提及率、声量、引用份额、官网引用率、商品卡、品牌情感（拆 Claim、聚属性和主题、算正向情感占比），以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring） |
 | `geo-presales-report-builder` | 售前报告数据层组装、HTML 渲染 | 采集（`geo-monitoring`）；指标公式（`geo-metrics`） |
-| `geo-presales-sentiment-judge` | 句级情感判读，算正向情感占比 | 品牌识别（`geo-metrics`） |
 | `geo-presales-report-audit` | 修改线上售前诊断报告的品牌提及识别结果 JSON（品牌名单和首现排序），出 Bad Case | 客户结论（report-editor） |
 | `geo-presales-report-editor` | 修改线上售前诊断报告的结论 CSV | 指标计算（`geo-metrics`） |
 | `geo-monitoring` | 采集和采集检查：`collect_answers.py` 是全库唯一的采集程序，售前 pipeline、选词研究预跑也调它；`audit_crawl_integrity.py` 在算指标前查字段层混用、引用定义丢失、空回答、未登记平台。签约后跑试跑、正式基线和日常采集；外加基线 HTML 报告、缺口交给内容团队 | 指标口径（`geo-metrics`） |
@@ -86,7 +85,7 @@ python3 skills/geo-prompt-selection-builder/scripts/run_selection_mode.py run \
 
 ### ③ 采集与出报告（`geo-presales-pipeline`）
 
-pipeline 只管阶段顺序和暂停点，到每个暂停点请对应的 Skill 出场：采集和采集完整性检查（`geo-monitoring` 的 `collect_answers.py`、`audit_crawl_integrity.py`）→ 指标与渲染（report-builder，指标调 `geo-metrics`）→ 情感判读（sentiment-judge）。手动跑一条命令到下一个暂停点：
+pipeline 只管阶段顺序和暂停点，到每个暂停点请对应的 Skill 出场：采集和采集完整性检查（`geo-monitoring` 的 `collect_answers.py`、`audit_crawl_integrity.py`）→ 指标与渲染（report-builder，指标调 `geo-metrics`）→ 情感判读（`geo-metrics` 的 `sentiment_sentences.py`）。手动跑一条命令到下一个暂停点：
 
 ```bash
 cd skills/geo-presales-report-builder
@@ -136,7 +135,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | --- | --- | --- |
 | 提及率、提及率排名、声量份额、平均提及位置 | 发现、替代两类；只剩问题解决题时算问题解决；对比、评估等题面点名品牌的类型显示「—」 | 品牌出现在去引用正文里才算提及；声量分母是全部纳入品牌 |
 | 引用份额、引用率、官网引用率 | 统计层默认全部意图类型；核心洞察只展示和提及率同一批回答，引用模块展示全部类型 | 只数正文里带编号的引用标记；份额按未去重次数算 |
-| 正向情感占比 | 情感题 | 正向 ÷（正向 + 负向），不设中性档；判读在 sentiment-judge |
+| 正向情感占比 | 情感题 | 正向 ÷（正向 + 负向），不设中性档；判读在 `geo-metrics`（references/sentiment.md） |
 | 商品卡触发率、商品卡提及率、商品卡平均位置、官网购买链接覆盖率 | 发现、替代两类，按平台分开 | 和提及率分开报；商品卡提及率分品牌级与 SKU 级 |
 
 上传 CSV 与后端仍只看发现题。每种意图类型统计哪些指标由类型决定，对照和后端字段见 `skills/shared/canonical-intent-mapping.md`。
@@ -183,13 +182,13 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 python3 -m unittest discover -s skills/geo-presales-report-audit/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-report-builder/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-presales-report-editor/scripts/tests -p 'test_*.py'
-python3 -m unittest discover -s skills/geo-presales-sentiment-judge/tests -p 'test_*.py'
+python3 -m unittest discover -s skills/geo-metrics/tests -p 'test_*.py'
 python3 -m unittest discover -s skills/geo-prompt-selection-builder/scripts -p 'test_*.py'
 python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
 python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 ```
 
-`geo-metrics` 的单元测试在 `geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）和 `geo-presales-report-audit/tests`（去引用）。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
+`geo-metrics` 的单元测试在 `skills/geo-metrics/tests`（情感）、`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）和 `geo-presales-report-audit/tests`（去引用）。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
 
 ### 发布
 

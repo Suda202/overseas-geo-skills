@@ -1,6 +1,6 @@
 # 跨 Skill 共享：意图类型规范映射表
 
-本文件是售前 skill 家族的唯一权威词表。消费方共五个：geo-prompt-selection-builder / geo-presales-report-editor / geo-presales-report-audit / geo-presales-report-builder / geo-presales-sentiment-judge，各自的"开始前读取"均指向本文件。各 skill 内部不得另行定义同概念的别名。
+本文件是售前 skill 家族的唯一权威词表。消费方共五个：geo-prompt-selection-builder / geo-presales-report-editor / geo-presales-report-audit / geo-presales-report-builder / geo-metrics（情感样本口径），各自的"开始前读取"均指向本文件。各 skill 内部不得另行定义同概念的别名。
 
 **命名**：这个维度对客叫「意图类型」（2026-11-06 Suda 定；2026-10-22 至 11-06 叫「提示词类型」，更早叫「诊断意图 / 意图」）。英文仍叫 Prompt Type：售前题库标签 `Prompt Type: …`，售后题库 JSON 字段 `prompt_type`，都不改；对客多维表格字段「意图类型」（旧 Base 的「提示词类型」照认）。上传 CSV 列 `diagnosis_intent` 和后端字段 `diagnostic_intent` 是与后端的接口约定，不改。原「Prompt Task」买家任务标签层已删除。旧题库不迁移。
 

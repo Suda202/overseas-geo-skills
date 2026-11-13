@@ -1,3 +1,10 @@
+## 3.15.1（2026-11-13）情感判读并进 geo-metrics
+
+触发依据：Suda 2026-11-13「geo-presales-sentiment-judge 是不是应该放到 geo-metrics 里」「并进去吧，反正都是指标统计」。
+
+- `geo-presales-sentiment-judge` 退役：`sentiment_sentences.py` 进 `geo-metrics/scripts/`，Claim 层契约、判读规则、品类联合分析进 `geo-metrics/references/`，原 SKILL 正文改成 `geo-metrics/references/sentiment.md`，单元测试进 `geo-metrics/tests/test_sentiment.py`。
+- 本 skill 跟着改：SKILL.md「边界」的情感规则指向 `geo-metrics`；`check_skill_terms.py` 把旧 skill 名列为退役说法。其他 skill（pipeline、report-builder 的 `run_pipeline.py`、`attach_sentiment.py`、report-audit、geo-monitoring 基线报告、shared 意图映射）同步改路径和说法。
+
 ## 3.15.0（2026-11-13）线上部署包：bundle 子命令，缺文件启动即停
 
 触发依据：Suda 2026-11-13「线上售前诊断报告只用 geo-prompt-selection-builder 这个 skill」「按推荐做打包命令」。

@@ -1,15 +1,15 @@
 {
   "name": "geo-metrics",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "owner": "海外 GEO 项目",
-  "updated_at": "2026-11-10",
+  "updated_at": "2026-11-13",
   "status": "active",
   "maturity_tier": "production",
   "lifecycle_stage": "production",
   "context_budget_tier": "production",
   "review_cadence": "per-release",
   "entrypoint": "SKILL.md",
-  "summary": "海外 GEO 统计口径与唯一实现：品牌与竞品提及识别、识别前正文清洗、答案有效性、引用网址规范化、提及/声量/引用/商品卡指标与样本范围。",
+  "summary": "海外 GEO 统计口径与唯一实现：品牌与竞品提及识别、识别前正文清洗、答案有效性、引用网址规范化、提及/声量/引用/商品卡指标与样本范围、品牌情感（Claim → Attribute → Theme，正向情感占比）。",
   "target_platforms": ["openai", "claude", "generic", "agent-skills-compatible"],
   "factory_components": ["references", "scripts"]
 }

@@ -140,7 +140,7 @@ def prepare_inputs(cfg, questions, intent, platforms):
 def attach_sentiment(cfg, data_path: Path):
     """接入情感判读（Claim 层）：04 情感模块与回答详情的品牌情感。
 
-    config.sentiment = {"units", "claims", "metrics"}，由 geo-presales-sentiment-judge 产出：
+    config.sentiment = {"units", "claims", "metrics"}，由 geo-metrics 的 sentiment_sentences.py 产出：
     extract 用本脚本合成的 out_dir/collect 与 out_dir/questions.csv（单元的 region 即意图、文件名带轮次），
     抽 Claim、两趟聚类、claims-assemble、claims-metrics。缺省则不出情感模块。
     必须在 patch_report_data 之前跑：attach 按「意图|平台|0001-r01」找每次运行的明细。

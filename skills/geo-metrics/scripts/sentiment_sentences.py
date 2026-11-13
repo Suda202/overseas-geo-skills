@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "sc
 import de_cite_crawl as de_cite  # noqa: E402
 from geo_presales_core.crawler import answer_body  # noqa: E402
 from geo_presales_core.lexicon import load_lexicon as core_load_lexicon  # noqa: E402
+from geo_presales_core.sentiment import brand_signal_stats, claim_signals  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     case_sensitive_for,
     find_alias_spans,
@@ -675,21 +676,11 @@ def cmd_claims_cluster_list(args: argparse.Namespace) -> None:
     print(f"{args.key} 去重后 {len(rows)} 项（共 {sum(counter.values())} 条），写入 {args.output}")
 
 
-def _norm_claim_text(text) -> str:
-    """去重用的 claim 文本归一：压空白 + casefold。语义级归一是抽取环节的职责。"""
-    return " ".join(str(text or "").split()).casefold()
-
-
 def cmd_claims_metrics(args: argparse.Namespace) -> None:
-    """按设计的统计口径计算 Claim / Attribute / Theme 三层指标。
+    """按 Claim 信号口径算正向情感占比（按品牌、平台、Attribute、Theme）。
 
-    口径（2026-09-20 设计定稿）：
-      * 最小结构化单位 = Prompt × 平台 × 回答 × Brand × Claim；
-      * 同一回答内、同一品牌 × 同一 semantic claim 只计 1 次
-        （语义归一由抽取环节完成，这里按 claim 文本兜底去重）；
-        同一 Attribute 下不同 Claim 各计一次；**跨回答分别计数**；
-      * 正向占比 = 正向 Claim 信号数 ÷ 正负向 Claim 信号数合计；
-      * 跨平台先算各平台占比，再对**有有效信号的平台等权平均**，无信号平台不补 0。
+    计算只在 geo_presales_core/sentiment.py 实现一次，售前报告和监测基线的情感接入也调它；
+    口径见那个文件开头和 references/claim-layer-contract.md。
     """
     claims = _load_claims(args.claims)
     brands = [b.strip() for b in args.brands.split(",") if b.strip()] if args.brands else \
@@ -697,67 +688,13 @@ def cmd_claims_metrics(args: argparse.Namespace) -> None:
     if args.brand:
         claims = [c for c in claims if c["brand"] == args.brand]
         brands = [args.brand]
-
-    def answer_key(c: dict) -> tuple:
-        return (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"))
-
-    # 回答内去重：同品牌 × 同 semantic claim 在一条回答里只算一次（按 claim 文本兜底）
-    signal_keys: set[tuple] = set()
-    per_brand_attr: dict[tuple, dict] = {}
-    per_theme: dict[tuple, dict] = {}
-    per_platform: dict[tuple, dict] = {}
-    for c in claims:
-        key = (c["brand"], answer_key(c), _norm_claim_text(c.get("claim")), c["sentiment"])
-        if key in signal_keys:
-            continue
-        signal_keys.add(key)
-        pk = (c["brand"], c.get("platform", ""))
-        bucket = per_platform.setdefault(pk, {"pos": 0, "neg": 0})
-        bucket["pos" if c["sentiment"] == "positive" else "neg"] += 1
-        attr_key = (c["brand"], c["attribute"], c["sentiment"])
-        per_brand_attr[attr_key] = per_brand_attr.get(attr_key, 0) + 1
-        theme_key = (c["brand"], c["theme"], c["sentiment"])
-        per_theme[theme_key] = per_theme.get(theme_key, 0) + 1
-
-    def rate(pos: int, neg: int) -> str:
-        total = pos + neg
-        return f"{pos / total * 100:.1f}%" if total else "—"
-
-    by_brand = {}
-    for brand in brands:
-        pos = sum(v for (b, _t, s), v in per_theme.items() if b == brand and s == "positive")
-        neg = sum(v for (b, _t, s), v in per_theme.items() if b == brand and s == "negative")
-        platform_rates = []
-        for (b, plat), bucket in sorted(per_platform.items()):
-            if b != brand or bucket["pos"] + bucket["neg"] == 0:
-                continue
-            platform_rates.append(bucket["pos"] / (bucket["pos"] + bucket["neg"]))
-        by_brand[brand] = {
-            "signal_total": pos + neg,
-            "positive_signals": pos,
-            "negative_signals": neg,
-            "pos_rate": rate(pos, neg),
-            "platforms_with_signal": len(platform_rates),
-            "pos_rate_cross_platform": (
-                f"{sum(platform_rates) / len(platform_rates) * 100:.1f}%" if platform_rates else "—"),
-            "by_platform": {
-                plat: {"positive": b["pos"], "negative": b["neg"], "pos_rate": rate(b["pos"], b["neg"])}
-                for (brand_name, plat), b in sorted(per_platform.items()) if brand_name == brand
-            },
-            "by_attribute": sorted(
-                ({"attribute": a, "sentiment": s, "occurrence": v}
-                 for (b, a, s), v in per_brand_attr.items() if b == brand),
-                key=lambda x: (-x["occurrence"], x["attribute"])),
-            "by_theme": sorted(
-                ({"theme": t, "sentiment": s, "occurrence": v}
-                 for (b, t, s), v in per_theme.items() if b == brand),
-                key=lambda x: x["theme"]),
-        }
+    signals = claim_signals(claims)
+    by_brand = brand_signal_stats(signals, brands)
 
     metrics = {
         "brands": brands,
         "claim_total": len(claims),
-        "deduped_signal_total": len(signal_keys),
+        "deduped_signal_total": len(signals),
         "by_brand": by_brand,
     }
     json.dump(metrics, open(args.out_metrics, "w"), ensure_ascii=False, indent=1)

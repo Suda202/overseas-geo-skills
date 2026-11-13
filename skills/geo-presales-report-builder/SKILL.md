@@ -16,7 +16,7 @@ metadata:
 
 负责：读取 Scrapeless 采集 JSON、按国家/平台/主题切分、复用后端指标管线算全部指标、渲染 HTML。
 
-不负责：采集和采集数据的可信度校验（走 `geo-monitoring`，本 skill 的前置步骤）、上传用 CSV 的生成与结论撰写（走 `geo-presales-report-editor`）、品牌提及识别的纠错（走 `geo-presales-report-audit`）、句级情绪判读的规则制定（走 `geo-presales-sentiment-judge`）。
+不负责：采集和采集数据的可信度校验（走 `geo-monitoring`，本 skill 的前置步骤）、上传用 CSV 的生成与结论撰写（走 `geo-presales-report-editor`）、品牌提及识别的纠错（走 `geo-presales-report-audit`）、情感判读的规则（走 `geo-metrics`）。
 
 ## 开始前读取
 
@@ -98,10 +98,10 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 5. **情感判读（Claim 层，可选；缺省时情感板块显示「待接入」）**：
 
-   走 `geo-presales-sentiment-judge` 的四层结构 `answer → evidence_text → Claim → Attribute → Theme`（契约见该 skill 的 [Claim 层契约](../geo-presales-sentiment-judge/references/claim-layer-contract.md)，**不必再读本 skill 的句级交接契约**）。
+   走 `geo-metrics` 情感的四层结构 `answer → evidence_text → Claim → Attribute → Theme`（契约见 [Claim 层契约](../geo-metrics/references/claim-layer-contract.md)，**不必再读本 skill 的句级交接契约**）。
 
    ```bash
-   J=../geo-presales-sentiment-judge/scripts/sentiment_sentences.py
+   J=../geo-metrics/scripts/sentiment_sentences.py
    # 1) 抽取单元（evidence_text 候选，确定性）
    python3 $J extract --bank <题库.csv> --crawl-dir <采集目录> \
      --lexicon assets/brand_lexicon.<品类>.json --output <输出>/sentiment-units.json
@@ -122,13 +122,13 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    三层各由一趟工序产出:**抽取只出 claim;attribute 是相近 claim 的聚类,theme 是 attribute 的再聚类**。聚类必须分开做且在去重清单上做,否则同一 attribute 会被各回答各起一个名字。
 
-   接入（脚本按 Claim 信号口径聚合，并与 `claims-metrics` 逐品牌对账，不一致直接报错）：
+   接入（按 Claim 信号口径聚合到每个切片；正向占比调 geo-metrics `geo_presales_core/sentiment.py` 计算，和 `claims-metrics` 是同一份实现）：
 
    ```bash
    python3 scripts/attach_sentiment.py --report <输出>/report-data.json \
      --units <输出>/sentiment-units.json --labels-dir <输出>/sentiment-batches \
      --brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌> \
-     --claims <输出>/claims.json --expected-metrics <输出>/claims-metrics.json \
+     --claims <输出>/claims.json \
      --out <输出>/report-data.json
    ```
 
