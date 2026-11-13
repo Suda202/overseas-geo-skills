@@ -1,6 +1,6 @@
 ---
 name: geo-metrics
-description: Owns every overseas GEO statistic rule and its single implementation — brand / competitor mention recognition (alias matching, case-sensitive aliases, cross-brand overlap resolution, the brand lexicon format and open-brand mining), answer-body cleaning before recognition (citation stripping, merchant columns), answer validity, citation URL normalization, and the metric calculations and sample scopes for mention rate, share of voice, average position, citation share, official-site rate and shopping product cards. Use it when changing, checking or explaining how any of these is counted, or when another skill needs to recognise brands or compute a metric. Do not use it to assemble or render a report (geo-presales-report-builder, geo-monitoring baseline), to judge sentiment (geo-presales-sentiment-judge), to rule on crawl trustworthiness (geo-presales-crawl-integrity), or to write customer-facing conclusions (geo-presales-report-editor).
+description: Owns every overseas GEO statistic rule and its single implementation — brand / competitor mention recognition (alias matching, case-sensitive aliases, cross-brand overlap resolution, the brand lexicon format and open-brand mining), answer-body cleaning before recognition (citation stripping, merchant columns), answer validity, citation URL normalization, and the metric calculations and sample scopes for mention rate, share of voice, average position, citation share, official-site rate and shopping product cards. Use it when changing, checking or explaining how any of these is counted, or when another skill needs to recognise brands or compute a metric. Do not use it to assemble or render a report (geo-presales-report-builder, geo-monitoring baseline), to judge sentiment (geo-presales-sentiment-judge), to collect answers or rule on crawl trustworthiness (geo-monitoring), or to write customer-facing conclusions (geo-presales-report-editor).
 ---
 
 # GEO 统计口径与实现
@@ -19,6 +19,8 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 每个指标用哪批样本、对客户能叫什么名字 | [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md) |
 | 开放品牌候选挖掘（人工收成词表） | `scripts/mine_brand_lexicon.py` |
 | 识别对账：按报告同一套识别列出词表内品牌的漏判候选（近似拼写、空格变体）和误判候选（标准名带大写、命中全是小写），出 summary.json / candidates.csv / report.md 给人复核 | `scripts/reconcile_brand_recognition.py` |
+
+情感不归本 skill：要判正负面、算正向情感占比，调用 `geo-presales-sentiment-judge`；它抽句子时用的正文清洗和品牌匹配仍调这里。组装和渲染报告归 `geo-presales-report-builder`（本地出售前 HTML 报告从 `geo-presales-pipeline` 进）和 `geo-monitoring` 的基线报告。
 
 ## 品牌词表
 
@@ -42,10 +44,10 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 
 ## 谁在调用
 
-- `geo-presales-report-builder`：`build_report_data.py`、`verify_report_data.py`、`collect_answers.py`、`infer_brand_domains.py`、`collect_domain_candidates.py`、`run_pipeline.py`（词表挖掘）
+- `geo-presales-report-builder`：`build_report_data.py`、`verify_report_data.py`、`infer_brand_domains.py`、`collect_domain_candidates.py`、`run_pipeline.py`（词表挖掘）
 - `geo-monitoring`：`build_baseline_html.py`、`trial_brand_count.py`、`changeability_domains.py`
 - `geo-presales-sentiment-judge`：`sentiment_sentences.py extract` 的单元清洗与品牌匹配
-- `geo-presales-crawl-integrity`：`answer_validity`、`extract_product_cards`
+- `geo-monitoring`（采集 `collect_answers.py`、采集完整性检查 `audit_crawl_integrity.py`）：`answer_validity`、`extract_product_cards`
 - `geo-presales-report-editor`：`geo_presales_editor/`（影子审计 CLI）
 - `geo-prompt-selection-builder`：`run_selection_mode.py` 线上运行时拷贝 `geo_presales_core`
 

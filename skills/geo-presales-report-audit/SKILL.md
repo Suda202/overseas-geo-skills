@@ -53,7 +53,7 @@ metadata:
 - 排名一律基于 `body_ranking`（已清空商品卡 `merchants` 列），不是 `body_markdown`。
 - 品牌序列未通过 `verify_brand_extraction.py` 前，不得开始算指标；退出码非 0 即为阻断。
 - 分片回收后先归一标准名再排名。同一品牌因大小写被拆成两行，会让它多占一个名次，品牌总数与排名同时错。
-- 采集器自带的 `mentioned_*` 标记不能作为提及依据，它扫的是整个响应体；检测与处理走 `geo-presales-crawl-integrity`。
+- 采集器自带的 `mentioned_*` 标记不能作为提及依据，它扫的是整个响应体；检测与处理走 `geo-monitoring` 的采集完整性检查（references/crawl-integrity.md）。
 
 ## 不可降低的交付门槛
 

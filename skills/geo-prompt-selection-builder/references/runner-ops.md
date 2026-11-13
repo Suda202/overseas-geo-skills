@@ -6,6 +6,7 @@
 
 - 运行环境：Python ≥ 3.12（`--agent sdk` 需要 `claude-agent-sdk`；语种检查需要 `lingua-language-detector`，见 `requirements.txt`，国内装包用阿里云或清华 PyPI 镜像）。不需要 Chrome、不需要 lark-cli、不需要浏览器登录态。
 - 服务器出网：只需要 `api.scrapeless.com`（必须）和 `api.dataforseo.com`（评价、关键词搜索量），或者研发网关上转发这两家的地址；大模型用国内 API，地址由 `ANTHROPIC_BASE_URL` 定。
+- 部署：在 skills 仓库里跑 `python3 geo-prompt-selection-builder/scripts/run_selection_mode.py bundle --out <新目录>`，把打出来的整个目录部署上去，入口是里面的 `geo-prompt-selection-builder/scripts/run_selection_mode.py`。包里除了选词，还有它运行要的其他 skill 文件：`shared` 整个目录（联网、收信号、题面门禁），研究预跑的 `geo-monitoring` 采集程序、采集检查和平台合同，以及采集程序导入的 `geo-metrics` 的 `geo_presales_core`；目录结构和仓库里一样，`BUNDLE.json` 记着选词版本和包含哪些文件。这些文件在仓库里各归各的 skill 维护，采集程序或选词改了就重新打包部署。只部署选词目录时 runner 启动就以退出码 2 停下（`result.json` 的 `missing_skill_files` 列出缺的路径）。
 - 一次只跑一个市场，每次一个新工作目录：`python3 scripts/run_selection_mode.py run --case <品牌资料.json> --market <市场> --platforms <AI 平台> --out <新目录> --agent sdk`。
 
 | 环境变量 | 必填 | 说明 |
@@ -80,6 +81,7 @@ export GEO_NET_DOMESTIC=1
 
 ## 验收
 
+- `python3 evals/e2e_bundle.py`：部署包（打包内容、从包里 prepare 和跑完整 run、缺文件启动即停），结果写 `reports/bundle-e2e.md`。改了 `SKILL_DIRS`、`PARTIAL_COPIES` 或采集程序的导入时跑。
 - `python3 evals/e2e_input_contract.py`：品牌资料输入合同（示例 payload、飞书路径与接口路径一致、错误输入的错误码），结果写 `reports/input-contract-e2e.md`。
 - `python3 evals/e2e_repair_loop.py`：返修循环四条路径（修好、丢题保底、关闭返修、无 bank），结果写 `reports/repair-loop-e2e.md`。
 - `python3 evals/e2e_review_loop.py`：审核环七条路径（无发现、阻塞返修后复核通过、review.json 坏掉、结构不对、关闭审核、额度用完、审核超时），结果写 `reports/review-loop-e2e.md`。

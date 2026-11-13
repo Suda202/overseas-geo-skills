@@ -89,4 +89,4 @@ python3 scripts/verify_brand_extraction.py \
 - **goods 列无品牌前缀的纯型号行不计入**（"Nexus 5"、"DR970X-2CH Plus II"）。
 - **正文引用标记是否等于原站 citation pill 无法从 JSON 证实**，需原始 HTML。按项目既有口径把交付的 Markdown 标记作为回退证据。
 - **回答正文比供应商引用字段更完整**：实测过字段为空而正文有 4 次标记的回答，也实测过正文丢定义行而字段完整的回答。两个方向都存在，不能固定信一侧。
-- **采集器的 `mentioned_*` 标记不可作为提及依据**——它扫的是整个响应体（含检索结果、原始流、购物卡片）。检测与处理见 `geo-presales-crawl-integrity`。
+- **采集器的 `mentioned_*` 标记不可作为提及依据**——它扫的是整个响应体（含检索结果、原始流、购物卡片）。检测与处理见 `geo-monitoring/references/crawl-integrity.md`。

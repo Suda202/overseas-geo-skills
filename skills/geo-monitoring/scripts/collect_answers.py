@@ -1,15 +1,15 @@
-"""售前采集：v8 题库 CSV → Scrapeless 采集目录（项目唯一的采集实现）。
+"""采集：题库 CSV → Scrapeless 采集目录（项目唯一的采集实现，归 geo-monitoring；售前、监测、选词研究预跑共用）。
 
-直接调 Scrapeless AI Scraper API（创建任务 → 轮询结果），产出 builder 和
-crawl-integrity 直接能读的目录：
+直接调 Scrapeless AI Scraper API（创建任务 → 轮询结果），产出 report-builder 和
+同目录 audit_crawl_integrity.py 直接能读的目录：
 
     <collect>/scraper.<平台>/<REGION>/<NNNN>.json      NNNN = 题库行号（从 1 起）
 
 每个文件是 Scrapeless 结果接口的原始返回（{"status", "task_result"}），与 Go 版试点
 （已归档到 90-历史归档/scrapeless-demo）落盘格式一致，历史采集目录可直接续采。
 
-答案有效性复用 geo_presales_core.crawler.answer_validity，字段读取复用 crawl-integrity
-的平台契约，这里不另写口径。每格独立重试；重试耗尽仍无效的格移出采集目录、登记进
+答案有效性复用 geo_presales_core.crawler.answer_validity，字段读取复用同目录 audit_crawl_integrity.py
+的平台契约（../references/platform-contract.json），这里不另写口径。每格独立重试；重试耗尽仍无效的格移出采集目录、登记进
 manifest，不进任何分母（integrity D5）。AIO 例外：接口 success 就算采到，空正文是
 「本次未触发概览」，不重试（契约 empty_answer_allowed）。
 
@@ -50,7 +50,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parent.parent
 CORE_DIR = SKILLS / "geo-metrics" / "scripts"
-INTEGRITY = SKILLS / "geo-presales-crawl-integrity" / "scripts" / "audit_crawl_integrity.py"
+INTEGRITY = HERE / "audit_crawl_integrity.py"
 BASE_URL = (os.environ.get("SCRAPELESS_BASE_URL", "").strip() or "https://api.scrapeless.com").rstrip("/")  # 平台网关或本地假服务
 GATEWAY = bool(os.environ.get("SCRAPELESS_BASE_URL", "").strip())
 CREATE_PATH = "/api/v2/scraper/request"

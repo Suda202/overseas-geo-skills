@@ -44,7 +44,7 @@
 
 ### 先预跑，再调研
 
-梳理约束条件之前先看 AI 现在怎么说这个品类：每条产品线 × 市场语言放一道品类认知题 `What should I look for when choosing [category]?`（非英语市场用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <dir> --regions <market>` 在每个要监测的平台跑 1 次。品牌和竞品的评估预跑题（`Evaluate the [category] company [brand]`）默认不跑，有具体需要时按需补跑。
+梳理约束条件之前先看 AI 现在怎么说这个品类：每条产品线 × 市场语言放一道品类认知题 `What should I look for when choosing [category]?`（非英语市场用市场语言写），用 `geo-monitoring/scripts/collect_answers.py --questions <csv> --out <dir> --regions <market>` 在每个要监测的平台跑 1 次。品牌和竞品的评估预跑题（`Evaluate the [category] company [brand]`）默认不跑，有具体需要时按需补跑。
 
 答案只当线索：AI 给的选购标准、比较选项时用的条件、召回或投诉记录、说错的品牌事实、引用了哪些页面。打开引用页核实后才能变成约束条件或品牌事实。预跑题不进题库、不试跑、不监测；只在新增产品线或市场、竞品变了、品类选购标准明显变化时重跑。
 

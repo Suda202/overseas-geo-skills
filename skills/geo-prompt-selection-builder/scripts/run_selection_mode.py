@@ -39,6 +39,12 @@
     python3 run_selection_mode.py precollect --out <工作目录>     # 对已 prepare 的目录单独补跑采集
     python3 run_selection_mode.py check-plan --out <工作目录>     # 检查行业判断写的 plan.json
     python3 run_selection_mode.py finalize --out <工作目录>
+    python3 run_selection_mode.py bundle --out <新目录>            # 打部署包：选词 + 它运行要的其他 skill 文件
+
+部署（3.15.0）：线上只部署 bundle 打出来的目录。选词运行要用到别的 skill 的文件（shared 整个目录；研究预跑的
+geo-monitoring 采集程序、采集检查、平台合同，以及采集程序导入的 geo-metrics geo_presales_core），源文件仍各在
+各的 skill 里维护，bundle 按 SKILL_DIRS + PARTIAL_COPIES 原样拷出同样的目录结构，写 BUNDLE.json 记录来源和版本。
+run / prepare 启动时先核对这些文件，缺一个就以退出码 2 停下（result.json 的 errors 写 missing_skill_files 和缺的路径）。
 
 run 带 --task-file（只用于测试）时不跑 precollect，除非设了 PRECOLLECT_SCRIPTS_DIR（测试用假采集脚本目录，
 默认用工作目录里拷贝的 .agents/skills/shared/scripts）。
@@ -80,7 +86,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
 
 退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现且
 删掉这些题后检查仍没过、或发现没写题号删不了，原因见 result.json）；
-2 输入或环境有错（品牌资料归一化不过、参数错、缺 SCRAPELESS_API_KEY），不启动 agent，errors 原样在 result.json。
+2 输入或环境有错（品牌资料归一化不过、参数错、缺 SCRAPELESS_API_KEY、部署缺 skill 文件），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
   1. 品牌资料缺必填字段 → prepare 停下，不启动 agent，errors 原样交回
@@ -97,6 +103,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   10. agent 不采评价、社区只搜一两次就交题库 → precollect 由脚本固定采；采到了却一条没登记 → 登记检查回喂返修
   11. 不分行业都采 Trustpilot、不分市场都搜 Reddit → 先判行业，渠道按表（行业 × 市场）定；行业判错或
       plan.json 两次不过 → 退回默认渠道（竞品 Trustpilot + 市场社区），原因写进 plan-checked.json，agent 按表补采
+  12. 部署时只放了选词目录，缺 shared 或采集程序 → 启动时就停（missing_skill_files），不等到研究预跑才报找不到文件
   11. precollect 某类缺凭据、超时或被挡 → 该类 status=failed 带原因，其他类和 agent 照常跑，该类不做登记检查
 """
 from __future__ import annotations
@@ -125,18 +132,33 @@ sys.path.insert(0, str(HERE))
 from precollect import (PLAN_TIMEOUT, PRECOLLECT_DIR, check_plan, domestic, fallback_plan, load_channels,  # noqa: E402
                         net_env, precollect, precollect_block, precollect_registration_errors)
 # 整个拷贝的 skill：选词本身、shared 的联网与信号脚本。
-# geo-monitoring 不拷（3.0.0）：线上不试跑、不采集。
+# geo-monitoring 不整个拷：线上不试跑、不跑基线，只拷研究预跑要的采集程序（见下）。
 SKILL_DIRS = ("geo-prompt-selection-builder", "shared")
-# 只拷一部分的 skill（3.0.0）：研究预跑只用 geo-presales-report-builder/scripts/collect_answers.py，
-# 它在导入时还要 geo-metrics 的 geo_presales_core 包和 geo-presales-crawl-integrity 的
-# audit_crawl_integrity.py（后者读同 skill 的 references/platform-contract.json 覆盖平台合同）。
+# 只拷一部分的 skill（3.0.0）：研究预跑只用 geo-monitoring/scripts/collect_answers.py，
+# 它在导入时还要同目录的 audit_crawl_integrity.py（读 geo-monitoring/references/platform-contract.json
+# 覆盖平台合同）和 geo-metrics 的 geo_presales_core 包。
 # 这是让 collect_answers.py 能在工作目录里跑起来的最小集合。
 PARTIAL_COPIES = (
-    ("geo-presales-report-builder", "scripts"),
+    ("geo-monitoring", "scripts/collect_answers.py"),
+    ("geo-monitoring", "scripts/audit_crawl_integrity.py"),
+    ("geo-monitoring", "references/platform-contract.json"),
     ("geo-metrics", "scripts/geo_presales_core"),
-    ("geo-presales-crawl-integrity", "scripts/audit_crawl_integrity.py"),
-    ("geo-presales-crawl-integrity", "references/platform-contract.json"),
 )
+# 部署包（bundle）要排除的：快照、缓存、本机配置、lark-cli 落下的 Base 导出（客户数据）。evals 和 reports 保留，部署后照 runner-ops.md 验收
+BUNDLE_IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "*.local.json", "build",
+                                       "legacy", "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
+
+
+def runtime_files() -> list[tuple[str, str]]:
+    """选词运行要的全部 skill 文件：(skill 名, 相对路径)；相对路径为空表示整个 skill 目录。"""
+    return [(name, "") for name in SKILL_DIRS] + list(PARTIAL_COPIES)
+
+
+def missing_sources(root: Path | None = None) -> list[str]:
+    root = root or SKILLS
+    return [f"{name}/{rel}".rstrip("/") for name, rel in runtime_files() if not (root / name / rel).exists()]
+
+
 # legacy = 已归档的旧规则，不给 agent 看，免得混用两套口径
 # client-facing-base.md = 只用来建对客确认表，线上不写这张表，不拷贝（省 ~31KB 上下文）
 # demand-side-signals.md = signal-sources.md 里「客户提供什么」等品牌方数据小节，线上没有客户数据
@@ -146,7 +168,7 @@ IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*
                                 # lark-cli 在 skill 目录里落下的 Base 导出（客户数据），线上不需要
                                 "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
 DEFAULT_TIMEOUT = 120 * 60
-# 与 geo-presales-report-builder/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
+# 与 geo-monitoring/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
 KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa"}
 
 TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续，把假设写进 `out/notes.md`。
@@ -156,7 +178,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 以前客户积累的经验：读 `.agents/skills/geo-prompt-selection-builder/references/industry-knowledge/` 里本行业的「行业-<行业>.md」（行业写在 `research/precollect/plan-checked.json` 的 `industry`），再挑一份和本客户品类最接近的「品类-<品类>.md」（看「行业-」文件里的已有品类列表，按英文品类词判断，没有接近的就不读）。约束条件、目标客户、场景、主题看品类那份，渠道效果看行业那份。它们只是假设级线索：帮你少漏，每条都要用本客户的买家信号核实，本客户没有信号的不硬加，不能写成依据。
 
 线上跳过不读：
-- 文档里指向 `geo-monitoring` 的链接是采集阶段（试跑、基线），线上不读，工作目录里也没有这个 skill。
+- 文档里指向 `geo-monitoring` 的链接是试跑、基线和报告，线上不读；工作目录里只有它的采集程序 `scripts/collect_answers.py`，研究预跑用。
 - selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md、demand-side-signals.md 的说明，工作目录里没有这两份）；第 6 步「售后重聚」。
 
 题量（selection-rules.md 第 7 步「出几道」）：
@@ -179,7 +201,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 联网：
 - 不用 WebSearch / WebFetch。搜索和取网页用 `.agents/skills/shared/scripts/net.py`，取网页一律 `net.py fetch <url> [<url> ...] --country {market}`，要读的页面攒成一批一次传（脚本并发取），被拦的页面不要再试 `render`；Pantip 帖子用 `net.py pantip <帖子 URL> --country TH`（取标题、主帖和评论）；Reddit 本次最多 {reddit_max} 次联网请求（`net.py reddit` 到上限会提示，precollect 已用掉一部分），先挑最相关的版块和帖子，读不到的记进未覆盖来源；搜索信号、关键词数据、评价用同目录的 `collect_serp_signals.py`、`collect_keyword_data.py`、`collect_reviews.py`（precollect 采过的种子词、竞品域名、帖子不要再采）。
-- 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-presales-report-builder/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
+- 研究预跑只在客户选的平台上跑：`python3 .agents/skills/geo-monitoring/scripts/collect_answers.py --questions research/prerun.csv --out research/prerun --regions {market} --platforms {platforms}`。不要加别的平台。
 - 没有带登录态的浏览器。要登录或通道表里标「不通」的站跳过，按 online-runner.md「线上没有浏览器」一节处理，写进 notes.md 的「未覆盖来源」。
 - 调研过程文件都放 `research/`。只在本工作目录里读写，不要访问工作目录以外的路径。
 
@@ -341,6 +363,13 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
     ws.mkdir(parents=True)
     for sub in ("inputs", "research", "research/site", "research/precollect", "out", "logs", "logs/net_cache"):
         (ws / sub).mkdir()
+    missing = missing_sources()
+    if missing:
+        # 部署只放了选词目录时，研究预跑和 validator 会在中途才报找不到文件；启动前就停（3.15.0）
+        write_json(ws / "out/result.json", {"status": "env_error", "market": market, "errors": [
+            {"code": "missing_skill_files", "message": "部署缺文件，用 run_selection_mode.py bundle 打包后整个部署",
+             "files": missing}]})
+        return 2
     try:
         payload = json.loads(case_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -909,6 +938,40 @@ def dataforseo_env(ws: Path, market: str) -> None:
         os.environ["DATAFORSEO_CASE"] = f"{brand} {market}".strip()
 
 
+def bundle(out: Path) -> int:
+    """打部署包：按 runtime_files() 把选词和它运行要的其他 skill 文件拷到 out，目录结构不变（3.15.0）。"""
+    if out.exists():
+        print(f"目录已存在：{out}（bundle 要一个新目录）", file=sys.stderr)
+        return 2
+    missing = missing_sources()
+    if missing:
+        print("源文件缺失，没法打包：\n" + "\n".join(f"- {m}" for m in missing), file=sys.stderr)
+        return 2
+    for name, rel in runtime_files():
+        src = SKILLS / name / rel
+        dst = out / name / rel
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=BUNDLE_IGNORE)
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    left = missing_sources(out)
+    if left:
+        print("打包后仍缺：" + "、".join(left), file=sys.stderr)
+        return 1
+    version = re.search(r'version:\s*"([^"]+)"', (SKILL / "SKILL.md").read_text(encoding="utf-8"))
+    files = sorted(str(f.relative_to(out)) for f in out.rglob("*") if f.is_file())
+    manifest = {"selection_version": version.group(1) if version else None,
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "source_skills_root": str(SKILLS),
+                "contents": [f"{name}/{rel}".rstrip("/") for name, rel in runtime_files()],
+                "file_count": len(files)}
+    write_json(out / "BUNDLE.json", manifest)
+    print(json.dumps(manifest, ensure_ascii=False, indent=1))
+    print(f"入口：python3 {out / SKILL.name / 'scripts/run_selection_mode.py'} run …")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -935,8 +998,12 @@ def main() -> int:
     p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("check-plan", help="检查 research/precollect/plan.json（行业判断步骤里 agent 自己跑）")
     p.add_argument("--out", type=Path, required=True)
+    p = sub.add_parser("bundle", help="打部署包：选词和它运行要的其他 skill 文件，线上整个部署这个目录")
+    p.add_argument("--out", type=Path, required=True, help="新目录，不能已存在")
     a = ap.parse_args()
     ws = a.out.resolve()
+    if a.cmd == "bundle":
+        return bundle(ws)
     if a.cmd == "finalize":
         return finalize(ws)
     if a.cmd == "check-plan":

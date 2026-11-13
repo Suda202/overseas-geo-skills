@@ -5,13 +5,13 @@
 ## Abrand(2026-09,东南亚净水器)
 
 - **双 Case 版本教训**:磁盘上同时存在两份 Case——`2026-09-14-case/case-fields.json`(初版)与 `2026-09-14-client-crosscheck/case-fields-updated.json`(客户核对版),竞品集不同。取错会让整份报告的竞品对比失去意义。这是 SKILL「Case 记录必须以客户确认后的最新版本为准」规则的出处。
-- **采集缺陷规模**(跳过 crawl-integrity 前置校验就会把这些当成品牌表现):AIO 21 条空答案、Perplexity 103 条空 URL 占位、ChatGPT 73 条题面缺失。
+- **采集缺陷规模**(跳过采集完整性检查就会把这些当成品牌表现):AIO 21 条空答案、Perplexity 103 条空 URL 占位、ChatGPT 73 条题面缺失。
 - **开放品牌词表规模**:词表命中 96 个品牌;前端榜单只展示 5 行,其余 91 个在环形图合并为「其他品牌」。
 - **空答案导致分母不等**:AIO 因 8 条空答案,Discovery 分母为 60,其余平台为 68。
 
 ## Bbrand(2026-09,行车记录仪)
 
-- `mentioned_<brand>` 字段层混用的实测后果:报告口径写 4.44% 提及率,按正文口径实际是 0/89(细节见 `../../geo-presales-crawl-integrity/SKILL.md` 与其缺陷目录 D1)。
+- `mentioned_<brand>` 字段层混用的实测后果:报告口径写 4.44% 提及率,按正文口径实际是 0/89(细节见 `../../geo-monitoring/references/crawl-integrity.md` 与缺陷目录 D1)。
 
 ## 2026-09-16 口径静默漂移事故(变更纪律出处)
 

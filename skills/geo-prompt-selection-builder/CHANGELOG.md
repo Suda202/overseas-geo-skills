@@ -1,3 +1,22 @@
+## 3.15.0（2026-11-13）线上部署包：bundle 子命令，缺文件启动即停
+
+触发依据：Suda 2026-11-13「线上售前诊断报告只用 geo-prompt-selection-builder 这个 skill」「按推荐做打包命令」。
+
+- `run_selection_mode.py bundle --out <新目录>`：按 `SKILL_DIRS` + `PARTIAL_COPIES` 把选词、`shared`、研究预跑要的 geo-monitoring 采集程序、采集检查、平台合同和 geo-metrics `geo_presales_core` 拷成一个目录，结构和仓库一样，写 `BUNDLE.json`（选词版本、内容、文件数）；排除快照、缓存、本机配置和 Base 导出，保留 evals 供部署后验收。源文件仍各归各的 skill，不在选词里放副本。
+- run / prepare 启动时先核对这些文件，缺一个就退出码 2，`result.json` 写 `missing_skill_files` 和缺的路径，不拷 skill、不启动 agent；原来缺文件会被静默跳过，到研究预跑才报找不到。
+- runner-ops.md 部署清单改成「部署 bundle 打出来的目录」；验收加 `evals/e2e_bundle.py`；SKILL.md 脚本表和维护说明同步。
+- `e2e_input_contract.py` 写报告前先建 `reports/`：公开仓库不带这个目录，新克隆里第一个跑它时会报找不到目录。
+- 回归：新增 `e2e_bundle.py` 7/7（打包内容、不带快照缓存和 Base 导出、不覆盖已有目录、从包里 prepare 后采集程序 dry-run、包里跑返修循环 e2e、缺 geo-monitoring 或 shared 启动即停）；包里跑 test_validate 56 passed、verify_workflow 62/62、e2e_input_contract 42/42、e2e_repair_loop 11/11、e2e_review_loop 14/14。
+
+## 3.14.4（2026-11-12）采集程序和采集检查并进 geo-monitoring
+
+触发依据：Suda 2026-11-12「geo-presales-crawl-integrity 是不是应该放到 geo-monitoring 里才对」「并进去」。
+
+- `collect_answers.py` 从 `geo-presales-report-builder/scripts/` 移到 `geo-monitoring/scripts/`；`geo-presales-crawl-integrity` 退役，脚本 `audit_crawl_integrity.py` 进 `geo-monitoring/scripts/`，平台字段合同、数据分层契约、缺陷目录进 `geo-monitoring/references/`，原 SKILL.md 正文改成 `geo-monitoring/references/crawl-integrity.md`。
+- 本 skill 跟着改：`run_selection_mode.py` 的 `PARTIAL_COPIES` 改拷 geo-monitoring 的采集程序、检查脚本和平台合同（不再拷 report-builder 的整个 `scripts/`），TASK 里研究预跑命令换路径；selection-rules.md、online-runner.md、client-facing-base.md 的采集路径；runner-ops.md 部署清单写明要带哪些文件；`e2e_gateway.py` 换路径。**研发部署线上选词时要同步换成新路径。**
+- 其他 skill 同步：pipeline、report-builder（`run_pipeline.py` 从 geo-monitoring 调采集和检查）、report-audit、geo-metrics 的 SKILL.md 与 references，shared 的 `render_crawl_audit_report.py`、`skill-layout-conventions.md`。改前快照 `.agents/skills/.snapshots/migrate-collect-20261112-190006/`，旧文件在废纸篓 `migrate-collect-20261112/`。
+- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_input_contract 42/42、e2e_repair_loop 11/11、e2e_review_loop 14/14；按 `PARTIAL_COPIES` 拷出的工作目录里 `collect_answers.py --dry-run` 正常；某制氧机客户 collect_us_r2 上新旧 `audit_crawl_integrity.py` 输出逐键一致，`collect_answers.py --check-only` 45/45，`run_pipeline.py` 跑过采集检查、采集校验、词表、数据生成，停在译文暂停点；report-builder、report-audit、report-editor、sentiment-judge 单元测试通过。`e2e_gateway.py`（付费）没跑。
+
 ## 3.14.3（2026-11-12）第二轮审核 R1–R20：试跑后回写归选词；语言不设白名单；门禁 12 认品牌别名
 
 触发依据：Suda 2026-11-12 第二轮审核回复：「R1 线下 agent 对话的时候支持开就行了，线上目前默认是不开的」「线上录入什么语言就以线上选择什么语言为准，我们不用管」「对客表不加本期目标」「R4 归选词做『试跑后回写』一步」「其他的按照你的修」。清单在 `docs/exec-plans/active/selection-skill-audit-20261112-progress.md`「第二轮审核」。

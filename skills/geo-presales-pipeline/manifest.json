@@ -9,7 +9,7 @@
   "context_budget_tier": "production",
   "review_cadence": "per-release",
   "entrypoint": "SKILL.md",
-  "summary": "售前全链路编排：Case → 生词（prompt-builder）→ Scrapeless 采集（collect_answers.py，唯一采集实现）→ crawl-integrity → 情感 → HTML 报告；只定阶段顺序与暂停点分派，口径与实现全部在被调 skill。",
+  "summary": "售前全链路编排：Case → 生词（prompt-builder）→ Scrapeless 采集与采集完整性检查（geo-monitoring 的 collect_answers.py、audit_crawl_integrity.py）→ 情感 → HTML 报告；只定阶段顺序与暂停点分派，口径与实现全部在被调 skill。",
   "target_platforms": [
     "openai",
     "claude",

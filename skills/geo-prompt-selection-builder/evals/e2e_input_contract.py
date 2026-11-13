@@ -162,6 +162,7 @@ lines = [
 for name, ok, detail in rows:
     lines.append(f"| {name} | {'通过' if ok else '失败'} | {detail.replace('|', '/') if detail else ''} |")
 report = SKILL / "reports" / "input-contract-e2e.md"
+report.parent.mkdir(exist_ok=True)  # 公开仓库不带 reports/，新克隆第一次跑时要建
 report.write_text("\n".join(lines) + "\n", encoding="utf-8")
 print("\n".join(lines))
 sys.exit(0 if passed == len(rows) else 1)

@@ -325,7 +325,7 @@ def build(audit_dir: Path, target: str) -> str:
     # ------------------------------------------------------------ 采集可信性
     integ = ["\n## 采集可信性校验\n"]
     integ.append(
-        f"用 `geo-presales-crawl-integrity` 对采集目录做前置校验：{integrity['samples']} 条样本，"
+        f"用 `geo-monitoring` 的采集完整性检查对采集目录做前置校验：{integrity['samples']} 条样本，"
         f"平台分布 {'、'.join(f'{k} {v}' for k, v in integrity['by_platform'].items())}。"
         f"阻断性缺陷 {integrity['counts']['defects']} 项，警告 {integrity['counts']['warnings']} 项。\n"
     )
@@ -397,13 +397,13 @@ def build(audit_dir: Path, target: str) -> str:
         parts.append(f"| `{item['file']}` | {item['desc']} |")
     parts.append(
         "\n先跑采集校验与抽取复核（脚本在 `geo-presales-report-audit` 与 "
-        "`geo-presales-crawl-integrity` 两个 skill 里），再渲染本报告：\n"
+        "`geo-monitoring` 两个 skill 里），再渲染本报告：\n"
     )
     parts.append(
         "\n```bash\n"
         "SKILLS=<skills 根目录>\n"
         "BANK=<题库.json>; LEX=<品牌词表.json>\n"
-        "python3 $SKILLS/geo-presales-crawl-integrity/scripts/audit_crawl_integrity.py \\\n"
+        "python3 $SKILLS/geo-monitoring/scripts/audit_crawl_integrity.py \\\n"
         "  --collect-dir <结果目录> --target " + target + " --out <audit-dir>/crawl-integrity.json\n"
         "python3 $SKILLS/geo-metrics/scripts/de_cite_crawl.py \\\n"
         "  --collect-dir <结果目录> --question-bank $BANK --out <audit-dir>/normalized-answers.jsonl\n"

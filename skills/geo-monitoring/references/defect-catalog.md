@@ -165,7 +165,7 @@
 | `SHOPPING_ADS_EXCLUDED` | 信息 | AIO `source` 里的广告商品卡数 |
 | `SHOPPING_FLAG_WITHOUT_CARDS` | 警告 | AIO `is_overview_shopping=True` 但 `source` 里没有 `type=product`：商品层丢失，该条购物指标不可信 |
 
-报告顶层 `shopping_by_platform` 按平台给「多少条带卡、共多少张」，只是字段事实；触发率等比率由 core 按有效回答算，本 skill 不算。
+报告顶层 `shopping_by_platform` 按平台给「多少条带卡、共多少张」，只是字段事实；触发率等比率由 core 按有效回答算，采集检查不算。
 
 **处理**：信息级不需处理。`SHOPPING_FLAG_WITHOUT_CARDS` 命中时，受影响条目的购物指标在交付里标注采集缺陷，并把文件清单反馈供应商。
 

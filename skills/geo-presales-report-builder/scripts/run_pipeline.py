@@ -31,7 +31,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parent.parent
-CRAWL_INTEGRITY = SKILLS / "geo-presales-crawl-integrity" / "scripts" / "audit_crawl_integrity.py"
+MONITORING = SKILLS / "geo-monitoring" / "scripts"
+CRAWL_INTEGRITY = MONITORING / "audit_crawl_integrity.py"
+COLLECTOR = MONITORING / "collect_answers.py"
 JUDGE = SKILLS / "geo-presales-sentiment-judge" / "scripts" / "sentiment_sentences.py"
 
 
@@ -57,7 +59,7 @@ def stage_collect(args) -> None:
         return
     if not args.regions:
         raise SystemExit("[-1 采集] 采集目录还没建好，必须传 --regions(如 US 或 SG,MY)")
-    base = [sys.executable, HERE / "collect_answers.py", "--questions", args.questions,
+    base = [sys.executable, COLLECTOR, "--questions", args.questions,
             "--out", args.collect, "--regions", args.regions, "--platforms", args.platforms]
     printable = " ".join(str(c) for c in base)
     print(f"→ [-1 采集检查] {printable} --check-only")
@@ -103,7 +105,7 @@ def stage_crawl_integrity(args, out: Path) -> None:
     result = subprocess.run([str(c) for c in cmd])
     if result.returncode == 2:
         raise SystemExit(
-            f"[0 采集校验] 有阻断缺陷(退出码 2),按 geo-presales-crawl-integrity 的缺陷分派"
+            f"[0 采集校验] 有阻断缺陷(退出码 2),按 geo-monitoring/references/crawl-integrity.md 的缺陷分派"
             f"修采集或显式降级口径后再继续。报告:{audit}")
     if result.returncode == 1:
         print(f"⚠ [0 采集校验] 有警告(退出码 1),按缺陷目录补齐口径后再采信指标。报告:{audit}")

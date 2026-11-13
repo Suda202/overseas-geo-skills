@@ -1,9 +1,9 @@
 ---
 name: geo-monitoring
-description: Use when collecting GEO answers on a Prompt set — the 3-run quality trial per Prompt on each monitored platform, the formal Before baseline (7 runs per query × platform × country × language), daily or periodic collection and re-running failed cells — and when building the baseline HTML report or handing located gaps to the content team. Do not use for researching, writing, adding, merging, picking or locking Prompts (geo-prompt-selection-builder and the client Base), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers or brand recognition (geo-metrics).
+description: Use when collecting GEO answers on a Prompt set — the 3-run quality trial per Prompt on each monitored platform, the formal Before baseline (7 runs per query × platform × country × language), daily or periodic collection and re-running failed cells — when checking whether a raw collection directory is trustworthy before any metric (field-layer mixing, lost reference definitions, empty citation fields, failed answers, unregistered platforms), and when building the baseline HTML report or handing located gaps to the content team. Owns the single collector (scripts/collect_answers.py, also used by the presales pipeline and the selection research pre-run), the per-platform field contract and the crawl integrity check. Do not use for researching, writing, adding, merging, picking or locking Prompts (geo-prompt-selection-builder and the client Base), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers or brand recognition (geo-metrics).
 metadata:
   author: Overseas GEO Project
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # GEO Monitoring（监测）
@@ -22,8 +22,8 @@ metadata:
 
 ## 工具
 
-- 采集：`../geo-presales-report-builder/scripts/collect_answers.py`，项目唯一采集实现，8 个平台。跑之前设 `no_proxy=api.scrapeless.com`（本机代理会掐断 Python 的 HTTPS 握手）；失败格加 `--retry-unrecoverable` 才会重采。
-- 采集完整性：`geo-presales-crawl-integrity`，算任何指标前先过。
+- 采集：`scripts/collect_answers.py`，项目唯一采集实现，8 个平台；售前 pipeline 和选词研究预跑也调它。跑之前设 `no_proxy=api.scrapeless.com`（本机代理会掐断 Python 的 HTTPS 握手）；失败格加 `--retry-unrecoverable` 才会重采。各平台字段合同在 `references/platform-contract.json`，新增平台在这里登记。
+- 采集完整性：`scripts/audit_crawl_integrity.py`，算任何指标前先过；退出码、缺陷怎么处理见 [crawl-integrity.md](references/crawl-integrity.md)。
 - 试跑读数：`scripts/trial_brand_count.py`（每道题答案点了几个品牌）、`scripts/changeability_domains.py`（引用前 20 域名的来源结构），用法见脚本开头说明。
 - 基线报告：`scripts/build_baseline_html.py`，流程见 [baseline-report.md](references/baseline-report.md)。读数只出 HTML，不写进多维表格。
 

@@ -31,7 +31,7 @@
 python3 scripts/run_selection_mode.py run --case <payload.json> --market <市场代码> --platforms <AI 平台> --out <新工作目录> --agent sdk
 ```
 
-脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-presales-report-builder` 只拷 `scripts/`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）和 `audit_crawl_integrity.py`；不拷 `geo-monitoring`，线上不试跑、不采集），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
+脚本先归一化品牌资料，建一个只含所需文件的独立工作目录（选词、shared 整个拷；`geo-monitoring` 只拷研究预跑用的 `scripts/collect_answers.py`、`scripts/audit_crawl_integrity.py` 和 `references/platform-contract.json`，外加 `collect_answers.py` 导入要的 `geo_presales_core` 包（geo-metrics）；线上不试跑、不跑基线），再让 agent 按本文和 selection-rules.md 调研、写 `out/bank.json`，最后跑校验和导出，结果写进 `out/result.json`。检查没过而 `out/bank.json` 存在时，脚本把报错原文写成 `REPAIR-<n>.md` 回喂 agent 返修再查，默认最多 2 轮（`--repair-rounds`，0 关闭）；最后一轮授权 agent 丢题不丢库（改不好的题删掉、题号记 `config.retired`），所以门禁不放松、一次性跑也能出词。宿主有自己的 harness 时，把 `--agent sdk` 换成 `--agent-cmd "<命令>"`。环境变量、退出码和产物清单见脚本开头说明。一次只跑一个市场。
 
 部署、环境变量、境内服务器、接平台网关、审核环、每轮记账和验收见 [runner-ops.md](runner-ops.md)（给研发，agent 不用读）。
 
@@ -58,7 +58,7 @@ B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，�
 | 步 | 线上怎么做 |
 |---|---|
 | 1. 业务范围 | 没有品牌方填的业务范围表，用归一化后的品牌资料代替：市场和语言写进 `config.collection_config.market` / `.language`，品牌（`brand_name`）、品牌别名（`brand_aliases`）、官网、竞品照抄 `normalize_case.py` 的结果。缺的业务字段不找客户补。`config.business_goals` 可以不写（validator 按 `{selected: ["发现型可见度"], information_named: false}` 填充）。品类名 `config.category_label` 从「产品线」和官网推出，写进 `notes.md`「假设」。`config.shopping_cards` 照选词推理，但售前没有试跑，工业、工程类直接写关 |
-| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-presales-report-builder/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节；没有品牌方提供的资料，`demand-side-signals.md`（客户提供什么）不读，工作目录里也没有这个文件 |
+| 2. 调研 | 研究预跑每个产品线 × 市场语言只放 1 道品类认知题（`What should I look for when choosing [category]?`，用市场语言写），用 `geo-monitoring/scripts/collect_answers.py --questions <csv> --out <目录> --regions <市场> --platforms <AI 平台>` 跑，平台只用表单「AI 平台」里客户选的，每个平台 1 次。品牌和竞品评估预跑题默认不跑，和本地一致（selection-rules.md → 2）。答案目录和每个平台是否采到写进 `notes.md`「预跑答案」。公开信号照 signal-sources.md 收不需要客户数据的三节；没有品牌方提供的资料，`demand-side-signals.md`（客户提供什么）不读，工作目录里也没有这个文件 |
 | 3. 约束条件 | 照 selection-rules.md 第 3 步写 `config.attribute_plan`：每条判品牌情况（官网和公开资料判不出的填待确认，不出题）和公开硬事实上的相对竞品，三种取值都写 `brand_status_basis`。矩阵行或题挂了约束条件就必须有这张表（门禁 67），线上同样「宁可少出几道题」 |
 | 4. 目标客户与使用场景 | 从品牌资料里的「核心目标客户与购买场景」拆出目标客户，不改写业务范围那几行；按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
 | 5. 业务优先级 | 品牌资料「核心目标客户与购买场景」里写了的条目就是品牌方点名，对应的行判高，我们补充的判中（同 selection-rules.md 第 5 步；填写顺序只用于主题同档排序）；差异化优势写进依据，写明出处；这几项都空时按官网主推判（同 selection-rules.md 第 5 步）：主推产品的主要目标客户的核心使用场景记高、其他记中，`priority_basis` 写明「推断：品牌资料无业务重点，按官网主推定」。没开的行和原因写进 `notes.md`「没开的格子」 |

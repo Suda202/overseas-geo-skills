@@ -19,7 +19,7 @@
 - 历史遗留(不强迫迁移,跑测试前先看这张表):
   - `geo-presales-report-editor`:unittest 在 `scripts/tests/` 下。
   - `geo-presales-report-builder`:`tests/` 只放 fixture(`fixture_report_data.json`,被 `verify_report_data.py --self-test` 流程消费),没有 unittest。
-  - `geo-presales-crawl-integrity`、`shared`:暂无 unittest。
+  - `geo-monitoring`、`shared`:暂无 unittest。
 - `unittest discover` 返回 exit 5(NO TESTS RAN)说明找错了目录,不是测试通过;按上表换目录再跑。
 
 ## 词表与共享资产

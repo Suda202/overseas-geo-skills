@@ -34,7 +34,7 @@ Perplexity、Copilot、Grok、Alexa 四平台按 2026-10-21 实采核验（Vbran
 
 ## 购物层（商品卡）
 
-商品卡是回答之外的另一层数据，抽取规则只在 core `geo_presales_core/shopping.py` 实现一次，本 skill 引用它核对字段，不另写解析。
+商品卡是回答之外的另一层数据，抽取规则只在 core `geo_presales_core/shopping.py` 实现一次，采集检查引用它核对字段，不另写解析。
 
 | 平台 | 商品卡字段 | 不计入 |
 |---|---|---|

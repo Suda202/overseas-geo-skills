@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (online runs Discovery only; locally the types of the goals the brand party picked), validate and export — as a Feishu client-confirmation Base, as 5-column upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for trial runs, baselines, collection or reports (geo-monitoring) — the brand party picks the formal set in the client Base — defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.14.3"
+  version: "3.15.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -70,6 +70,7 @@ metadata:
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |
 | `scripts/normalize_case.py <payload.json> [-o <out>]` | 品牌资料校验与归一化（线上表单数据或品牌资料文件，字段同《品牌资料收集》第一部分） |
 | `scripts/run_selection_mode.py run --case <payload.json> --market <市场> --platforms <平台> --out <新目录> --agent sdk` | 线上一条命令跑完一个品牌 × 市场，检查不过自动返修，过了再按 review-rubric.md 审核一轮，见 online-runner.md |
+| `scripts/run_selection_mode.py bundle --out <新目录>` | 打线上部署包：选词和它运行要的 shared、geo-monitoring 采集程序、geo-metrics core，线上整个部署这个目录（runner-ops.md） |
 | `scripts/export_upload_csv.py <bank.json> --out <dir>` | 导出上传 CSV |
 | `scripts/industry_kb.py add --ws <工作目录>` 或 `add --bank <bank.json> --industry <行业> --category <英文品类词> --brand <品牌>`；`show --industry <行业> [--category <品类>]` | 把一次选词的经验并进 `references/industry-knowledge/`：约束条件、目标客户、场景、主题按品类存，渠道效果按行业存（线上 runner 成功后自动跑），2 个以上客户出现的标「通用」 |
 | `scripts/write_tags.py --base <token> --bank <bank.json> [--write]` | 把切片标签写进提示词库「标签」列 |
@@ -78,4 +79,4 @@ metadata:
 
 ## 维护本 skill
 
-动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了品牌资料输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py`、`python3 evals/e2e_repair_loop.py` 和 `python3 evals/e2e_review_loop.py`；动了 `net.py`、`collect_serp_signals.py` 或境内模式（`GEO_NET_DOMESTIC`）的，再跑 `python3 evals/e2e_domestic_network.py`（真实付费调用 Scrapeless 约 20 次）；动了任何采集脚本的厂商地址或请求头的，再跑 `python3 evals/e2e_gateway.py`（真实付费）；动了行业知识档案的，再跑 `python3 evals/e2e_industry_kb.py`；动了语种检查的，再跑 `python3 evals/e2e_language_check.py`。validator 的语种检查依赖 `lingua-language-detector`（在 `requirements.txt` 里），没装时跳过并给 W32 警告。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。
+动手前先读 [CHANGELOG.md](CHANGELOG.md) 最新版本号：比你会话里拿到的版本新，说明另一会话改过，先对账再改。还在讨论、当天可能翻转的判法先放 `30-选Topic与生词/方案/` 讨论稿，拍板后再进正文。改任何规则后跑 `python3 -I scripts/check_skill_terms.py`（扫本 skill、`geo-monitoring` 和 shared 两份文档的退役说法）、validator 测试 `python3 -m pytest -q scripts/test_validate_after_sales_set.py` 和 `python3 -I evals/verify_workflow.py`，三者都通过才算改完；动了品牌资料输入或线上入口的，再跑 `python3 evals/e2e_input_contract.py`、`python3 evals/e2e_repair_loop.py`、`python3 evals/e2e_review_loop.py` 和 `python3 evals/e2e_bundle.py`；动了 `net.py`、`collect_serp_signals.py` 或境内模式（`GEO_NET_DOMESTIC`）的，再跑 `python3 evals/e2e_domestic_network.py`（真实付费调用 Scrapeless 约 20 次）；动了任何采集脚本的厂商地址或请求头的，再跑 `python3 evals/e2e_gateway.py`（真实付费）；动了行业知识档案的，再跑 `python3 evals/e2e_industry_kb.py`；动了语种检查的，再跑 `python3 evals/e2e_language_check.py`。validator 的语种检查依赖 `lingua-language-detector`（在 `requirements.txt` 里），没装时跳过并给 W32 警告。退役一个说法时，同一次改动把它加进扫描清单。规则的修订历史记在 [CHANGELOG.md](CHANGELOG.md)，正文只写现在的规则。

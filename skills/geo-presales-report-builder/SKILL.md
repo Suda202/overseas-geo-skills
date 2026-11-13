@@ -16,7 +16,7 @@ metadata:
 
 负责：读取 Scrapeless 采集 JSON、按国家/平台/主题切分、复用后端指标管线算全部指标、渲染 HTML。
 
-不负责：采集数据的可信度校验（走 `geo-presales-crawl-integrity`，本 skill 的前置步骤）、上传用 CSV 的生成与结论撰写（走 `geo-presales-report-editor`）、品牌提及识别的纠错（走 `geo-presales-report-audit`）、句级情绪判读的规则制定（走 `geo-presales-sentiment-judge`）。
+不负责：采集和采集数据的可信度校验（走 `geo-monitoring`，本 skill 的前置步骤）、上传用 CSV 的生成与结论撰写（走 `geo-presales-report-editor`）、品牌提及识别的纠错（走 `geo-presales-report-audit`）、句级情绪判读的规则制定（走 `geo-presales-sentiment-judge`）。
 
 ## 开始前读取
 
@@ -26,13 +26,13 @@ metadata:
 4. [重跑与产物卫生](references/rerun-and-artifact-hygiene.md)——修复抽取器/清洗器/渲染器或替换已交付报告时必读；规定隔离重跑、labels 安全迁移、残留扫描、旧新对账与快照验收。
 5. [客户中途换竞品](references/competitor-swap.md)——换展示竞品时聚合板块与逐回答的两条规则,客户中途提出换品牌时先读。
 6. [跨 skill 规范映射](../shared/canonical-intent-mapping.md)——诊断意图与客户标签的唯一权威词表。
-7. `geo-presales-crawl-integrity` 的校验产出（前置步骤，见执行流程第 0 步）。
+7. `geo-monitoring` 采集完整性检查的产出（前置步骤，见执行流程第 0 步）。
 
 ## 输入
 
 | 输入 | 必需 | 说明 |
 |---|---|---|
-| 采集目录 | 是 | `<collect>/scraper.<platform>/<REGION>/<NNNN>.json`。区域目录名不限，按实际存在的读。新采集用 `scripts/collect_answers.py`（项目唯一采集实现，直连 Scrapeless API，`--dry-run` 先报调用量；平台网关地址用 `SCRAPELESS_BASE_URL` 配置），用法见 `geo-presales-pipeline` 第 3 步 |
+| 采集目录 | 是 | `<collect>/scraper.<platform>/<REGION>/<NNNN>.json`。区域目录名不限，按实际存在的读。新采集用 `geo-monitoring/scripts/collect_answers.py`（项目唯一采集实现，直连 Scrapeless API，`--dry-run` 先报调用量；平台网关地址用 `SCRAPELESS_BASE_URL` 配置），用法见 `geo-presales-pipeline` 第 3 步 |
 | 题库 CSV | 是 | 至少含 `query / question_zh / topic / diagnosis_intent / tags / question_types`，行序即题号 |
 | Case 记录 | 是 | 品牌、官网域名、配置竞品及其域名（数量不限，可用「竞品 N 主题」按产品线各挂）、品类 |
 | 品牌词表 | 建议 | 开放品牌集，决定声量份额分母的覆盖度 |
@@ -51,13 +51,13 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
   [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 ```
 
-`--platforms` 默认售前四平台；`all` 采 Scrapeless 支持的全部 8 个（另含 perplexity、copilot、grok、alexa），下游报告与校验均已登记。各平台字段与已知数据缺口见 crawl-integrity 的 `references/layer-contract.md`。
+`--platforms` 默认售前四平台；`all` 采 Scrapeless 支持的全部 8 个（另含 perplexity、copilot、grok、alexa），下游报告与校验均已登记。各平台字段与已知数据缺口见 `geo-monitoring/references/layer-contract.md`。
 
 采集目录还不存在时，脚本停在阶段 -1，并打印 `collect_answers.py` 的采集命令；付费采集不由驾驶脚本代跑。
 
 退出码:`0` 跑完到渲染、`3` 停在暂停点、其余为某步失败。它只调度不实现,各步口径以下列分步定义为准;单独重跑某一步时直接用该步命令。
 
-0. **先校验采集数据可信度**：用 `geo-presales-crawl-integrity` 检查采集目录，它会逐平台报出字段层混用、参考定义丢失、引用字段为空、答案失败等问题，并指名具体文件。**跳过这一步会把采集缺陷当成品牌表现**——实测中单个任务出现过数十到上百条空答案、空 URL 占位与题面缺失（规模实例见 [案例备注](references/case-notes.md)）。校验结论要写进报告的可用性说明。
+0. **先校验采集数据可信度**：用 `geo-monitoring/scripts/audit_crawl_integrity.py` 检查采集目录（规则见 `geo-monitoring/references/crawl-integrity.md`），它会逐平台报出字段层混用、参考定义丢失、引用字段为空、答案失败等问题，并指名具体文件。**跳过这一步会把采集缺陷当成品牌表现**——实测中单个任务出现过数十到上百条空答案、空 URL 占位与题面缺失（规模实例见 [案例备注](references/case-notes.md)）。校验结论要写进报告的可用性说明。
 
 1. **确认口径与输入**：目标品牌、配置竞品（按产品线各挂，数量不限）、官网域名、市场列表、平台列表。平台与市场从采集目录结构推断，不要写死。
 
@@ -209,7 +209,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 **回答正文里的商品卡**在原文位置渲染（2026-11-09）：ChatGPT 每张卡以带 title 的商品图开头，清洗时转占位符留在原位，`markdown_to_html` 还原成卡片（图、徽标、标题、价格、评分、卖点、Shop 链接）；带 title 但缺价格/评分/编号标题的图按文章配图处理，不渲染成卡。AI Mode、Gemini 正文没有卡片位置，AIO 全是 base64 内嵌图，这三个平台的卡片仍按平台顺序排在正文上方（`details[].product_cards`）。
 
-**引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-presales-crawl-integrity` 的数据分层契约与缺陷 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
+**引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-monitoring` 的数据分层契约与缺陷目录 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
 
 **可见度只用发现＋替代**（问题解决不统计提及率），对比、评估、验证、交易、售后题面点名品牌，不进可见度分母。
 

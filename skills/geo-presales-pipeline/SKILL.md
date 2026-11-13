@@ -1,6 +1,6 @@
 ---
 name: geo-presales-pipeline
-description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-presales-crawl-integrity, geo-presales-report-builder, geo-presales-sentiment-judge) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
+description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-presales-report-builder, geo-presales-sentiment-judge) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
 metadata:
   author: 海外 GEO 项目
   version: "2.1.0"
@@ -13,8 +13,8 @@ metadata:
 把一条评测 Case 一路带到可交客户的单文件 HTML 报告。**本 skill 只编排、零新逻辑**：口径、校验、计算、渲染都在被调 skill 及其脚本里。这里只回答两个问题：下一步跑什么；停下来时请哪个 skill 出场。
 
 - 负责：阶段顺序、断点续跑、每个暂停点的分派。
-- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集缺陷的判定规则（crawl-integrity）、Claim 判读规则（sentiment-judge）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
-- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过 crawl-integrity）；只判情感用 `geo-presales-sentiment-judge`；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
+- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集与采集缺陷的判定规则（`geo-monitoring`）、Claim 判读规则（sentiment-judge）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
+- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过采集完整性检查，见 `geo-monitoring`）；只判情感用 `geo-presales-sentiment-judge`；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
 
 ## 从哪一段进
 
@@ -34,10 +34,10 @@ metadata:
 
 ## 第 3 步：采集（付费）
 
-采集只有一套实现：`<skills>/geo-presales-report-builder/scripts/collect_answers.py`。它直接调 Scrapeless AI Scraper API，按题库行号落盘 `<collect>/scraper.<平台>/<REGION>/<NNNN>.json`，格式和 builder、integrity 对齐。
+采集只有一套实现：`<skills>/geo-monitoring/scripts/collect_answers.py`。它直接调 Scrapeless AI Scraper API，按题库行号落盘 `<collect>/scraper.<平台>/<REGION>/<NNNN>.json`，格式和 report-builder、采集完整性检查对齐。
 
 ```bash
-cd <skills>/geo-presales-report-builder
+cd <skills>/geo-monitoring
 python3 scripts/collect_answers.py --questions <上传.csv> --out <采集目录> --regions US --dry-run
 export SCRAPELESS_API_KEY=...          # 服务器用环境变量；本机没设时自动读 macOS 钥匙串同名项。不写进文件或命令参数
 python3 scripts/collect_answers.py --questions <上传.csv> --out <采集目录> --regions US
@@ -76,7 +76,7 @@ python3 scripts/run_pipeline.py \
 | --- | --- | --- |
 | 第 2 步选词 validator 或导出检查不通过 | `geo-prompt-selection-builder` | 按 errors 改题；新增事实交回 Case 提供方（线上表单或 Case 文件），不在题面扩张 |
 | 阶段 -1 采集未齐 | 用户确认调用量 | `--dry-run` 报数，确认后跑 `collect_answers.py` |
-| 阶段 0 采集校验退出码 2（阻断）或 1（警告） | `geo-presales-crawl-integrity` | 按缺陷目录逐条定位到平台和文件，修采集或显式降级口径后续跑；不许带着缺陷算指标 |
+| 阶段 0 采集校验退出码 2（阻断）或 1（警告） | `geo-monitoring`（references/crawl-integrity.md） | 按缺陷目录逐条定位到平台和文件，修采集或显式降级口径后续跑；不许带着缺陷算指标 |
 | 阶段 1 词表不存在 | 人工（Suda 或授权人） | 脚本已挖出候选 CSV，由人工冻结成 `brands[].name/aliases/type`。机器分不清品牌名和品类词，**这步不能自动化**；已有同品类冻结词表可直接复用 |
 | 阶段 2 数据生成失败 | `geo-presales-report-builder` | 读数据接口契约排障；不要绕过 build_report_data 手写数据 |
 | 阶段 3b Claim 抽取 | `geo-presales-sentiment-judge` | 按 Claim 层契约逐单元拆原子 Claim；拿不准的进 review-queue 交 Suda 裁决 |

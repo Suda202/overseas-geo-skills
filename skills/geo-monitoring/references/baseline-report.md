@@ -14,7 +14,7 @@ S=<项目根>/.agents/skills/geo-monitoring/scripts/build_baseline_html.py
 
 Sentiment and translations are prepared before the report is built, so the report is generated once with everything in it (Suda 2026-10-22).
 
-1. **Collect** each round into its own directory (`collect_r1` … `collect_rN`, `scraper.<platform>/<region>/NNNN.json`, numbered by `questions_csv` row order) and run `geo-presales-crawl-integrity` on each.
+1. **Collect** each round into its own directory (`collect_r1` … `collect_rN`, `scraper.<platform>/<region>/NNNN.json`, numbered by `questions_csv` row order) and run `scripts/audit_crawl_integrity.py` on each (see [crawl-integrity.md](crawl-integrity.md)).
 2. **Prepare** — `python3 -I $S --config baseline-html.json --prepare`. Writes `out_dir/collect` (all rounds merged, files `<NNNN>-r<RR>.json`, region directory = 意图类型), `out_dir/questions.csv` and `out_dir/lexicon.json`. Nothing is computed yet.
 3. **Sentiment** (skip it and the 04 情感 module and the per-answer sentiment are left out):
    - `python3 <sentiment-judge>/scripts/sentiment_sentences.py extract --bank out_dir/questions.csv --crawl-dir out_dir/collect --lexicon out_dir/lexicon.json --output sentiment/units.json`
