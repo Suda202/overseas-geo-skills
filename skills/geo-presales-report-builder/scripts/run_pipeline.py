@@ -213,7 +213,6 @@ def stage_sentiment(args, out: Path) -> None:
          "--report", out / "report-data.json", "--units", units,
          "--labels-dir", out / "sentiment-batches", "--brands", args.brands,
          "--target", args.target, "--claims", claims_file,
-         "--expected-metrics", metrics_file,
          *(["--theme-keywords", args.theme_keywords] if args.theme_keywords else []),
          "--out", out / "report-data.json"], args.dry_run, "3i 情感接入")
 

@@ -3,7 +3,8 @@
 流程：读分品牌判读标签 → 按报告切片（国家 / 平台 / 主题）统计正负句 → 写入每个切片的
 sentiment 字段。正向率口径为 正向句 ÷（正向句 + 负向句），排除中性。
 
-头部切片的数字会与 geo-metrics sentiment_sentences.py 的 `compute` 对账一次，确保没有各自算各自的。
+正向占比怎么算（Claim 信号去重、正向 ÷（正向 + 负向）、跨平台等权）只在 geo-metrics
+`geo_presales_core/sentiment.py` 实现一次，这里调用；句级降级路径的头部数字仍和 `compute` 对账一次。
 
 用法：
     python3 attach_sentiment.py --report report-data.json \
@@ -29,6 +30,10 @@ from pathlib import Path
 SKILLS_ROOT = Path(os.environ.get(
     "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])))
 JUDGE_SCRIPTS = SKILLS_ROOT / "geo-metrics" / "scripts"
+if str(JUDGE_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(JUDGE_SCRIPTS))
+from geo_presales_core.sentiment import (  # noqa: E402
+    brand_signal_stats, claim_signals, norm_claim_text, positive_share)
 
 # 报告平台显示名 → 采集目录里的平台名
 PLATFORM_INTERNAL = {
@@ -155,9 +160,7 @@ def clean_text(value: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def rate(pos: int, neg: int) -> str:
-    rated = pos + neg
-    return f"{pos * 100 / rated:.1f}%" if rated else "—"
+rate = positive_share
 
 
 def excerpt(sentence: str, keywords: list[str], width: int = 46) -> str:
@@ -295,52 +298,6 @@ def load_claims_file(path) -> list[dict]:
     return claims
 
 
-def _norm_claim_text(text) -> str:
-    """去重用的 claim 文本归一：压空白 + casefold。语义级归一是抽取环节的职责。"""
-    return " ".join(str(text or "").split()).casefold()
-
-
-def _verify_claim_metrics(claims: list[dict], brands: list[str], target: str,
-                          expected: dict) -> None:
-    """把本 skill 的全局 Claim 统计与 geo-metrics sentiment_sentences.py 的 claims-metrics 对账。
-
-    两处实现同一套口径（回答内按 semantic claim 去重、跨回答保留、跨平台等权不补 0），
-    不一致说明有一侧被改动过——直接报错，不让它静默进入报告。
-    """
-    seen: set[tuple] = set()
-    per_brand: dict[str, dict] = {}
-    for c in claims:
-        brand = c.get("brand")
-        if brand not in brands:
-            continue
-        direction = c.get("sentiment") or ""
-        if direction not in ("positive", "negative"):
-            continue
-        key = (brand, (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat")),
-               _norm_claim_text(c.get("claim")), direction)
-        if key in seen:
-            continue
-        seen.add(key)
-        slot = "pos" if direction == "positive" else "neg"
-        per_brand.setdefault(brand, {"pos": 0, "neg": 0})[slot] += 1
-
-    mismatches = []
-    for brand, exp in (expected.get("by_brand") or {}).items():
-        got = per_brand.get(brand)
-        if got is None:
-            mismatches.append(f"{brand}: 本地没有该品牌的 claim")
-            continue
-        if got["pos"] != exp.get("positive_signals") or got["neg"] != exp.get("negative_signals"):
-            mismatches.append(
-                f"{brand}: 本地 正{got['pos']}/负{got['neg']} vs claims-metrics "
-                f"正{exp.get('positive_signals')}/负{exp.get('negative_signals')}")
-    if mismatches:
-        for m in mismatches[:10]:
-            print("口径对账不一致:", m, file=sys.stderr)
-        raise SystemExit("Claim 统计口径与 geo-metrics claims-metrics 不一致，请先对齐口径")
-    print(f"口径对账通过：{len(expected.get('by_brand') or {})} 个品牌与 claims-metrics 一致")
-
-
 def _norm_qid_repeat(value) -> tuple[str, int | None]:
     """Split detail/report question id into (base question_id, repeat)."""
     text = str(value or "").strip()
@@ -378,32 +335,13 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
     if not claims:
         return None
 
-    def answer_key(c: dict) -> tuple:
-        return (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"))
-
-    seen: set[tuple] = set()
+    signals = claim_signals(claims, brands)
+    brand_stats = brand_signal_stats(signals, brands)
     per_brand_attr: dict[tuple, int] = {}
-    per_brand_theme: dict[tuple, int] = {}
-    per_platform: dict[tuple, dict] = {}
-    per_answer: dict[tuple, list] = {}
-    for c in claims:
-        brand = c.get("brand")
-        if brand not in brands:
-            continue
-        key = (brand, answer_key(c), _norm_claim_text(c.get("claim")), c.get("sentiment"))
-        if key in seen:
-            continue
-        seen.add(key)
-        direction = c.get("sentiment") or ""
-        if direction not in ("positive", "negative"):
-            continue
-        slot = "pos" if direction == "positive" else "neg"
-        bucket = per_platform.setdefault((brand, c.get("platform", "")), {"pos": 0, "neg": 0})
-        bucket[slot] += 1
-        per_brand_attr[(brand, c.get("attribute") or "", direction)] = \
-            per_brand_attr.get((brand, c.get("attribute") or "", direction), 0) + 1
-        per_brand_theme[(brand, c.get("theme") or "", direction)] = \
-            per_brand_theme.get((brand, c.get("theme") or "", direction), 0) + 1
+    per_answer: dict[str, list] = {}
+    for c in signals:
+        attr_key = (c.get("brand"), c.get("attribute") or "", c.get("sentiment"))
+        per_brand_attr[attr_key] = per_brand_attr.get(attr_key, 0) + 1
         answer_id = str(c.get('idx'))
         if c.get('repeat') is not None:
             answer_id = f"{answer_id}-r{int(c.get('repeat')):02d}"
@@ -416,39 +354,6 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
             "evidence_text": c.get("evidence_text"),
             "question_id": c.get("question_id"),
         })
-
-    def rate(pos: int, neg: int) -> str:
-        total = pos + neg
-        return f"{pos / total * 100:.1f}%" if total else "—"
-
-    brand_stats = {}
-    for brand in brands:
-        pos = sum(v for (b, _a, s), v in per_brand_attr.items() if b == brand and s == "positive")
-        neg = sum(v for (b, _a, s), v in per_brand_attr.items() if b == brand and s == "negative")
-        platform_rates = [b["pos"] / (b["pos"] + b["neg"])
-                          for (bn, _p), b in per_platform.items()
-                          if bn == brand and b["pos"] + b["neg"] > 0]
-        brand_stats[brand] = {
-            "signal_total": pos + neg,
-            "positive_signals": pos,
-            "negative_signals": neg,
-            "pos_rate": rate(pos, neg),
-            "platforms_with_signal": len(platform_rates),
-            "pos_rate_cross_platform": (f"{sum(platform_rates) / len(platform_rates) * 100:.1f}%"
-                                        if platform_rates else "—"),
-            "by_platform": {
-                plat: {"positive": b["pos"], "negative": b["neg"], "pos_rate": rate(b["pos"], b["neg"])}
-                for (bn, plat), b in sorted(per_platform.items()) if bn == brand
-            },
-            "by_attribute": sorted(
-                ({"attribute": a, "sentiment": s, "occurrence": v}
-                 for (b, a, s), v in per_brand_attr.items() if b == brand),
-                key=lambda x: (-x["occurrence"], x["attribute"])),
-            "by_theme": sorted(
-                ({"theme": t, "sentiment": s, "occurrence": v}
-                 for (b, t, s), v in per_brand_theme.items() if b == brand),
-                key=lambda x: (x["theme"], x["sentiment"])),
-        }
 
     # Theme × 品牌 矩阵：单元格取该主题下计数最高的 Attribute 作代表描述（不是数字）。
     # attribute → theme 是全局映射（聚类 2 的产物，跨品牌同一条 attribute 只有一个 theme），
@@ -650,8 +555,6 @@ def main() -> int:
     parser.add_argument("--claims", type=Path, default=None,
                         help="Claim 层产物（geo-metrics sentiment_sentences.py claims-assemble 输出）。"
                              "提供时按 Claim 信号口径聚合（推荐）；不提供则回落句级路径")
-    parser.add_argument("--expected-metrics", type=Path, default=None,
-                        help="geo-metrics sentiment_sentences.py claims-metrics 的产出；提供时逐品牌对账统计口径，不一致即报错")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
 
@@ -687,12 +590,6 @@ def main() -> int:
     theme_keywords = load_theme_keywords(args.theme_keywords)
     if claims:
         print(f"Claim 层聚合：{len(claims)} 条 claim（Claim 信号口径，回答内按 semantic claim 去重 + 跨平台等权）")
-        # 口径对账：本 skill 出的是「每个切片」的统计，geo-metrics claims-metrics 的
-        # claims-metrics 出全局统计——两处实现同一套规则（回答内去重、跨回答保留、
-        # 跨平台不补 0），必须一致。传了 --expected-metrics 时逐品牌核对，防止漂移。
-        if args.expected_metrics:
-            expected = json.loads(Path(args.expected_metrics).read_text(encoding="utf-8"))
-            _verify_claim_metrics(claims, brands, args.target, expected)
     elif args.theme_keywords is None:
         print("提示: 未走 Claim 层且未提供 --theme-keywords,主题矩阵使用内置净水器品类词表;"
               "换品类时未命中关键词的观点会整块落入「其他」而不进矩阵。")
@@ -801,20 +698,9 @@ def main() -> int:
                                 neg_n + (direction == "negative"))
 
     if claims:
-        seen_target: set[tuple] = set()
-        for c in claims:
-            if c.get("brand") != args.target:
-                continue
-            direction = c.get("sentiment")
-            if direction not in ("positive", "negative"):
-                continue
-            dedupe_key = (c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
-                          _norm_claim_text(c.get("claim")))
-            if dedupe_key in seen_target:
-                continue
-            seen_target.add(dedupe_key)
+        for c in claim_signals(claims, [args.target]):
             bump_signal(c.get("region", ""), c.get("platform", ""),
-                        str(c.get("question_id") or "").zfill(4), direction)
+                        str(c.get("question_id") or "").zfill(4), c.get("sentiment"))
     else:
         for direction, indices in (("positive", pos_sets[args.target]),
                                    ("negative", neg_sets[args.target])):
@@ -826,17 +712,8 @@ def main() -> int:
     # 抽屉「品牌对比」用：逐题、逐品牌（展示品牌）的正向情感占比，口径同目标品牌（Claim 信号，回答内去重）
     brand_tables: dict[str, dict] = {}
     if claims:
-        seen_brand: set[tuple] = set()
-        for c in claims:
-            brand = c.get("brand")
-            direction = c.get("sentiment")
-            if brand not in brands or direction not in ("positive", "negative"):
-                continue
-            key = (brand, c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
-                   _norm_claim_text(c.get("claim")))
-            if key in seen_brand:
-                continue
-            seen_brand.add(key)
+        for c in claim_signals(claims, brands):
+            brand, direction = c.get("brand"), c.get("sentiment")
             t = brand_tables.setdefault(brand, {"rpq": Counter(), "rpq_n": Counter(), "q": Counter(), "q_n": Counter(),
                                                 "rq": Counter(), "rq_n": Counter(), "pq": Counter(), "pq_n": Counter()})
             r_, p_, q_ = c.get("region", ""), c.get("platform", ""), str(c.get("question_id") or "").zfill(4)
@@ -863,7 +740,7 @@ def main() -> int:
             else:
                 pos_n, neg_n = by_qid.get(qid_str, (0, 0))
             if pos_n + neg_n > 0:
-                rec["sentiment"] = f"{pos_n * 100 / (pos_n + neg_n):.1f}%"
+                rec["sentiment"] = positive_share(pos_n, neg_n)
                 filled_records += 1
             else:
                 rec["sentiment"] = None
@@ -877,7 +754,7 @@ def main() -> int:
                 else:
                     name, k = "q", qid_str
                 rec["brand_sentiment"] = {
-                    brand: f"{t[name][k] * 100 / t[name + '_n'][k]:.1f}%"
+                    brand: positive_share(t[name][k], t[name + '_n'][k] - t[name][k])
                     for brand, t in brand_tables.items() if t[name + "_n"][k]
                 }
 
@@ -897,17 +774,8 @@ def main() -> int:
     if claims:
         grouped: dict[str, dict[str, dict]] = defaultdict(
             lambda: defaultdict(lambda: {"pos_claims": [], "neg_claims": []}))
-        seen_drawer: set[tuple] = set()
-        for c in claims:
-            brand = c.get("brand")
-            direction = c.get("sentiment")
-            if brand not in brands or direction not in ("positive", "negative"):
-                continue
-            key = (brand, c.get("region", ""), c.get("platform", ""), c.get("idx"), c.get("repeat"),
-                   _norm_claim_text(c.get("claim")))
-            if key in seen_drawer:
-                continue
-            seen_drawer.add(key)
+        for c in claim_signals(claims, brands):
+            brand, direction = c.get("brand"), c.get("sentiment")
             answer_key = _answer_key_text(c.get('region', ''), c.get('platform', ''),
                                           c.get('question_id', ''), c.get('repeat'))
             bucket = "pos_claims" if direction == "positive" else "neg_claims"
@@ -938,7 +806,7 @@ def main() -> int:
             "r": c.get("region", ""), "p": c.get("platform", ""),
             "k": f"{c.get('idx')}|{c.get('repeat')}",
             "q": int(str(c.get("question_id") or "0") or 0),
-            "b": c.get("brand"), "t": _norm_claim_text(c.get("claim")),
+            "b": c.get("brand"), "t": norm_claim_text(c.get("claim")),
             "d": c.get("sentiment") or "", "a": c.get("attribute") or "", "h": c.get("theme") or "",
             **({"e": str(c.get("evidence_text") or "").strip()}
                if c.get("brand") == args.target and str(c.get("evidence_text") or "").strip() else {}),

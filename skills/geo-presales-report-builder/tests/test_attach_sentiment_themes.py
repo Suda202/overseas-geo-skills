@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
 
 class ClaimLayerAggregationTests(unittest.TestCase):
-    """Claim 层接入：Claim 信号口径、回答内按 semantic claim 去重、口径对账。"""
+    """Claim 层接入：Claim 信号口径、回答内按 semantic claim 去重（计算在 geo-metrics core sentiment.py）。"""
 
     def claims(self):
         # 同回答同品牌同 semantic claim（文本重复）→ 只计 1 次；
@@ -139,12 +139,3 @@ class ClaimLayerAggregationTests(unittest.TestCase):
         cell = block["theme_matrix"]["matrix"]["安装与部署"]["A"]
         self.assertEqual("安装便捷", cell["top_attribute"])
         self.assertEqual("pos", cell["top_dir"])
-
-    def test_reconciliation_rejects_drifted_metrics(self):
-        expected = {"by_brand": {"A": {"positive_signals": 99, "negative_signals": 1}}}
-        with self.assertRaises(SystemExit):
-            MODULE._verify_claim_metrics(self.claims(), ["A"], "A", expected)
-
-    def test_reconciliation_passes_on_matching_metrics(self):
-        expected = {"by_brand": {"A": {"positive_signals": 3, "negative_signals": 1}}}
-        MODULE._verify_claim_metrics(self.claims(), ["A"], "A", expected)  # 不抛异常
