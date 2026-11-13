@@ -107,9 +107,8 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(answer_validity("Acme is a valid option."), (True, None))
 
     def test_answer_validity_ignores_reference_definition_lines(self):
-        # 引用定义行是采集交付的引用数据，不是助手正文。其实测中 URL 路径（one-login）、
-        # 查询串（utm_source=chatgpt）与标题（"One Login"）会拼出跨词匹配，
-        # 把正常回答判成 LOGIN_REQUIRED（brand_t scraper.chatgpt/SG/0025.json、0026.json）。
+        # 引用定义行是采集交付的引用数据，不是助手正文；URL 和标题里的词不能参与失败页判定
+        # （brand_t scraper.chatgpt/SG/0025.json、0026.json 实测）。
         body = (
             "FCM covers the region well.\n\n"
             "[1]: https://www.fcmtravel.com/en-sg/one-login-technology/Singapore?utm_source=chatgpt.com "
@@ -121,8 +120,9 @@ class ContractTests(unittest.TestCase):
             answer_validity("I encountered an error doing what you asked. Could you try again?\n"
                             "[1]: https://example.com \"Example\""),
             (False, "ERROR_PAGE"))
-        self.assertEqual(answer_validity("Please log in to your ChatGPT account to continue."),
-                         (False, "LOGIN_REQUIRED"))
+        self.assertEqual(answer_validity("I am unable to generate a response at this time."), (False, "ERROR_PAGE"))
+        # 2026-11-13 删掉登录页判法：正常回答里讲「打开 App 登录账号」照常有效
+        self.assertEqual(answer_validity("Open the app and sign in or create an account."), (True, None))
 
     def test_task190_metric_scopes_are_independent(self):
         non_discovery_visibility = {

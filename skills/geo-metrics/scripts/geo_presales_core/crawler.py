@@ -24,13 +24,13 @@ from .util import ContractError, extract_urls, normalize_text, sha256_obj
 # 实测暴露面：三个数据集 240 条回答里只有 1 条含签名词且判定正确——属机制隐患，非现行错误。
 # 后续若发现某批数据有效回答数偏低，先查这里。
 #
-# 2026-09-18 补：签名改为**只在剔除引用定义行后**匹配。
-# 实测 Tbrand 港新数据集 scraper.chatgpt/SG/0025.json、0026.json 两条正常回答
-# （3406 / 4030 字符）被判成 LOGIN_REQUIRED：命中的是尾部引用定义行
-# `[1]: https://www.fcmtravel.com/en-sg/one-login-technology/Singapore?utm_source=chatgpt.com
-#  "FCM Travel - One Login - Singapore…"`——URL 路径里的 `one-login` 与查询串里的
-# `chatgpt`（utm_source）、以及标题里的「One Login」拼出了跨词匹配。
-# 引用定义行是采集交付的引用数据，不是助手正文，本不应参与失败页判定。
+# 2026-09-18 补：签名**只在剔除引用定义行后**匹配。引用定义行（`[1]: url "标题"`）是采集交付的引用数据，
+# 不是助手正文；URL 和标题里的词会和签名拼出跨词匹配（Tbrand scraper.chatgpt/SG/0025、0026 实测）。
+#
+# 2026-11-13 只留三类实测拦对过的（Suda「删这三条」）：空回答、页面污染、报错页。登录页、拒答、占位符三条
+# 删掉：全库（评测数据、交付、历史归档）一次真命中都没有，登录页那条还把 6 条正常回答（讲怎么在 App、
+# 政府网站、云平台上登录账号）误判成无效、反复付费重采。拒答也是 AI 的真实表现，算「没提到」说得通，不该重采。
+# 原 REFUSAL 里的平台故障说法「unable to generate a response」并进报错页。
 INVALID_SIGNATURES = [
     # 页面污染：采集把 Google 页面框架（复制/分享面板、反馈按钮）连同侧栏来源卡片摘要一起抓进了正文。
     # 2026-10-10 实测 Bbrand 端到端 scraper.overview/US/0005 首次尝试：免责声明之后 35% 的正文
@@ -38,18 +38,11 @@ INVALID_SIGNATURES = [
     # 不能只剥掉按钮文字当作有效——污染段边界不可靠，整条重采。放在 ERROR_PAGE 前，原因才报得准。
     ("PAGE_CHROME", re.compile(
         r"Share public link|Good response\s*Bad response|Copied to clipboard\s*Failed to copy", re.I)),
-    ("LOGIN_REQUIRED", re.compile(r"\b(log in|login|sign in|sign up)\b.{0,80}\b(chatgpt|account|continue)\b", re.I | re.S)),
     ("ERROR_PAGE", re.compile(
         r"\b(something went wrong|internal server error|bad gateway|service unavailable"
         r"|try again later|could you try again|i encountered an error|an error occurred"
-        r"|error (?:doing|while doing) what you asked)\b", re.I)),
-    ("REFUSAL", re.compile(
-        r"^(i['’]?m sorry[, ]+but "
-        r"|i (?:can(?:not|'t)|won't) (?:help|assist|provide)"
-        r"|unable to comply"
-        r"|i(?:'m| am| was)? unable to (?:generate|respond|provide|answer|complete)"
-        r"|unable to (?:generate|respond to|provide) (?:a |an )?(?:response|answer|reply|result))", re.I)),
-    ("PLACEHOLDER", re.compile(r"^(n/?a|no answer|placeholder|loading\.{0,3})$", re.I)),
+        r"|error (?:doing|while doing) what you asked"
+        r"|unable to generate (?:a |an )?(?:response|answer|reply))\b", re.I)),
 ]
 
 # 引用定义行：`[编号]: url "标题"`（chatgpt / gemini 交付格式）。
