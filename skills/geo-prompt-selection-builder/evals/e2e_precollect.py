@@ -16,7 +16,7 @@
   4. 评价类缺凭据 → summary 里评价 status=failed 带原因，不检查评价，其他两类照常 → success
   5. 每轮都不登记评价 → 最后一轮只记 warning，不删题（题数不变、config.retired 没新增）→ success
   6. 开发者与云基础设施：评价走 Trustpilot + Capterra/TrustRadius 站内页（站名当关键词搜、网址要含竞品名），社区加 Hacker News；category_en 进种子词
-  7. 内容与流媒体：评价只走 Google Play / App Store（带应用 ID、--country/--lang），不碰 Trustpilot；社区加 MyDramaList
+  7. 内容与流媒体：评价只走 Google Play / App Store（带 App 名称、--country/--lang），不碰 Trustpilot；社区加 MyDramaList
   8. 行业写错两次 → 回喂 PLAN-REPAIR 一次，仍错退回默认渠道（竞品 Trustpilot + 市场社区），原因写进 plan-checked.json
   9. 泰国市场：社区换成 Pantip（net.py pantip 取帖子页评论，3.6.2 起不用无头 Chrome），不调 Reddit
  10. 想跳过表里的固定渠道 → check-plan 报错，返修后通过
@@ -55,6 +55,7 @@ CASE_PAYLOAD = {
                  {"名称": "RivalTwo", "官网域名": "https://rival-two.example/en"},
                  {"名称": "RivalThree", "官网域名": "http://rival-three.example/"}],
         "核心目标客户与购买场景": ["海外华人观众：想看带英文字幕的亚洲剧"],
+        "差异化优势": ["亚洲剧片库全、英文字幕同步更新"],
     },
     "options": {"locale": "en"},
 }
@@ -237,7 +238,9 @@ def quotes(cats):
     return out
 
 
-cats = ["搜索联想", "评价", "社区"] if mode == "all" else ["搜索联想", "社区"]
+cats = ["搜索联想", "评价", "社区"] if mode in ("all", "supp") else ["搜索联想", "社区"]
+if mode == "supp":
+    cats.append("补充内容")
 if mode == "fix" and task.startswith("REPAIR-"):
     cats = ["搜索联想", "评价", "社区"]  # 返修：把评价补登记进去
 bank["config"]["buyer_quotes"] = list(bank["config"].get("buyer_quotes") or []) + quotes(cats)
@@ -277,8 +280,8 @@ DEFAULT_PLAN = {"industry": "消费级软件与在线服务", "industry_basis": 
 
 
 def run_case(name: str, mode: str, reviews: str = "ok", repair_rounds: int = 2, plan: dict | None = None,
-             plan_repair: dict | None = None, market: str = "US", extra_env: dict | None = None
-             ) -> tuple[int, dict, Path, list[dict]]:
+             plan_repair: dict | None = None, market: str = "US", extra_env: dict | None = None,
+             case: Path | None = None) -> tuple[int, dict, Path, list[dict]]:
     ws = WS_ROOT / f"ws-{name}"
     log = WS_ROOT / f"calls-{name}.jsonl"
     env = {k: v for k, v in os.environ.items() if k not in ("NET_REDDIT_MAX", "DATAFORSEO_WHO")}
@@ -287,7 +290,7 @@ def run_case(name: str, mode: str, reviews: str = "ok", repair_rounds: int = 2, 
                **(extra_env or {}))
     if plan_repair is not None:
         env["FAKE_PLAN_REPAIR"] = json.dumps(plan_repair, ensure_ascii=False)
-    cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(CASE), "--market", market,
+    cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(case or CASE), "--market", market,
            "--platforms", "chatgpt", "--out", str(ws), "--task-file", str(dummy_task),
            "--repair-rounds", str(repair_rounds), "--review-rounds", "0",
            "--agent-cmd", f'"{sys.executable}" -I "{fake}"']
@@ -457,15 +460,15 @@ check("6 种子词用 category_en；run success", seeds6[0] == "best cloud gpu r
 # 7. 内容与流媒体
 P7 = {"industry": "内容与流媒体", "industry_basis": "官网首页 Watch Asian dramas，https://brandx.example",
       "category_en": "asian drama streaming",
-      "app_ids": {"google-play": ["com.brandx.app", "com.rivalone.android"], "app-store": ["id1234567"]}}
+      "app_names": ["BrandX", "RivalOne"]}
 rc, res, ws, calls = run_case("streaming", "all", plan=P7)
 rev7 = sorted((c["argv"] for c in calls if c["script"] == "collect_reviews.py"), key=lambda a: a[0], reverse=True)
-check("7 流媒体：评价只调 google-play、app-store（应用 ID 去掉 id 前缀、带 --country us --lang en），不调 trustpilot；rerun.txt 是工作目录相对路径的完整命令",
+check("7 流媒体：评价只调 google-play、app-store（两个商店都按 App 名称搜、带 --country us --lang en），不调 trustpilot；rerun.txt 是工作目录相对路径的完整命令",
       [a[0] for a in rev7] == ["google-play", "app-store"]
-      and rev7[0][1:3] == ["com.brandx.app", "com.rivalone.android"] and rev7[1][1] == "1234567"
+      and rev7[0][1:3] == ["BrandX", "RivalOne"] and rev7[1][1:3] == ["BrandX", "RivalOne"]
       and all(a[a.index("--country") + 1] == "us" and a[a.index("--lang") + 1] == "en" for a in rev7)
       and (ws / "research/precollect/reviews/google-play/rerun.txt").read_text(encoding="utf-8").strip().split(
-          "collect_reviews.py ", 1)[-1] == "google-play com.brandx.app com.rivalone.android "
+          "collect_reviews.py ", 1)[-1] == "google-play BrandX RivalOne "
       "--out research/precollect/reviews/google-play --product-line 'Streaming platform: Asian drama library with "
       "English subtitles' --id-prefix PR1 --country us --lang en --wait 600",
       f"collect_reviews={rev7}")
@@ -587,6 +590,31 @@ P16 = {"industry": "其他实体消费品", "industry_basis": "卖厨房小家�
 rc, res, ws, calls = run_case("consumer", "all", plan=P16)
 rv16 = sorted({c["argv"][0] for c in calls if c["script"] == "collect_reviews.py"})
 check("16 其他实体消费品：评价走 google-shopping 和 trustpilot", rv16 == ["google-shopping", "trustpilot"], f"reviews={rv16}")
+
+# 17. 补充内容上传的文件（3.17.0）：prepare 拷进工作目录，precollect 读成第四类，登记检查同样适用
+SUPP_DIR = WS_ROOT / "uploads"
+SUPP_DIR.mkdir()
+(SUPP_DIR / "gsc.csv").write_text("Query,Clicks,Impressions\nbrandx login,9,80\n"
+                                  "best app for chinese dramas with english subtitles,4,210\n", encoding="utf-8")
+(SUPP_DIR / "insights.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 32)
+supp_case = WS_ROOT / "case-supp.json"
+supp_case.write_text(json.dumps({**CASE_PAYLOAD, "case": {**CASE_PAYLOAD["case"], "补充内容": ["uploads/gsc.csv", "uploads/insights.png"]}},
+                                ensure_ascii=False), encoding="utf-8")
+rc, res, ws, calls = run_case("supp", "supp", case=supp_case)
+c17 = summary(ws)["categories"].get("补充内容", {})
+norm17 = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]
+check("17 补充内容：文件拷进 inputs/supplement/，GSC 去掉品牌查询后 1 条、PNG 列给 agent；登记后 success",
+      norm17["supplement_files"] == ["inputs/supplement/01-gsc.csv", "inputs/supplement/02-insights.png"]
+      and all((ws / f).is_file() for f in norm17["supplement_files"])
+      and c17.get("status") == "ok" and c17.get("rows") == 1 and c17.get("pages") == 1
+      and c17.get("to_read") == ["inputs/supplement/02-insights.png"] and rc == 0 and res.get("status") == "success",
+      f"normalized={norm17['supplement_files']} 补充内容={c17} exit={rc} status={res.get('status')}")
+rc, res, ws, calls = run_case("supp-unreg", "all", case=supp_case, repair_rounds=0)
+check("17b 补充内容采到却没登记：最后一轮只记 warning，照常交付",
+      rc == 0 and any("补充内容" in w for w in res.get("warnings") or []),
+      f"exit={rc} warnings={res.get('warnings')}")
+c1 = summary(WS_ROOT / "ws-all")["categories"].get("补充内容", {}) if (WS_ROOT / "ws-all").exists() else {}
+check("17c 没上传补充内容：这一类记 skipped，不做登记检查", c1.get("status") == "skipped", f"补充内容={c1}")
 
 passed = sum(1 for _, ok, _ in rows if ok)
 lines = ["# precollect 与登记检查端到端校验", "", f"- 运行时间：{datetime.now():%Y-%m-%d %H:%M}",

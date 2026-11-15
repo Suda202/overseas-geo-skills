@@ -5,8 +5,10 @@
 
 五个子命令（DataForSEO 的评价接口都是先提交任务、再取结果，脚本自己轮询）：
   trustpilot      给 Trustpilot 上的商家域名（trustpilot.com/review/<域名> 里那一段）；每 20 条计一次费，最多 200 条
-  google-play     给 Google Play 应用 ID（details?id= 后面那一段）；每 150 条计一次费
-  app-store       给 App Store 应用 ID（URL 里 id 后面的数字）；每 25 条计一次费，最多 500 条
+  google-play     给 Google Play 应用 ID（details?id= 后面那一段）或应用名称；每 150 条计一次费
+  app-store       给 App Store 应用 ID（URL 里 id 后面的数字）或应用名称；每 25 条计一次费，最多 500 条
+                  给的是名称时，先在该市场的应用商店搜这个名称（DataForSEO app_searches，每 30 个结果计一次费），
+                  取标题含这个名称的第一个应用，打印匹配到的应用名和 ID；没有标题含它的结果就记失败，不取别的应用
   google-shopping 给商品搜索词：先在 Google Shopping 搜商品，取前 --products 个有评价的商品，再取各自的评价；
                   每条评价带原始出处链接（零售站、评测站）。消费品替代 Amazon 评价用（DataForSEO 的 Amazon
                   评价接口 2026-10-27 文档写着暂不可用）
@@ -17,6 +19,7 @@
     python3 -I collect_reviews.py trustpilot www.example.com --depth 40 --sort newest --out <目录>
     python3 -I collect_reviews.py google-play com.ybrand.phone --country th --lang th --depth 150 --out <目录>
     python3 -I collect_reviews.py app-store 336141475 --country tw --lang zh-Hant --out <目录>
+    python3 -I collect_reviews.py google-play "Ybrand" --country th --lang th --out <目录>
     python3 -I collect_reviews.py google-shopping "automatic litter box" --country us --lang en --products 3 --depth 20 --out <目录>
     python3 -I collect_reviews.py google-maps "Din Tai Fung Paragon Singapore" --country sg --lang en --match "Din Tai Fung" --sort lowest --out <目录>
 
@@ -45,6 +48,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -70,6 +74,9 @@ PLATFORM = {
                     "business_data/google/reviews/task_get/"),
 }
 PRODUCTS = ("merchant/google/products/task_post", "merchant/google/products/task_get/advanced/")
+APP_SEARCH = {"google-play": ("app_data/google/app_searches/task_post", "app_data/google/app_searches/task_get/advanced/"),
+              "app-store": ("app_data/apple/app_searches/task_post", "app_data/apple/app_searches/task_get/advanced/")}
+APP_ID = {"google-play": re.compile(r"[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+"), "app-store": re.compile(r"(id)?\d{6,12}")}
 SORT = {"trustpilot": {"newest": "recency", "relevant": "relevance"},
         "google-play": {"newest": "newest", "relevant": "most_relevant"},
         "app-store": {"newest": "most_recent", "relevant": "most_helpful"},
@@ -178,6 +185,22 @@ def collect(r: Runner, platform: str, target: str, base: dict) -> list[dict]:
     return rows
 
 
+def resolve_app(r: Runner, platform: str, target: str) -> tuple[str, str]:
+    """应用 ID 原样用；名称就在该市场的应用商店搜，取标题含这个名称的第一个结果。返回 (应用 ID, 出处标签)。"""
+    if APP_ID[platform].fullmatch(target):
+        return target.removeprefix("id") if platform == "app-store" else target, target
+    got = r.task(f"{platform}-search", *APP_SEARCH[platform], {"keyword": target, "depth": 30, **r.location()})
+    items = ((got.get("result") or [{}])[0] or {}).get("items") or []
+    want = target.casefold()
+    for it in items:
+        title = str(it.get("title") or "")
+        if want in title.casefold() and it.get("app_id"):
+            print(f"  应用：{title}（{it['app_id']}）")
+            return str(it["app_id"]), f"{target} → {title}"
+    seen = "、".join(str(it.get("title") or "") for it in items[:5]) or "无结果"
+    raise LookupError(f"应用商店里没有标题含「{target}」的应用（前几个结果：{seen}）；换更准确的名称或直接给应用 ID")
+
+
 def maps_target(target: str) -> dict:
     for prefix in ("place_id", "cid"):
         if target.startswith(prefix + ":"):
@@ -204,7 +227,8 @@ def run(r: Runner, platform: str, targets: list[str]) -> tuple[list[dict], dict]
             if platform == "trustpilot":
                 got = collect(r, platform, target, {"domain": target})
             elif platform in ("google-play", "app-store"):
-                got = collect(r, platform, target, {"app_id": target, **r.location()})
+                app_id, label = resolve_app(r, platform, target)
+                got = [{**row, "target": label} for row in collect(r, platform, app_id, {"app_id": app_id, **r.location()})]
             elif platform == "google-maps":
                 got = collect(r, platform, target, {**maps_target(target), **r.location()})
             else:
@@ -294,8 +318,8 @@ def write_outputs(r: Runner, platform: str, rows: list[dict], per_target: dict):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
-    helps = {"trustpilot": "Trustpilot 商家域名", "google-play": "Google Play 应用 ID",
-             "app-store": "App Store 应用 ID", "google-shopping": "Google Shopping 商品搜索词",
+    helps = {"trustpilot": "Trustpilot 商家域名", "google-play": "Google Play 应用 ID 或应用名称",
+             "app-store": "App Store 应用 ID 或应用名称", "google-shopping": "Google Shopping 商品搜索词",
              "google-maps": "Google 地图商家搜索词或 place_id:/cid:"}
     for name, what in helps.items():
         p = sub.add_parser(name, help=f"按{what}取评价")

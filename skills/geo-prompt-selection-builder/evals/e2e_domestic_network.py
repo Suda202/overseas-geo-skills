@@ -57,6 +57,7 @@ CASE_PAYLOAD = {
                  {"名称": "Google Cloud", "官网域名": "https://cloud.google.com"},
                  {"名称": "Microsoft Azure", "官网域名": "https://azure.microsoft.com"}],
         "核心目标客户与购买场景": ["AI 初创团队：按小时租 GPU 训练和推理模型"],
+        "差异化优势": ["按小时计费、开机快"],
     },
     "options": {"locale": "en"},
 }

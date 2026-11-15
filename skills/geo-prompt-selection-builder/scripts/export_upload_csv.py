@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """选词题库 JSON → 售前诊断上传 CSV（5 列：query,question_zh,topic,diagnosis_intent,tags）。
 
-2026-11-11 起：删掉 question_types、purchase_intent、persona_name、scene_name 四列（研发要求先改 skill；
-线上后端改为按意图类型决定统计什么，旧模板带这四列的照收、忽略）；替代题直接传 alternatives。
+后端按意图类型（diagnosis_intent）决定统计什么，CSV 不带统计口径列；替代题直接传 alternatives。
 
 - 只认现行结构的题库：旧结构（validate_after_sales_set.legacy_markers 认出的）报「不支持的旧结构」，退出码 2，不导出。
 - diagnosis_intent 用后端枚举：discovery、alternatives、competitor、evaluation。tags 写跨主题切片标签：按 config.tag_dimensions
@@ -122,7 +121,10 @@ def main():
     topic_names = {str(t.get("topic_id") or "").strip(): str(t.get("topic") or t.get("name") or "").strip()
                    for t in (bank.get("config") or {}).get("topics") or [] if isinstance(t, dict)}
     config = bank.get("config") or {}
-    derived, tag_problems, _ = tag_plan(config, bank["questions"])
+    derived, tag_problems, unregistered = tag_plan(config, bank["questions"])
+    # 3.18.0：validator 不再告警 W62 / W63，没出的标签值和没登记的手写标签都在这里打印
+    tag_problems = list(tag_problems) + [f"{qid} 手写标签 {'、'.join(tags)} 没登记在自定义维度里"
+                                         for qid, tags in unregistered.items()]
     # 60 条上限按市场 × 产品线算（Suda 2026-11-09）：产品线从题所在矩阵行读
     slice_line = {str(r.get("slice_id") or "").strip(): str(r.get("product_line") or "").strip()
                   for r in config.get("slices") or [] if isinstance(r, dict)}

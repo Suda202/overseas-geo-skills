@@ -8,7 +8,7 @@
 
     prepare   归一化品牌资料，建独立工作目录（skill 拷贝、inputs/、TASK.md）
     行业判断  precollect 前先跑一次短 agent（PLAN.md，3.5.0）：取品牌和竞品官网首页（存 research/site/，给后面
-              官网调研接着用），从 references/precollect-channels.json 选行业，填英文品类词、应用 ID、门店名等参数，
+              官网调研接着用），从 references/precollect-channels.json 选行业，填英文品类词、App 名称、门店名等参数，
               写 research/precollect/plan.json；runner 检查（check-plan）不过回喂一次，仍不过退回默认渠道。
               要采哪些渠道由表决定（行业行 + 市场行），agent 只能跳过缺应用或门店的渠道、补渠道表里的站（最多 3 个，行业写「其他」时 5 个）和表外的站（add_sites，最多 2 个）
     precollect agent 启动前由脚本按渠道计划固定采集三类公开信号，采不采、采多少不交给 agent（3.4.0）：
@@ -16,6 +16,8 @@
               Trustpilot / Google Shopping / 应用商店 / Google 地图，或评价站 site: 搜索后取页面正文）；
               社区按市场（Reddit 搜索后读最相关的 3 帖、Hacker News 评论、本地论坛站内页）。每类单独超时
               （评价 10 分钟、其余 6 分钟）、单独失败，三类之间和同类渠道之间并行；失败只记原因不中断 run；
+              另读品牌资料「补充内容」上传的文件（read_supplement.py：表格取非品牌查询、文本按段落，PDF 和图片
+              留给 agent 读），作为第四类「补充内容」（3.17.0）。
               产物在 research/precollect/，合并表 signals.csv
               多一列「采集类别」，页面正文在 pages/
     agent     在工作目录里让 agent 按 TASK.md 调研、写 out/bank.json
@@ -71,7 +73,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   out/bank.json        题库 JSON（内部底稿）
   out/upload/*.csv     交给线上的 5 字段题（每个市场一份）
   research/precollect/ precollect 产物：serp/、reviews/、community/ 各类原始产物，summary.json（每类
-                       {status: ok|failed|skipped, reason, rows, out_dir}），signals.csv（三类去重合并，加「采集类别」列）
+                       {status: ok|failed|skipped, reason, rows, out_dir}），signals.csv（各类去重合并，加「采集类别」列）
   out/result.json      {status, market, locale, upload_files, prompt_count, topics, repair_rounds, precollect, review,
                        costs, errors…}；precollect 是每类采集状态与行数
                        review 是审核块（3.2.0）：{rounds, blocking_found, nonblocking_found,
@@ -161,10 +163,9 @@ def missing_sources(root: Path | None = None) -> list[str]:
 
 # legacy = 已归档的旧规则，不给 agent 看，免得混用两套口径
 # client-facing-base.md = 只用来建对客确认表，线上不写这张表，不拷贝（省 ~31KB 上下文）
-# demand-side-signals.md = signal-sources.md 里「客户提供什么」等品牌方数据小节，线上没有客户数据
 IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*.bak", "evals", "reports",
                                 "*.local.json", "build", "legacy",
-                                "client-facing-base.md", "demand-side-signals.md", "CHANGELOG*.md", "runner-ops.md",
+                                "client-facing-base.md", "CHANGELOG*.md", "runner-ops.md",
                                 # lark-cli 在 skill 目录里落下的 Base 导出（客户数据），线上不需要
                                 "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
 DEFAULT_TIMEOUT = 120 * 60
@@ -179,7 +180,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 
 线上跳过不读：
 - 文档里指向 `geo-monitoring` 的链接是试跑、基线和报告，线上不读；工作目录里只有它的采集程序 `scripts/collect_answers.py`，研究预跑用。
-- selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md、demand-side-signals.md 的说明，工作目录里没有这两份）；第 6 步「售后重聚」。
+- selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md 的说明，工作目录里没有这份）；demand-side-signals.md 只在品牌方上传了补充内容时读「GSC 与搜索词报告怎么用」一节；第 6 步「售后重聚」。
 
 题量（selection-rules.md 第 7 步「出几道」）：
 - 候选题一个市场 × 一条产品线 30–60 道。超过 60 是硬限（validator 门禁 47 和导出都报错，控制成本），写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。不到 30 不凑题；检查通过后脚本会补一轮题，补不到也照常交付。
@@ -188,10 +189,11 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 输入：
 - `inputs/case-normalized.json`：归一化后的品牌资料。竞品用品牌资料里客户填的，不自己增删。主题一律由你从矩阵行聚出，个数不限。品类名从「产品线」和官网推出，写进 `config.category_label`。
 - 题型：只出发现题。品牌资料里的「核心目标客户与购买场景」是品牌方点名的处境，对应的行判高、我们补充的判中；填写先后只用于主题同档排序。
+- 品牌资料里的「补充内容」是品牌方上传的文件（GSC、Semrush 这类导出，截图，销售或客服整理的常见问题），拷在 `inputs/supplement/`。runner 已用程序读过：表格里的非品牌查询、文本里的段落在 `research/precollect/signals.csv`（`采集类别` 为「补充内容」，来源类型按文件写 GSC、Semrush、品牌方资料等）；PDF 和图片程序不读，列在 `research/precollect/summary.json` 的 `categories.补充内容.to_read`，你直接打开读，读出的查询词和买家问题登记进 `config.buyer_quotes`，出处写「补充内容：<文件名>」。查询词是需求证据；销售、客服整理的问题是品牌方转述，按 signal-sources.md 的同类来源用。「公司名称」只做记录，不用于出题。
 - 市场：`{market}`；语言：`{locale}`。所有题的 `region` 写 `{market}`，`config.collection_config` 写 `{{"market": "{market}", "language": "{locale}"}}`。
 
 需求信号（必填）：
-- runner 在你启动前已判断品牌所在行业、按行业和市场选好评价站与社区并采了一轮：行业、依据和每个渠道采不采、为什么跳过在 `research/precollect/plan-checked.json`；评价、社区、搜索联想的原话合并在 `research/precollect/signals.csv`（`采集类别` 列标明哪一类）；评价站和本地社区的页面正文在 `research/precollect/pages/`，这一类没有拆成原话，读完把买家原话登记进去，出处写页面网址；各类状态和失败原因见 `research/precollect/summary.json`。品牌和竞品官网首页已取过，在 `research/site/homepages.txt`，第 2 步官网调研从这份接着看。先读完这些再决定还要不要补采；不要重复采同样的来源（同一批竞品域名、同样的种子词、已读过的帖子和页面）。计划里跳过或采失败的渠道，能补就按 signal-sources.md 补，补不了写进「未覆盖来源」；评价渠道超时的，任务已经提交过，在你写题前重跑 `research/precollect/reviews/<渠道>/rerun.txt` 里的命令就能取到结果、不重复付费。
+- runner 在你启动前已判断品牌所在行业、按行业和市场选好评价站与社区并采了一轮：行业、依据和每个渠道采不采、为什么跳过在 `research/precollect/plan-checked.json`；评价、社区、搜索联想和补充内容的原话合并在 `research/precollect/signals.csv`（`采集类别` 列标明哪一类）；评价站和本地社区的页面正文在 `research/precollect/pages/`，这一类没有拆成原话，读完把买家原话登记进去，出处写页面网址；各类状态和失败原因见 `research/precollect/summary.json`。品牌和竞品官网首页已取过，在 `research/site/homepages.txt`，第 2 步官网调研从这份接着看。先读完这些再决定还要不要补采；不要重复采同样的来源（同一批竞品域名、同样的种子词、已读过的帖子和页面）。计划里跳过或采失败的渠道，能补就按 signal-sources.md 补，补不了写进「未覆盖来源」；评价渠道超时的，任务已经提交过，在你写题前重跑 `research/precollect/reviews/<渠道>/rerun.txt` 里的命令就能取到结果、不重复付费。
 - 登记与本产品线相关的信号，写进 `config.buyer_quotes`；撑不起任何题的也可以登记，用来说明买家在意什么。`research/precollect/signals.csv` 里与本产品线相关的都要登记。一条一个对象：`{{"输入编号": "<市场前缀>-R001", "来源类型": "<评价 / 社区 / 搜索联想 等，precollect 来的照抄文件里的值>", "原话": "<买家原话原文，不要翻译>", "目标客户": "<谁在问，看不出留空>", "约束条件": "<这条信号能证明题面哪些条件，关键词写法>", "出处": "<完整 URL，不要写「同上帖」之类的简写>"}}`。
 - precollect 某类失败（summary.json 里 status 为 failed）的，写进 notes.md「未覆盖来源」并带上 summary.json 里的原因。某类采到了但全部与本产品线无关、一条不登记的，也在「未覆盖来源」写出类别名和理由；否则结束检查会要求返修。
 - 约束那一列的键名就是 `约束条件`，和对客 Base 列名、`signals.csv` 一致。
@@ -223,8 +225,8 @@ PLAN_TASK = """你在一个无人值守的流水线里，没有人会回答问�
 2. 一次取完品牌官网首页和竞品官网首页，存下来给后面的官网调研接着用：
    `python3 .agents/skills/shared/scripts/net.py fetch <品牌官网> <竞品官网 …> --country {market} > research/site/homepages.txt`
 3. 读 `.agents/skills/geo-prompt-selection-builder/references/precollect-channels.json` 和 `.agents/skills/geo-prompt-selection-builder/references/signal-sources.md`「按行业收评价和社区」。按品牌卖什么、卖给谁，从 `industries` 里选一个行业，键名原样照抄；行业看品牌本身，不看竞品。一个都不合适就写「其他」，按品牌卖什么、买家在哪里讨论和评价，自己推理该采哪些渠道：在 add 里挑渠道表里有的（最多 5 个），表里没有的站写进 add_sites（最多 2 个）。
-4. 本行业的「评价」「社区」，加上市场 {market} 在 `markets` 里的社区（没有这个市场就用 `_default`），就是 runner 要采的渠道，都会采，不能删。只有两种情况能写进 skip 并说明原因：要参数的三个渠道（google-play、app-store 要应用 ID，google-maps 要门店名）在品牌和竞品都没有 App、没有门店时；渠道表里写了 `scope` 的站（如 rtings 只测它自己的那些品类），品牌的品类不在 scope 里时。表里这一行没写、但这个品牌明显该采的，从 `review_channels`、`community_channels` 里挑，写进 add，最多 3 个，写原因；渠道表里没有的站（比如这个品类的专业评测站、垂直论坛），写进 add_sites，最多 2 个，runner 会用「站名 品类词」搜出本站页面再取正文。规则没写到的情况按这一步的目标自己推理，依据写进 industry_basis 或原因里。
-5. 要采 Google Play 或 App Store 的，找品牌和竞品的应用 ID：先看官网首页里的应用商店链接；没有再用 `python3 .agents/skills/shared/scripts/net.py search "<名称> app store" --gl {gl} --hl {lang}`（Scrapeless 的 Google 搜索不认 `site:`），搜索一共不超过 3 次。要采 Google 地图的，在 maps_queries 写竞品门店的「店名 城市」。
+4. 本行业的「评价」「社区」，加上市场 {market} 在 `markets` 里的社区（没有这个市场就用 `_default`），就是 runner 要采的渠道，都会采，不能删。只有两种情况能写进 skip 并说明原因：要参数的三个渠道（google-play、app-store 要 App 名称，google-maps 要门店名）在品牌和竞品都没有 App、没有门店时；渠道表里写了 `scope` 的站（如 rtings 只测它自己的那些品类），品牌的品类不在 scope 里时。表里这一行没写、但这个品牌明显该采的，从 `review_channels`、`community_channels` 里挑，写进 add，最多 3 个，写原因；渠道表里没有的站（比如这个品类的专业评测站、垂直论坛），写进 add_sites，最多 2 个，runner 会用「站名 品类词」搜出本站页面再取正文。规则没写到的情况按这一步的目标自己推理，依据写进 industry_basis 或原因里。
+5. 要采 Google Play 或 App Store 的，在 app_names 写品牌和竞品的 App 名称，按它在应用商店里显示的名字写（看官网首页的应用下载区或应用商店链接文字），不用找应用 ID：runner 会按名称在该市场的应用商店搜，只取标题含这个名称的应用，搜不到就记失败。要采 Google 地图的，在 maps_queries 写竞品门店的「店名 城市」。
 
 plan.json 的格式（除 industry、industry_basis 外都可省略）：
 {{
@@ -235,7 +237,7 @@ plan.json 的格式（除 industry、industry_basis 外都可省略）：
   "skip": {{"google-play / app-store / google-maps / 写了 scope 的站": "为什么不采"}},
   "add": {{"渠道名": "为什么要加"}},
   "add_sites": {{"域名": {{"category": "评价 或 社区", "why": "为什么要看这个站"}}}},
-  "app_ids": {{"google-play": ["com.example.app"], "app-store": ["123456789"]}},
+  "app_names": ["品牌和竞品的 App 名称，如 Trip.com"],
   "maps_queries": ["店名 城市"],
   "reddit_queries": ["最多 2 条：买家比较或求推荐的说法，不填就用竞品名对比和品类推荐问法"],
   "hn_queries": ["最多 3 条，不填就用竞品名"]
@@ -273,7 +275,7 @@ TOP_UP_TASK = """你在无人值守流水线的补题环节。工作目录里的
 
 只补题，不改已有的题：
 1. 先看 `out/notes.md`「没开的格子」和已有矩阵行：我方补充、能写出合理推断的处境，开成业务优先级为中的行（没有买家原话的，`priority_basis` 写「假设：……」），在这些行上出题；
-2. 还不够，再在业务优先级为低的行上出题（W64 告警写处理记录：「补足题量」）；
+2. 还不够，再在业务优先级为低的行上出题（validator 会给 W64 提示，属正常，不用处理）；
 3. 不许用同义改写、调换语序、机械组合条件凑数：门禁 8、W8b、W37 照常拦。找不到真实的新购买决策就停，在 `out/notes.md`「假设」里写一句为什么题少（品类窄、场景少等），照常交付。
 
 规则照 online-runner.md 和 selection-rules.md；约束条件表、需求信号登记照常。合计不超过 60 道。不要重做调研，不要访问工作目录以外的路径。
@@ -376,7 +378,16 @@ def prepare(case_path: Path, market: str, platforms: str, ws: Path, task_file: P
         write_json(ws / "out/result.json", {"status": "input_error", "market": market,
                                              "errors": [{"code": "unreadable_input", "message": str(exc)}]})
         return 2
-    result = load_normalizer().normalize(payload)
+    result = load_normalizer().normalize(payload, base_dir=case_path.parent)
+    if result["ok"]:
+        # 补充内容上传的文件拷进工作目录，case-normalized.json 里改写成工作目录内的相对路径
+        copied = []
+        for index, src in enumerate(result["normalized"].get("supplement_files") or [], start=1):
+            dst = ws / "inputs/supplement" / f"{index:02d}-{Path(src).name}"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            copied.append(str(dst.relative_to(ws)))
+        result["normalized"]["supplement_files"] = copied
     write_json(ws / "inputs/case-normalized.json", result)
     if not result["ok"]:
         write_json(ws / "out/result.json", {"status": "input_error", "market": market,

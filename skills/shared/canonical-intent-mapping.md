@@ -27,7 +27,7 @@
 - **引用所有类型都统计**（引用份额、引用率、引用来源；线上目前只有引用份额，没有引用率，这次不加，我们本地基线和售前 HTML 照算），按意图类型分开看。售前 HTML 报告的引用模块默认合并全部意图类型，核心洞察的引用份额、引用率只看发现＋替代、和提及率同一批题（2026-11-07）；监测基线 HTML 的「全部类型」仍只合并题面不点名品牌的类型（2026-10-22，`geo-monitoring/scripts/build_baseline_html.py`）。两处口径见 `geo-metrics/references/metric-scope-and-copy-contract.md`「样本范围」。
 - **提及只数正文里的品牌**：先去掉引用标记（「([RivalH1][5])」这类脚注、引用卡片标题）再识别，口径同 `geo-metrics/scripts/de_cite_crawl.py` 的 `strip_citations`。正文里写出来的品牌都算提及，包括被当作数据来源点名的（「Source: SRX Property Index」「According to rival-h2.example」）；提及不等于推荐。
 
-**上传列 `question_types` 是过渡字段。** 后端现在按 `question_types` 决定统计什么，只有 `visibility`、`sentiment` 两个值；导出脚本 2026-11-11 起不再导出这一列。目标是后端直接按 `diagnostic_intent` 决定统计哪些指标，上传模板已删掉这一列和 `purchase_intent`、`persona_name`、`scene_name` 三个留空列（旧模板带的照收、忽略）。线上目前没有统计胜率和准确性，这次都不加；引用对所有类型都算，历史数据不回算（研发需求第 4 节，2026-11-11）。在那之前，上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标都要后端先支持。这五个英文值（`alternatives`、`trust`、`information`、`transactional`、`support`）和售后数据看板的「意图类型」筛选已写进研发需求《售前诊断：线上生词改用选词 skill，研发需要改的地方》第 4 节（2026-11-09）。
+**后端按意图类型决定统计什么。** 上传列只有 `query,question_zh,topic,diagnosis_intent,tags` 五列，一道题统计哪些指标按 `diagnosis_intent` 查上表，不另设统计口径列（研发需求《售前诊断生词逻辑兼容》第 3、4 节，研发在线上改用选词生词之前先改完）。线上目前没有统计胜率和准确性，这次都不加；引用对所有类型都算，历史数据不回算。上表里后端还没有的枚举（替代、验证、问题解决、交易、售后）和准确性指标要后端先支持；这五个英文值（`alternatives`、`trust`、`information`、`transactional`、`support`）已写进研发需求第 4 节。
 
 **准确性怎么判。** 交易、售后题读的是 AI 说的事实对不对。
 
@@ -55,9 +55,9 @@
 
 Verification、Accuracy 和 Category Awareness 均不进入当前选词题库。旧题库的旅程阶段（三段或八段）和旧类型值保留兼容读取，不迁移历史数据。规则正文见选词 selection-rules.md 第 5、7、8 步。
 
-## 问题类型（后端枚举）
+## 后端怎么定统计口径
 
-后端问题类型（上传列 `question_types`）现在只有两个值：`visibility`、`sentiment`，是过渡字段，见上文「上传列 `question_types` 是过渡字段」。
+后端按 `diagnosis_intent` 决定统计哪些指标，见上文「后端按意图类型决定统计什么」。
 - `accuracy` 现在只是 diagnostic_intent 值，不是问题类型；交易、售后要统计准确性，需后端先加这项指标。
 
 ## `target_attributes` 来源

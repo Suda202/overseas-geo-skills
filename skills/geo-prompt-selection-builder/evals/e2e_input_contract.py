@@ -24,9 +24,9 @@ from normalize_case import CASE_KEYS, normalize  # noqa: E402
 
 EXAMPLES = SKILL / "references" / "input-examples"
 TEMPLATES = SKILL.parent / "shared" / "publish-templates"
-# 《AI 搜索监测｜品牌资料收集》第一部分的字段（市场、语言走采集配置，不进 case）
-INTAKE_FIELDS = {"品牌", "品牌别名", "官方域名", "产品线", "适用边界", "竞品",
-                 "核心目标客户与购买场景", "差异化优势"}
+# 线上诊断表单的品牌资料字段（Suda 2026-11-13；国家/地区、语言、AI 平台走采集配置，不进 case）
+INTAKE_FIELDS = {"公司名称", "品牌", "品牌别名", "官方域名", "产品线", "适用边界", "竞品",
+                 "核心目标客户与购买场景", "差异化优势", "补充内容"}
 
 rows: list[tuple[str, bool, str]] = []
 
@@ -43,8 +43,8 @@ def codes(result: dict) -> list[str]:
     return [e["code"] for e in result["errors"]]
 
 
-# 1. 合同字段与《品牌资料收集》第一部分一致
-check("合同字段 = 《品牌资料收集》第一部分字段", CASE_KEYS == INTAKE_FIELDS,
+# 1. 合同字段与线上表单一致
+check("合同字段 = 线上表单品牌资料字段", CASE_KEYS == INTAKE_FIELDS,
       f"多 {sorted(CASE_KEYS - INTAKE_FIELDS)} 少 {sorted(INTAKE_FIELDS - CASE_KEYS)}")
 
 # 2. 示例与公开模板都能通过，编号字段按顺序展开
@@ -76,15 +76,17 @@ def mutate(fn) -> dict:
 minimal = {"input_version": base["input_version"],
            "case": {k: base["case"][k] for k in ("品牌", "官方域名", "产品线")}}
 minimal["case"]["竞品"] = base["case"]["竞品"][:1]
+minimal["case"]["核心目标客户与购买场景"] = base["case"]["核心目标客户与购买场景"][:1]
+minimal["case"]["差异化优势"] = base["case"]["差异化优势"][:1]
 result = normalize(minimal)
-check("只填必填项（品牌、官方域名、产品线、1 个竞品）→ 通过",
+check("只填必填项（品牌、官方域名、产品线、1 个竞品、1 条核心目标客户、1 条差异化优势）→ 通过",
       result["ok"] and result["normalized"]["locale"] == "en", json.dumps(result["errors"], ensure_ascii=False))
 
 # 4. v1 输入：整份拒收，并说明改用 v2
 v1 = mutate(lambda p: p.__setitem__("input_version", "presales-case-input/v1"))
 result = normalize(v1)
 check("v1 payload → unsupported_version", codes(result) == ["unsupported_version"], f"实际错误码={codes(result)}")
-for field in ("公司名", "业务模式", "品类", "痛点", "希望解决的问题", "主题", "补充内容", "品牌名称"):
+for field in ("业务模式", "品类", "痛点", "希望解决的问题", "主题", "品牌名称"):
     result = normalize(mutate(lambda p, f=field: p["case"].__setitem__(f, "x")))
     check(f"v2 里带了已停用字段 {field} → retired_field", "retired_field" in codes(result), f"实际错误码={codes(result)}")
 
@@ -94,6 +96,74 @@ result = normalize(renamed)
 check("旧名「本期产品线」→ 按「产品线」收，renamed_field 告警",
       result["ok"] and result["normalized"]["case_fields"].get("产品线") == base["case"]["产品线"]
       and "本期产品线" not in result["normalized"]["case_fields"]
+      and [w["code"] for w in result["warnings"]] == ["renamed_field"],
+      json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
+
+# 4c. 公司名称是选填（2026-11-13）：照收进 case_fields；旧名「公司名」按「公司名称」收
+result = normalize(mutate(lambda p: p["case"].update({"公司名称": "某平台信息技术（北京）有限公司"})))
+check("公司名称 → 通过并进 case_fields",
+      result["ok"] and not result["warnings"]
+      and result["normalized"]["case_fields"].get("公司名称") == "某平台信息技术（北京）有限公司",
+      json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
+
+# 4d. 补充内容是多文件上传（3.17.0）：表格取非品牌查询，文本按段落，PDF 和图片交给 agent 读
+import tempfile  # noqa: E402
+import zipfile  # noqa: E402
+
+import read_supplement  # noqa: E402
+
+tmp = Path(tempfile.mkdtemp(prefix="supplement-e2e-"))
+(tmp / "gsc-queries.csv").write_text("Top queries,Clicks,Impressions\nbest chinese drama app,12,340\n"
+                                     "ybrand thai sub,40,900\nwhere to watch thai bl series free,3,120\n", encoding="utf-8")
+with zipfile.ZipFile(tmp / "semrush-keywords.xlsx", "w") as z:
+    z.writestr("xl/workbook.xml", '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+               'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+               '<sheet name="Organic" sheetId="1" r:id="rId1"/></sheets></workbook>')
+    z.writestr("xl/_rels/workbook.xml.rels", '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+               '<Relationship Id="rId1" Type="worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+    z.writestr("xl/worksheets/sheet1.xml", '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+               '<row r="1"><c r="A1" t="inlineStr"><is><t>Keyword</t></is></c><c r="B1" t="inlineStr"><is><t>Search Volume</t></is></c></row>'
+               '<row r="2"><c r="A2" t="inlineStr"><is><t>asian drama streaming with english subtitles</t></is></c><c r="B2"><v>1900</v></c></row>'
+               '</sheetData></worksheet>')
+with zipfile.ZipFile(tmp / "sales-faq.docx", "w") as z:
+    z.writestr("word/document.xml", '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+               '<w:p><w:r><w:t>Can I download episodes to watch offline on a plane?</w:t></w:r></w:p>'
+               '<w:p><w:r><w:t>Is there a family plan for 4 screens?</w:t></w:r></w:p></w:body></w:document>')
+(tmp / "insights.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 64)
+(tmp / "bing-ai-performance.pdf").write_bytes(b"%PDF-1.4\n")
+upload = ["gsc-queries.csv", "semrush-keywords.xlsx", "sales-faq.docx", "insights.png", "bing-ai-performance.pdf"]
+result = normalize(mutate(lambda p: p["case"].__setitem__("补充内容", upload)), base_dir=tmp)
+files = (result.get("normalized") or {}).get("supplement_files") or []
+check("补充内容传 5 个文件（相对路径）→ 通过，按 JSON 所在目录解析成绝对路径，case_fields 记文件名",
+      result["ok"] and files == [str((tmp / f).resolve()) for f in upload]
+      and result["normalized"]["case_fields"].get("补充内容 2") == "semrush-keywords.xlsx",
+      json.dumps(result.get("errors") or [Path(f).name for f in files], ensure_ascii=False))
+sigs, summ = read_supplement.read_files([Path(f) for f in files], ["Ybrand", "某平台"])
+by = {}
+for sig in sigs:
+    by.setdefault(sig["来源类型"], []).append(sig)
+check("补充内容读文件：GSC 去掉品牌查询、展示写进出处；Semrush 量进月搜索量；docx 按段落；PNG、PDF 列给 agent",
+      [x["原话"] for x in by.get("GSC", [])] == ["best chinese drama app", "where to watch thai bl series free"]
+      and summ["brand_queries_dropped"] == 1 and "展示 340" in by["GSC"][0]["出处"]
+      and by.get("Semrush", [{}])[0].get("月搜索量") == "1900"
+      and len(by.get("品牌方资料", [])) == 2 and by["品牌方资料"][0]["出处"] == "补充内容：sales-faq.docx 第 1 段"
+      and [Path(x).name for x in summ["to_read"]] == ["insights.png", "bing-ai-performance.pdf"] and not summ["failed"],
+      json.dumps({"sources": {k: len(v) for k, v in by.items()}, "files": summ["files"],
+                  "dropped": summ["brand_queries_dropped"]}, ensure_ascii=False))
+big = tmp / "too-big.csv"
+with big.open("wb") as f:
+    f.truncate(21 * 1024 * 1024)
+for name, value, want in (
+        ("传字符串（旧文本框写法）", "泰国站今年主推独播剧", "invalid_type"),
+        ("超 15 个文件", [upload[0]] * 16, "too_many_files"),
+        ("格式不支持", ["setup.exe"], "unsupported_file_type"),
+        ("文件不存在", ["missing.csv"], "file_not_found"),
+        ("单个超 20 MB", ["too-big.csv"], "file_too_large")):
+    result = normalize(mutate(lambda p, v=value: p["case"].__setitem__("补充内容", v)), base_dir=tmp)
+    check(f"补充内容{name} → {want}", want in codes(result), f"实际错误码={codes(result)}")
+result = normalize(mutate(lambda p: p["case"].__setitem__("公司名", "某平台")))
+check("旧名「公司名」→ 按「公司名称」收，renamed_field 告警",
+      result["ok"] and result["normalized"]["case_fields"].get("公司名称") == "某平台"
       and [w["code"] for w in result["warnings"]] == ["renamed_field"],
       json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
 
@@ -126,6 +196,10 @@ FAILURES = [
     ("缺品牌", lambda p: p["case"].pop("品牌"), "missing_field"),
     ("缺产品线", lambda p: p["case"].pop("产品线"), "missing_field"),
     ("缺官方域名", lambda p: p["case"].pop("官方域名"), "missing_field"),
+    ("缺核心目标客户与购买场景", lambda p: p["case"].pop("核心目标客户与购买场景"), "missing_field"),
+    ("缺差异化优势", lambda p: p["case"].pop("差异化优势"), "missing_field"),
+    ("差异化优势只填「待补充」", lambda p: p["case"].__setitem__("差异化优势", ["待补充"]), "missing_field"),
+    ("核心目标客户为空字符串", lambda p: p["case"].__setitem__("核心目标客户与购买场景", ""), "missing_field"),
     # 不依赖样例里竞品的个数和名字（公开仓库的脱敏样例只有 2 个竞品、名字也换了）
     ("竞品 4 个", lambda p: p["case"]["竞品"].extend(
         {"名称": f"Extra {i}", "官网域名": f"https://extra-{i}.example"} for i in range(4 - len(p["case"]["竞品"]))),

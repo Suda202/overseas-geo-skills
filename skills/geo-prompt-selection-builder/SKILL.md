@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (online runs Discovery only; locally the types of the goals the brand party picked), validate and export — as a Feishu client-confirmation Base, as 5-column upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for trial runs, baselines, collection or reports (geo-monitoring) — the brand party picks the formal set in the client Base — defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.15.1"
+  version: "3.18.1"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -23,7 +23,7 @@ metadata:
 | 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每个发现行和已开放类型的行判一次业务优先级，这是全流程唯一的档位判断；没开放的类型只登记 | 提示词矩阵表 |
 | 6 | 主题与主题优先级 | 主题 ＝ 值得独立监测的一组买家需求；先按候选类别初聚，再按竞争格局、评价标准、优化方向三问判断要不要按目标客户或使用场景拆；按主题售卖，每个发现主题至少 10 题；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
 | 7 | 写题 | 在高、中档发现行和已开放目标的行上出题；按决策差异定题数，每条产品线 × 每个市场 30–60 道（超 60 报错，控制成本；主题个数不限）；问不出发现题的行改类型 | 提示词库、题库 JSON |
-| 8 | 校验与导出；试跑后回写 | validator 错误全改、告警逐条记处理；按场景导出。试跑和采集归 `geo-monitoring`，跑完回来改题、补竞品、定商品卡开关、复核主题；挑正式题在对客确认表上 | 题库 JSON、对客确认表和 / 或上传 CSV |
+| 8 | 校验与导出；试跑后回写 | validator 错误全改；提示（告警）看一遍，有道理的改，不用写处理记录；按场景导出。试跑和采集归 `geo-monitoring`，跑完回来改题、补竞品、定商品卡开关、复核主题；挑正式题在对客确认表上 | 题库 JSON、对客确认表和 / 或上传 CSV |
 
 **接手线上生成的题库时**：线上每个市场留一份 `bank.json` 和 `notes.md`（`run_selection_mode.py` 工作目录的 `out/`），按 online-runner.md「交给本地选词接着做」继续。
 
@@ -36,7 +36,7 @@ metadata:
 1. 对客确认表（飞书多维表格）：要品牌方看和改时用，表和字段见 [references/client-facing-base.md](references/client-facing-base.md)。
 2. 上传 CSV / 接口行：`python3 -I scripts/export_upload_csv.py <bank.json> --out <dir>`，五列模板，一个市场 × 一条产品线一个文件，每个文件最多 60 条；线上一条命令跑（`scripts/run_selection_mode.py`）只交这一种。
 
-附 validator 结论一行和告警处理记录（`config.warning_decisions`）。
+附 validator 结论一行（有报错 / 没报错）；提示只供参考，不用写处理记录。
 
 ## 边界
 
@@ -55,7 +55,7 @@ metadata:
 | [references/client-facing-base.md](references/client-facing-base.md) | 建或改对客确认表；线上不建表，不用读 |
 | [references/output-contract.md](references/output-contract.md) | 写题库 JSON、跑 validator |
 | [references/signal-sources.md](references/signal-sources.md) | 第 1、2 步：我方自己去哪收搜索数据、评价和社区 |
-| [references/demand-side-signals.md](references/demand-side-signals.md) | 第 1、2 步：向品牌方要什么数据、拿到后怎么用（含 GSC 与搜索词报告怎么用）；线上没有品牌方资料，不用读 |
+| [references/demand-side-signals.md](references/demand-side-signals.md) | 第 1、2 步：向品牌方要什么数据、拿到后怎么用（含 GSC 与搜索词报告怎么用）；线上只在品牌方上传了补充内容时读「GSC 与搜索词报告怎么用」 |
 | [references/community-channels.md](references/community-channels.md) | 第 2 步：每个站点用什么通道取数 |
 | [references/online-runner.md](references/online-runner.md) | 线上无人值守跑一份品牌资料：和本地不一样的几步、没有浏览器怎么办 |
 | [references/runner-ops.md](references/runner-ops.md) | 部署线上选词（给研发）：环境变量、服务器要连的地址、境内服务器、接平台网关、审核环、每轮记账、验收；agent 不读 |
@@ -68,6 +68,7 @@ metadata:
 | `scripts/write_prompt_reasons.py --base <token> --bank <bank.json> --brand <品牌> --noun <品类名词>` | 往提示词库写出题原因和提示词优先级 |
 | `scripts/check_client_base.py --base <token> [--template]` | 对客确认表发出前检查 |
 | `scripts/diff_base_against_spec.py --base <token> --spec <spec.json>` | 增量部署前后对账，0 差异才算部署完 |
+| `scripts/read_supplement.py <文件…> --out <目录> --brand <品牌> [--alias <别名>]` | 读品牌资料「补充内容」上传的文件：表格取非品牌查询、文本按段落，PDF 和图片列给 agent 读（线上 runner 在 precollect 里自动跑） |
 | `scripts/normalize_case.py <payload.json> [-o <out>]` | 品牌资料校验与归一化（线上表单数据或品牌资料文件，字段同《品牌资料收集》第一部分） |
 | `scripts/run_selection_mode.py run --case <payload.json> --market <市场> --platforms <平台> --out <新目录> --agent sdk` | 线上一条命令跑完一个品牌 × 市场，检查不过自动返修，过了再按 review-rubric.md 审核一轮，见 online-runner.md |
 | `scripts/run_selection_mode.py bundle --out <新目录>` | 打线上部署包：选词和它运行要的 shared、geo-monitoring 采集程序、geo-metrics core，线上整个部署这个目录（runner-ops.md） |

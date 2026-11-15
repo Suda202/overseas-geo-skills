@@ -103,7 +103,8 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         result = validate(current_bank(2, "hypothesis"))
         self.assertEqual(result.returncode, 0, result.stdout)
 
-    def test_discovery_method_question_without_candidate_ask_fails(self) -> None:
+    def test_discovery_method_question_without_candidate_ask_warns(self) -> None:
+        # 3.18.0：要候选靠关键词判，会误报自然问法，降成提示 W12，不挡交付
         for text, ok in [
             ("How do I get rid of litter box smell in a home with multiple cats?", False),
             ("What's the best way to get my cat to drink more water?", False),
@@ -115,9 +116,8 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
             data["questions"][0]["monitoring_prompt"] = text
             result = validate(data)
             with self.subTest(text=text):
-                self.assertEqual(result.returncode == 0, ok, result.stdout)
-                if not ok:
-                    self.assertIn("asks no candidate question", result.stdout)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual("[W12]" in result.stdout, not ok, result.stdout)
 
     def test_topic_has_no_prompt_floor(self) -> None:  # Suda 2026-10-30
         result = validate(current_bank(4, "locked"))
@@ -204,7 +204,9 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         # 无高档行不再要求归入主题（Suda 2026-10-31：只要每题归一个主题、没有空主题）
         self.assertNotIn("homed in no Topic", validate(data).stdout)
         data["config"]["slices"][1]["priority_basis"] = ""
-        self.assertIn("priority_basis is empty", validate(data).stdout)
+        result = validate(data)  # 3.18.0：依据为空是提示 W43，对客表检查才挡
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("[W43] slice M-002: priority_basis is empty", result.stdout)
         data["config"]["slices"][1]["priority_basis"] = "品牌方未提，只有假设"
         data["questions"][3]["topic_id"] = "topic_x"
         self.assertIn("differs from its row", validate(data).stdout)
@@ -213,9 +215,11 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data["config"]["slices"][0]["priority"] = "中"
         self.assertNotIn("中 rows carrying more than one Prompt", validate(data).stdout)
         data["config"]["slices"][0]["priority"] = "高"
-        # 品类认知只在属性池前预跑，不进新结构题库（Suda 2026-10-29）
+        # 品类认知只在属性池前预跑，不进题库（Suda 2026-10-29）；3.18.0 起由类型校验拒收
         data["questions"][4]["prompt_type"] = "Category Awareness"
-        self.assertIn("Category Awareness Prompts in the bank", validate(data).stdout)
+        result = validate(data)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("unsupported prompt_type 'Category Awareness'", result.stdout)
 
     def test_non_discovery_row_needs_no_priority(self) -> None:
         # 3.0.0：非发现行只登记、不判档；发现行没定档仍报错
@@ -238,10 +242,13 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data["questions"] = data["questions"][:9]
         self.assertIn("[W59] Topics below the default coverage target (topic_1: 9 KPI Prompts)", validate(data).stdout)
 
-    def test_topic_needs_prompts(self) -> None:
+    def test_empty_topic_is_a_hint(self) -> None:
+        # 3.18.0：空主题不影响读数，降成提示 W3
         data = current_bank(2, "hypothesis")
         data["config"]["topics"].append({"topic_id": "topic_2", "topic": "Brand check", "priority": "高", "priority_basis": "高：测试造数"})
-        self.assertIn("Topics with no Prompt", validate(data).stdout)
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("[W3] Topics with no Prompt", result.stdout)
 
     def test_selection_topic_holds_one_prompt_type(self) -> None:
         data = current_bank(6, "hypothesis")
@@ -261,36 +268,31 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         self.assertNotIn("Gate 66", stdout)
         self.assertNotIn("Topics with no Discovery Prompt", stdout)
 
-    def test_topic_priority_has_a_basis(self) -> None:
+    def test_topic_priority_is_computed_from_rows(self) -> None:
+        # 3.18.0：主题优先级由脚本取组内最高的业务优先级，不再核对手填值（W46 删除）；依据为空是提示 W43
         data = current_bank(2, "hypothesis")
         topic = data["config"]["topics"][0]
+        topic["priority"] = "低"
         topic.pop("priority_basis")
-        self.assertIn("priority_basis is empty", validate(data).stdout)
-        topic.pop("priority")  # 3.14.3：主题优先级必填（门禁 43）
-        self.assertIn("topic topic_1: priority is empty", validate(data).stdout)
-        topic["priority"] = "高"
-        topic["priority_basis"] = "核心目标客户与购买场景（1）落在本主题"
-        self.assertEqual(validate(data).returncode, 0, validate(data).stdout)
-        topic["priority"] = "中"
-        self.assertIn("its highest row is 高", validate(data).stdout)
-        topic["priority"] = "急"
-        self.assertEqual(validate(data).returncode, 1)
+        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn('"topic_priority": {"topic_1": "高"}', result.stdout)
+        self.assertIn("[W43] topic topic_1: priority_basis is empty", result.stdout)
+        self.assertNotIn("[W46]", result.stdout)
 
-    def test_warning_decisions_and_capped_readiness(self) -> None:
+    def test_verdict_is_two_level_and_warnings_need_no_decision(self) -> None:
+        # 3.18.0（Suda 2026-11-13）：告警只打印、不要求处理记录；没有报错就是 Ready，不按一手数据封顶
         data = current_bank(2, "hypothesis")
-        data["config"]["first_party_data"] = True
+        data["config"].pop("first_party_data", None)
         result = validate(data)
-        self.assertIn("Usable", result.stdout)
-        warnings = [line for line in result.stdout.splitlines() if line.startswith("WARNING")]
-        self.assertTrue(warnings)
-        data["config"]["warning_decisions"] = [{"match": w.split(": ", 1)[1][:40], "decision": "保留：测试"} for w in warnings]
-        result = validate(data)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertTrue([line for line in result.stdout.splitlines() if line.startswith("WARNING")])
         self.assertIn('"readiness": "Ready"', result.stdout)
-        self.assertIn("WARNING (handled)", result.stdout)
-        data["config"]["first_party_data"] = False
-        self.assertIn("public data only", validate(data).stdout)
-        data["config"].pop("first_party_data")  # 3.14.3：没写一手数据也按只有公开数据封顶
-        self.assertIn("public data only", validate(data).stdout)
+        self.assertNotIn("Usable", result.stdout)
+        data["config"]["warning_decisions"] = [{"gate": "W59", "decision": "保留：测试"}]
+        self.assertNotIn("(handled)", validate(data).stdout)
+        data["questions"][0]["question_id"] = ""
+        self.assertIn("READINESS: Not ready", validate(data).stdout)
 
 class OldStructureTests(unittest.TestCase):
     """Old banks are not supported: the validator names each old-structure marker and exits 2."""
@@ -514,14 +516,15 @@ class CompetitorUseCaseGateTests(unittest.TestCase):
         data["config"]["slices"][0]["prompt_type"] = "Competitor"
         return data
 
-    def test_empty_constraints_fail_at_selection_stage(self) -> None:
+    def test_empty_constraints_warn(self) -> None:  # 3.18.0：降成提示 W38
         for constraints in ([], None):
             data = self.bank([])
             if constraints is None:
                 data["questions"][0].pop("constraints")
             with self.subTest(constraints=constraints):
                 result = validate(data)
-                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertIn("[W38] " , result.stdout)
                 self.assertIn(self.GATE, result.stdout)
 
     def test_gate_does_not_need_buyer_quotes(self) -> None:
@@ -663,12 +666,13 @@ class BusinessGoalGateTests(unittest.TestCase):
     """Gates 49 and 52 (Suda 2026-11-02 审核清单 B2; W50 / W51 removed in 3.0.0): business_goals decides which Prompt
     types are written."""
 
-    def test_49_missing_business_goals_defaults_to_discovery(self) -> None:
-        # 3.0.0：只做发现期间 business_goals 是常量，没写按 {selected: [发现型可见度], information_named: false} 填
-        self.assertNotIn("[W49]", validate(goal_bank(None)).stdout)
-        self.assertNotIn("[W49]", validate(goal_bank(["发现型可见度"])).stdout)
-        # 写了但取值不在四个目标里，仍告警
-        self.assertIn("[W49] config.business_goals malformed", validate(goal_bank(["品牌曝光"])).stdout)
+    def test_missing_or_malformed_business_goals_default_to_discovery(self) -> None:
+        # 3.18.0：W49 删除；没写或写错都按 {selected: [发现型可见度]} 读，出了别的类型由 W52 提示
+        for goals in (None, ["发现型可见度"], ["品牌曝光"]):
+            with self.subTest(goals=goals):
+                result = validate(goal_bank(goals))
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertNotIn("[W49]", result.stdout)
 
     def test_default_goals_still_drive_gate_52(self) -> None:
         # 默认填充后 W52 照查：没写 business_goals 的题库出了对比题、问题解决题照样告警
@@ -733,15 +737,18 @@ class EightTypeTests(unittest.TestCase):
     def test_accuracy_rejected_from_selection_bank(self) -> None:
         data = goal_bank(["发现型可见度"])
         add_typed(data, "Accuracy")
-        self.assertIn("Accuracy probes sit outside the bank", validate(data).stdout)
+        result = validate(data)  # 3.18.0：并进类型校验
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("unsupported prompt_type 'Accuracy'", result.stdout)
 
 
 class WarningCodeTests(unittest.TestCase):
-    """D5 / D3 (Suda 2026-11-02 审核清单): stable warning codes, whole-class decisions, gate 39 without terms."""
+    """Every warning opens with a stable code (D5, Suda 2026-11-02). Removed in 3.18.0: whole-class decisions
+    (warnings need no decision) and gate 39 / audience_terms."""
 
     @staticmethod
     def short_bank() -> dict[str, object]:
-        data = goal_bank(["品牌曝光"])  # malformed goals keep one [W49] open (missing goals default since 3.0.0)
+        data = goal_bank(["发现型可见度"])
         data["config"]["collection_config"] = {"market": "United States", "language": "en"}
         for i, text in ((0, "best litter box"), (1, "best cat litter box")):
             data["questions"][i]["user_question"] = text  # [W32] too short, twice
@@ -752,38 +759,19 @@ class WarningCodeTests(unittest.TestCase):
         lines = [l for l in validate(self.short_bank()).stdout.splitlines() if l.startswith("WARNING")]
         self.assertTrue(lines)
         for line in lines:
-            self.assertRegex(line, r"^WARNING(?: \(handled\))?: \[W\d+b?\] ")
+            self.assertRegex(line, r"^WARNING: \[W\d+b?\] ")
 
-    def test_gate_decision_covers_the_whole_class(self) -> None:
+    def test_removed_warnings_stay_removed(self) -> None:
         data = self.short_bank()
-        out = validate(data).stdout
-        self.assertEqual(validate(data).returncode, 0, out)
-        self.assertGreaterEqual(len([l for l in out.splitlines() if l.startswith("WARNING: [W32]")]), 2, out)
-        # one {gate} decision handles every [W32] warning; [W49] stays open
-        data["config"]["warning_decisions"] = [{"gate": "W32", "decision": "保留：测试"}]
-        out = validate(data).stdout
-        self.assertNotIn("WARNING: [W32]", out)
-        self.assertGreaterEqual(out.count("WARNING (handled): [W32]"), 2, out)
-        self.assertIn("WARNING: [W49]", out)
-        # gate codes may be written "W49", "[W8b]" or "36"; the old match-substring form still works
-        data["config"]["warning_decisions"] += [
-            {"gate": "W49", "decision": "保留：测试"}, {"gate": "[W8b]", "decision": "保留：测试"},
-            {"gate": "36", "decision": "保留：测试"},
-            {"gate": "W59", "decision": "任务覆盖已复核"},
-            {"match": "fewer than 30 candidate Prompts", "decision": "保留：测试"},
-            {"gate": "W54", "decision": "保留：测试"}]
-        out = validate(data).stdout
-        self.assertNotIn("WARNING: [W", out)
-        self.assertNotIn("without a decision", out)
-
-    def test_gate_39_is_a_manual_check_without_audience_terms(self) -> None:
-        data = goal_bank(["发现型可见度"])
         for row in data["questions"]:
             row["audience"] = "多猫家庭"
-        self.assertNotIn("[W39]", validate(data).stdout)
-        self.assertNotIn("audience_terms", validate(data).stdout)
-        data["config"]["audience_terms"] = {"多猫家庭": ["multiple cats", "multi-cat"]}
-        self.assertIn("[W39] Prompts filed under a non-base audience", validate(data).stdout)
+            row["status"] = "待审核"
+        data["config"]["audience_terms"] = {"多猫家庭": ["multiple cats"]}
+        data["config"]["audience_inputs"] = ["input-1"]
+        data["questions"][0].pop("attribute_ref", None)
+        out = validate(data).stdout
+        for code in ("W33", "W35", "W39", "W46", "W49", "W56", "W57", "W62", "W63"):
+            self.assertNotIn(f"[{code}]", out)
 
 
 EXPORT = Path(__file__).with_name("export_upload_csv.py")
@@ -817,35 +805,46 @@ def file_on_audience_rows(data: dict[str, object]) -> dict[str, object]:
     return data
 
 
-class SliceTagTests(unittest.TestCase):
-    """W62/W63 and export (Suda 2026-11-03): slice tags cut across Topics and never duplicate the Topic."""
+def export_out(data: dict[str, object]) -> str:
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = Path(tmp) / "bank.json"
+        bank.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        run = subprocess.run([sys.executable, "-I", str(EXPORT), str(bank), "--out", tmp],
+                             text=True, capture_output=True, check=False)
+        return run.stdout + run.stderr
 
-    def test_62_value_in_one_topic_duplicates_topic(self) -> None:
-        out = validate(tag_bank([{"dimension": "目标客户", "basis": "内容团队按人群补页面"}])).stdout
+
+class SliceTagTests(unittest.TestCase):
+    """Slice tags cut across Topics and never duplicate the Topic (Suda 2026-11-03). 3.18.0: the validator no longer
+    warns (W62 / W63); the export prints every value it leaves out and why."""
+
+    def test_value_in_one_topic_duplicates_topic(self) -> None:
+        out = export_out(tag_bank([{"dimension": "目标客户", "basis": "内容团队按人群补页面"}]))
         self.assertIn("目标客户「购房者」只落在 1 个主题（topic_1）", out)
         self.assertIn("目标客户「外派家庭」只落在 1 个主题（topic_2）", out)
         self.assertNotIn("目标客户「租房者」", out)
 
-    def test_62_topic_axis_dimension(self) -> None:
+    def test_topic_axis_dimension(self) -> None:
         data = tag_bank([{"dimension": "目标客户", "basis": "测试"}])
         for row in data["questions"]:
             row["audience"] = "租房者" if row["topic_id"] == "topic_1" else "购房者"
-        self.assertIn("这个维度就是主题的切分轴", validate(file_on_audience_rows(data)).stdout)
+        self.assertIn("这个维度就是主题的切分轴", export_out(file_on_audience_rows(data)))
 
-    def test_62_too_few_prompts_and_missing_basis(self) -> None:
+    def test_too_few_prompts_and_missing_basis(self) -> None:
         data = tag_bank([{"dimension": "目标客户"}])
         data["questions"][9]["audience"] = "购房者"  # 购房者: 3 in topic_1 + 1 in topic_2
-        out = validate(file_on_audience_rows(data)).stdout
+        out = export_out(file_on_audience_rows(data))
         self.assertIn("目标客户：没写 basis", out)
         self.assertIn("目标客户「购房者」只有 4 道题", out)
 
-    def test_63_handwritten_tag_must_be_registered(self) -> None:
+    def test_handwritten_tag_must_be_registered(self) -> None:
         data = tag_bank([])
         data["questions"][0]["tags"] = ["黑五"]
-        self.assertIn("[W63]", validate(data).stdout)
+        self.assertNotIn("[W63]", validate(data).stdout)
+        self.assertIn("手写标签 黑五 没登记在自定义维度里", export_out(data))
         data["config"]["tag_dimensions"] = [{"dimension": "自定义", "basis": "黑五活动", "values": ["黑五"]}]
-        out = validate(data).stdout
-        self.assertNotIn("[W63]", out)
+        out = export_out(data)
+        self.assertNotIn("没登记在自定义维度里", out)
         self.assertIn("自定义「黑五」只落在 1 个主题", out)
 
     def test_export_writes_only_passing_values(self) -> None:

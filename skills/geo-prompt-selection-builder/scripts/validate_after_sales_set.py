@@ -17,19 +17,7 @@ from itertools import combinations
 from pathlib import Path
 
 
-INTENTS = {
-    "Discovery",
-    "Competitor",
-    "Alternatives",
-    "Evaluation",
-    "Verification",
-    "Category Awareness",
-    "Accuracy",
-    "Information",
-    "Trust",
-    "Transactional",
-    "Support",
-}
+INTENTS = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
 # Eight selection types since 2026-11-06 (Suda): Discovery (incl. shortlist), Information (问题解决), Evaluation (评估,
 # incl. capability questions), Competitor, Alternatives, Trust (验证: reliability / complaints), Transactional (交易),
 # Support (售后: names the brand / model). No journey stage on new banks.
@@ -39,6 +27,8 @@ INTENTS = {
 # a buyer asking how to solve a problem or reach a goal; AI answers with advice, not a candidate
 # list; only own-domain citation is read. Pure knowledge questions are not this type.
 # No lifecycle, trial, baseline or lock gates (3.14.1): locking happens in the client Base (check_client_base.py).
+# 3.18.0 (Suda 2026-11-13): an error is kept only when skipping it would void the readings or break the client Base /
+# the export; everything else is a printed hint. Warnings need no written decision, and the verdict is two-level.
 
 
 def fail(message: str, errors: list[str]) -> None:
@@ -113,10 +103,6 @@ if str(_SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SHARED_SCRIPTS))
 import prompt_gates as _prompt_gates  # noqa: E402
 import scope_gates as _scope_gates  # noqa: E402
-# Cross-Topic slice tags (Suda 2026-11-03): one rule for export and the W62/W63 warnings.
-if str(Path(__file__).resolve().parent) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tag_dimensions import tag_plan as _tag_plan  # noqa: E402
 
 # Evidence source families for the diversity warning. Classification is by
 # keyword because evidence_refs are free strings; refs that match nothing are
@@ -328,8 +314,8 @@ def wording_checks(
             else:
                 english = reads_english is True
             if english and not _prompt_gates.requests_candidates(text):
-                fail(f"{qid}: Discovery Prompt asks no candidate question (which / best / "
-                     f"recommend / where to buy ...); AI answers it with advice, not a brand list", errors)
+                warnings.append(f"[W12] {qid}: Discovery Prompt may ask no candidate question (which / best / "
+                                f"recommend / where to buy ...); AI may answer with advice, not a brand list")
         if script:
             share = expected_script_share(text, script)
             if share is not None and share < 0.5:
@@ -412,11 +398,11 @@ def scope_checks(
     # depends". Independent of buyer_quotes, so it runs before the early return below.
     for row in questions:
         if (intents or {}).get(id(row)) == "Competitor" and not row.get("constraints"):
-            fail(f"{row.get('question_id')}: Competitor Prompt has no use case (empty constraints); without one "
-                 f"AI answers \"it depends\" instead of a verdict — name the scenario the verdict hinges on", errors)
+            warnings.append(f"[W38] {row.get('question_id')}: Competitor Prompt has no use case (empty constraints); "
+                            f"AI may answer \"it depends\" instead of a verdict — name the scenario the verdict hinges on")
     quote_constraints, quote_texts = _scope_gates.quote_index(config)
     if not quote_constraints:
-        warnings.append("[W36] no config.buyer_quotes (需求信号): gates 36–37 "
+        warnings.append("[W37] no config.buyer_quotes (需求信号): W36–W37 "
                         "(conditions without a basis, one decision asked twice) were skipped")
         return
     base = config.get("base_conditions") or []
@@ -428,8 +414,9 @@ def scope_checks(
             unknown[qid] = result["unknown_refs"]
         outside = result["keywords"] + [f"数字 {n}" for n in result["numbers"]]
         if outside:
-            # Warning since 2026-10-30 (Suda): quote research is never complete, so a
-            # condition may rest on other evidence — written in condition_basis.
+            # Warning since 2026-10-30 (Suda): quote research is never complete, so a condition may rest on other
+            # evidence — written in condition_basis. Kept whole in 3.18.0: on the 2026-10-22 blind-review samples
+            # the keyword check caught 38 of 40 failed Prompts; numbers alone caught 1.
             warnings.append(f"[W36] {qid}: condition outside the cited evidence {outside}; cite the 需求信号 it comes from in "
                             f"evidence_refs, write its basis in condition_basis "
                             f"(search data, pre-run answer, competitor filter, buyer common sense), or drop it from the Prompt")
@@ -441,64 +428,6 @@ def scope_checks(
         warnings.append(f"[W37] {' / '.join(group)}: same Topic, attribute and evidence-backed constraints — one "
                         f"purchase decision asked {len(group)} times; keep one, or give the others a "
                         f"condition their evidence carries")
-
-
-def audience_values(row: dict) -> list[str]:
-    value = row.get("audience")
-    items = value if isinstance(value, (list, tuple)) else [value]
-    return [str(item).strip() for item in items if str(item or "").strip()]
-
-
-def audience_checks(
-    config: dict,
-    questions: list[dict],
-    warnings: list[str],
-    intents: dict[int, str],
-) -> None:
-    """Gate 39: a Prompt filed under a non-base audience shows who is asking, stated or implied.
-
-    A segment exists because it changes the candidates, the criteria or the
-    answer; a Prompt that does not say who is asking is answered for the
-    generic buyer, so its audience label measures nothing. Warning only:
-    matching the buyer's own words is a heuristic.
-    """
-    base = {str(item).strip() for item in config.get("base_conditions") or []} | {"通用"}
-    raw_terms = config.get("audience_terms")
-    terms = raw_terms if isinstance(raw_terms, dict) else {}
-
-    def fold(text: object) -> str:
-        return " ".join(str(text or "").casefold().replace("-", " ").split())
-
-    used: set[str] = set()
-    unnamed: list[str] = []
-    rows = slice_index(config)
-    for row in questions:
-        own = audience_values(row) or audience_values(rows.get(str(row.get("slice_ref") or "").strip()) or {})
-        audiences = [a for a in own if a not in base]
-        if not audiences:
-            continue
-        used.update(audiences)
-        if intents.get(id(row)) in {"Verification", "Accuracy"} or str(row.get("audience_implicit") or "").strip():
-            continue
-        registered = [fold(term) for a in audiences for term in (terms.get(a) or []) if fold(term)]
-        if not registered:
-            continue  # reported once below as an audience with no terms
-        query = fold(row.get("user_question"))
-        if not any(term in query for term in registered):
-            unnamed.append(f"{row.get('question_id')}({'/'.join(audiences)})")
-    if not used:
-        return
-    if not terms:
-        # No config.audience_terms: gate 39 becomes a manual check (output-contract.md → 人工检查),
-        # not a warning (Suda 2026-11-02 审核清单 D3).
-        return
-    missing = sorted(a for a in used if not [t for t in terms.get(a) or [] if fold(t)])
-    if missing:
-        warnings.append(f"[W39] audiences with no entry in config.audience_terms ({len(missing)}): {', '.join(missing)}")
-    if unnamed:
-        warnings.append(f"[W39] Prompts filed under a non-base audience whose wording neither states nor implies it ({len(unnamed)}): "
-                        f"{', '.join(unnamed[:8])}{' …' if len(unnamed) > 8 else ''}; register the implying term in "
-                        f"config.audience_terms, state who is asking in the buyer's words, or record audience_implicit")
 
 
 def normalized_intent(row: dict, errors: list[str]) -> str:
@@ -522,18 +451,9 @@ TOPIC_FLOOR = 10
 # by count; within 60, ten-Prompt Topics fit six.
 CANDIDATE_FLOOR, CANDIDATE_CAP = 30, 60
 PROMPT_FIELDS = ("attribute_ref", "constraint_type")
-# A Prompt states the constraint it tests (attribute_ref); target customer and use scenario are read from its
-# matrix row (config.slices).
-REQUIRED_STAGED_FIELDS = ("attribute_ref",)
 # No-condition Discovery Prompts are not written by default (Suda 2026-10-29): a bare category
 # question is owned by category leaders. Judged from constraint_type.
 LOW_CONDITION_VALUES = {"无限定", "无限定条件", "低条件", "none", "unconstrained", "no_condition"}
-REVIEW_STATUSES = ("待审核", "已批准", "需修改")
-REVIEW_ALIASES = {
-    **{status: status for status in REVIEW_STATUSES},
-    # 提示词库 状态 also carries 正式 (locked) and 停测 (dropped); both were approved first.
-    "正式": "已批准", "停测": "已批准",
-}
 
 
 
@@ -564,19 +484,6 @@ def attribute_plan(config: dict) -> list[dict]:
     return plan if isinstance(plan, list) and all(isinstance(entry, dict) for entry in plan) else []
 
 
-def report_rows(message: str, rows: list[dict], total: int, hard: bool,
-                errors: list[str], warnings: list[str], code: str = "W33") -> None:
-    """One line per check over Prompts: an error when hard, otherwise a warning under its code."""
-    if not rows:
-        return
-    ids = ", ".join(str(r.get("question_id")) for r in rows[:6]) + (" …" if len(rows) > 6 else "")
-    text = f"{message} ({len(rows)} of {total}: {ids})"
-    if hard:
-        errors.append(text)
-    else:
-        warnings.append(f"[{code}] {text}")
-
-
 def field_contract_checks(
     config: dict,
     questions: list[dict],
@@ -585,10 +492,6 @@ def field_contract_checks(
     warnings: list[str],
 ) -> None:
     fields = {id(row): normalize_fields(row) for row in questions}
-    for field in REQUIRED_STAGED_FIELDS:
-        # attribute_ref may be empty on a category-baseline Prompt; it only has to be stated.
-        missing = [r for r in questions if fields[id(r)][field] is None]
-        report_rows(f"missing {field}", missing, len(questions), False, errors, warnings)
 
     # Bare category questions are written only when the brand party asks for the head term
     # (Suda 2026-10-29; the per-Topic low-condition anchor of 2026-10-22 is retired).
@@ -639,7 +542,7 @@ VS_COMPETITORS = ("明显优势", "明显劣势", "持平", "未知")
 
 
 def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], warnings: list[str]) -> None:
-    """Gates 49 and 52 (Suda 2026-11-02 审核清单 B2): the brand party's goals decide which Prompt types are written.
+    """W52 (Suda 2026-11-02 审核清单 B2): the brand party's goals decide which Prompt types are written.
 
     config.business_goals = {selected: [goals], information_named: bool}; missing means DEFAULT_BUSINESS_GOALS
     (3.0.0). Alternatives belong to 竞争定位. Verification and Accuracy are outside selection banks and rejected by
@@ -647,15 +550,10 @@ def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], wa
     when written. The dormant gates 50 / 51 (a selected goal with no Prompt of its type) were removed in 3.0.0.
     """
     goals = config.get("business_goals")
-    if goals is None:
-        goals = DEFAULT_BUSINESS_GOALS
     selected = goals.get("selected") if isinstance(goals, dict) else None
-    if (not isinstance(goals, dict) or not isinstance(selected, list)
-            or any(str(g).strip() not in BUSINESS_GOALS for g in selected)):
-        warnings.append("[W49] config.business_goals malformed: leave it out (read as {selected: [\"发现型可见度\"], "
-                        "information_named: false}) or write {selected: [goals from "
-                        f"{' / '.join(BUSINESS_GOALS)}], information_named: true / false}} so gate 52 can run")
-        return
+    if not isinstance(selected, list):  # missing or malformed: read as the default (W49 dropped in 3.18.0)
+        goals = DEFAULT_BUSINESS_GOALS
+        selected = goals["selected"]
     chosen = {str(g).strip() for g in selected}
     named_info = goals.get("information_named") is True
     by_type: dict[str, list[str]] = {}
@@ -740,11 +638,7 @@ class BankValidator:
         self.topic_counts: Counter = Counter()
         self.role_counts: Counter = Counter()
         self.topic_ids: set = set()
-        self.review_active = False
-        self.review_counts: Counter = Counter()
-        self.approved_rows: list[dict] = self.questions
-        self.carried_names: set[str] = set()
-        self.written_names: set[str] = set()
+        self.topic_priority: dict[str, str] = {}
 
     def run(self) -> int:
         self.check_root()
@@ -756,17 +650,13 @@ class BankValidator:
         self.check_topics()
         self.check_goals_and_tags()
         self.check_scope()
-        self.check_attribute_coverage()
         self.check_constraint_table()
-        self.check_inputs()
         return self.finish()
 
     # ---------- bank root and Topics ----------
 
     def check_root(self) -> None:
         config, topics, errors = self.config, self.topics, self.errors
-        if self.data.get("mode") != "after-sales-strategic-topics":
-            fail("root mode must be after-sales-strategic-topics", errors)
         if not topics:
             fail("config.topics must contain at least one Topic", errors)
         self.topic_ids = {topic.get("topic_id") for topic in topics if topic.get("topic_id")}
@@ -808,18 +698,12 @@ class BankValidator:
                 fail(f"slice {sid}: priority must be 高 / 中 / 低 (Discovery rows and rows of a selected goal's type "
                      "are tiered); a situation the brand cannot use or serve is not opened as a row", errors)
             elif is_blank(row.get("priority_basis")):
-                fail(f"slice {sid}: priority_basis is empty — a priority with no written basis is not made", errors)
+                warnings.append(f"[W43] slice {sid}: priority_basis is empty — the client Base 业务优先级依据 will be blank")
             tid = row.get("topic_id")
             if not is_blank(tid) and tid not in self.topic_ids:
                 fail(f"slice {sid}: topic_id {tid!r} is not in config.topics", errors)
             self.check_row_type(sid, row)
 
-        # Category Awareness is the research pre-run before the attribute pool, never a bank Prompt (Suda 2026-10-29).
-        ca = [str(q.get("question_id")) for q in questions
-              if str(q.get("prompt_type") or "").strip() == "Category Awareness"]
-        if ca:
-            fail(f"Category Awareness Prompts in the bank ({len(ca)}): {', '.join(ca)}; it runs once per platform "
-                 "before the attribute pool as research and is not written into the bank", errors)
         unfiled: list[str] = []
         per_row: Counter[str] = Counter()
         low_carried: list[str] = []
@@ -886,7 +770,7 @@ class BankValidator:
         """Rows judged and written this period: Discovery, plus the types of the selected goals (3.10.0 / 3.13.0)."""
         return str(row.get("prompt_type") or "").strip() in opened_types(self.config)
 
-    # ---------- Prompts (gates 2, 4, 8; Verification / Accuracy) ----------
+    # ---------- Prompts (gates 2, 4, 8, 60) ----------
 
     def check_prompts(self) -> None:
         errors = self.errors
@@ -906,11 +790,11 @@ class BankValidator:
             intent = normalized_intent(row, errors)
             self.intents[id(row)] = intent
             self.role_counts[intent] += 1
-            self.check_retired_types(question_id, intent)
             if not intent:
                 fail(f"{question_id}: missing prompt_type", errors)
             elif intent not in INTENTS:
-                fail(f"{question_id}: unsupported prompt_type {intent!r}", errors)
+                fail(f"{question_id}: unsupported prompt_type {intent!r}; one of {sorted(INTENTS)} (Verification is "
+                     "Evaluation; Accuracy probes and the Category Awareness pre-run stay outside the bank)", errors)
             if not str(row.get("region") or "").strip():
                 fail(f"{question_id}: missing region", errors)
             user_question = str(row.get("user_question") or "").strip()
@@ -923,15 +807,6 @@ class BankValidator:
                 fail(f"{row.get('question_id')}: duplicate query", errors)
             normalized_queries.add(query_key)
 
-    def check_retired_types(self, question_id: str, intent: str) -> None:
-        if intent == "Verification":
-            fail(f"{question_id}: Verification is retired (2026-11-06): a capability question is prompt_type Evaluation; "
-                 "zero-mention diagnosis checks crawlability and cited pages first (geo-monitoring/references/gap-cause-action-table.md)",
-                 self.errors)
-        if intent == "Accuracy":
-            fail(f"{question_id}: Accuracy probes sit outside the bank (fix acceptance / 品牌呈现); record them in the "
-                 "brand fact-check table", self.errors)
-
     def check_candidate_count(self) -> None:
         """Gate 47 (Suda 2026-11-02; 3.13.0): per product line × market, 30–60 candidate Prompts.
 
@@ -942,7 +817,7 @@ class BankValidator:
         cells: Counter[str] = Counter()
         slice_rows = slice_index(self.config)
         for row in self.questions:
-            if self.intents.get(id(row)) == "Verification" or str(row.get("status") or "").strip() == "停测":
+            if str(row.get("status") or "").strip() == "停测":
                 continue
             slice_row = slice_rows.get(str(row.get("slice_ref") or "").strip()) or {}
             line = str(row.get("product_line") or slice_row.get("product_line") or "").strip() or "—"
@@ -971,10 +846,10 @@ class BankValidator:
             by_topic.setdefault(q.get("topic_id"), []).append(q)
         empty = sorted(str(t.get("topic_id")) for t in topics if not by_topic.get(t.get("topic_id")))
         if empty and self.questions:
-            fail(f"Topics with no Prompt ({len(empty)}): {', '.join(empty)}; drop them or file Prompts under them", self.errors)
+            self.warnings.append(f"[W3] Topics with no Prompt ({len(empty)}): {', '.join(empty)}; drop them or file Prompts under them")
         self.check_topic_types(by_topic)
         self.check_topic_size(by_topic)
-        self.check_topic_priority(topics)
+        self.topic_priority = self.derive_topic_priority(topics)
 
     def check_topic_types(self, by_topic: dict) -> None:
         """Gate 66 (Suda 2026-11-05): the back-office dashboard reads by Topic, so a Topic holds one Prompt type."""
@@ -1004,42 +879,31 @@ class BankValidator:
                                  "purchase decision with similar candidate solutions. Still short: never pad with repeats — the brand party may fill the "
                                  "10-Prompt unit with Prompts from other Topics (mixed selection); record the decision.")
 
-    def check_topic_priority(self, topics: list[dict]) -> None:
-        """Topic priority is not judged again (Suda 2026-11-09, 2.62.0): it takes the highest 业务优先级 among its rows,
-        since a 高 row means a buyer situation the brand party named. Tier differences are never a reason to split a Topic."""
+    def derive_topic_priority(self, topics: list[dict]) -> dict[str, str]:
+        """主题优先级 is computed, not judged (2.62.0; 3.18.0 drops W46 and the hand-written field check): the highest
+        业务优先级 among the Topic's rows. A Topic with no tiered row keeps what was written. Printed in the summary;
+        the client Base copies it."""
         row_tiers: dict = {}
         for r in slice_index(self.config).values():
             idx = TIER_INDEX.get(str(r.get("priority") or "").strip())
             if idx is not None and r.get("topic_id"):
                 row_tiers.setdefault(r.get("topic_id"), []).append(idx)
+        out: dict[str, str] = {}
         for t in topics:
-            tid, level = t.get("topic_id"), str(t.get("priority") or "").strip()
-            if not level:
-                fail(f"topic {tid}: priority is empty — take the highest 业务优先级 among its rows (gate 43)", self.errors)
-                continue
-            if level not in TOPIC_PRIORITIES:
-                fail(f"topic {tid}: priority must be one of {'/'.join(TOPIC_PRIORITIES)}", self.errors)
-            elif is_blank(t.get("priority_basis")):
-                fail(f"topic {tid}: priority_basis is empty — a priority with no written basis is not made", self.errors)
-            elif row_tiers.get(tid):
-                best = ("高", "中", "低")[min(row_tiers[tid])]
-                if level != best:
-                    self.warnings.append(f"[W46] topic {tid}: priority {level} but its highest row is {best}; "
-                                         "主题优先级 takes the highest 业务优先级 in the Topic (2.62.0) — change the rows, not the Topic")
+            tid = t.get("topic_id")
+            if row_tiers.get(tid):
+                out[str(tid)] = TOPIC_PRIORITIES[min(row_tiers[tid])]
+            elif str(t.get("priority") or "").strip() in TOPIC_PRIORITIES:
+                out[str(tid)] = str(t.get("priority")).strip()
+            if is_blank(t.get("priority_basis")):
+                self.warnings.append(f"[W43] topic {tid}: priority_basis is empty — the client Base 主题优先级依据 will be blank")
+        return out
 
     # ---------- goals and slice tags (W49, W52, W62, W63) ----------
 
     def check_goals_and_tags(self) -> None:
         goal_checks(self.config, self.questions, self.intents, self.warnings)
-        # Gates W62/W63 (Suda 2026-11-03): slice tags cut data across Topics. A value inside one Topic,
-        # or under 5 Prompts, duplicates the Topic filter or reads as noise; export drops it either way.
-        _, tag_problems, unregistered = _tag_plan(self.config, self.questions)
-        for problem in tag_problems:
-            self.warnings.append(f"[W62] tag_dimensions: {problem}")
-        if unregistered:
-            listed = "; ".join(f"{qid}: {'、'.join(tags)}" for qid, tags in list(unregistered.items())[:6])
-            self.warnings.append(f"[W63] hand-written tags not registered as a 自定义 value in config.tag_dimensions "
-                                 f"({listed}{' …' if len(unregistered) > 6 else ''}); export leaves them out")
+        # W62 / W63 dropped in 3.18.0: export_upload_csv.py prints every tag value it leaves out and why.
 
     # ---------- conditions and audiences (gate 38; W36, W37, W39) ----------
 
@@ -1080,13 +944,13 @@ class BankValidator:
             if status not in BRAND_STATUS:
                 fail(f"约束条件 {name}: brand_status {status!r} must be one of {' / '.join(BRAND_STATUS)}", self.errors)
             elif is_blank(entry.get("brand_status_basis")):
-                fail(f"约束条件 {name}: brand_status {status} needs brand_status_basis (the evidence, or where we "
-                     "looked and found nothing)", self.errors)
+                self.warnings.append(f"[W67b] 约束条件 {name}: brand_status {status} has no brand_status_basis "
+                                     "(the evidence, or where we looked and found nothing)")
             if vs and vs not in VS_COMPETITORS:
                 fail(f"约束条件 {name}: vs_competitors {vs!r} is not one of {' / '.join(VS_COMPETITORS)}", self.errors)
             if vs in ("明显优势", "明显劣势", "持平") and is_blank(entry.get("vs_competitors_basis")):
-                fail(f"约束条件 {name}: vs_competitors {vs} needs vs_competitors_basis (the public figures and which "
-                     "competitors)", self.errors)
+                self.warnings.append(f"[W67b] 约束条件 {name}: vs_competitors {vs} has no vs_competitors_basis "
+                                     "(the public figures and which competitors)")
             if status in ("没有", "待确认"):
                 lacking.setdefault(name, []).append((line, status))
             if vs == "明显优势" and is_blank(entry.get("no_carrier_reason")):
@@ -1121,157 +985,34 @@ class BankValidator:
 
     def check_scope(self) -> None:
         scope_checks(self.config, self.questions, self.errors, self.warnings, self.intents)
-        audience_checks(self.config, self.questions, self.warnings, self.intents)
-
-    # ---------- 约束条件 coverage (W56, W57) ----------
-
-    def check_attribute_coverage(self) -> None:
-        """Every 约束条件 a Prompt measures is counted as covered only once that Prompt is 已批准.
-
-        status mirrors the 状态 column of the client Base 提示词库. Once any Prompt carries a review value, only
-        已批准 Prompts count as covering a constraint, the same rule as the Base 覆盖情况 formula.
-        """
-        questions, errors = self.questions, self.errors
-        review_of = lambda row: row.get("status") if str(row.get("status") or "").strip() in REVIEW_ALIASES else None
-        self.review_active = any(review_of(row) is not None for row in questions)
-        if self.review_active:
-            unstated: list[str] = []
-            self.approved_rows = []
-            for row in questions:
-                raw = review_of(row)
-                if is_blank(raw):
-                    unstated.append(str(row.get("question_id")))
-                    status = "待审核"
-                else:
-                    status = REVIEW_ALIASES[str(raw).strip()]
-                self.review_counts[status] += 1
-                if status == "已批准":
-                    self.approved_rows.append(row)
-            if unstated:
-                self.warnings.append(f"[W56] status missing on {len(unstated)} Prompts, counted as 待审核 "
-                                     f"({', '.join(unstated[:6])}{' …' if len(unstated) > 6 else ''})")
-
-        def carried_by(rows: list[dict]) -> set[str]:
-            names: set[str] = set()
-            for row in rows:
-                for tag in row.get("tags") or []:
-                    names.add(str(tag).strip())
-                value = str(row.get("attribute_ref") or "").strip()
-                if value:
-                    names.add(value)
-            return names
-
-        plan = attribute_plan(self.config)
-        if not plan:
-            return
-        self.carried_names = carried_by(self.approved_rows)
-        self.written_names = carried_by(questions)
-        pending = [name for entry in plan
-                   if (name := str(entry.get("attribute") or "").strip())
-                   and name not in self.carried_names and name in self.written_names]
-        if pending:
-            message = ("attributes carried only by Prompts not yet 已批准, so not counted as covered "
-                       f"({len(pending)}): " + ", ".join(sorted(pending)))
-            self.warnings.append(f"[W57] {message}")
-
-    # ---------- unused buyer inputs (W35) ----------
-
-    def check_inputs(self) -> None:
-        config, questions = self.config, self.questions
-        # Unused buyer-language inputs (warning only). When the bank carries the
-        # collected 需求信号 index, every input should either back a Prompt or have
-        # been consciously set aside; silently unused inputs are the cheapest
-        # evidence for the next expansion round.
-        audience_inputs = config.get("audience_inputs") or []
-        if audience_inputs and isinstance(audience_inputs, list):
-            # Quotes back Prompts or the matrix rows.
-            all_refs = " ".join(
-                str(ref) for row in questions for ref in (row.get("evidence_refs") or [])
-            ) + json.dumps([config.get("attribute_plan") or [], config.get("slices") or []], ensure_ascii=False)
-            unused: list[str] = []
-            for entry in audience_inputs:
-                input_id = str(entry.get("input_id") if isinstance(entry, dict) else entry or "").strip()
-                if input_id and input_id not in all_refs:
-                    unused.append(input_id)
-            if unused:
-                self.warnings.append(
-                    f"[W35] audience inputs referenced by no Prompt ({len(unused)}): "
-                    + ", ".join(unused[:8]) + (" …" if len(unused) > 8 else "")
-                    + "; cite each in an attribute's evidence or a Prompt, or record why it was set aside"
-                )
 
     # ---------- readiness ----------
 
     def finish(self) -> int:
-        """Print warnings, errors and the readiness verdict; return the exit code.
+        """Print hints and errors; the verdict is two-level (3.18.0, Suda 2026-11-13).
 
-        Warnings never change the exit code: each one needs a human decision, and rewording a Prompt only to silence a
-        heuristic is not a fix. Each warning is handled by a written decision in config.warning_decisions:
-        [{"match": "<text in the warning>", "decision": "已改写 / 保留：理由"}] (Suda 2026-10-31), or, for a whole
-        class, [{"gate": "W39", "decision": "保留：理由"}] — every warning opens with its stable code "[Wnn]"
-        (Suda 2026-11-02 审核清单 D5).
+        Errors void the readings or break the client Base / the export: fix them. Warnings ("[Wnn] …") are hints
+        printed for whoever reads the bank; they need no written decision and never change the verdict or the
+        exit code. config.warning_decisions is no longer read.
         """
-        config, errors, warnings = self.config, self.errors, self.warnings
-
-        def gate_code(value: object) -> str:
-            code = str(value or "").strip().strip("[]").strip()
-            if not code:
-                return ""
-            code = code[1:] if code[:1] in "Ww" else code
-            return f"[w{code.casefold()}]"  # compared case-insensitively with the warning's "[Wnn]" head
-
-        decisions = [d for d in config.get("warning_decisions") or []
-                     if isinstance(d, dict) and str(d.get("decision") or "").strip()
-                     and (str(d.get("match") or "").strip() or gate_code(d.get("gate")))]
-
-        def is_handled(warning: str) -> bool:
-            head = warning.split(" ", 1)[0].casefold()
-            for d in decisions:
-                match = str(d.get("match") or "").strip()
-                if match and match in warning:
-                    return True
-                if gate_code(d.get("gate")) and head == gate_code(d.get("gate")):
-                    return True
-            return False
-
-        handled = [w for w in warnings if is_handled(w)]
-        open_warnings = [w for w in warnings if w not in handled]
-        # Only public data (first_party_data not true), or a hypothesis-grade set, caps the verdict at Usable.
-        capped = config.get("first_party_data") is not True or config.get("evidence_status") == "hypothesis"
-        plural = lambda n, word: f"{n} {word}{'s' if n != 1 else ''}"
-        if errors:
-            readiness = f"Not ready: {plural(len(errors), 'error')} to fix"
-        elif open_warnings:
-            readiness = f"Usable: {plural(len(open_warnings), 'warning')} without a decision"
-        elif capped:
-            readiness = "Usable: public data only or hypothesis-grade evidence — list what the brand party still has to supply"
-        else:
-            readiness = "Ready"
-
-        for warning in warnings:
-            print(f"WARNING{' (handled)' if warning in handled else ''}: {warning}")
-        if errors:
-            for error in errors:
+        for warning in self.warnings:
+            print(f"WARNING: {warning}")
+        if self.errors:
+            for error in self.errors:
                 print(f"ERROR: {error}")
+            readiness = f"Not ready: {len(self.errors)} error{'s' if len(self.errors) != 1 else ''} to fix"
             print(f"READINESS: {readiness}")
             return 1
-
-        print(
-            json.dumps(
-                {
-                    "topics": len(self.topics),
-                    "prompts": len(self.questions),
-                    "prompts_per_topic": dict(self.topic_counts),
-                    "prompt_types": dict(self.role_counts),
-                    "generation_stage": self.stage,
-                    **({"review_status": dict(self.review_counts)} if self.review_active else {}),
-                    "warnings": len(warnings),
-                    "warnings_handled": len(handled),
-                    "readiness": readiness,
-                },
-                ensure_ascii=False,
-            )
-        )
+        print(json.dumps({
+            "topics": len(self.topics),
+            "prompts": len(self.questions),
+            "prompts_per_topic": dict(self.topic_counts),
+            "topic_priority": self.topic_priority,
+            "prompt_types": dict(self.role_counts),
+            "generation_stage": self.stage,
+            "warnings": len(self.warnings),
+            "readiness": "Ready",
+        }, ensure_ascii=False))
         return 0
 
 

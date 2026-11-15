@@ -3,9 +3,9 @@
 
 ``normalize(payload)`` takes the canonical payload defined in
 ``references/input-contract.md`` (``input_version = presales-case-input/v2``).
-The Case fields are the first part of the Feishu doc《AI 搜索监测｜品牌资料收集》
-(Suda 2026-11-09): the online diagnosis form and the after-sales intake collect
-the same fields. v1 payloads (公司名 / 业务模式 / 品类 / 痛点 …) are rejected.
+The Case fields are the brand-intake fields of the online diagnosis form
+(Suda 2026-11-13; change《AI 搜索监测｜品牌资料收集》part one together with it).
+v1 payloads (业务模式 / 品类 / 痛点 …) are rejected.
 
 Output is deterministic: ``case_fields`` with numbered fields expanded, the
 client's competitors (not frozen), locale and handoff. Things that need model
@@ -26,18 +26,25 @@ from urllib.parse import urlparse
 INPUT_VERSION = "presales-case-input/v2"
 RETIRED_VERSIONS = ("presales-case-input/v1",)
 
-# 与《品牌资料收集》第一部分一一对应（市场、语言是采集配置：市场走 --market，语言走 options.locale）。
+# 与线上诊断表单的品牌资料字段一一对应（Suda 2026-11-13 定；市场、语言、AI 平台是采集配置：
+# 市场走 --market，语言走 options.locale，平台走 --platforms）。
 SCALAR_REQUIRED = ("品牌", "产品线")
 DOMAIN_KEY = "官方域名"
-SCALAR_OPTIONAL = ("适用边界",)
+# 公司名称只做记录，不参与出题。
+SCALAR_OPTIONAL = ("公司名称", "适用边界")
+# 补充内容是多文件上传（Suda 2026-11-13）：传文件路径数组，相对路径按品牌资料 JSON 所在目录解析。
+# 文件由 read_supplement.py 拆成需求信号；PDF 和图片交给 agent 读。
+SUPPLEMENT_KEY = "补充内容"
+SUPPLEMENT_MAX_FILES = 15
+SUPPLEMENT_MAX_BYTES = 20 * 1024 * 1024
 # 多值字段，按 `字段 n` 展开；顺序原样保留（核心目标客户与购买场景按业务优先级排，最优先的在前）。
 NUMBERED_LISTS = ("品牌别名", "核心目标客户与购买场景", "差异化优势")
+REQUIRED_LISTS = ("核心目标客户与购买场景", "差异化优势")  # 2026-11-13 起必填，至少 1 条
 SUGGESTED_MAX = {"核心目标客户与购买场景": 5, "差异化优势": 5}
 COMPETITOR_KEY = "竞品"
-CASE_KEYS = set(SCALAR_REQUIRED + (DOMAIN_KEY,) + SCALAR_OPTIONAL + NUMBERED_LISTS + (COMPETITOR_KEY,))
+CASE_KEYS = set(SCALAR_REQUIRED + (DOMAIN_KEY,) + SCALAR_OPTIONAL + NUMBERED_LISTS + (COMPETITOR_KEY, SUPPLEMENT_KEY))
 # v1 字段和 v2 的「业务目标」（都在 2026-11-09 退役）：报 retired_field，说明并到了哪里。
 RETIRED_FIELDS = {
-    "公司名": "删除；易混淆的公司或品牌名写进「品牌别名」",
     "品牌名称": "改名「品牌」",
     "业务 / 产品名称": "改用「产品线」",
     "业务模式": "删除；B2B / B2C 从「核心目标客户与购买场景」判断",
@@ -48,7 +55,6 @@ RETIRED_FIELDS = {
     "痛点": "并入「核心目标客户与购买场景」",
     "使用场景": "并入「核心目标客户与购买场景」",
     "产品特性": "删除；选词调研时读官网",
-    "补充内容": "删除",
     "希望解决的问题": "删除",
     "业务目标": "删除（2026-11-09，《品牌资料收集》已删这个字段）",
     "主题": "删除；主题由选词从矩阵行聚出",
@@ -58,7 +64,7 @@ RETIRED_FIELDS = {
     "地理与市场": "删除；市场走 --market",
 }
 # 改了名但仍照收的字段：旧名 → 新名。照收并给 renamed_field 提醒（线上表单未必同步改名）。
-RENAMED_FIELDS = {"本期产品线": "产品线"}  # 2026-11-10
+RENAMED_FIELDS = {"本期产品线": "产品线", "公司名": "公司名称"}  # 2026-11-10、2026-11-13
 COMPETITOR_KEYS = {"名称", "官网域名"}
 CONFIRMATION_STATUSES = ("none", "partial", "confirmed")
 # 《品牌资料收集》：暂不确定的填「待补充」，按没填处理；不适用的填「无」，原样记录。
@@ -195,6 +201,43 @@ def _competitors(case: dict, report: Report) -> list[dict]:
     return result
 
 
+def _supplement(case: dict, report: Report, base_dir: Path | None) -> list[str]:
+    """补充内容：文件路径数组，最多 15 个，单个不超过 20 MB，格式见 read_supplement.ALLOWED_EXT。
+    能定位到文件时（绝对路径，或给了 base_dir）检查存在和大小；返回绝对路径（定位不到时原样）。"""
+    from read_supplement import ALLOWED_EXT  # noqa: PLC0415 - 同目录脚本
+    value = case.get(SUPPLEMENT_KEY)
+    if _is_blank(value):
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
+        report.error("invalid_type", SUPPLEMENT_KEY, "补充内容是文件上传：传文件路径的字符串数组")
+        return []
+    if len(value) > SUPPLEMENT_MAX_FILES:
+        report.error("too_many_files", SUPPLEMENT_KEY,
+                     f"补充内容最多 {SUPPLEMENT_MAX_FILES} 个文件，收到 {len(value)} 个")
+    paths: list[str] = []
+    for index, raw in enumerate(value, start=1):
+        field = f"{SUPPLEMENT_KEY}[{index}]"
+        path = Path(_clean(raw)).expanduser()
+        if not path.is_absolute() and base_dir is not None:
+            path = (base_dir / path).resolve()
+        if path.suffix.lower() not in ALLOWED_EXT:
+            report.error("unsupported_file_type", field,
+                         f"{path.name} 的格式不支持；支持 {sorted(e.lstrip('.') for e in ALLOWED_EXT)}")
+            continue
+        if path.is_absolute():
+            if not path.is_file():
+                report.error("file_not_found", field, f"找不到文件 {path}")
+                continue
+            if path.stat().st_size > SUPPLEMENT_MAX_BYTES:
+                report.error("file_too_large", field, f"{path.name} 超过 20 MB")
+                continue
+        if str(path) in paths:
+            report.error("duplicate_item", field, f"补充内容第 {index} 个文件与前面重复：{path.name}")
+            continue
+        paths.append(str(path))
+    return paths
+
+
 def _handoff(payload: dict, report: Report) -> dict:
     raw = payload.get("handoff")
     if raw is None:
@@ -232,7 +275,8 @@ def _handoff(payload: dict, report: Report) -> dict:
     return {"confirmation_status": status, "confirmed_fields": confirmed, "sources": sources}
 
 
-def normalize(payload: dict) -> dict:
+def normalize(payload: dict, base_dir: Path | None = None) -> dict:
+    """base_dir：品牌资料 JSON 所在目录，用来解析「补充内容」的相对路径。"""
     report = Report()
     if not isinstance(payload, dict):
         report.error("invalid_type", "$", "输入必须是 JSON 对象")
@@ -284,13 +328,17 @@ def normalize(payload: dict) -> dict:
             fields[field] = value
     lists: dict[str, list[str]] = {}
     for field in NUMBERED_LISTS:
-        items = _string_list(case, field, report)
+        items = _string_list(case, field, report, required=field in REQUIRED_LISTS)
         high = SUGGESTED_MAX.get(field)
         if high and len(items) > high:
             report.warn("count_suggestion", field, f"{field} 建议不超过 {high} 条，收到 {len(items)} 条")
         lists[field] = items
         for index, item in enumerate(items, start=1):
             fields[f"{field} {index}"] = item
+
+    supplement = _supplement(case, report, base_dir)
+    for index, path in enumerate(supplement, start=1):
+        fields[f"{SUPPLEMENT_KEY} {index}"] = Path(path).name
 
     competitors = _competitors(case, report)
     for index, competitor in enumerate(competitors, start=1):
@@ -320,6 +368,8 @@ def normalize(payload: dict) -> dict:
         # 竞品取客户填的，不冻结；报告侧按提及率补足归线上与监测（2026-11-06 / 11-09）
         "competitor_selection": {"status": "client_input", "selection_count": len(competitors), "formal_competitors": competitors},
         "locale": locale,
+        # 补充内容上传的文件（绝对路径）；runner 拷进工作目录 inputs/supplement/ 再读
+        "supplement_files": supplement,
         "handoff": handoff,
     }
     return _result(report, normalized)
@@ -343,7 +393,7 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as exc:
         print(json.dumps({"ok": False, "errors": [{"code": "unreadable_input", "field": "$", "message": str(exc)}]}, ensure_ascii=False, indent=2))
         return 2
-    result = normalize(data)
+    result = normalize(data, base_dir=args.input.resolve().parent)
     output = json.dumps(result, ensure_ascii=False, indent=2)
     print(output)
     if args.output:

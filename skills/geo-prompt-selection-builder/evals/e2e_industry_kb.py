@@ -211,7 +211,8 @@ def main() -> int:
         case.write_text(json.dumps({"input_version": "presales-case-input/v2", "case": {
             "品牌": "Brandx", "官方域名": "https://brandx.example", "产品线": "Dash cams: front and rear",
             "竞品": [{"名称": "RivalOne", "官网域名": "https://rival-one.example"}],
-            "核心目标客户与购买场景": ["私家车车主：停车被刮蹭要留证据"]}, "options": {"locale": "en"}}, ensure_ascii=False),
+            "核心目标客户与购买场景": ["私家车车主：停车被刮蹭要留证据"],
+            "差异化优势": ["停车监控省电"]}, "options": {"locale": "en"}}, ensure_ascii=False),
             encoding="utf-8")
         p = subprocess.run([sys.executable, str(RUNNER), "prepare", "--case", str(case), "--market", "US", "--platforms",
                             "chatgpt", "--out", str(tmp / "ws-prep")], capture_output=True, text=True)

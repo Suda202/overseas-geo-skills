@@ -57,7 +57,8 @@ PRECOLLECT_PROXY_PAGES = 2           # RSS 读不到时改读网页版（Scrapel
 REVIEW_DEPTH = 40                    # 每个竞品域名约 40 条 Trustpilot 评价（20 条一个计费单位）
 # 采集类别 = 采集脚本写进 signals.csv 的「来源类型」值（collect_serp_signals.py 写「搜索联想」、
 # collect_reviews.py 写「评价」，社区由本脚本按 net.py reddit 的输出写「社区」）
-PRECOLLECT_CATEGORIES = {"搜索联想": "serp", "评价": "reviews", "社区": "community"}
+# 补充内容 = 品牌资料「补充内容」上传的文件，由 read_supplement.py 读（3.17.0），来源类型按文件写（GSC、Semrush、品牌方资料…）
+PRECOLLECT_CATEGORIES = {"搜索联想": "serp", "评价": "reviews", "社区": "community", "补充内容": "supplement"}
 # 与 shared/scripts/collect_keyword_data.py 的 FIELDS 一致（三个采集脚本的 signals.csv 同一套列）
 SIGNAL_FIELDS = ["输入编号", "产品线", "来源类型", "月搜索量", "原话", "译文", "目标客户", "约束条件",
                  "出处", "引用它的问题"]
@@ -66,7 +67,7 @@ _STOP = {"best", "with", "from", "that", "this", "your", "for", "and", "the", "o
 
 
 CHANNELS_REL = "references/precollect-channels.json"
-PARAM_CHANNELS = {"google-play": "app_ids", "app-store": "app_ids", "google-maps": "maps_queries"}
+PARAM_CHANNELS = {"google-play": "app_names", "app-store": "app_names", "google-maps": "maps_queries"}
 FALLBACK_INDUSTRY = "未判定"
 FALLBACK_REVIEWS = ["trustpilot"]     # 只在行业判断失败时用
 PLAN_TIMEOUT = 15 * 60
@@ -93,7 +94,7 @@ def _market_communities(table: dict, market: str) -> list[str]:
 def check_plan(ws: Path) -> tuple[list[str], dict]:
     """检查 research/precollect/plan.json，返回 (报错, 展开后的渠道计划)。没有报错时同时写 plan-checked.json。
 
-    要采的渠道 = 行业行的评价、社区 + 市场行的社区 + add；只有要参数的渠道（应用 ID、门店名）和写了 scope 的站能 skip，
+    要采的渠道 = 行业行的评价、社区 + 市场行的社区 + add；只有要参数的渠道（应用名称、门店名）和写了 scope 的站能 skip，
     这样「采不采」仍由表决定，模型只负责判行业和填参数。"""
     table = load_channels(ws)
     market = ""
@@ -181,19 +182,15 @@ def check_plan(ws: Path) -> tuple[list[str], dict]:
                           f"「{name}」按表要采，不能跳过")
         elif not str(why or "").strip():
             errors.append(f"skip 里的「{name}」要写原因")
-    app_ids = plan.get("app_ids") or {}
+    app_names = [str(v).strip() for v in (plan.get("app_names") or []) if str(v).strip()]
     maps_q = [str(q).strip() for q in (plan.get("maps_queries") or []) if str(q).strip()]
     for name, field in PARAM_CHANNELS.items():
         if name not in planned or name in skip:
             continue
-        vals = maps_q if field == "maps_queries" else [str(v).strip() for v in (app_ids.get(name) or []) if str(v).strip()]
+        vals = maps_q if field == "maps_queries" else app_names
         if not vals:
-            errors.append(f"要采 {name}：在 {field} 里填{'门店「店名 城市」' if field == 'maps_queries' else '应用 ID'}，"
+            errors.append(f"要采 {name}：在 {field} 里填{'门店「店名 城市」' if field == 'maps_queries' else '品牌和竞品的 App 名称'}，"
                           f"或在 skip 里写为什么没有")
-        if name == "google-play" and any(not re.fullmatch(r"[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+", v) for v in vals):
-            errors.append(f"google-play 应用 ID 是包名（如 com.example.app），收到 {vals}")
-        if name == "app-store" and any(not re.fullmatch(r"(id)?\d{6,12}", v) for v in vals):
-            errors.append(f"app-store 应用 ID 是 6–12 位数字，收到 {vals}")
     for key, cap in (("reddit_queries", 2), ("hn_queries", 3)):
         if len(plan.get(key) or []) > cap:
             errors.append(f"{key} 最多 {cap} 条")
@@ -207,8 +204,7 @@ def check_plan(ws: Path) -> tuple[list[str], dict]:
                          "reason": str(skip.get(name) or "")})
     checked = {"industry": industry, "industry_basis": str(plan["industry_basis"]).strip(), "market": market,
                "category_en": cat_en, "local_query": str(plan.get("local_query") or "").strip(),
-               "app_ids": {k: [str(v).strip().removeprefix("id") if k == "app-store" else str(v).strip()
-                               for v in (app_ids.get(k) or [])] for k in ("google-play", "app-store")},
+               "app_names": app_names,
                "maps_queries": maps_q,
                "reddit_queries": [str(q).strip() for q in plan.get("reddit_queries") or [] if str(q).strip()],
                "hn_queries": [str(q).strip() for q in plan.get("hn_queries") or [] if str(q).strip()],
@@ -230,7 +226,7 @@ def fallback_plan(ws: Path, why: str) -> dict:
     channels += [{"name": n, "category": "社区", "from": f"市场：{market or '_default'}", "spec": comms.get(n) or {},
                   "status": "planned", "reason": ""} for n in _market_communities(table, market)]
     checked = {"industry": FALLBACK_INDUSTRY, "industry_basis": why, "market": market, "category_en": "", "local_query": "",
-               "app_ids": {}, "maps_queries": [], "reddit_queries": [], "hn_queries": [], "channels": channels,
+               "app_names": [], "maps_queries": [], "reddit_queries": [], "hn_queries": [], "channels": channels,
                "source": "fallback"}
     write_json(ws / PRECOLLECT_DIR / "plan-checked.json", checked)
     return checked
@@ -376,8 +372,8 @@ def _collector_targets(spec: dict, terms: dict, plan: dict, name: str) -> list[s
         return list(terms["domains"])
     if kind == "category":
         return [terms["category"]] if terms["category"] else []
-    if kind == "app_ids":
-        return list((plan.get("app_ids") or {}).get(name) or [])
+    if kind == "app_names":
+        return list(plan.get("app_names") or [])
     if kind == "maps_queries":
         return list(plan.get("maps_queries") or [])
     return []
@@ -853,8 +849,26 @@ def _collect_hn(ws: Path, terms: dict, plan: dict, out: Path, log: Path, budget:
             "reason": "；".join(problems)[:300] or f"搜索 {queries} 没有提到竞品或品类词的评论"}
 
 
+def _collect_supplement(ws: Path, terms: dict, market: str, locale: str, out: Path, log: Path, plan: dict) -> dict:
+    """读品牌资料「补充内容」上传的文件（prepare 已拷进 inputs/supplement/）；没传文件记 skipped。"""
+    norm = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]
+    files = [ws / f for f in norm.get("supplement_files") or []]
+    if not files:
+        return {"status": "skipped", "reason": "品牌资料没有上传补充内容", "rows": 0}
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import read_supplement  # noqa: PLC0415 - 同目录脚本
+    signals, summary = read_supplement.read_files(files, [norm.get("brand_name", ""), *(norm.get("brand_aliases") or [])])
+    read_supplement.write(out, signals, summary, terms["product_line"], "PB")
+    to_read = [str(Path(f).relative_to(ws)) for f in summary["to_read"]]
+    reason = "；".join(f"{x['file']} 读不了（{x['reason']}）" for x in summary["failed"])
+    if not summary["rows"] and not to_read:
+        return {"status": "failed", "rows": 0, "reason": reason or "上传的文件里没有可用的内容"}
+    return {"status": "ok", "rows": summary["rows"], "pages": len(to_read), "to_read": to_read,
+            "brand_queries_dropped": summary["brand_queries_dropped"], "reason": reason}
+
+
 def precollect(ws: Path) -> dict:
-    """agent 启动前跑三类采集。每类单独 try，失败只记原因；写 summary.json 与合并的 signals.csv。"""
+    """agent 启动前跑三类采集，并读补充内容文件。每类单独 try，失败只记原因；写 summary.json 与合并的 signals.csv。"""
     root = ws / PRECOLLECT_DIR
     root.mkdir(parents=True, exist_ok=True)
     prior = json.loads((ws / "out/result.json").read_text(encoding="utf-8")) if (ws / "out/result.json").exists() else {}
@@ -862,7 +876,8 @@ def precollect(ws: Path) -> dict:
     norm = json.loads((ws / "inputs/case-normalized.json").read_text(encoding="utf-8"))["normalized"]
     plan = load_plan(ws)
     terms = precollect_terms(norm, plan.get("category_en") or "")
-    collectors = {"搜索联想": _collect_serp, "评价": _collect_reviews, "社区": _collect_community}
+    collectors = {"搜索联想": _collect_serp, "评价": _collect_reviews, "社区": _collect_community,
+                  "补充内容": _collect_supplement}
     cats: dict[str, dict] = {}
     merged: list[dict] = []
     seen: set[tuple[str, str]] = set()
@@ -961,11 +976,13 @@ def precollect_registration_errors(ws: Path) -> list[str]:
         if info.get("status") != "ok" or n + pages < 1:
             continue
         hit = any(str(q.get("来源类型") or "").strip() == cat or norm(q.get("原话")) in texts.get(cat, set())
-                  for q in quotes)
+                  or str(q.get("出处") or "").startswith(f"{cat}：") for q in quotes)
         if hit or cat in uncovered:
             continue
         got = f"{n} 条" + (f"、页面 {pages} 个" if pages else "")
-        where = "research/precollect/signals.csv" + ("和 research/precollect/pages/" if pages else "")
+        where = "research/precollect/signals.csv" + (
+            ("和 summary.json 里 to_read 列的文件（PDF、图片）" if cat == "补充内容" else "和 research/precollect/pages/")
+            if pages else "")
         errors.append(f"research/precollect/ 里已采到 {cat} {got}，buyer_quotes 里一条没有；读 "
                       f"{where} 把相关的登记进去，或在 notes.md『未覆盖来源』说明为什么这一类"
                       f"全部与本产品线无关（只需补登记或说明，不要为这条删题）")

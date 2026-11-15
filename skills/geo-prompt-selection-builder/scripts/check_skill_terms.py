@@ -29,6 +29,10 @@ TARGETS = [
 
 # 退役说法 → 现在的说法
 RETIRED = [
+    # 3.17.0：研发按《售前诊断生词逻辑兼容》删上传列 question_types 等四列，后端按 diagnosis_intent 定口径，不留兼容
+    (r"question_types|purchase_intent|persona_name|scene_name", "后端按 diagnosis_intent 定统计口径，上传只有五列（3.17.0）"),
+    # 3.17.0：应用商店评价按 App 名称搜应用，不再要应用 ID
+    (r"app_ids|找品牌和竞品的应用 ID", "plan.json 写 app_names，collect_reviews.py 按名称搜应用（3.17.0）"),
     # 3.7.0：研发说不需要再包一层搜索服务，改由平台网关透传两家原厂接口
     (r"GEO_SEARCH_API|search-service|搜索服务模式", "平台网关：SCRAPELESS_BASE_URL / DATAFORSEO_BASE_URL / GEO_GATEWAY_HEADERS", "strict"),
     (r"产品系列名和型号不从品牌方收|常见拼写和空格变体",

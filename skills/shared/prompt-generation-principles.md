@@ -64,7 +64,7 @@ Profound AEO Guide 提出了“当前关联”和“目标属性”，并建议�
 
 | 售前记在哪 | 售后怎么用 |
 |---|---|
-| `config.buyer_quotes`、`base_conditions`、`audience_terms`、`category_aliases` | 直接沿用，补客户提供的原话 |
+| `config.buyer_quotes`、`base_conditions`、`category_aliases` | 直接沿用，补客户提供的原话 |
 | `config.attribute_plan` | 作约束条件初稿，用客户数据复核 |
 | `config.slices`、`config.topics` | 作矩阵与主题初稿；业务优先级用品牌方填的核心目标客户与购买场景重判 |
 | `notes.md`「预跑答案」「没开的格子」 | 预跑不重跑；没开的格子按客户业务范围复查 |

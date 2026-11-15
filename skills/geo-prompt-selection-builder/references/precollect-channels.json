@@ -3,8 +3,8 @@
   "review_channels": {
     "trustpilot": {"collector": "trustpilot", "targets": "competitor_domains", "说明": "竞品官网域名的 Trustpilot 评价"},
     "google-shopping": {"collector": "google-shopping", "targets": "category", "说明": "按品类词搜商品，取商品下汇总的零售站和评测站评价（代替 Amazon 评价）"},
-    "google-play": {"collector": "google-play", "targets": "app_ids", "说明": "plan.json 的 app_ids.google-play"},
-    "app-store": {"collector": "app-store", "targets": "app_ids", "说明": "plan.json 的 app_ids.app-store"},
+    "google-play": {"collector": "google-play", "targets": "app_names", "说明": "plan.json 的 app_names；collect_reviews.py 按名称在该市场应用商店搜出应用再取评价"},
+    "app-store": {"collector": "app-store", "targets": "app_names", "说明": "plan.json 的 app_names；collect_reviews.py 按名称在该市场应用商店搜出应用再取评价"},
     "google-maps": {"collector": "google-maps", "targets": "maps_queries", "说明": "plan.json 的 maps_queries，竞品门店名＋城市"},
     "capterra": {"site": "capterra.com", "query": "competitors", "说明": "产品要在站上有档案，站内搜不到就记没有"},
     "trustradius": {"site": "trustradius.com", "query": "competitors"},

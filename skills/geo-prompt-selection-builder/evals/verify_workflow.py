@@ -280,8 +280,9 @@ def run_checks() -> list[dict]:
     changed("constraint_table_filled", lambda b: constraint_table(
         b, brand_status="有", brand_status_basis="帮助中心预算设置页", vs_competitors="明显优势",
         vs_competitors_basis="月度预算上限可按部门设，竞品 A 只能按公司设"), True)
+    # 3.18.0: an empty basis is a hint (W67b), not an error
     changed("constraint_table_has_without_basis", lambda b: constraint_table(
-        b, brand_status="有", vs_competitors="未知"), False)
+        b, brand_status="有", vs_competitors="未知"), True)
     changed("constraint_table_prompt_on_missing_capability",
             lambda b: constraint_table(b, brand_status="没有", brand_status_basis="文档写只能按公司设",
                                        vs_competitors="未知"), False)
@@ -291,10 +292,10 @@ def run_checks() -> list[dict]:
     changed("constraint_table_unconfirmed_without_basis",
             lambda b: (constraint_table(b, brand_status="有", brand_status_basis="帮助中心预算设置页",
                                         vs_competitors="未知"),
-                       b["config"]["attribute_plan"][1].pop("brand_status_basis")), False)
+                       b["config"]["attribute_plan"][1].pop("brand_status_basis")), True)
     changed("constraint_table_position_without_basis",
             lambda b: constraint_table(b, brand_status="有", brand_status_basis="帮助中心预算设置页",
-                                       vs_competitors="明显劣势"), False)
+                                       vs_competitors="明显劣势"), True)
     changed("constraint_table_not_judged_is_not_a_status",
             lambda b: constraint_table(b, brand_status="不判", brand_status_basis="每家都有",
                                        vs_competitors="未知"), False)
@@ -336,8 +337,6 @@ def run_checks() -> list[dict]:
         b["questions"][1]["evidence_refs"] = []
 
     changed("condition_without_cited_signal", uncited_condition, True)
-    changed("unused_audience_inputs_warn",
-            lambda b: b["config"].update(audience_inputs=[f"input-{n}" for n in range(7)]), True)
 
     # Gate 8 exemption: a pair differing only by the category's registered naming variants.
     def category_alias_pair(b: dict) -> None:
@@ -351,38 +350,6 @@ def run_checks() -> list[dict]:
 
     changed("category_alias_pair_not_near_duplicate", category_alias_pair, True)
     changed("category_pair_without_aliases_warns", category_pair_without_aliases, True)
-
-    # Gate 39: a Prompt filed under a non-base audience names that audience.
-    def audience_prompt(b: dict, query: str, audience, terms: dict | None) -> None:
-        row = b["questions"][1]
-        row.update(user_question=query, audience=audience)
-        if terms is not None:
-            b["config"]["audience_terms"] = terms
-    sme_query = "Which business travel providers suit a small-business finance team for scenario 1?"
-    plain_query = "Which business travel management providers fit a growing company for scenario 1?"
-    sme_terms = {"中小企业财务": ["small business", "SME"]}
-    changed("audience_named_in_wording",
-            lambda b: audience_prompt(b, sme_query, ["中小企业财务"], sme_terms), True)
-    changed("audience_one_of_several_named",
-            lambda b: audience_prompt(b, sme_query, ["差旅经理", "中小企业财务"],
-                                      {**sme_terms, "差旅经理": ["travel manager"]}), True)
-    changed("audience_not_named_warns",
-            lambda b: audience_prompt(b, plain_query, "中小企业财务", sme_terms), True)
-
-    def audience_implicit(b: dict) -> None:
-        audience_prompt(b, plain_query, "中小企业财务", sme_terms)
-        b["questions"][1]["audience_implicit"] = "growing company implies an SME buyer"
-    changed("audience_implicit_exempt", audience_implicit, True)
-    # D3 (Suda 2026-11-02): with no config.audience_terms, gate 39 is a manual check, not a warning.
-    changed("audience_terms_missing_is_manual_check",
-            lambda b: audience_prompt(b, plain_query, "中小企业财务", None), True)
-    changed("audience_without_terms_entry_warns",
-            lambda b: audience_prompt(b, plain_query, "中小企业财务", {"差旅经理": ["travel manager"]}), True)
-
-    def base_audience(b: dict) -> None:
-        audience_prompt(b, plain_query, "企业差旅", None)
-        b["config"]["base_conditions"] = ["企业差旅"]
-    changed("base_audience_not_checked", base_audience, True)
 
     # The full matrix: one row per type, business priority, Topic priority.
     selection = selection_bank()
@@ -414,14 +381,15 @@ def run_checks() -> list[dict]:
     selection_case("constraint_table_missing_on_this_line_fails", scoped_missing("差旅管理"), False)
     selection_case("selection_prompt_on_weak_attribute",
                    lambda b: b["questions"][2].update(attribute_ref="全球覆盖"), True)
-    selection_case("selection_topic_priority_mismatch_warns",
+    # 3.18.0: 主题优先级 is computed from the rows; a hand-written value that disagrees is ignored, not warned
+    selection_case("selection_topic_priority_is_computed",
                    lambda b: b["config"]["topics"][0].update(priority="中", priority_basis="中：父关键词月搜索 4.4 万"),
                    True)
     # Gates 49 / 52 (Suda 2026-11-02 审核清单 B2): goals malformed, or a Competitor Prompt with 竞争定位 not picked.
     # 3.0.0: missing business_goals is read as {selected: ["发现型可见度"], information_named: false}.
     selection_case("selection_without_business_goals_defaults",
                    lambda b: b["config"].pop("business_goals"), True)
-    selection_case("selection_malformed_business_goals_warns",
+    selection_case("selection_malformed_business_goals_defaults",
                    lambda b: b["config"].update(business_goals={"selected": ["品牌曝光"]}), True)
     selection_case("selection_competitor_without_goal_warns",
                    lambda b: b["config"]["business_goals"].update(selected=["发现型可见度"]), True)
@@ -433,11 +401,6 @@ def run_checks() -> list[dict]:
         b["config"].pop("warning_decisions")
     selection_case("selection_topic_below_size_floor_warns", selection_thin_topic, True)
 
-    def selection_thin_topic_waived(b: dict) -> None:
-        selection_thin_topic(b)
-        b["config"]["warning_decisions"] = [{"match": "W59", "decision": "品牌方点名单买本主题，已告知读数波动风险（2026-11-03）"},
-                                            {"gate": "W47", "decision": "测试造数：只验证 W59"}]
-    selection_case("selection_topic_below_size_floor_waived", selection_thin_topic_waived, True)
 
     def selection_verification(b: dict) -> None:
         b["questions"][4].update(prompt_type="Verification")
@@ -506,25 +469,18 @@ def run_checks() -> list[dict]:
         "constraint_table_ref_not_listed": "attribute_ref is not in config.attribute_plan",
         "constraint_table_missing_on_this_line_fails": "预算控制:没有",
         "spanish_query_in_english_bank": "q3: query reads as 'es', not the collection language 'en'",
-        "verification_rejected_from_selection_bank": "Verification is retired (2026-11-06)",
+        "verification_rejected_from_selection_bank": "unsupported prompt_type 'Verification'",
 
         "competitor_named_in_discovery": "names a brand or competitor ['SAP Concur']",
         "target_brand_named_in_discovery": "names a brand or competitor ['Example']",
         "english_query_in_thai_bank": "q3: query is not written in the collection language 'thai'",
-        "review_all_approved_on_locked_set": '"review_status": {"已批准": 5}',
-        # 2 warnings: q0 / q4 share wording by construction, and the bank carries no
-        # config.buyer_quotes, so gates 36–37 report that they were skipped.
-        "base_bank": '"readiness": "Usable: 2 warnings without a decision"',
+        # 3.18.0: two-level verdict; warnings need no decision
+        "base_bank": '"readiness": "Ready"',
         "condition_outside_constraint_column":
             "WARNING: [W36] q1: condition outside the cited evidence ['数字 500']",
         "condition_without_cited_signal":
             "WARNING: [W36] q1: condition outside the cited evidence ['500美元以内', '数字 500']",
-        # Gate 39 adds nothing on top of the two baseline warnings.
-        "audience_named_in_wording": '"readiness": "Usable: 2 warnings without a decision"',
-        "audience_one_of_several_named": '"readiness": "Usable: 2 warnings without a decision"',
-        "audience_implicit_exempt": '"readiness": "Usable: 2 warnings without a decision"',
-        "base_audience_not_checked": '"readiness": "Usable: 2 warnings without a decision"',
-        "audience_terms_missing_is_manual_check": '"readiness": "Usable: 2 warnings without a decision"',
+        "selection_topic_priority_is_computed": '"topic_priority": {"travel": "高"',
         "selection_locked_bank": '"readiness": "Ready"',
         "selection_row_without_priority": "ERROR: slice M-001: priority must be 高 / 中 / 低",
         "typed_prompt_on_wrong_type_row": "q4: prompt_type Competitor does not match row M-001 (Discovery)",
@@ -534,12 +490,9 @@ def run_checks() -> list[dict]:
             "unsupported old structure in current.json: matrix rows with the prompt_types list (1: M-001)",
     }
     expected_warnings = {
-        "audience_not_named_warns": [
-            "Prompts filed under a non-base audience whose wording neither states nor implies it (1): q1(中小企业财务)",
-        ],
-        "audience_without_terms_entry_warns": [
-            "audiences with no entry in config.audience_terms (1): 中小企业财务",
-        ],
+        "constraint_table_has_without_basis": ["约束条件 预算控制: brand_status 有 has no brand_status_basis"],
+        "constraint_table_unconfirmed_without_basis": ["约束条件 账单合并: brand_status 待确认 has no brand_status_basis"],
+        "constraint_table_position_without_basis": ["约束条件 预算控制: vs_competitors 明显劣势 has no vs_competitors_basis"],
         "category_pair_without_aliases_warns": [
             "q1 / q2: near-duplicate wording",
         ],
@@ -548,17 +501,10 @@ def run_checks() -> list[dict]:
             "q2: asks more than one question",
             "q2: uses currency ['GBP'] outside the market's ['USD']",
         ],
-        "review_pending_while_drafting_warns": [
-            "status missing on 1 Prompts, counted as 待审核 (q4)",
-            "attributes carried only by Prompts not yet 已批准, so not counted as covered (2): 账单合并, 预算控制",
-        ],
-        "unused_audience_inputs_warn": [
-            "audience inputs referenced by no Prompt (2): input-5, input-6",
-        ],
         "constraint_column_backs_condition": [],
-        "selection_topic_priority_mismatch_warns": ["topic travel: priority 中 but its highest row is 高"],
+
         "typed_discovery_row_without_prompt_warns": ["高 / 中 rows with no Prompt (1): M-004"],
-        "selection_malformed_business_goals_warns": ["config.business_goals malformed"],
+
         "selection_competitor_without_goal_warns": ["Competitor Prompts written without the goal 竞争定位 in business_goals (1): q4",
                                                     "Alternatives Prompts written without the goal 竞争定位 in business_goals (1): q3"],
         "selection_topic_below_size_floor_warns": ["Topics below the default coverage target (travel: 4 KPI Prompts)"],
@@ -569,8 +515,9 @@ def run_checks() -> list[dict]:
         "selection_unopened_type_row_without_priority_passes": ["priority must be", "priority_basis is empty"],
         "typed_non_discovery_row_stays_quiet": ["rows with no Prompt"],
         "selection_locked_bank": ["Gate 66", "its rows sit in different Topics"],
-        "audience_terms_missing_is_manual_check": ["audience_terms", "[W39]"],
-        "selection_topic_below_size_floor_waived": ["without a decision"],
+        "review_pending_while_drafting_warns": ["[W56]", "[W57]"],
+        "selection_topic_priority_is_computed": ["[W46]"],
+        "selection_malformed_business_goals_defaults": ["[W49]"],
     }
     results = []
     for name, data, previous, expected in cases:

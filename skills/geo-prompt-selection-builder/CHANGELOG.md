@@ -1,3 +1,43 @@
+## 3.18.1（2026-11-15）补 3.18.0 漏改的两处「告警记处理」
+
+- 触发依据：Suda 2026-11-15 确认修掉上一轮核出的两处矛盾，不涉及规则变更。
+- `SKILL.md` 第 8 步：原文写「validator 错误全改、告警逐条记处理」，与同文件「交付」节和 output-contract.md 的「提示不写处理记录」冲突，改为「提示（告警）看一遍，有道理的改，不用写处理记录」。
+- `selection-rules.md` 第 6 步硬要求 3：删掉「处理记录写进 `warning_decisions`」（3.18.0 起该字段不再读），W59 的补题顺序和「不凑题」保留不变。
+- 验收：check_skill_terms 无命中；validator 测试与 verify_workflow 全过（本次只动文档）。改前快照 `.snapshots/3.18.1-wording-sync-20261115-205829/`。
+
+## 3.18.0（2026-11-13）validator 精简：只有让读数作废或对客表、导出出错的才报错
+
+触发依据：Suda 2026-11-13「选词 skill 搞这么复杂有必要吗」，按《选词validator门禁精简清单-20261113》（30-选Topic与生词/方案/）拍板「按清单改」。
+
+- **判据**：这条不查，读数会不会作废，或者对客表、导出会不会错。会的留作报错，不会的降成提示或删掉。
+- **降成提示**：空主题（W3）、英文发现题没要候选（W12，关键词判会误报）、对比题没带条件（W38）、行和主题的优先级依据为空（W43；对客表上 `check_client_base.py` 照查）、约束条件表依据为空（W67b）。
+- **删掉或合并**：根结构 `mode` 固定值（没有脚本读）；验证、准确性、品类认知三条专门报错并进类型校验（报 `unsupported prompt_type`）。
+- **删掉的提示**：W33、W35（连同 `audience_inputs`）、W39（连同 `audience_terms`）、W49（`business_goals` 写错按只开发现读）、W56、W57（对客表「覆盖情况」公式已算）、W62、W63（改由 `export_upload_csv.py` 打印，新增打印没登记的手写标签）。W46 删掉，主题优先级改成脚本按组内最高的业务优先级算，打印在结论 JSON 的 `topic_priority`。
+- **机制**：提示不再要求写处理记录，`config.warning_decisions` 不再读；结论只分两档（Not ready / Ready），不再按一手数据或假设级证据封顶 Usable。推翻 10-31、11-02（审核清单 D5）的口径。
+- **W36 没改**：清单原本建议只查数字，用 10-22 盲评样本复测后撤回。139 题里盲评判条件不合格 40 道：完整 W36 报 57 道、命中 38 道；只查数字只报 2 道、命中 1 道。关键词比对误报约三分之一，但不能删。
+- 同步：output-contract.md 门禁一节重写；selection-rules.md、SKILL.md、demand-side-signals.md、online-runner.md、runner TASK 的处理记录说法；shared/prompt-generation-principles.md 去掉 `audience_terms`。
+- 验收：8 份客户题库（brand-o KE/NG、某车载品牌、Bbrand、Ubrand、Dbrand、某制氧机客户两份，共 535 题；约束条件表补了占位品牌情况）新旧两版对比，报错逐条一致（Dbrand 门禁 68 的 1 条照报，其余 0），提示只少了清单里列的编号，7 份结论从 Usable 变 Ready。test_validate 55 passed、test_prompt_gates 通过、verify_workflow 53/53、e2e_input_contract 53/53、e2e_language_check 35/35、e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_precollect 36/36、e2e_industry_kb 15/15、e2e_bundle 11/11；check_skill_terms 无命中。改前快照 `.snapshots/validator-slim-20261113-185912/`。
+
+## 3.17.0（2026-11-13）补充内容改多文件上传；删 question_types 兼容；应用商店按 App 名称搜
+
+触发依据：Suda 2026-11-13「把选词 skill 的输入合同也改成文件上传，而且选词 skill 的 question_types 去掉……研发会在该生词逻辑之前先把这里的改了，所以 skill 不要留那些兼容的逻辑」（研发文档《售前诊断生词逻辑兼容》第 1、3、4 节）；「应用 ID 用来采应用商店评价——搜索应用名称不就好了，客户一般也不知道 id」「那你做呗」。
+
+- **补充内容是多文件上传**：`normalize_case.py` 收文件路径数组，相对路径按品牌资料 JSON 所在目录解析；最多 15 个、单个不超过 20 MB，支持 CSV、TSV、xlsx、TXT、Markdown、docx、PDF、PNG、JPG、WebP、GIF。新错误码 `too_many_files`、`unsupported_file_type`、`file_not_found`、`file_too_large`；传字符串（旧文本框写法）报 `invalid_type`，不兼容。`normalized.supplement_files` 给出文件。
+- 新增 `scripts/read_supplement.py`（只用标准库）：表格按表头找查询词列，含品牌名或别名的查询去掉；来源类型按文件名和表头判 GSC、Bing、Semrush、Ahrefs、Similarweb、Google Ads，判不出记「品牌方关键词文件」；只有关键词工具的量进「月搜索量」，GSC、Bing、Google Ads 的展示写进出处；没有查询词列的表格和 TXT、Markdown、docx 按行或段落记「品牌方资料」，不成句的（国家、设备、网址、标题）不收；PDF 和图片不读，列给 agent 看。不限条数。
+- runner：prepare 把上传文件拷进 `inputs/supplement/`；precollect 把它作为第四类「补充内容」读进 `signals.csv`，PDF 和图片列在 `summary.json` 的 `to_read`；登记检查同样适用（出处写「补充内容：」也算登记）。没传文件这一类记 skipped。demand-side-signals.md 不再从工作目录排除，品牌方上传了搜索数据时读「GSC 与搜索词报告怎么用」。TASK 和 online-runner.md 同步改；补充内容不再是「品牌方说明、只作参考」。
+- **删 question_types 兼容**：导出脚本和 output-contract.md 删掉「旧模板带这四列照收、忽略」的说法，上传只有五列，后端按 `diagnosis_intent` 定口径；shared/canonical-intent-mapping.md 的「过渡字段」两段改写成现行口径。`check_skill_terms.py` 把 `question_types`、`purchase_intent`、`persona_name`、`scene_name` 列为退役说法。
+- **应用商店按 App 名称搜**：`shared/scripts/collect_reviews.py` 的 google-play、app-store 收应用 ID 或名称；给名称时先用 DataForSEO app_searches 在该市场搜，只取标题含这个名称的第一个应用，搜不到记失败、不取别的应用。plan.json 的 `app_ids` 改为 `app_names`（一份名单两个商店共用），PLAN 任务不再让 agent 找应用 ID。
+- 回归：e2e_input_contract 53/53（新增补充内容 5 个文件读取、传字符串、超 15 个、格式不支持、文件不存在、超 20 MB）；e2e_precollect 36/36（新增补充内容拷贝与读取、没登记只记 warning、没上传记 skipped；流媒体用例改按 App 名称）；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_bundle 7/7、e2e_industry_kb 15/15；check_skill_terms 无命中。真实付费验证 collect_reviews 按名称搜：App Store「Trip.com」匹配到 681752345 并取 25 条评价；Google Play「Sbrand Security」没有同名应用，按设计记失败（共 0.0031 美元）。read_supplement 用 某安全软件真实导出（GSC 5 个 CSV、Semrush、Google Ads 搜索词 xlsx、知识库 md）核对：GSC 维度导出（国家、设备、网页、图表）不再混进信号。本次没动 validator；3.18.0 validator 精简合入后复跑：test_validate 55 passed、verify_workflow 53/53，上面各项 e2e 照旧全过。改前快照 `.snapshots/supplement-files-20261113-185909/`。
+
+## 3.16.0（2026-11-13）输入合同按线上新表单改
+
+触发依据：Suda 2026-11-13 定线上表单新字段；「公司名称、补充内容在合同里按选填来」「我们的选词 skill 倒是没必要限制语言」。
+
+- `normalize_case.py` 与 input-contract.md：`公司名称`、`补充内容` 收为选填（原先报 `retired_field`）；旧名 `公司名` 按 `公司名称` 收、给 `renamed_field`。`核心目标客户与购买场景`、`差异化优势` 改必填，至少 1 条，缺、空或只填「待补充」报 `missing_field`。字段真源改为线上表单，《品牌资料收集》第一部分跟着改。
+- 语言照旧不设白名单；合同写明本期线上只开英语由表单和接口层控制。表单上为旧 Dify 暂留的「品类」「监测主题」写明不传进来。
+- `公司名称` 只做记录；`补充内容` 是品牌方说明，第 3、4 步作参考，不算买家证据：online-runner.md 第 1 步和 runner 的 TASK 说明同步写上。online-runner.md 第 5 步删掉「核心目标客户和差异化优势都空时按官网主推判」的分支（必填后走不到）。
+- 回归：e2e_input_contract 46/46（新增公司名称/补充内容照收、旧名公司名、缺核心目标客户、缺差异化优势、只填待补充、空字符串）；e2e_precollect、e2e_domestic_network、e2e_industry_kb 的自带品牌资料补上差异化优势；e2e_industry_kb 15/15、e2e_precollect、e2e_repair_loop 11/11、e2e_review_loop、e2e_bundle、verify_workflow 62/62 通过；check_skill_terms 无命中。e2e_domestic_network（付费）没跑。改前快照 `.snapshots/input-contract-form-20261113-174141/`。
+
 ## 3.15.1（2026-11-13）情感判读并进 geo-metrics
 
 触发依据：Suda 2026-11-13「geo-presales-sentiment-judge 是不是应该放到 geo-metrics 里」「并进去吧，反正都是指标统计」。
