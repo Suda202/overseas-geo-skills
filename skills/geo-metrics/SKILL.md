@@ -15,6 +15,8 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 识别前的正文清洗：去引用标记、图片、链接网址、HTML，删 AI 反问用户的追问块，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`（传 `follow_up_form`）、`strip_follow_up_form`、`strip_choice_lists`、`blank_merchant_columns` |
 | 答案是否有效、商品卡抽取 | `scripts/geo_presales_core/crawler.py`、`shopping.py` |
 | 引用网址规范化：跟踪参数、平台站内域名、域名后缀表 | `util.py` 的 `normalize_url`、`strip_tracking_params`、`is_platform_internal`、`COMMON_MULTI_LABEL_SUFFIXES` |
+| 引用来源分类与未判读门禁：自有 > 竞品 > 内置表与共享缓存 > 未判读；未判读引用超过 5% 停下补判 | `scripts/geo_presales_core/sources.py` 的 `classify_source`、`unjudged_coverage`、`enforce_judged`；规则见 [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md)「引用来源分类」 |
+| 临时引用统计：采集目录 → 来源类别、域名榜、品牌官网、按主题和逐题的官网引用份额与引用率，带同一道门禁 | `scripts/citation_sources.py`；试跑读数、单次分析用它，不要自己另写统计脚本 |
 | 指标计算：提及率、声量份额、平均位置、引用份额、官网引用率、商品卡三项 | `scripts/geo_presales_core/metrics.py`、`deterministic.py`、`shopping.py` |
 | 每个指标用哪批样本、对客户能叫什么名字 | [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md) |
 | 开放品牌候选挖掘（人工收成词表） | `scripts/mine_brand_lexicon.py` |
@@ -28,6 +30,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 结构 `{"brands": [{"name", "aliases", "type", "domains"}], "case_sensitive_aliases": [...]}`。
 
 - 品牌名本身自动算一条别名。
+- `same_category`（可选）：是否和本品卖同一类东西。目标品牌和配置竞品默认是；开放品牌要写 `true` 才算，别的品类厂商写 `false`（车载屏客户的便携导航仪品牌）。`geo-monitoring` 的可改变性用它判品类错位、认竞品官网。
 - `case_sensitive_aliases`：品牌名或别名本身是普通词或缩写时（ERA / era、AVG / avg），把要认的大小写写法逐个列出；原文写法与名单里某个写法逐字相同才算提及。名单对词表内外所有品牌生效（目标品牌、配置竞品、开放品牌），售前报告、监测基线、试跑计数、情感抽取读的是同一份。
 - 同一别名只归一个品牌：报告数据层按首次登记的品牌归属、丢弃后来的重名；core 配置入口遇到重名直接报错。
 - **别名收什么**（每个客户、每个品牌各自补，目标品牌由品牌方填，竞品由我们或 AI 查官网补、人工确认，不做跨客户共享）：
@@ -46,7 +49,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 ## 谁在调用
 
 - `geo-presales-report-builder`：`build_report_data.py`、`verify_report_data.py`、`infer_brand_domains.py`、`collect_domain_candidates.py`、`run_pipeline.py`（词表挖掘、情感阶段）、`attach_sentiment.py`（正向占比调 `geo_presales_core/sentiment.py`）
-- `geo-monitoring`：`build_baseline_html.py`、`trial_brand_count.py`、`changeability_domains.py`；基线报告的情感走 `sentiment_sentences.py`
+- `geo-monitoring`：`build_baseline_html.py`（读共享域名缓存 `sources.load_cache`）、`trial_brand_count.py`、`changeability_domains.py`；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`
 - `geo-monitoring`（采集 `collect_answers.py`、采集完整性检查 `audit_crawl_integrity.py`）：`answer_validity`、`extract_product_cards`
 - `geo-presales-report-editor`：`geo_presales_editor/`（影子审计 CLI）
 - `geo-prompt-selection-builder`：`run_selection_mode.py` 线上运行时拷贝 `geo_presales_core`

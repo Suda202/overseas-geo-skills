@@ -113,13 +113,18 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 
 判定顺序固定，先命中先返回：
 
-1. **自有网站**：host 等于或属于 `official_domain`（`example.com` 与 `*.example.com`）。
-2. **竞品网站**：host 命中词表的 `competitor_site_domains`（配置竞品官网 + 开放品牌官网，后端规则同桶）。
-3. **域名缓存**：`assets/domain-categories.json`，按 host 精确匹配，再按后缀匹配（`blog.example.com` 命中 `example.com`）。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`。
-4. 以上都不命中 → `other`。
+1. **自有网站**：host 等于或属于目标品牌的官网域名（`example.com` 与 `*.example.com`）。
+2. **竞品网站**：host 属于配置竞品或开放品牌的官网，或命中词表顶层的 `competitor_site_domains`。
+3. **域名表**：内置 `KNOWN_HOST_TYPES` → 共享缓存 `geo-presales-report-builder/assets/domain-categories.json`（按 host 精确匹配，再按后缀匹配，`blog.example.com` 命中 `example.com`）→ `.gov` / `.edu` 后缀。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`。
+4. 以上都不命中 → **未判读**，展示时归「其他」。
 
-实现只有一处：`geo-presales-report-builder/scripts/build_report_data.py` 的 `classify_source_host()`，引用对象建好时就写入 `source_type`，报告端只读不重算。
+实现只有一处：`scripts/geo_presales_core/sources.py` 的 `classify_source`。报告数据层（引用模块和回答抽屉）、监测基线、临时统计都调它。
 
-- **缓存要用起来**：`--domain-cache` 传的那份文件必须真的参与判定。它写进 `config.domain_category_cache` 之后没有消费方，等于没接（2026-11-11 修）。缓存本身随每次运行生长，新域名判过一次就进表。
-- **「其他」占比高先看两件事**：自有/竞品域名有没有传进来；缓存有没有命中。这两项都正常还有大量「其他」，才是真的判不出来，交付说明里要写清这一项的可信度。
+**未判读门禁**（2026-11-13 Suda：「补判域名」老被跳过，结果悄悄落进「其他」，某制氧机客户 305/373、某车载品牌 36%）：
+
+- 「未判读」和缓存里判过的「其他」是两回事。前者没人看过，后者看过、确认不属于任何一类。
+- 未判读引用（按未去重次数）超过全部引用的 5% 就停下：`build_report_data.py` 和 `citation_sources.py` 退出码 3，并写出待判清单（`<输出名>.domain-candidates.json` / `<输出目录>/domain-candidates.json`）；售前流水线和监测基线随之暂停。
+- 补判做法：逐条读域名和页面标题，判成上面五类之一，写回共享缓存后重跑。品牌官网不写缓存，改 Case 或词表的官网域名。
+- 确实不判时用 `--allow-unjudged-domains "<理由>"`（基线 config 写 `allow_unjudged_domains`）放行，理由记进 `report-data.json` 的 `meta.source_classification`，交付说明要写清「其他」这一项的可信度。
+- 门禁没过 5% 时也会列出待判清单，顺手判掉能让下次更准。
 - 分类是展示口径，不参与提及率、声量份额、引用份额的计算，改分类不改那些数。

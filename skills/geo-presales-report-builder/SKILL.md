@@ -88,6 +88,8 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    逐条读域名与其页面标题判读类别，写回 `assets/domain-categories.json`。该文件随每次运行生长，判过的域名下次直接命中。
 
+   这一步有门禁：第 4 步 `build_report_data.py` 发现未判读的引用超过 5% 会以退出码 3 停下，并写出 `<输出名>.domain-candidates.json`，判完写回缓存再重跑。确实不判时加 `--allow-unjudged-domains "<理由>"`。分类实现和门禁在 geo-metrics core `sources.py`。
+
 4. **生成数据**：
 
    ```bash
@@ -248,7 +250,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 ## 已知边界
 
 - **引用来源的展示类别固定 7 类**：自有网站 / 竞品网站 / 社交平台 / 媒体网站 / 新闻稿平台 / 机构网站 / 其他。以《引用来源分类》定义为准，不得增删。两条最容易搞错的边界：**目标品牌与全部竞品（配置竞品 + 开放竞品）的官网都进「自有网站」/「竞品网站」，不限于本批配置的那几个**——开放竞品的官网域名靠 `infer_brand_domains.py` 从引用来源推断、推不出的联网搜索补全（2026-09-22 改，此前规定开放竞品官网不进这一类）；**未命中默认类别的企业网站（含其他厂商官网、母公司站）归「其他」**——注意母公司站不算产品官网（如 tencent.com 不是 RivalY2 的官网，RivalY2 是 rivaly2.vip）。旧版的 `corporate_site`（企业网站）已取消，遇到历史值按「其他」处理。
-- 引用来源类别依赖 `assets/domain-categories.json` 的判读覆盖度；未判读的域名回落「其他」。新品类首次运行时「其他」占比偏高属正常，补判后下降。
+- 引用来源类别依赖 `assets/domain-categories.json` 的判读覆盖度。未判读的引用超过 5% 时数据层停下（门禁），不会再悄悄落进「其他」；放行时理由记在 `meta.source_classification`。
 - 开放品牌集是词表驱动的，词表没收录的品牌不会进入声量分母。补充词表要重新跑数据层。
 - 前端每个榜单只展示本主题所属产品线的品牌（目标 + 该线配置竞品 + 1 个开放竞品），是为了可读性；其余品牌仍进声量分母。需要完整分布时看 `report-data.json` 的 `competition` 与 `matrix`。
 - **采集目录的文件名必须是题库全局题号**（`0001.json`、`0001-r2.json`）。`details` 的键由文件名决定（`<地区>|<平台>|<题号>`），抽屉按题号回查；用原始批次名（如 `KECHG005_1.json`）会让抽屉显示「没有这道题的原始回答」（2026-11-11 实测）。

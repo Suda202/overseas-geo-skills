@@ -359,26 +359,17 @@ def load_case(path: Path) -> dict:
 
 
 def load_domain_cache(path) -> dict:
-    """读取引用来源域名类别缓存。
+    """读取引用来源域名类别缓存（格式校验在 geo-metrics core `sources.load_cache`）。
 
-    分类不是封闭集合：内置白名单之外的域名按运行时缓存判读，缓存随每次运行生长。
-    读不到时返回空字典，未登记域名回落「其他」，不阻塞构建。
+    缓存里没有的域名是「未判读」，构建时由门禁拦下（见 main 里的 unjudged_coverage）。
     """
     if not path:
         return {}
-    cache_path = Path(path)
-    if not cache_path.exists():
-        print(f"提示：域名类别缓存不存在（{cache_path}），未登记域名将回落「其他」")
+    if not Path(path).exists():
+        print(f"提示：域名类别缓存不存在（{path}），所有非官网域名都是未判读，门禁会拦下")
         return {}
-    payload = json.loads(cache_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise SystemExit(f"域名类别缓存格式应为扁平映射 {{域名: 类别}}，实际为 {type(payload).__name__}")
-    valid = {"media_review", "ugc", "institutional", "press_release", "other"}
-    unknown = {k: v for k, v in payload.items() if v not in valid}
-    if unknown:
-        sample = ", ".join(f"{k}={v}" for k, v in list(unknown.items())[:3])
-        raise SystemExit(f"域名类别缓存含未知类别（{sample}），允许值：{'/'.join(sorted(valid))}")
-    return payload
+    from geo_presales_core.sources import load_cache
+    return load_cache(path)
 
 
 def shopping_detail_by_region(collect_dir: Path, regions: list[str]) -> dict:
@@ -1368,7 +1359,10 @@ def parse_args(argv=None):
     parser.add_argument("--lexicon", type=Path, default=None,
                         help="开放品牌词表；缺省时只用 Case 里的配置品牌跑通")
     parser.add_argument("--domain-cache", type=Path, default=DEFAULT_DOMAIN_CACHE,
-                        help="引用来源域名类别缓存；缺失时未登记域名回落「其他」")
+                        help="引用来源域名类别缓存；缓存里没有的域名是未判读，超过 5%% 会被门禁拦下")
+    parser.add_argument("--allow-unjudged-domains", default="", metavar="理由",
+                        help="引用来源未判读超过 5%% 时默认停下（退出码 3）并列出待判清单；"
+                             "确实不判时写明理由放行，理由记进报告 meta.source_classification")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--regions", default="",
                         help="逗号分隔的市场代码；留空则从采集目录发现（推荐）")
@@ -2080,52 +2074,9 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
 
 
 def classify_source_host(host: str, config: dict) -> str:
-    """引用来源分类：自有网站 > 竞品网站 > 域名缓存 > 其他。
-
-    规则见 geo-metrics/references/metric-scope-and-copy-contract.md「引用来源分类」。
-    """
-    h = normalize_host(host or "")
-    if not h:
-        return "other"
-    bare = h[4:] if h.startswith("www.") else h
-
-    def norm(d):
-        x = normalize_host(str(d or ""))
-        return x[4:] if x.startswith("www.") else x
-
-    def hit(domains):
-        for d in domains:
-            c = norm(d)
-            if c and (bare == c or bare.endswith("." + c)):
-                return True
-        return False
-
-    own, comp = [], []
-    for obj in config.get("objects") or []:
-        if not isinstance(obj, dict):
-            continue
-        domains = obj.get("official_domains") or obj.get("domains") or []
-        kind = str(obj.get("role") or obj.get("type") or obj.get("object_id") or "")
-        if kind == "target" or str(obj.get("object_id")) == "target":
-            own.extend(domains)
-        elif kind in ("competitor", "open") or "competitor" in kind or "open" in kind:
-            comp.extend(domains)
-    own.extend([config.get("official_domain") or ""])
-    comp.extend(config.get("competitor_site_domains") or [])
-
-    if hit(own):
-        return "brand_official"
-    if hit(comp):
-        return "competitor_official"
-
-    cache = config.get("domain_category_cache") or {}
-    for key in (bare, h):
-        if key in cache:
-            return cache[key]
-    for k, v in cache.items():
-        if k and (bare.endswith("." + k) or bare == k):
-            return v
-    return "other"
+    """引用来源分类，唯一实现在 geo-metrics core `geo_presales_core.sources`（自有 > 竞品 > 域名表与缓存 > 其他）。"""
+    from geo_presales_core.sources import classify_source_host as _core_classify
+    return _core_classify(normalize_host(host or ""), config)
 
 
 def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dict,
@@ -2425,6 +2376,16 @@ def main(argv=None) -> int:
         index, sample_issues, order_issues = build_answers_index(
             args.collect, config, bank, run_root, regions)
 
+        # 门禁：引用来源域名没判读就统计，会全落进「其他」（2026-11-11 某制氧机客户、11-13 某车载品牌两次）。
+        from geo_presales_core.sources import enforce_judged, unjudged_coverage, UNJUDGED_EXIT_CODE
+        coverage = unjudged_coverage(
+            {"host": c.get("host"), "title": c.get("title"), "url": c.get("canonical_url"),
+             "basis": "unjudged" if c.get("classification_source") == "default_other" else "judged"}
+            for doc in index.values() for a in doc["answers"] if is_valid(a) for c in a.get("citations") or [])
+        candidates_path = args.out.with_name(args.out.stem + ".domain-candidates.json")
+        if not enforce_judged(coverage, candidates_path, args.allow_unjudged_domains, "引用来源门禁"):
+            return UNJUDGED_EXIT_CODE
+
         slices: dict[str, dict] = {}
         # 意图类型切片（topic 位写「类型:发现」）：前端选了意图类型、没选主题时用。只有一种类型时不出。
         type_labels = list(dict.fromkeys(
@@ -2462,6 +2423,15 @@ def main(argv=None) -> int:
                 for q in bank["questions"])]
             for label in type_labels}
         meta["type_topic_prefix"] = TYPE_TOPIC_PREFIX
+        meta["source_classification"] = {
+            "total_citations": coverage["total_citations"],
+            "unjudged_citations": coverage["unjudged_citations"],
+            "unjudged_share": coverage["unjudged_share"],
+            "limit": coverage["limit"],
+            "unjudged_domains": len(coverage["candidates"]),
+            "allowed_reason": args.allow_unjudged_domains.strip()
+            if coverage["unjudged_share"] > coverage["limit"] else "",
+        }
         if args.shopping_cards:
             meta["shopping_cards"] = args.shopping_cards
         # 商品卡都没带商家时不出「官网购买链接覆盖率」（只会是一排 0%）

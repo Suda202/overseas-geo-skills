@@ -141,7 +141,23 @@ def stage_build(args, out: Path) -> None:
         cmd += ["--sku-map", args.sku_map]
     if args.source_limit is not None:
         cmd += ["--source-limit", str(args.source_limit)]
-    run(cmd, args.dry_run, "2 数据生成")
+    if args.allow_unjudged_domains:
+        cmd += ["--allow-unjudged-domains", args.allow_unjudged_domains]
+    printable = " ".join(str(c) for c in cmd)
+    print(f"→ [2 数据生成] {printable}")
+    if args.dry_run:
+        return
+    result = subprocess.run([str(c) for c in cmd])
+    if result.returncode == 3:
+        # 引用来源门禁（geo-metrics core sources.enforce_judged）：域名判读是语义活，不能自动化。
+        raise Pause(
+            f"引用来源有超过 5% 的引用来自没判读过的域名，待判清单已写到 "
+            f"{report.with_name(report.stem + '.domain-candidates.json')}。逐条读域名和页面标题，"
+            f"判成 media_review/ugc/institutional/press_release/other，写回 "
+            f"{HERE.parent / 'assets' / 'domain-categories.json'} 后重跑；品牌官网改 Case 或词表，不写缓存。"
+            f"确实不判时加 --allow-unjudged-domains \"<理由>\"。")
+    if result.returncode != 0:
+        raise SystemExit(f"[2 数据生成] 失败(退出码 {result.returncode}),流水线停止:{printable}")
 
 
 def stage_sentiment(args, out: Path) -> None:
@@ -268,6 +284,8 @@ def main() -> int:
     parser.add_argument("--brand-suffixes",
                         help="逗号分隔的品类/产品线后缀,展示时从品牌名剥掉(如 LED,Display);"
                              "留空用内置净水器词表兜底")
+    parser.add_argument("--allow-unjudged-domains", default="", metavar="理由",
+                        help="引用来源未判读超过 5%% 时流水线默认暂停等补判；写明理由才放行")
     parser.add_argument("--source-limit", type=int,
                         help="引用域名/页面榜单条数,透传给 build_report_data;缺省售前 Top 20,0 为全量(售后)")
     parser.add_argument("--regions", help="逗号分隔区域:新采集时必填(决定采哪些国家),同时透传给 build_report_data")

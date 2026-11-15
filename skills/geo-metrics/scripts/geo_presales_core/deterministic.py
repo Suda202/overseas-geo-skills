@@ -16,99 +16,16 @@ from .util import (
 )
 
 
-SOURCE_TYPES = {
-    # 现行 7 类，以《引用来源分类》定义为准。旧版的 corporate_site（企业网站）已取消：
-    # 未命中默认类别的企业网站归入 other；开放竞品官网也不进 competitor_official。
-    "brand_official": "自有网站",
-    "competitor_official": "竞品网站",
-    "ugc": "社交平台",
-    "media_review": "媒体网站",
-    "press_release": "新闻稿平台",
-    "institutional": "机构网站",
-    "other": "其他",
-}
-
-# 已从 SOURCE_TYPES 退休的类别 → 现行类别，按《引用来源分类》的迁移口径。
-# 百科类归「机构网站」（政府/非营利/教育/公共机构），企业网站归「其他」。
-RETIRED_SOURCE_TYPES = {
-    "encyclopedia_reference": "institutional",
-    "corporate_site": "other",
-}
-
-
-KNOWN_HOST_TYPES = {
-    # 机构网站（Institutions）：政府、非营利组织、教育机构和公共机构的网站。
-    # .gov / .edu 由 _known_type 的后缀规则兜住；这里放经确认的高频机构域名
-    # （who.int、wikipedia.org、wikimedia.org 等）。
-    "baike.baidu.com": "institutional",
-    "who.int": "institutional",
-    "reddit.com": "ugc",
-    "youtube.com": "ugc",
-    "facebook.com": "ugc",
-    "instagram.com": "ugc",
-    "tiktok.com": "ugc",
-    "x.com": "ugc",
-    "twitter.com": "ugc",
-    "quora.com": "ugc",
-    "wikipedia.org": "institutional",
-    "wikimedia.org": "institutional",
-    "wikidata.org": "institutional",
-    "britannica.com": "institutional",
-    "reuters.com": "media_review",
-    "apnews.com": "media_review",
-    "forbes.com": "media_review",
-    "techcrunch.com": "media_review",
-    "searchenginejournal.com": "media_review",
-    "g2.com": "media_review",
-    "capterra.com": "media_review",
-    "trustpilot.com": "media_review",
-    "bbb.org": "media_review",
-    "github.com": "other",
-    "linkedin.com": "other",
-}
-
-
-def _known_type(host: str, cache: dict | None = None) -> str | None:
-    """域名 → 来源类别。
-
-    分类不是封闭集合：`KNOWN_HOST_TYPES` 只放稳定的高频域名，其余走运行时缓存
-    （`config["domain_category_cache"]`）。缓存由报告侧按实际链接判读后写回，
-    每次运行都会把新出现的域名补进去，因此覆盖度随运行增长。
-
-    历史值兜底：`corporate_site`、`encyclopedia_reference` 等已从 `SOURCE_TYPES`
-    退休的分类按迁移口径归并（见 `RETIRED_SOURCE_TYPES`），其余无法识别的值落到
-    「其他」。内置表与运行时缓存两条路径都要过一遍——缓存里同样可能残留旧值，
-    否则 `SOURCE_TYPES[known]` 会直接 KeyError 打断整条构建。
-    """
-    def _valid(source_type: str | None) -> str | None:
-        if source_type is None:
-            return None
-        if source_type in SOURCE_TYPES:
-            return source_type
-        return RETIRED_SOURCE_TYPES.get(source_type, "other")
-
-    for known, source_type in KNOWN_HOST_TYPES.items():
-        if host == known or host.endswith("." + known):
-            return _valid(source_type)
-    if cache:
-        for known, source_type in cache.items():
-            if host == known or host.endswith("." + known):
-                return _valid(source_type)
-    if host.endswith(".gov") or ".gov." in host or host.endswith(".edu") or ".edu." in host:
-        return "institutional"
-    return None
-
-
-def _classify_official(host: str, objects: list[dict], competitor_sites=()) -> tuple[str | None, str | None]:
-    """官网规则：纳入对象的官网按顺序第一个命中的胜出；都不中时，config 的 competitor_site_domains
-    （同类平台站点，词表顶层字段，因客户而异，不进共用的域名类别缓存）归「竞品网站」、不挂品牌。"""
-    for obj in objects:
-        for domain in obj["official_domains"]:
-            if domain_matches(host, domain):
-                return ("brand_official" if obj["role"] == "target" else "competitor_official", obj["object_id"])
-    if any(domain_matches(host, site) for site in competitor_sites):
-        return "competitor_official", None
-    return None, None
+# 引用来源分类的类别表、内置域名表和判定函数在 sources.py（唯一实现），这里只转出旧名字，
+# 供 `from geo_presales_core.deterministic import SOURCE_TYPES` 这类老调用继续可用。
+from .sources import (  # noqa: E402,F401
+    KNOWN_HOST_TYPES,
+    RETIRED_SOURCE_TYPES,
+    SOURCE_TYPES,
+    _classify_official,
+    _known_type,
+    classify_source,
+)
 
 
 def choose_representative_samples(samples: list[dict], questions: list[dict]) -> tuple[dict[str, str | None], list[dict]]:
@@ -211,26 +128,17 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
                 "classification_confidence": None,
             })
             if row["host"]:
-                source_type, object_id = _classify_official(row["host"], all_objects(config),
-                                                            config.get("competitor_site_domains") or ())
-                if source_type:
+                verdict = classify_source(row["host"], config)
+                if verdict["basis"] != "unjudged":
                     row.update({
-                        "source_type": source_type,
-                        "source_type_name": SOURCE_TYPES[source_type],
-                        "matched_official_object_id": object_id,
-                        "classification_source": "official_rule",
-                        "classification_confidence": 1.0,
+                        "source_type": verdict["source_type"],
+                        "source_type_name": SOURCE_TYPES[verdict["source_type"]],
+                        "matched_official_object_id": verdict["object_id"],
+                        "classification_source": verdict["basis"],
+                        "classification_confidence": verdict["confidence"],
                     })
                 else:
-                    known = _known_type(row["host"], config.get("domain_category_cache"))
-                    if known:
-                        row.update({
-                            "source_type": known,
-                            "source_type_name": SOURCE_TYPES[known],
-                            "classification_source": "domain_rule",
-                            "classification_confidence": 0.95,
-                        })
-                    elif normalized and selected.get(sample["question_id"]) == sample["sample_id"]:
+                    if normalized and selected.get(sample["question_id"]) == sample["sample_id"]:
                         host_item = unknown_hosts.setdefault(row["host"], {
                             "host": row["host"],
                             "sample_urls": [],
