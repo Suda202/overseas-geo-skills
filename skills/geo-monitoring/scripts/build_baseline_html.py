@@ -131,7 +131,11 @@ def prepare_inputs(cfg, questions, intent, platforms):
         if cfg.get(key):
             lexicon[key] = list(cfg[key])
     (out / "lexicon.json").write_text(json.dumps(lexicon, ensure_ascii=False, indent=1))
-    cache = {d: kind for kind, ds in (cfg.get("domain_categories") or {}).items() for d in ds}
+    # 先读共享的域名类别缓存（各客户判过的域名都在这里），再叠加本客户 config 的 domain_categories。
+    # 2026-11-13 前只用 config 手填的几个域名，别的客户判过的域名在基线里一律算「其他」。
+    from geo_presales_core.sources import load_cache
+    cache = dict(load_cache())
+    cache.update({d: kind for kind, ds in (cfg.get("domain_categories") or {}).items() for d in ds})
 
     (out / "domain-categories.json").write_text(json.dumps(cache, ensure_ascii=False, indent=1))
     print("合成采集文件", n)
@@ -1032,7 +1036,13 @@ def main(argv=None) -> int:
         rc = brd.main(["--collect", str(out / "collect"), "--questions", str(out / "questions.csv"),
                        "--case", str(out / "case.json"), "--lexicon", str(out / "lexicon.json"),
                        "--domain-cache", str(out / "domain-categories.json"), "--out", str(data_path),
-                       "--source-limit", "0"])
+                       "--source-limit", "0"]
+                      + (["--allow-unjudged-domains", str(cfg["allow_unjudged_domains"])]
+                         if cfg.get("allow_unjudged_domains") else []))
+        if rc == 3:
+            raise SystemExit("引用来源有未判读域名超过 5%：按上面列出的待判清单逐条判读，写回 "
+                             "geo-presales-report-builder/assets/domain-categories.json 后重跑；"
+                             "确实不判时在 config 写 allow_unjudged_domains: \"<理由>\"")
         if rc:
             return rc
         import verify_report_data as vr

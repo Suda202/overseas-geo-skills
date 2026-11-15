@@ -41,7 +41,8 @@ Sentiment and translations are prepared before the report is built, so the repor
 | `case_sensitive_aliases` | Abbreviations that collide with words (ERA); list every accepted casing (lyf / Lyf / LYF). Written to the brand lexicon's top level; geo-metrics core applies it |
 | `multi_label_suffixes` | Must already be in geo-metrics core `COMMON_MULTI_LABEL_SUFFIXES` (`gov.sg`, `edu.sg`, `per.sg` are); the build stops if one is missing — add it there, not here |
 | `competitor_site_domains` | Same-category platforms counted as 竞品网站 beyond the configured brands. Written to the brand lexicon's top level; geo-metrics core source classification applies it |
-| `domain_categories` | `ugc / media_review / press_release / institutional` domain lists |
+| `domain_categories` | `ugc / media_review / press_release / institutional` domain lists, layered over the shared cache `geo-presales-report-builder/assets/domain-categories.json` (read first since 2026-11-13; before that only these lists were used and every other domain fell into 其他) |
+| `allow_unjudged_domains` | Reason for building with more than 5% of citations from unjudged domains. Without it the build stops (exit 3) and writes `report-data.domain-candidates.json` next to the data file: judge each domain, add it to the shared cache, rebuild |
 | `sentiment` | `{units, claims, metrics}` paths; ignored until all three exist |
 | `translations` | Folder of `batch-*.zh.json` |
 | `hide_sections` | Module ids to hide with their nav link, e.g. `opportunities` (05 内容规划) until content work starts. Modules with no data are hidden without being listed here: `distribution` (04 情感) when sentiment is not attached, `sources` (03 引用) when no answer cites anything. Remaining modules are renumbered in order (Suda 2026-10-22) |
@@ -63,9 +64,29 @@ Sentiment and translations are prepared before the report is built, so the repor
   5. 回答记录 — one row per run: 平台, 采集时间 (the collection file's time; the payload has none), brand mentioned, brands named, 引用份额, 操作. No 「第 n 次」.
   6. A run's answer: only 「← 返回列表」 on top; meta shows 平台 · 采集时间; 中文译文 / 回答原文 tabs; 品牌提及 (all same-category brands; empty state 「这次回答没有提到任何同类平台或竞品」), 品牌情感 (all brands; empty state 「这次回答没有对品牌的明确褒贬」), citations, search sources.
 
+## 可改变性（默认只优化官网，Suda 2026-11-13）
+
+回答的是「只改官网，能不能改变这道题的答案」。第三方信源要另外加钱、社区也不好做，所以默认按只优化官网判。`scripts/changeability_domains.py` 全自动判，不用人工打开页面；只用于不点名本品的题（发现、替代、问题解决），评估、对比、验证、交易、售后输出「不适用」。按顺序判，命中即定档：
+
+| 顺序 | 判什么 | 结果 |
+|---|---|---|
+| 1 | 品类错位（只用于发现、替代）：同类品牌（含本品）被提到的回答不到 20%，7 次里最多 1 次 | 低 |
+| 2 | 硬规格劣势：题目的主约束在约束条件表里「相对竞品」是明显劣势 | 低 |
+| 3 | 有引用的回答不到 4 条 | 不判，标「引用样本不足」 |
+| 4 | 官网差距：有引用的回答里，某家同类竞品官网被引的比例比本品高 40 个百分点以上，且多出至少 3 条回答 | 高 |
+| 5 | 第三方主导：有引用的回答里，引了任一同类厂商官网（含本品）的不到 40% | 低；品牌方已购第三方信源时（`--third-party`）媒体、社区为主的改判中，机构为主仍是低 |
+| 6 | 其余：厂商官网常被引，本品和竞品差距不到门槛 | 中 |
+
+- 分母只算有引用的回答：ChatGPT 有不少回答不联网、不带引用，算进去会把题误判成第三方主导。
+- 「同类品牌」在品牌词表里标：目标品牌和配置竞品默认同类，开放品牌要写 `same_category: true` 才算；别的品类厂商（导航仪之于 CarPlay 屏）写 `false`。同类品牌的官网域名就是比差距用的竞品官网。
+- 有效回答不到 7 条（3 次试跑）只算预判：「有引用的回答 4 条」「多出 3 条」两个次数门槛按回答数等比例缩，最少 2 条（3 次试跑就是 2 条、2 条）；7 次基线跑完再定正式档。
+- 可改变性只回答能不能改，不回答值不值得做：提及率已经很高的题也可能判高。
+- 每题输出被引最多的竞品页面网址，作为改官网的参照；不参与定档。
+- 阈值（20%、40 个百分点、3 条、40%、4 条）都是参数，按某车载品牌一个客户定的，多积累客户后再校准。
+
 ## 优化顺序 (Suda 2026-10-23)
 
-The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 and, on 2026-10-28, by the per-Prompt 可改变性 (高 / 中 / 低, from the top 20 cited domains). They are computed per formal Prompt from the formal baseline (7 runs per query × platform × country × language), pooled across platforms, and used to order optimisation work. They never change the selection 优先级 (提示词库 优先级, prefilled from the matrix row).
+The five competition patterns moved here from the client Base, where the seven-value 竞争格局 field was replaced by 信源壁垒 and, on 2026-10-28, by the per-Prompt 可改变性 (高 / 中 / 低; rules in「可改变性」below). They are computed per formal Prompt from the formal baseline (7 runs per query × platform × country × language), pooled across platforms, and used to order optimisation work. They never change the selection 优先级 (提示词库 优先级, prefilled from the matrix row).
 
 Applies to Discovery and Alternatives Prompts only; named-brand types put the brand in the question and would always read as mentioned. Let t = the brand's mention rate on the Prompt and L = the highest rate among the other brands named as candidates:
 

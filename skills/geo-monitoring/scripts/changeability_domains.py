@@ -18,19 +18,19 @@
    ChatGPT、部分 AIO）回退数正文引用标记，Gemini / AIO 旧格式的伪拆分按同一套规则折叠；Alexa 数
    ``{ref cite_…}``。逐个回答判代数，不按日期。正文字段用同一模块的 ``ANSWER_FIELD``，
    失败页判定用 core 的 ``answer_validity``。
-4. 每道题跨所有平台、所有试跑次数汇总被引次数，子域名归到注册域名（``blog.x.com`` 算 ``x.com``；
-   ``hdb.gov.sg`` 这类 国家二级后缀下的站保留到机构一级），取被引次数前 20 的域名（并列按域名字母序）。
-5. 分三类：官网（品牌官网、竞品官网、``--official`` 给的转化渠道页）、社区（``--community-domain``：
-   品牌用自己账号发帖的社区、另买的信源服务）、其余都是难影响。
-6. 两种占比都算：按被引次数、按域名个数。建议档用按被引次数的：官网+社区 ≥60% 高、≤40% 低、其余中
-   （阈值暂定，可用 ``--high`` / ``--low`` 改）。前 20 里政府站加百科的被引次数超过 50%，
-   打「需人工：政府/百科主导」，不给建议档；有回答但一条正文引用都没有，打「需人工：无正文引用」。
-   前 20 合计被引不足 5 次的照样给档，但在 note 和依据里写「被引不足 5 次，档位不稳」。
+4. 每道题跨所有平台、所有试跑次数汇总，子域名归到注册域名（``blog.x.com`` 算 ``x.com``；
+   ``hdb.gov.sg`` 这类国家二级后缀下的站保留到机构一级）。
+5. 定档（Suda 2026-11-13 审核版，默认只优化官网，全自动）：规则在 ``summarize`` 的说明和
+   geo-monitoring/references/baseline-report.md「可改变性」。要点：品类错位 → 低；主约束相对竞品明显劣势 → 低；
+   有引用的回答不到 4 条 → 不判；同类竞品官网被引的回答比例领先本品 ≥40 个百分点且多 ≥3 条 → 高；
+   引了厂商官网的有引用回答 <40% → 低（第三方主导）；其余 → 中。只用于发现、替代、问题解决；点名本品的类型不适用。
+   同类品牌和竞品官网读 ``--lexicon`` 的 ``same_category``。不到 7 条有效回答只算预判。
+6. 官网＋社区占全部被引的比例（``official_share_reference``）和前 20 域名照样输出，只作参考，不参与定档。
 
 域名参数的写法：不带 ``/`` 按域名比（含子域名），带 ``/`` 按「主机+路径前缀」比，例如
 ``reddit.com/r/yourbrand``、``amazon.com/stores/YourBrand``——这样品牌自己的版块算社区，Reddit 其余帖子仍是难影响。
 品牌官网 = ``config.official_domain`` ∪ ``--official``；竞品官网 = 题库 config 里竞品条目的 domain /
-official_domain ∪ ``--competitor-domain``。
+official_domain ∪ ``--competitor-domain``（只用于参考占比和前 20 标注）；定档比差距用的同类竞品官网另读词表（第 5 条）。
 
 输出（``--out`` 目录）：``changeability.csv``（每题一行）、``changeability.json``（每题完整明细、
 分平台回答数与引用格式、归题问题清单）。默认只预览；``--write`` 才把建议档和一句依据写回题库的
@@ -39,8 +39,8 @@ official_domain ∪ ``--competitor-domain``。
 
 用法：
     python3 -I changeability_domains.py --bank <bank.json> --collect <试跑目录> [<试跑目录> …] \\
-        --out <输出目录> [--official brand.cn] [--competitor-domain rival.com …] \\
-        [--community-domain reddit.com/r/yourbrand …] [--write [--overwrite]]
+        --out <输出目录> --lexicon <品牌词表.json> [--official brand.cn] [--competitor-domain rival.com …] \\
+        [--community-domain reddit.com/r/yourbrand …] [--third-party] [--write [--overwrite]]
 """
 from __future__ import annotations
 
@@ -64,10 +64,6 @@ from geo_presales_core.crawler import answer_validity  # noqa: E402
 from geo_presales_core.util import normalize_host, normalize_text, registrable_domain  # noqa: E402
 
 TOP_N = 20
-DEFAULT_HIGH = 0.60
-DEFAULT_LOW = 0.40
-GOV_WIKI_LIMIT = 0.50
-FEW_CITATIONS = 5  # 前 20 域名合计被引少于这个数，照样给建议档，但在 note 里提示档位不稳
 PENDING = {"", "待试跑", None}
 
 # 国家代码顶级域下的通用二级标签：x.co.th、x.gov.sg 的注册域名要保留三段。
@@ -182,6 +178,62 @@ def competitor_domains(config: dict) -> list[str]:
                 values = value if isinstance(value, list) else [value]
                 out.extend(str(v) for v in values if v)
     return out
+
+
+def load_vendor_brands(config: dict, lexicon_path):
+    """同类品牌：用于品类门槛（认品牌）和竞品官网（认域名）。
+
+    目标品牌和题库 config 里的配置竞品默认同类；词表里 type 为 target / competitor* 的默认同类，
+    open 品牌要写 same_category: true 才算（便携导航仪这类别的品类厂商不算）；任何品牌写 same_category: false 就排除。
+    返回 ({竞品名: Matcher(官网)}, [{name, aliases, case_sensitive_aliases}], 提示)。
+    """
+    import geo_presales_core.util as core_util
+    merged: dict[str, dict] = {}
+
+    def add(name, aliases=(), domains=(), same=True):
+        name = str(name or "").strip()
+        if not name:
+            return
+        slot = merged.setdefault(normalize_text(name), {"name": name, "aliases": set(), "domains": set(), "flags": []})
+        slot["aliases"].update(x for x in [name, *(str(a).strip() for a in aliases or [])] if x)
+        slot["domains"].update(str(d) for d in domains or [] if d)
+        slot["flags"].append(same)  # True / False（词表明写）/ None（开放品牌没写）
+
+    add(config.get("brand_name"), config.get("aliases") or [], [], True)
+    target_key = normalize_text(str(config.get("brand_name") or ""))
+    for item in config.get("competitors") or []:
+        if isinstance(item, dict):
+            add(item.get("name"), item.get("aliases") or [],
+                [item.get(k) for k in ("domain", "official_domain") if item.get(k)], True)
+    note, missing = "", []
+    if lexicon_path:
+        lex = json.loads(Path(lexicon_path).read_text(encoding="utf-8"))
+        for b in lex.get("brands") or []:
+            kind = str(b.get("type") or "")
+            flag = b.get("same_category")
+            same = flag if isinstance(flag, bool) else (True if kind == "target" or kind.startswith("competitor") else None)
+            if same is None:
+                missing.append(b.get("name"))
+            add(b.get("name"), b.get("aliases") or [], b.get("domains") or b.get("official_domains") or [], same)
+            if kind == "target":
+                target_key = normalize_text(str(b.get("name") or "")) or target_key
+        if missing:
+            note = (f"词表里 {len(missing)} 个开放品牌没写 same_category，按非同类处理：{'、'.join(map(str, missing[:8]))}"
+                    + ("…" if len(missing) > 8 else ""))
+    else:
+        note = "没给 --lexicon：同类品牌只认题库 config 里的本品和配置竞品，品类门槛可能误判"
+    case_sensitive = core_util.read_case_sensitive_aliases(lexicon_path) if lexicon_path else set()
+    brands, vendors = [], {}
+    for key, v in merged.items():
+        if False in v["flags"] or True not in v["flags"]:
+            continue
+        brands.append({"name": v["name"], "aliases": sorted(v["aliases"]),
+                       "case_sensitive_aliases": core_util.case_sensitive_for(v["aliases"], case_sensitive)})
+        if key != target_key and v["domains"]:
+            vendors[v["name"]] = Matcher(sorted(v["domains"]))
+    if not any(v for v in merged.values() if True in v["flags"] and False not in v["flags"]):
+        note = (note + "；" if note else "") + "题库和词表里都没有同类品牌，跳过品类门槛"
+    return vendors, brands, note
 
 
 # ------------------------------------------------------------------ 采集目录
@@ -301,13 +353,13 @@ def classify(host: str, url: str, official: Matcher, competitor: Matcher, commun
     return "难影响", ""
 
 
-def collect(args, questions, official, competitor, community):
+def collect(args, questions, official, competitor, community, vendors=None, brands=None, cache=None):
     resolver = Resolver(questions)
     runs = find_runs(args.collect)
     issues: list[dict] = []
     seen_hashes: dict[str, str] = {}
     per_q = {q["question_id"]: {"answers": Counter(), "valid": Counter(), "format": Counter(),
-                                "domains": Counter(), "unresolved": 0, "files": []}
+                                "domains": Counter(), "unresolved": 0, "files": [], "per_answer": []}
              for q in questions}
     for run in runs:
         rows, _csv = run_questions_csv(run, issues)
@@ -362,55 +414,154 @@ def collect(args, questions, official, competitor, community):
                         slot["format"]["cited_count"] += 1
                     else:
                         slot["format"]["body_marker"] += 1
+                    rec = {"file": str(path), "platform": platform, "cited": False, "vendors": set(),
+                           "pages": [], "third": Counter(), "same_category": None}
                     for entry in brd._citation_entries(platform, task, text):
                         host = entry.get("domain_hint") or ""
                         url = entry.get("raw_url") or ""
                         if not host:
                             slot["unresolved"] += 1
                             continue
+                        rec["cited"] = True
                         cls, sub = classify(host, url, official, competitor, community)
                         dom = reg_domain(host)
                         slot["domains"][(dom, cls, sub)] += 1
+                        owner = "本品" if (official.match(host, url) or community.match(host, url)) else None
+                        if owner is None:
+                            owner = next((name for name, m in (vendors or {}).items() if m.match(host, url)), None)
+                        if owner:
+                            rec["vendors"].add(owner)
+                            if owner != "本品" and url:
+                                rec["pages"].append((owner, url.split("?")[0]))
+                        else:
+                            rec["third"][third_party_type(host, cache)] += 1
+                    if brands:  # 一个同类品牌都不认识时不判品类门槛（same_category 留 None）
+                        rec["same_category"] = same_category_mentioned(text, task, brands)
+                    slot["per_answer"].append(rec)
     return runs, per_q, issues
 
 
-def summarize(q: dict, slot: dict, high: float, low: float) -> dict:
+NAMED_TYPES = {"Evaluation", "Competitor", "Trust", "Transactional", "Support"}
+BRAND_LIST_TYPES = {"Discovery", "Alternatives"}
+THIRD_LABEL = {"media_review": "媒体评测", "ugc": "社区", "institutional": "机构与百科",
+               "press_release": "新闻稿", "other": "其他网站"}
+
+
+def third_party_type(host: str, cache) -> str:
+    from geo_presales_core.sources import classify_source
+    verdict = classify_source(normalize_host(host), {"domain_category_cache": cache or {}})
+    t = verdict["source_type"]
+    return t if t in THIRD_LABEL else "other"
+
+
+def same_category_mentioned(text: str, task: dict, brands: list[dict]) -> bool:
+    """去引用正文里有没有提到任何同类品牌（含本品）。识别口径同 trial_brand_count。"""
+    from de_cite_crawl import blank_merchant_columns, strip_citations
+    from geo_presales_core.util import find_alias_spans
+    body = blank_merchant_columns(strip_citations(text, task.get("follow_up_form")))
+    return any(find_alias_spans(body, b["aliases"], b["case_sensitive_aliases"]) for b in brands)
+
+
+def summarize(q: dict, slot: dict, rules: dict, weak_attrs: dict) -> dict:
+    """可改变性：默认只优化官网时，改官网能不能改变这道题（Suda 2026-11-13 审核版）。
+
+    按顺序判，命中即定档：
+    1 品类错位（只用于发现、替代题）：同类品牌（含本品）被提到的回答 < category_min → 低
+    2 硬规格劣势：题目挂的约束条件在约束条件表里「相对竞品」= 明显劣势 → 低
+    3 有引用的回答 < min_cited → 不判（引用样本不足）
+    4 官网差距：有引用的回答里，某家同类竞品官网被引的比例 − 本品官网 ≥ gap，且多出的回答 ≥ gap_answers → 高
+    5 第三方主导：有引用的回答里，引了任一同类厂商官网（含本品）的 < vendor_min → 低
+      （--third-party 开时，媒体、社区为主的改判中；机构为主仍是低）
+    6 其余 → 中
+    点名本品的类型（评估、对比、验证、交易、售后）不适用。有效回答少于 formal_answers 时只算预判。
+    """
     ranked = sorted(slot["domains"].items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))
-    top = ranked[:TOP_N]
+    top = ranked[:TOP_N]  # 只用于展示和人工复核
     total_all = sum(slot["domains"].values())
-    top_total = sum(n for _, n in top)
-    oc_cites = sum(n for (d, cls, _), n in top if cls in ("官网", "社区"))
-    oc_domains = sum(1 for (d, cls, _), n in top if cls in ("官网", "社区"))
-    gw_cites = sum(n for (d, cls, _), n in top if cls == "难影响" and (is_gov(d) or is_wiki(d)))
-    share_c = oc_cites / top_total if top_total else None
-    share_d = oc_domains / len(top) if top else None
-    gw_share = gw_cites / top_total if top_total else None
-    valid = sum(slot["valid"].values())
-    flag, tier = "", None
+    oc_cites = sum(n for (d, cls, _), n in ranked if cls in ("官网", "社区"))
+    share_c = oc_cites / total_all if total_all else None
+    answers = slot["per_answer"]
+    valid = len(answers)
+    cited = [a for a in answers if a["cited"]]
+    n_cited = len(cited)
+    ptype = str(q.get("prompt_type") or q.get("intent") or "").strip()
+
+    def rate(pred, pool):
+        return sum(1 for a in pool if pred(a)) / len(pool) if pool else 0.0
+
+    own_rate = rate(lambda a: "本品" in a["vendors"], cited)
+    comp_rates = {}
+    for a in cited:
+        for v in a["vendors"] - {"本品"}:
+            comp_rates[v] = comp_rates.get(v, 0) + 1
+    comp_counts = dict(comp_rates)
+    comp_rates = {k: v / n_cited for k, v in comp_rates.items()} if n_cited else {}
+    top_comp, top_comp_rate = max(comp_rates.items(), key=lambda kv: kv[1]) if comp_rates else ("", 0.0)
+    own_count = sum(1 for a in cited if "本品" in a["vendors"])
+    gap_answers = comp_counts.get(top_comp, 0) - own_count
+    vendor_rate = rate(lambda a: bool(a["vendors"]), cited)
+    same_known = [a for a in answers if a["same_category"] is not None]
+    same_rate = rate(lambda a: a["same_category"], same_known) if same_known else None
+    third = Counter()
+    for a in cited:
+        third.update(a["third"])
+    third_main = third.most_common(1)[0][0] if third else ""
+    pages = Counter(url for a in cited for owner, url in a["pages"] if owner == top_comp)
+    attr = str(q.get("attribute_ref") or "").strip()
+    # 次数门槛按 7 次基线定；试跑回答少时按比例缩（3 次试跑：有引用 ≥2 条、多 ≥2 条），结果只算预判
+    scale = min(1.0, valid / rules["formal_answers"]) if valid else 1.0
+    min_cited = max(2, round(rules["min_cited"] * scale))
+    need_gap = max(2, round(rules["gap_answers"] * scale))
+
+    tier, step, reason = None, "", ""
     if not valid:
-        flag = "无试跑答案"
-    elif not top_total:
-        flag = "需人工：无正文引用"
-    elif gw_share > GOV_WIKI_LIMIT:
-        flag = "需人工：政府/百科主导"
+        step, reason = "无数据", "没有有效回答"
+    elif ptype in NAMED_TYPES:
+        step, reason = "不适用", f"{ptype} 题题面点名本品，这套规则不适用"
+    elif ptype in BRAND_LIST_TYPES and same_rate is not None and same_rate < rules["category_min"]:
+        tier, step = "低", "品类错位"
+        reason = f"同类品牌只在 {same_rate:.0%} 的回答里出现，AI 按另一类产品回答"
+    elif attr and weak_attrs.get(attr):
+        tier, step = "低", "硬规格劣势"
+        reason = f"主约束「{attr}」相对竞品明显劣势：{weak_attrs[attr]}"
+    elif n_cited < min_cited:
+        step, reason = "引用样本不足", f"有引用的回答只有 {n_cited} 条（少于 {min_cited}）"
+    elif top_comp_rate - own_rate >= rules["gap"] and gap_answers >= need_gap:
+        tier, step = "高", "官网差距"
+        reason = (f"{top_comp} 官网在 {top_comp_rate:.0%} 的有引用回答里被引，本品官网 {own_rate:.0%}"
+                  f"（多 {gap_answers} 次回答）")
+    elif vendor_rate < rules["vendor_min"]:
+        main = THIRD_LABEL.get(third_main, "第三方")
+        if rules["third_party"] and third_main in ("media_review", "ugc"):
+            tier, step = "中", "第三方主导（已购第三方信源）"
+        else:
+            tier, step = "低", "第三方主导"
+        reason = f"只有 {vendor_rate:.0%} 的有引用回答引了厂商官网，主要引{main}"
     else:
-        tier = "高" if share_c >= high else "低" if share_c <= low else "中"
+        tier, step = "中", "官网常被引"
+        reason = (f"厂商官网在 {vendor_rate:.0%} 的有引用回答里被引；本品 {own_rate:.0%}"
+                  + (f"，{top_comp} {top_comp_rate:.0%}" if top_comp else "") + "，差距不到门槛")
+    stage = "正式" if valid >= rules["formal_answers"] else f"预判（{valid} 次回答）"
+
     domains = []
     for rank, ((d, cls, sub), n) in enumerate(top, 1):
         tag = "政府" if is_gov(d) else "百科" if is_wiki(d) else ""
         domains.append({"rank": rank, "domain": d, "class": cls, "detail": sub or tag, "citations": n})
     return {
-        "question_id": q["question_id"], "user_question": q_text(q), "prompt_type": q.get("prompt_type"),
+        "question_id": q["question_id"], "user_question": q_text(q), "prompt_type": ptype,
         "region": q.get("region"),
-        "answers_valid": valid, "answers_by_platform": dict(slot["valid"]),
+        "answers_valid": valid, "answers_cited": n_cited, "answers_by_platform": dict(slot["valid"]),
         "citation_format": dict(slot["format"]),
         "citations_all": total_all, "citations_unresolved": slot["unresolved"],
-        "domains_all": len(slot["domains"]), "top20_citations": top_total,
-        "official_community_citations": oc_cites,
-        "share_by_citations": share_c, "share_by_domains": share_d, "gov_wiki_share": gw_share,
-        "suggested": tier, "flag": flag,
-        "note": f"被引不足 {FEW_CITATIONS} 次，档位不稳" if tier and top_total < FEW_CITATIONS else "",
+        "domains_all": len(slot["domains"]),
+        "same_category_rate": same_rate, "own_site_rate": own_rate, "top_competitor": top_comp,
+        "top_competitor_rate": top_comp_rate, "vendor_site_rate": vendor_rate,
+        "third_party_main": THIRD_LABEL.get(third_main, ""), "attribute_ref": attr,
+        "official_share_reference": share_c,
+        "suggested": tier, "step": step, "reason": reason, "stage": stage,
+        "flag": "" if tier else step,
         "current": q.get("changeability"), "current_basis": q.get("changeability_basis"),
+        "top_competitor_pages": [u for u, _ in pages.most_common(3)],
         "top20": domains,
         "answer_files": slot["files"],
     }
@@ -421,19 +572,10 @@ def label(item: dict) -> str:
 
 
 def basis_sentence(r: dict) -> str:
-    oc = [i for i in r["top20"] if i["class"] in ("官网", "社区")]
-    hard = [i for i in r["top20"] if i["class"] == "难影响"]
-    head = (f"官网+社区 {round(r['share_by_citations'] * 100)}%（被引 {r['official_community_citations']}/"
-            f"{r['top20_citations']}，前 {len(r['top20'])} 域名，{r['answers_valid']} 次回答）")
-    parts = [head + "：" + ("、".join(f"{label(i)} {i['citations']}" for i in oc[:4]) or "无")]
-    if hard:
-        parts.append("难影响：" + "、".join(f"{i['domain']} {i['citations']}" for i in hard[:3])
-                     + ("…" if len(hard) > 3 else ""))
-    if r.get("gov_wiki_share"):
-        parts.append(f"其中政府/百科 {round(r['gov_wiki_share'] * 100)}%")
-    if r.get("note"):
-        parts.append(r["note"])
-    return "；".join(parts) + "（脚本预判）"
+    text = f"{r['suggested']}（{r['step']}）：{r['reason']}"
+    if r["step"] == "官网差距" and r["top_competitor_pages"]:
+        text += "；竞品被引页面：" + "、".join(r["top_competitor_pages"][:2])
+    return text + f"。{r['stage']}，脚本判"
 
 
 def pct(v):
@@ -444,10 +586,11 @@ def write_outputs(out: Path, results: list, meta: dict):
     out.mkdir(parents=True, exist_ok=True)
     (out / "changeability.json").write_text(
         json.dumps({"meta": meta, "questions": results}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    headers = ["question_id", "prompt_type", "region", "answers_valid", "answers_by_platform", "citation_format",
-               "citations_all", "citations_unresolved", "top20_citations", "official_community_citations",
-               "share_by_citations", "share_by_domains", "gov_wiki_share", "suggested", "flag", "note",
-               "current", "basis_preview", "top20_domains", "user_question"]
+    headers = ["question_id", "prompt_type", "region", "answers_valid", "answers_cited", "answers_by_platform",
+               "suggested", "step", "stage", "reason", "same_category_rate", "own_site_rate", "top_competitor",
+               "top_competitor_rate", "vendor_site_rate", "third_party_main", "attribute_ref",
+               "official_share_reference", "citations_all", "citation_format", "current", "basis_preview",
+               "top_competitor_pages", "top20_domains", "user_question"]
     with (out / "changeability.csv").open("w", encoding="utf-8-sig", newline="") as handle:
         w = csv.DictWriter(handle, fieldnames=headers)
         w.writeheader()
@@ -456,8 +599,10 @@ def write_outputs(out: Path, results: list, meta: dict):
                 **{k: r.get(k) for k in headers if k in r},
                 "answers_by_platform": " ".join(f"{k}={v}" for k, v in sorted(r["answers_by_platform"].items())),
                 "citation_format": " ".join(f"{k}={v}" for k, v in sorted(r["citation_format"].items())),
-                "share_by_citations": pct(r["share_by_citations"]), "share_by_domains": pct(r["share_by_domains"]),
-                "gov_wiki_share": pct(r["gov_wiki_share"]), "suggested": r["suggested"] or "",
+                **{k: pct(r[k]) for k in ("same_category_rate", "own_site_rate", "top_competitor_rate",
+                                          "vendor_site_rate", "official_share_reference")},
+                "suggested": r["suggested"] or "",
+                "top_competitor_pages": " ".join(r["top_competitor_pages"]),
                 "basis_preview": basis_sentence(r) if r["suggested"] else "",
                 "top20_domains": "; ".join(
                     f"{i['domain']}[{i['class']}{'/' + i['detail'] if i['detail'] else ''}] {i['citations']}"
@@ -473,8 +618,15 @@ def main(argv=None) -> int:
     ap.add_argument("--official", nargs="*", default=[], help="品牌官网 / 转化渠道页（与 config.official_domain 合并）")
     ap.add_argument("--competitor-domain", nargs="*", default=[], help="竞品官网（与题库 config 竞品域名合并）")
     ap.add_argument("--community-domain", nargs="*", default=[], help="品牌发帖的社区、另买的信源服务")
-    ap.add_argument("--high", type=float, default=DEFAULT_HIGH, help="官网+社区被引占比 ≥ 此值记高（默认 0.60）")
-    ap.add_argument("--low", type=float, default=DEFAULT_LOW, help="官网+社区被引占比 ≤ 此值记低（默认 0.40）")
+    ap.add_argument("--lexicon", type=Path, default=None,
+                    help="品牌词表：同类品牌标 same_category: true（目标和配置竞品默认同类），用于品类门槛和竞品官网")
+    ap.add_argument("--third-party", action="store_true", help="品牌方已购第三方信源：媒体、社区主导的题判中")
+    ap.add_argument("--category-min", type=float, default=0.20, help="同类品牌提及率低于此值判品类错位（默认 0.20，7 次里最多 1 次）")
+    ap.add_argument("--gap", type=float, default=0.40, help="竞品官网被引回答比例领先本品至少此值判高（默认 0.40，7 次里约多 3 次）")
+    ap.add_argument("--gap-answers", type=int, default=3, help="官网差距还要求竞品多被引的回答数至少此值（默认 3，防止有引用回答少时 2 次就够）")
+    ap.add_argument("--vendor-min", type=float, default=0.40, help="引了厂商官网的有引用回答低于此值判第三方主导（默认 0.40）")
+    ap.add_argument("--min-cited", type=int, default=4, help="有引用的回答少于此数不判档（默认 4）")
+    ap.add_argument("--formal-answers", type=int, default=7, help="有效回答少于此数只算预判（默认 7，即正式基线）")
     ap.add_argument("--write", action="store_true", help="把建议档和依据写回 bank.json")
     ap.add_argument("--overwrite", action="store_true", help="配合 --write：覆盖题库里已有的高/中/低")
     args = ap.parse_args(argv)
@@ -488,30 +640,37 @@ def main(argv=None) -> int:
     competitor = Matcher(competitor_domains(config) + list(args.competitor_domain))
     community = Matcher(args.community_domain)
 
-    runs, per_q, issues = collect(args, questions, official, competitor, community)
-    results = [summarize(q, per_q[q["question_id"]], args.high, args.low) for q in questions]
+    vendors, brands, lex_note = load_vendor_brands(config, args.lexicon)
+    from geo_presales_core.sources import load_cache
+    runs, per_q, issues = collect(args, questions, official, competitor, community, vendors, brands, load_cache())
+    rules = {"category_min": args.category_min, "gap": args.gap, "gap_answers": args.gap_answers, "vendor_min": args.vendor_min,
+             "min_cited": args.min_cited, "formal_answers": args.formal_answers, "third_party": args.third_party}
+    weak = {a.get("attribute"): (a.get("vs_competitors_basis") or "明显劣势")
+            for a in config.get("attribute_plan") or [] if a.get("vs_competitors") == "明显劣势"}
+    results = [summarize(q, per_q[q["question_id"]], rules, weak) for q in questions]
     meta = {
         "bank": str(args.bank), "runs": [str(r) for r in runs],
         "official": official.describe(), "competitor": competitor.describe(), "community": community.describe(),
-        "thresholds": {"high_ge": args.high, "low_le": args.low, "gov_wiki_gt": GOV_WIKI_LIMIT, "top_n": TOP_N},
+        "rules": rules, "lexicon": str(args.lexicon or ""), "lexicon_note": lex_note,
+        "same_category_brands": [b["name"] for b in brands], "vendor_sites": sorted(vendors),
         "issues": issues,
     }
     write_outputs(args.out, results, meta)
 
     print(f"试跑目录 {len(runs)} 个；官网 {', '.join(official.describe())}；竞品 {', '.join(competitor.describe()) or '无'}；"
           f"社区 {', '.join(community.describe()) or '无'}")
-    print(f"阈值：官网+社区被引占比 ≥{args.high:.0%} 高、≤{args.low:.0%} 低；政府/百科 >{GOV_WIKI_LIMIT:.0%} 需人工")
+    print(f"规则：品类错位 <{args.category_min:.0%}、官网差距 ≥{args.gap:.0%}、厂商官网 <{args.vendor_min:.0%} 判第三方主导、"
+          f"有引用回答 <{args.min_cited} 不判；第三方信源{'已购' if args.third_party else '未购（默认只优化官网）'}")
+    if lex_note:
+        print(lex_note)
     codes = Counter(i["code"] for i in issues)
     if codes:
         print("归题问题：" + "、".join(f"{k} {v}" for k, v in codes.most_common()))
     print()
-    print(f"{'题号':<16}{'回答':>4}{'被引':>6}{'按次':>6}{'按域名':>7}{'政/百':>6}  建议  现值  标记 / 前 5 域名")
+    print(f"{'题号':<16}{'回答':>4}{'有引':>4}  建议  现值  依据")
     for r in results:
-        top5 = "、".join(f"{label(i)}{'*' if i['class'] == '官网' else ''} {i['citations']}" for i in r["top20"][:5])
-        print(f"{r['question_id']:<16}{r['answers_valid']:>4}{r['top20_citations']:>6}{pct(r['share_by_citations']):>6}"
-              f"{pct(r['share_by_domains']):>7}{pct(r['gov_wiki_share']):>6}  {r['suggested'] or '—':<4}"
-              f"{str(r['current'] or '—'):<5} {r['flag'] + ' ' if r['flag'] else ''}"
-              f"{'〔' + r['note'] + '〕' if r['note'] else ''}{top5}")
+        print(f"{r['question_id']:<16}{r['answers_valid']:>4}{r['answers_cited']:>4}  {r['suggested'] or '—':<4}"
+              f"{str(r['current'] or '—'):<5} {r['step']}：{r['reason']}（{r['stage']}）")
     print(f"\n（* = 官网；输出：{args.out / 'changeability.csv'}、{args.out / 'changeability.json'}）")
 
     if not args.write:

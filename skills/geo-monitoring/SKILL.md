@@ -24,7 +24,7 @@ metadata:
 
 - 采集：`scripts/collect_answers.py`，项目唯一采集实现，8 个平台；售前 pipeline 和选词研究预跑也调它。跑之前设 `no_proxy=api.scrapeless.com`（本机代理会掐断 Python 的 HTTPS 握手）；失败格加 `--retry-unrecoverable` 才会重采。各平台字段合同在 `references/platform-contract.json`，新增平台在这里登记。
 - 采集完整性：`scripts/audit_crawl_integrity.py`，算任何指标前先过；退出码、缺陷怎么处理见 [crawl-integrity.md](references/crawl-integrity.md)。
-- 试跑读数：`scripts/trial_brand_count.py`（每道题答案点了几个品牌）、`scripts/changeability_domains.py`（引用前 20 域名的来源结构），用法见脚本开头说明。
+- 试跑读数：`scripts/trial_brand_count.py`（每道题答案点了几个品牌）、`scripts/changeability_domains.py`（可改变性：默认只优化官网时改官网能不能改变这道题，规则见 [baseline-report.md](references/baseline-report.md)「可改变性」），用法见脚本开头说明。引用来源类别、域名榜、逐题官网引用份额和引用率用 geo-metrics 的 `scripts/citation_sources.py`，不要自己另写统计脚本：它带未判读门禁，未判读引用超过 5% 会停下列出待判域名。
 - 基线报告：`scripts/build_baseline_html.py`，流程见 [baseline-report.md](references/baseline-report.md)。读数只出 HTML，不写进多维表格。
 
 ## 交给内容团队
