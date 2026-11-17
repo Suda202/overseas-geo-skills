@@ -1,8 +1,8 @@
 {
   "name": "geo-gap-diagnosis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "owner": "海外 GEO 项目",
-  "updated_at": "2026-11-16",
+  "updated_at": "2026-11-17",
   "status": "active",
   "maturity_tier": "beta",
   "lifecycle_stage": "pilot",
@@ -10,5 +10,5 @@
   "entrypoint": "SKILL.md",
   "summary": "正式基线之后的缺口诊断：七层读数、推荐与事实标注、页面缺口、三道门与第一断点，产出带决定、载体、动作四要素和度量契约的优化机会诊断表。",
   "depends_on": ["geo-monitoring", "geo-metrics", "geo-presales-report-builder"],
-  "factory_components": ["references", "scripts"]
+  "factory_components": ["references", "scripts", "evals"]
 }

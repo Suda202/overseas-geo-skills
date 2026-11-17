@@ -3,7 +3,7 @@ name: geo-gap-diagnosis
 description: Use after a formal GEO monitoring baseline (after-sales, 5–7 runs per Prompt × platform) to diagnose why the brand or a target SKU underperforms and decide what to optimise — reads the collection directory into seven layers (reach, search, retrieval, citation, mention, recommendation, accuracy), labels recommendation status per answer (D-TOP / D-REC / R-LIST / Q-FIT / X-WARN / Z-GAP) and brand fact errors, checks cited third-party pages for page gaps vs answer gaps, then applies business-value / product-fit / stability gates and a first-breakpoint table to produce an optimisation-opportunity table with a decision (test / observe / research first / hold / not now / route to product), one carrier, the four action fields and a measurement contract. Use when asked 「为什么提及率低」「该优化什么」「优化机会诊断」「缺口诊断」「品牌在、型号不在」「SKU 推荐率低」, or to turn baseline readings into work for the content team. Do not use to collect answers or check crawl integrity (geo-monitoring), to change metric calibers or brand recognition (geo-metrics), to pick or write Prompts (geo-prompt-selection-builder), for the presales diagnosis report (geo-presales-report-builder / -editor), or to write the content itself.
 metadata:
   author: Overseas GEO Project
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # GEO 缺口诊断
@@ -35,3 +35,7 @@ metadata:
 ## 产物放哪
 
 该客户的售后工作目录下 `诊断-<日期>/`：readings、labels、pagegap、diagnosis 四个子目录，加 facts.md、诊断用词表副本、priority / sku 输入文件，以及和人工结论的差异清单。
+
+## 自检
+
+改脚本或规则后跑 `python3 evals/e2e_gap_diagnosis.py`，36 条用例覆盖四个脚本的完整链路（读数、门与断点、标注校验、页面缺口、三份产物），不联网、不花钱；报告写到 `reports/gap-diagnosis-e2e.md`。
