@@ -208,7 +208,7 @@ INTENT_LABEL = {
     "sentiment": "评估",
     "competitor": "对比",
     "alternatives": "替代",
-    "trust": "验证",
+    "trust": "信任",
     "transactional": "交易",
     "support": "售后",
     "validation": "能力核查",

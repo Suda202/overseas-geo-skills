@@ -27,9 +27,9 @@
     返修      run 里检查没过而 out/bank.json 存在时，把报错原文写成 REPAIR-<n>.md 回喂 agent 再
               finalize，默认最多 2 轮（--repair-rounds，0 关闭）；最后一轮授权 agent 丢题不丢库
               （改不好的题删掉、题号进 config.retired，每个主题仍只放一种意图类型）
-    补题      检查通过但导出不到 30 道时，写 TOPUP.md 让 agent 补一轮（3.13.0，--repair-rounds 0 时不补）：先开我方
-              补充的中档行和假设行，再用低档行，不许同义改写；补完没过检查就退回补题前的题库；仍不到 30 道照常交付，
-              result.json 记 top_up {before, after, status} 和一条 warning
+    补题      审核之后导出仍不到 30 道时，写 TOPUP.md 让 agent 补一轮（3.19.0 起不受 --repair-rounds 影响）：先开我方
+              补充的中档行和假设行，再用低档行，不许同义改写；补完没过检查就退回补题前的题库；补完仍不到 30 道，
+              这次运行判失败（status=failed、errors 里 stage=top_up），不交付。result.json 记 top_up {before, after, status}
     审核      首次 finalize 通过后，新开一个审核 agent 按 references/review-rubric.md 九条核对题库，
               发现写进 out/review.json；blocking 的发现写成 REVIEW-REPAIR-<n>.md 回喂返修、再 finalize、
               只复核报过的题，默认 1 轮（--review-rounds，0 关闭；不占 --repair-rounds 额度）。
@@ -87,7 +87,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
                        审核的发现，logs/review-<n>.json 存每轮原件
 
 退出码：0 生词成功；1 生词失败（agent 出错、超时，返修轮次用完检查仍没过，或审核返修轮次用完仍有阻塞发现且
-删掉这些题后检查仍没过、或发现没写题号删不了，原因见 result.json）；
+删掉这些题后检查仍没过、或发现没写题号删不了，或补题后仍不到 30 道，原因见 result.json）；
 2 输入或环境有错（品牌资料归一化不过、参数错、缺 SCRAPELESS_API_KEY、部署缺 skill 文件），不启动 agent，errors 原样在 result.json。
 
 可能出错的地方（本脚本针对的就是这些）：
@@ -100,7 +100,7 @@ DATAFORSEO_CASE 没传时自动填「品牌 市场」。流水在服务端 ~/.da
   6. 没有 SCRAPELESS_API_KEY → agent 采不了研究预跑会凭空写题，启动前就停下
   7. 审核 agent 没写 review.json、写坏了、结构不对或超时 → review.status=review_failed，记 warning，照常交付
   8. 审核 agent 违规改了 bank.json → 恢复审核前的题库并记 warning
-  8b. 题太少（不到 30 道）→ 补一轮；补坏了退回原题库，补不到照常交付并记 warning
+  8b. 题太少（不到 30 道，含审核删题后变少）→ 补一轮；补坏了退回原题库；补完仍不到 30 道判失败，不交付
   9. 审核返修把检查改坏 → 下一轮审核返修把检查报错和未修的阻塞发现一起回喂，额度用完才失败
   10. agent 不采评价、社区只搜一两次就交题库 → precollect 由脚本固定采；采到了却一条没登记 → 登记检查回喂返修
   11. 不分行业都采 Trustpilot、不分市场都搜 Reddit → 先判行业，渠道按表（行业 × 市场）定；行业判错或
@@ -183,7 +183,7 @@ TASK = """你在一个无人值守的流水线里，没有人会回答问题。�
 - selection-rules.md 里这几处线上跳过：对客确认表（第 8 步回读行数、「交付」里的对客确认表，以及所有指向 client-facing-base.md 的说明，工作目录里没有这份）；demand-side-signals.md 只在品牌方上传了补充内容时读「GSC 与搜索词报告怎么用」一节；第 6 步「售后重聚」。
 
 题量（selection-rules.md 第 7 步「出几道」）：
-- 候选题一个市场 × 一条产品线 30–60 道。超过 60 是硬限（validator 门禁 47 和导出都报错，控制成本），写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。不到 30 不凑题；检查通过后脚本会补一轮题，补不到也照常交付。
+- 候选题一个市场 × 一条产品线 30–60 道。超过 60 是硬限（validator 门禁 47 和导出都报错，控制成本），写到 60 道就停，超出先砍业务优先级为中的行里证据最弱的题。30 道是下限：写题时就要写到 30 道；不到 30 道，脚本会让你补一轮，补完仍不到 30 道这次运行判失败。补题也不许同义改写凑数。
 - 主题个数不限；发现主题每个至少 10 道，60 道里最多 6 个满额主题。
 
 输入：
@@ -269,14 +269,15 @@ REPAIR_TASK = """你在无人值守流水线的返修环节（第 {round} / {max
 
 REPAIR_WHY = "但结束检查没过"
 
-# 3.13.0（Suda 2026-11-12）：线上生成的题就是售前报告测的全部题，不到 30 道补一轮；补完仍不够照常交付。
+# 3.13.0（Suda 2026-11-12）：线上生成的题就是售前报告测的全部题，不到 30 道补一轮。
+# 3.19.0（Suda 2026-11-17）：补完仍不到 30 道判失败，不交付；研发文档《售前诊断生词逻辑兼容》第 4 节同口径。
 TOP_UP_FLOOR = 30
 TOP_UP_TASK = """你在无人值守流水线的补题环节。工作目录里的 out/bank.json 已通过检查，但只有 {count} 道题，不到 {floor} 道（选词 selection-rules.md 第 7 步「出几道」）。
 
 只补题，不改已有的题：
 1. 先看 `out/notes.md`「没开的格子」和已有矩阵行：我方补充、能写出合理推断的处境，开成业务优先级为中的行（没有买家原话的，`priority_basis` 写「假设：……」），在这些行上出题；
 2. 还不够，再在业务优先级为低的行上出题（validator 会给 W64 提示，属正常，不用处理）；
-3. 不许用同义改写、调换语序、机械组合条件凑数：门禁 8、W8b、W37 照常拦。找不到真实的新购买决策就停，在 `out/notes.md`「假设」里写一句为什么题少（品类窄、场景少等），照常交付。
+3. 补到至少 {floor} 道。不许用同义改写、调换语序、机械组合条件凑数：门禁 8、W8b、W37 照常拦。确实找不到真实的新购买决策就停，在 `out/notes.md`「假设」里写一句为什么题少（品类窄、场景少等）；补完仍不到 {floor} 道，这次运行判失败，由选词同事在本地处理。
 
 规则照 online-runner.md 和 selection-rules.md；约束条件表、需求信号登记照常。合计不超过 60 道。不要重做调研，不要访问工作目录以外的路径。
 
@@ -542,6 +543,8 @@ def finalize(ws: Path, agent_record: dict | None = None, repair_rounds: int | No
     market, locale = prior.get("market", ""), prior.get("locale", "")
     result = {"status": "failed", "market": market, "locale": locale, "platforms": prior.get("platforms", []), "errors": [],
               "warnings": prior.get("warnings", []), "prepared_at": prior.get("prepared_at", "")}
+    if "review" in prior:  # 补题在审核之后 finalize（3.19.0），审核记录要带过去
+        result["review"] = prior["review"]
     block = precollect_block(ws)
     if block is not None:
         result["precollect"] = block
@@ -1000,6 +1003,8 @@ def main() -> int:
             p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="agent 时间上限（秒），每轮返修同额")
             p.add_argument("--repair-rounds", type=int, default=2,
                            help="检查没过时回喂报错返修的最大轮数（默认 2，0 关闭；最后一轮授权丢题不丢库）")
+            p.add_argument("--prompt-floor", type=int, default=TOP_UP_FLOOR,
+                           help=f"题量下限（默认 {TOP_UP_FLOOR}，不到就补一轮、补完仍不到判失败）；只给测试改，线上用默认值")
             p.add_argument("--review-rounds", type=int, default=1,
                            help="审核报阻塞问题时回喂返修的最大轮数（默认 1＝审一轮＋复核一轮，0 关闭审核；"
                                 "不占 --repair-rounds 额度）")
@@ -1062,26 +1067,30 @@ def main() -> int:
         code = finalize(ws, record, repair_rounds=rounds, precollect_final=rounds >= a.repair_rounds)
     if code != 0:
         return code
-    if a.repair_rounds > 0 and top_up(ws, a.agent, a.agent_cmd, a.timeout, rounds) != 0:
-        return 1
     code = review_loop(ws, a.agent, a.agent_cmd, a.timeout, a.review_rounds, rounds, a.market.strip())
+    if code != 0:
+        return code
+    # 补题放在审核之后（3.19.0）：审核删题也可能让题量掉到 30 以下，最后一步统一补、统一判
+    code = top_up(ws, a.agent, a.agent_cmd, a.timeout, rounds, a.prompt_floor)
     if code == 0:
         learn_industry(ws, testing=bool(a.task_file))
     return code
 
 
-def top_up(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int, rounds: int) -> int:
-    """题库已过检查但不到 TOP_UP_FLOOR 道时补一轮（3.13.0）。补完没过检查就退回补题前的题库，照常交付。
+def top_up(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int, rounds: int,
+           floor: int = TOP_UP_FLOOR) -> int:
+    """题库已过检查和审核但不到 floor 道时补一轮（3.13.0）。补完没过检查就退回补题前的题库；
+    补完仍不到 floor 道判失败（3.19.0），返回 1。
 
-    结果记在 result.json 的 top_up：{before, after, status: added / unchanged / reverted}。返回 finalize 的退出码（0）。
+    结果记在 result.json 的 top_up：{before, after, status: added / unchanged / reverted}。
     """
     result_path = ws / "out/result.json"
     before = json.loads(result_path.read_text(encoding="utf-8")).get("prompt_count") or 0
-    if before >= TOP_UP_FLOOR:
+    if before >= floor:
         return 0
     saved = {name: (ws / "out" / name).read_bytes() for name in ("bank.json", "notes.md") if (ws / "out" / name).exists()}
     task = ws / "TOPUP.md"
-    task.write_text(TOP_UP_TASK.format(count=before, floor=TOP_UP_FLOOR), encoding="utf-8")
+    task.write_text(TOP_UP_TASK.format(count=before, floor=floor), encoding="utf-8")
     record = run_agent(ws, agent, agent_cmd, timeout, task_path=task, tag="-topup")
     code = finalize(ws, record, repair_rounds=rounds, precollect_final=True)
     status = "added"
@@ -1095,8 +1104,11 @@ def top_up(ws: Path, agent: str | None, agent_cmd: str | None, timeout: int, rou
     if status == "added" and after <= before:
         status = "unchanged"
     result["top_up"] = {"before": before, "after": after, "status": status}
-    if after < TOP_UP_FLOOR:
-        result["warnings"].append(f"[top_up] 补题后仍只有 {after} 道，不到 {TOP_UP_FLOOR} 道，照常交付；原因见 out/notes.md")
+    if after < floor:
+        result["status"] = "failed"
+        result.setdefault("errors", []).append({"stage": "top_up", "message":
+            f"生成题量不足（{after} 道）：补题后仍不到 {floor} 道，不交付；原因见 out/notes.md"})
+        code = 1
     write_json(result_path, result)
     return code
 

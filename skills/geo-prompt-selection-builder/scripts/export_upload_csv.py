@@ -7,7 +7,7 @@
 - diagnosis_intent 用后端枚举：discovery、alternatives、competitor、evaluation。tags 写跨主题切片标签：按 config.tag_dimensions
   从矩阵行派生（口径在 tag_dimensions.py，落在不到 2 个主题、不到 5 道题、和主题重复的值不出，打印原因），
   不写 diagnosis_intent 已经表达的类型名。
-  问题解决（Information）、验证（Trust）、交易（Transactional）、售后（Support）后端还没有枚举，不导出并打印题号。
+  问题解决（Information）、信任（Trust）、交易（Transactional）、售后（Support）后端还没有枚举，不导出并打印题号。
 - 每类统计什么以 shared/canonical-intent-mapping.md 和研发需求第 4 节的表为准，不在 CSV 里表达。
 - 上传时市场在上传页另选，所以 CSV 不带市场；题库有几个 region 就出几份，每份一个市场。
 - 主题名按 topic_id 去 config.topics 取；要换显示名时加 --topic-label。

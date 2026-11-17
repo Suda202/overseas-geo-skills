@@ -71,7 +71,7 @@
 
 - 一个市场 × 一条产品线一个文件，每个文件最多 60 条；`diagnosis_intent` 填后端枚举（`discovery`、`alternatives`、`competitor`、`evaluation`），统计口径以 shared/canonical-intent-mapping.md 为准。
 - `tags` 写按 `tag_dimensions` 派生的标签，不合格的值不出并打印原因。替代题直接传 `alternatives`，`tags` 不写类型名。
-- 问题解决、验证、交易、售后没有后端枚举，不导出并打印题号；停测、需修改的不导出；旧结构题库退出码 2。
+- 问题解决、信任、交易、售后没有后端枚举，不导出并打印题号；停测、需修改的不导出；旧结构题库退出码 2。
 
 交付说明要告诉品牌方：替代题和问题解决题的读数现在只在基线 HTML 报告里看得到。
 

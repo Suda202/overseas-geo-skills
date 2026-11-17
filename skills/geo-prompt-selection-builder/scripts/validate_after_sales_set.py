@@ -19,7 +19,7 @@ from pathlib import Path
 
 INTENTS = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
 # Eight selection types since 2026-11-06 (Suda): Discovery (incl. shortlist), Information (问题解决), Evaluation (评估,
-# incl. capability questions), Competitor, Alternatives, Trust (验证: reliability / complaints), Transactional (交易),
+# incl. capability questions), Competitor, Alternatives, Trust (信任: reliability / complaints), Transactional (交易),
 # Support (售后: names the brand / model). No journey stage on new banks.
 # Verification and Accuracy are two distinct intents (Suda 2026-10-16): Verification
 # covers a capability AI does not recognise, Accuracy a fact AI states wrongly. No aliasing.

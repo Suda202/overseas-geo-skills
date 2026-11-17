@@ -1,3 +1,18 @@
+## 3.19.1（2026-11-17）Trust 的中文名改为「信任」
+
+- 触发依据：Suda 2026-11-17「trust 的中文名改成『信任』」。原中文名「验证」和历史数据里的 verification（能力核查）撞名，研发和客户容易搞反。英文键 Trust、上传值 `trust` 不变。
+- 改名范围：selection-rules.md 八类表、type-branches.md、client-facing-base.md（意图类型单选项和例题）、output-contract.md、demand-side-signals.md；`tag_dimensions.py`、`write_prompt_reasons.py`（句式和「信任题不降」）、`check_client_base.py`（对客表意图类型取值）、`export_upload_csv.py`、validator 注释；shared/canonical-intent-mapping.md、shared/prompt-generation-principles.md；geo-monitoring `build_baseline_html.py`（显示名改信任，读旧 CSV 时「验证」仍映射到 trust）、`changeability_domains.py` 注释；geo-presales-report-builder `build_report_data.py`、`assets/report.js`。
+- 对客表里已填「验证」的旧行，`check_client_base.py` 会报意图类型取值不对，改成「信任」即可。
+- `check_skill_terms.py` 退役「验证题」「验证行」「验证类型」等说法。
+- 回归：check_skill_terms 无命中；test_validate 55 passed、verify_workflow 53/53；e2e_repair_loop、e2e_review_loop、e2e_input_contract、e2e_bundle 全过；geo-presales-report-builder tests 38 passed；report.js `node --check` 通过。改前快照 `.snapshots/trust-rename-20261117-111610/`（demand-side-signals.md 是改后才拷进去的，改前原文只差「开验证行」一词）。
+
+## 3.19.0（2026-11-17）线上题量不到 30 道必须补，补完仍不够判失败
+
+- 触发依据：Suda 2026-11-17「skill 需要改成题量不够 30 得补」；研发文档《售前诊断生词逻辑兼容》第 4 节同日改为「自动生词补一轮后仍不到 30 条，任务失败，不进入采集」。推翻 3.13.0 的「补完仍不够照常交付」。
+- `run_selection_mode.py`：补题从审核之前挪到审核之后，审核删题后掉到 30 以下也会补；补题不再受 `--repair-rounds 0` 关闭；补完仍不到 30 道 `status=failed`、`errors` 记 `stage=top_up`「生成题量不足（N 道）」、退出码 1。补题 finalize 保留 `result.json` 的审核记录。新增 `--prompt-floor`（默认 30，只给测试改）。TOPUP.md 改为「补到至少 30 道，补不够判失败」，仍不许同义改写凑数。
+- 文档：online-runner.md 第 7 步、selection-rules.md 第 7 步题量段、runner TASK 题量说明同步。validator W47 不变（本地仍是告警，线上由 runner 判失败）。
+- 回归：e2e_repair_loop 14/14（补够 success、补不够 failed、补坏退回仍不够 failed、够了不补、--repair-rounds 0 照补、补题在审核后且审核记录保留）；e2e_review_loop 14/14、e2e_precollect 36/36（两者加 `--prompt-floor 0`，夹具题少，题量由 repair_loop 测）；e2e_bundle 7/7、e2e_input_contract 53/53、e2e_industry_kb 15/15；test_validate 55 passed、verify_workflow 53/53；check_skill_terms 无命中。改前快照 `.snapshots/topup-floor-fail-20261117-105721/`。
+
 ## 3.18.1（2026-11-15）补 3.18.0 漏改的两处「告警记处理」
 
 - 触发依据：Suda 2026-11-15 确认修掉上一轮核出的两处矛盾，不涉及规则变更。

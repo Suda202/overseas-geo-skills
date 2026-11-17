@@ -107,6 +107,7 @@ def run_case(name: str, mode: str, review_rounds: int = 1, timeout: int = 120) -
     env = dict(os.environ, FAKE_MODE=mode, FIXTURE=str(FIXTURE))
     cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(CASE), "--market", "US",
            "--platforms", "chatgpt", "--out", str(ws), "--task-file", str(dummy_task),
+           "--prompt-floor", "0",  # 夹具只有几道题；题量下限由 e2e_repair_loop 测
            "--review-rounds", str(review_rounds), "--timeout", str(timeout),
            "--agent-cmd", f'"{sys.executable}" -I "{fake}"']
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)

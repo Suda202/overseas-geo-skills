@@ -6,7 +6,7 @@
 
 ## 完整映射
 
-选词的意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后，定义见选词 selection-rules.md → 5「意图类型：八类」。八类售前、售后都能用：线上售前诊断目前默认只出发现题，线下跑售前诊断或做售后时按需出其他类型（2026-11-09）。下表另含历史数据兼容映射：Verification（旧的 yes/no 能力核查）和 Accuracy 的旧值仅用于读取历史数据；能力核查现归评估，准确性题在题库之外，不生成上传行。
+选词的意图类型共八类：发现、问题解决、评估、对比、替代、信任、交易、售后，定义见选词 selection-rules.md → 5「意图类型：八类」。八类售前、售后都能用：线上售前诊断目前默认只出发现题，线下跑售前诊断或做售后时按需出其他类型（2026-11-09）。下表另含历史数据兼容映射：Verification（旧的 yes/no 能力核查）和 Accuracy 的旧值仅用于读取历史数据；能力核查现归评估，准确性题在题库之外，不生成上传行。
 
 | 题库标签 | 后端 diagnostic_intent | 中文客户标签 | 统计指标 | formal_visibility_eligible | 报告模块归属 |
 |---|---|---|---|---|---|
@@ -14,13 +14,13 @@
 | `Prompt Type: Alternatives` | `alternatives`（导出直接传此值；后端枚举上线前线上读不到替代题） | 替代 | 提及率、情感 | `false` | 点名一个竞品问替代方案，品牌不是对比的一边、答案是名单；提及率读替代名单里的提及。后端加 `alternatives` 枚举之前，线上报告看不到替代题的提及率，我们自己的基线报告照算。不点名的替代问法仍是 Discovery |
 | `Prompt Type: Competitor` | `competitor` | 对比 | 胜负、情感（线上目前没有统计胜率，本地基线照算） | `false` | M02 竞品表现（决胜与情感） |
 | `Prompt Type: Evaluation` | `sentiment` | 评估（问本品适不适合、有没有某能力） | 情感 | `false` | M04 品牌表达 |
-| `Prompt Type: Trust` | `trust`（后端尚未支持） | 验证（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | 本地选了「声誉与信任」才出，线上不出；不导出上传 CSV |
+| `Prompt Type: Trust` | `trust`（后端尚未支持） | 信任（问本品靠不靠谱、口碑、投诉） | 情感 | `false` | 本地选了「声誉与信任」才出，线上不出；不导出上传 CSV |
 | `Prompt Type: Information` | `information`（后端尚未支持） | 问题解决 | 引用 | `false` | AI 多给步骤和建议，多数回答不提品牌，提及率基数小，不统计提及率（2026-11-11 Suda 定，推翻 11-06 改看提及率）；看 AI 引用了哪些来源，用来给内容计划找方向 |
 | `Prompt Type: Transactional` | `transactional`（后端尚未支持） | 交易（点名本品问哪里买、价格、库存） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
 | `Prompt Type: Support` | `support`（后端尚未支持） | 售后（点名本品问安装、使用、故障、维修、退换） | 准确性 | `false` | 本期不出，不导出上传 CSV；判什么见下方「准确性怎么判」 |
 | `Prompt Type: Category Awareness` | `market_perception` | 品类认知 | —（M08 自有读法） | `true` | M08 购买框架（品类认知 / Market Perception）；只用于调研预跑，不进选词题库 |
 | `Prompt Type: Accuracy` | `accuracy` | 准确性 | 准确性 | `false` | 无独立模块；历史数据读取用。不出题、不上传 |
-| `Prompt Type: Verification` | `validation` | 能力核查（旧） | — | `false` | 历史数据兼容；现在问「有没有某能力」归 Evaluation。不要和新的验证类型 Trust 混用 |
+| `Prompt Type: Verification` | `validation` | 能力核查（旧） | — | `false` | 历史数据兼容；现在问「有没有某能力」归 Evaluation。不要和信任类型 Trust 混用 |
 
 **统计指标由意图类型决定，不另设字段。** 每道题统计什么只看上表「统计指标」列，提示词库和题库都不另设分析维度字段。另有两条对所有类型都适用：
 

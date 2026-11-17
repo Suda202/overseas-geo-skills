@@ -292,6 +292,7 @@ def run_case(name: str, mode: str, reviews: str = "ok", repair_rounds: int = 2, 
         env["FAKE_PLAN_REPAIR"] = json.dumps(plan_repair, ensure_ascii=False)
     cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(case or CASE), "--market", market,
            "--platforms", "chatgpt", "--out", str(ws), "--task-file", str(dummy_task),
+           "--prompt-floor", "0",  # 夹具只有几道题；题量下限由 e2e_repair_loop 测
            "--repair-rounds", str(repair_rounds), "--review-rounds", "0",
            "--agent-cmd", f'"{sys.executable}" -I "{fake}"']
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)

@@ -473,7 +473,7 @@ def summarize(q: dict, slot: dict, rules: dict, weak_attrs: dict) -> dict:
     5 第三方主导：有引用的回答里，引了任一同类厂商官网（含本品）的 < vendor_min → 低
       （--third-party 开时，媒体、社区为主的改判中；机构为主仍是低）
     6 其余 → 中
-    点名本品的类型（评估、对比、验证、交易、售后）不适用。有效回答少于 formal_answers 时只算预判。
+    点名本品的类型（评估、对比、信任、交易、售后）不适用。有效回答少于 formal_answers 时只算预判。
     """
     ranked = sorted(slot["domains"].items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))
     top = ranked[:TOP_N]  # 只用于展示和人工复核

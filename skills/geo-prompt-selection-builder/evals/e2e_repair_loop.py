@@ -10,8 +10,9 @@
      → success，repair_rounds=2，题数回到夹具原量
   3. 关闭返修：--repair-rounds 0 → failed，报错指向 validator，不生成 REPAIR-1.md
   4. agent 没写出 bank.json → failed，不返修
-  5. 补题（3.13.0）：通过检查但不到 30 道 → 写 TOPUP.md 补一轮；补了题 → top_up.status=added；
-     补坏了（发现题带品牌名）→ 退回补题前的题库，top_up.status=reverted，照常 success；--repair-rounds 0 不补
+  5. 补题（3.13.0，3.19.0 改判失败）：用 --prompt-floor 把下限设在夹具题数附近。审核之后不到下限 → 写 TOPUP.md
+     补一轮；补够 → success，top_up.status=added；补了仍不够 → failed，errors 里 stage=top_up；补坏了（发现题带
+     品牌名）→ 退回补题前的题库，top_up.status=reverted，仍不够 → failed；题量够 → 不补；--repair-rounds 0 仍补
 
 产物：reports/repair-loop-e2e.md；工作目录建在系统临时目录，跑完删除。
 
@@ -98,12 +99,13 @@ dummy_task = WS_ROOT / "dummy-task.md"
 dummy_task.write_text("测试任务：由假 agent 执行，内容不读。\n", encoding="utf-8")
 
 
-def run_case(name: str, mode: str, repair_rounds: int = 2, topup: str = "none") -> tuple[int, dict, Path]:
+def run_case(name: str, mode: str, repair_rounds: int = 2, topup: str = "none",
+             floor: int = 0) -> tuple[int, dict, Path]:
     ws = WS_ROOT / f"ws-{name}"
     env = dict(os.environ, FAKE_MODE=mode, FIXTURE=str(FIXTURE), TOPUP_MODE=topup)
     cmd = [sys.executable, "-I", str(RUNNER), "run", "--case", str(CASE), "--market", "US",
            "--platforms", "chatgpt", "--out", str(ws), "--task-file", str(dummy_task),
-           "--repair-rounds", str(repair_rounds),
+           "--repair-rounds", str(repair_rounds), "--prompt-floor", str(floor),
            "--agent-cmd", f'"{sys.executable}" -I "{fake}"']
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     result_path = ws / "out/result.json"
@@ -154,28 +156,46 @@ check("没有 bank.json：failed，不返修",
       and any("bank.json" in (e.get("message") or "") for e in res.get("errors", [])),
       f"exit={rc} status={res.get('status')} errors={[e.get('message') for e in res.get('errors', [])]}")
 
-# 5. 补题（夹具只有 5 道，通过检查后都会进补题轮）
-rc, res, ws = run_case("topup-add", "fix", topup="add")
+# 5. 补题：fix 模式过检查后有 FIXTURE_COUNT + 1 道；下限设成 +2，补一道正好够
+F = FIXTURE_COUNT + 1
+rc, res, ws = run_case("topup-add", "fix", topup="add", floor=F + 1)
 top = res.get("top_up") or {}
-check("补题：不到 30 道补一轮，补了题 → added",
+check("补题：不到下限补一轮，补够 → added，success",
       rc == 0 and res.get("status") == "success" and (ws / "TOPUP.md").exists()
-      and top.get("status") == "added" and top.get("after") == top.get("before", 0) + 1
-      and any("[top_up]" in w for w in res.get("warnings", [])),
+      and top == {"before": F, "after": F + 1, "status": "added"} and not res.get("errors"),
       f"exit={rc} status={res.get('status')} top_up={top}")
-check("补题：TOPUP.md 写了补题顺序和不许凑数",
+check("补题：TOPUP.md 写了补题顺序、不许凑数和补不够判失败",
       "假设" in (ws / "TOPUP.md").read_text(encoding="utf-8")
-      and "同义改写" in (ws / "TOPUP.md").read_text(encoding="utf-8"), "")
-rc, res, ws = run_case("topup-break", "fix", topup="break")
+      and "同义改写" in (ws / "TOPUP.md").read_text(encoding="utf-8")
+      and "判失败" in (ws / "TOPUP.md").read_text(encoding="utf-8"), "")
+review_t = (ws / "logs/agent-run-review.json").stat().st_mtime_ns if (ws / "logs/agent-run-review.json").exists() else None
+topup_t = (ws / "logs/agent-run-topup.json").stat().st_mtime_ns if (ws / "logs/agent-run-topup.json").exists() else None
+check("补题：补题在审核之后，result.json 仍带审核记录",
+      review_t is not None and topup_t is not None and topup_t > review_t and "review" in res,
+      f"review_before_topup={review_t is not None and topup_t is not None and topup_t > review_t} review_kept={'review' in res}")
+rc, res, ws = run_case("topup-short", "fix", topup="add", floor=F + 2)
+top = res.get("top_up") or {}
+stages = [e.get("stage") for e in res.get("errors", [])]
+msg = " ".join(e.get("message", "") for e in res.get("errors", []))
+check("补题：补了仍不到下限 → failed，stage=top_up，提示题量不足",
+      rc == 1 and res.get("status") == "failed" and stages == ["top_up"] and "生成题量不足" in msg
+      and top.get("after") == F + 1,
+      f"exit={rc} status={res.get('status')} stages={stages} top_up={top}")
+rc, res, ws = run_case("topup-break", "fix", topup="break", floor=F + 1)
 top = res.get("top_up") or {}
 bank = json.loads((ws / "out/bank.json").read_text(encoding="utf-8"))
-check("补题：补坏了退回原题库 → reverted，照常 success",
-      rc == 0 and res.get("status") == "success" and top.get("status") == "reverted"
-      and top.get("after") == top.get("before") and len(bank["questions"]) == FIXTURE_COUNT + 1,
+check("补题：补坏了退回原题库 → reverted，仍不够 → failed",
+      rc == 1 and res.get("status") == "failed" and top.get("status") == "reverted"
+      and top.get("after") == top.get("before") == F and len(bank["questions"]) == F,
       f"exit={rc} status={res.get('status')} top_up={top} questions={len(bank['questions'])}")
-rc, res, ws = run_case("topup-off", "good", repair_rounds=0)
-check("补题：--repair-rounds 0 不补，首轮合格照常 success",
+rc, res, ws = run_case("topup-enough", "fix", topup="add", floor=F)
+check("补题：题量够下限 → 不补，success",
       rc == 0 and res.get("status") == "success" and not (ws / "TOPUP.md").exists() and "top_up" not in res,
       f"exit={rc} top_up={res.get('top_up')}")
+rc, res, ws = run_case("topup-rounds0", "good", repair_rounds=0, topup="add", floor=F + 1)
+check("补题：--repair-rounds 0 也照样补（补题不占返修额度）",
+      rc == 0 and res.get("status") == "success" and (res.get("top_up") or {}).get("status") == "added",
+      f"exit={rc} status={res.get('status')} top_up={res.get('top_up')}")
 
 # 6. 文档与默认值
 runner_text = RUNNER.read_text(encoding="utf-8")

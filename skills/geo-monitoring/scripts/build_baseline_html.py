@@ -45,17 +45,17 @@ for p in (str(SK), str(CORE)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# 2026-11-06：八类意图类型；「评价」改叫「评估」，旧 verification / validation 是能力核查，和新的验证（trust）不同
+# 2026-11-06：八类意图类型；「评价」改叫「评估」，旧 verification / validation 是能力核查，和信任（trust）不同
 INTENT_ZH = {"discovery": "发现", "information": "问题解决", "evaluation": "评估", "sentiment": "评估",
              "verification": "能力核查", "validation": "能力核查", "competitor": "对比", "alternatives": "替代",
-             "trust": "验证", "transactional": "交易", "support": "售后",
+             "trust": "信任", "transactional": "交易", "support": "售后",
              "accuracy": "准确性",
              "category awareness": "品类认知", "category_awareness": "品类认知", "market_perception": "品类认知"}
 # 中文类型 → 售前题库 CSV 的 diagnosis_intent（build_report_data.CSV_INTENT_MAP 的键）
 CSV_INTENT = {"发现": "discovery", "问题解决": "information", "评估": "evaluation", "对比": "competitor",
-              "替代": "alternatives", "验证": "trust", "交易": "transactional", "售后": "support",
+              "替代": "alternatives", "信任": "trust", "验证": "trust", "交易": "transactional", "售后": "support",
               "能力核查": "validation", "准确性": "accuracy", "品类认知": "market_perception"}
-INTENT_ORDER = ["发现", "问题解决", "评估", "对比", "替代", "验证", "交易", "售后", "能力核查", "准确性", "品类认知"]
+INTENT_ORDER = ["发现", "问题解决", "评估", "对比", "替代", "信任", "交易", "售后", "能力核查", "准确性", "品类认知"]
 URL = re.compile(r"https?://\S+|www\.\S+")
 def load_config(path: Path) -> dict:
     cfg = json.loads(path.read_text(encoding="utf-8"))
@@ -865,7 +865,7 @@ def render(cfg, data_path: Path, out: Path):
         ("该回答未提及已配置品牌", "这次回答没有提到任何同类平台或竞品"),
         ('return "<td>" + Number(value).toFixed(1) + "%</td>";', 'return "<td>" + (Number(value) === 0 ? "0%" : Number(value).toFixed(1) + "%") + "</td>";'),
         # 售后所有题都计入提及率（选词阶段，Suda 2026-10-20），指标解释不写「默认统计发现、替代」
-        ('"提到监测对象的回答 ÷ 有效回答。对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计。"',
+        ('"提到监测对象的回答 ÷ 有效回答。对比、评估、信任、交易、售后题面点名了品牌，提及率接近 100%，不统计。"',
          '"提到监测对象的回答 ÷ 有效回答。所有意图类型都计入，范围由筛选决定。"'),
         ("海外 AI 搜索可见度售前诊断", cfg.get("title") or "AI 搜索可见度 · 候选基线"),
         ("海外 GEO 售前诊断报告", "海外 GEO 候选基线报告"),

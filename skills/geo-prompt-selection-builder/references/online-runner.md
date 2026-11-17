@@ -63,7 +63,7 @@ B2B 软件评价站：G2 被 DataDome 拦，代理和无头 Chrome 都不通，�
 | 4. 目标客户与使用场景 | 从品牌资料里的「核心目标客户与购买场景」拆出目标客户，不改写业务范围那几行；按会不会改变候选来拆并。每个使用场景按常识推理 AI 会推荐哪一类解决方案（「杀毒软件」「企业终端安全平台」「专门的磁盘分析工具」「找房平台」），写到解决方案类型这一层，不写品牌名单；再判断品牌能不能合理满足这个任务（不要求同一种产品形态），以及 AI 的回答里会不会出现品牌这一类（问在售楼盘，回答列的是楼盘，平台品牌基本不会出现）。线上没有试跑读数，这一步只靠推理，写明是推理。套件型品牌的单项功能，AI 常列专门的单功能工具（Sbrand 试跑：磁盘分析列 WizTree、TreeSize，重复文件列 AllDup，游戏加速列 Razer Cortex），不要默认它和套件的主功能是同一类候选。结果写进 `notes.md`「使用场景候选」 |
 | 5. 业务优先级 | 品牌资料「核心目标客户与购买场景」里写了的条目就是品牌方点名，对应的行判高，我们补充的判中（同 selection-rules.md 第 5 步；填写顺序只用于主题同档排序）；差异化优势写进依据，写明出处。这两项是表单必填，归一化不过就不会走到这一步。没开的行和原因写进 `notes.md`「没开的格子」 |
 | 6. 主题 | 和选词一样聚，个数不限。拿不准候选类别时按推理的候选类别归类，在主题的 `priority_basis` 里写「候选类别为推理，待验证」。能满足、但回答里基本不会出现品牌这一类的行照开、本期不出 |
-| 7. 写题 | 和选词一样，本期只出发现题。题量按 selection-rules.md 第 7 步：超过 60 道 validator 和导出都报错；不到 30 道不凑题，检查通过后 runner 会写 `TOPUP.md` 让你补一轮（先开业务优先级为中的我方补充行和假设行，再用业务优先级为低的行，不许同义改写），补不到照常交付，`out/notes.md`「假设」里写一句为什么题少。补题在审核之前，审核删掉阻塞题后可能又不到 30 道，不再补；`--repair-rounds 0` 时不补题 |
+| 7. 写题 | 和选词一样，本期只出发现题。题量按 selection-rules.md 第 7 步：超过 60 道 validator 和导出都报错；30 道是下限，写题时就写到 30 道；审核之后仍不到 30 道（含审核删题后变少），runner 会写 `TOPUP.md` 让你补一轮（先开业务优先级为中的我方补充行和假设行，再用业务优先级为低的行，不许同义改写），补完仍不到 30 道这次运行判失败、不交付，`out/notes.md`「假设」里写一句为什么题少，由选词同事在本地处理 |
 | 8. 校验与导出 | 依次跑 `scripts/validate_after_sales_set.py <bank.json>`、`scripts/export_upload_csv.py <bank.json> --out <目录>`，都退出码 0 才算完成。不写对客确认表 |
 
 `config` 另写固定值：`generation_stage: "selection"`；`evidence_status` 按 output-contract.md 的定义写：`config.buyer_quotes` 里有评价、社区或搜索数据的买家信号写 `after_sales_signal`，一条都没有写 `hypothesis`；根节点写 `schema_version: "overseas-geo-question-bank/v8"` 和 `mode: "after-sales-strategic-topics"`（`mode` 是 validator 要求的固定值，`schema_version` 照写备查）。题的字段按 output-contract.md。

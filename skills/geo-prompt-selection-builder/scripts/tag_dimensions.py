@@ -15,7 +15,7 @@ MIN_TOPICS = 2
 MIN_PROMPTS = 5
 SKIP_STATUS = {"停测", "需修改"}
 TYPE_ZH = {"Discovery": "发现", "Competitor": "对比", "Alternatives": "替代", "Evaluation": "评估",
-           "Information": "问题解决", "Trust": "验证", "Transactional": "交易", "Support": "售后"}  # 八类意图类型
+           "Information": "问题解决", "Trust": "信任", "Transactional": "交易", "Support": "售后"}  # 八类意图类型
 
 
 def _text(value):

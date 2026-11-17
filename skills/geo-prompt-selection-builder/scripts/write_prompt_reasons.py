@@ -4,7 +4,7 @@
 规则见 references/selection-rules.md → 7「品牌明显劣势」「出题原因」和 client-facing-base.md → *提示词库*。
 提示词优先级不判，算出来：等于所属切片（矩阵行）的「业务优先级」；题上记了 `brand_weakness`、或挂的约束条件在
 约束条件表里「相对竞品」为明显劣势的降一档，
-低档不再降，验证题不降。出题原因一两句：有降档、假设的写在开头，再写哪类买家在什么处境下问什么、看 AI 什么，
+低档不再降，信任题不降。出题原因一两句：有降档、假设的写在开头，再写哪类买家在什么处境下问什么、看 AI 什么，
 最后接题上的 `reason_note`。证据看「证据」列，行的依据看提示词矩阵，这里不重复。
 
 只认现行结构的 Base：没有属性池表，提示词矩阵有「业务优先级」「业务优先级依据」「目标客户」「意图类型」，
@@ -55,7 +55,7 @@ def situation(typ, who, cond, brand, noun, baseline):
         return f"{who}在 {brand} 和对手之间做选择（{cond}），看 AI 选谁。"
     if typ == "评估":
         return f"{who}点名问 {brand} 适不适合自己（{cond}），看 AI 怎么判断。"
-    if typ == "验证":
+    if typ == "信任":
         return f"{who}点名问 {brand} 靠不靠谱（{cond}），看 AI 怎么说口碑和风险。"
     if typ == "交易":
         return f"{who}准备买（{cond}），看 AI 把人指到哪个渠道、有没有指到 {brand} 官网。"
@@ -183,13 +183,13 @@ def build(matrix, lib, bank, brand, aliases, noun, base_audiences):
         # 约束条件是多选，第一个是主约束
         att = (text(r.get("约束条件")).split("/") or [""])[0] or None
         cond = att or "这一类需求"
-        p1 = situation(typ, who, cond, named if typ in ("评估", "验证", "交易", "售后") else brand, noun, att is None)
+        p1 = situation(typ, who, cond, named if typ in ("评估", "信任", "交易", "售后") else brand, noun, att is None)
         if p1 is None:
             skipped.append((code, f"意图类型「{typ}」没有句式"))
             continue
         weak, note = bank[code]["weakness"], bank[code]["note"]
         prio, head = tier, []
-        if weak and typ == "验证":
+        if weak and typ == "信任":
             head.append(f"风险：{weak}。")
         elif weak:
             prio = STEP_DOWN[tier]
