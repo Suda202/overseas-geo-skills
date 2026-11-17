@@ -1,6 +1,6 @@
 # 海外 GEO Skills
 
-这个仓库有 7 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
+这个仓库有 8 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
@@ -11,6 +11,7 @@
 | 线上已交付的诊断报告要改 | `geo-presales-report-audit`，再 `geo-presales-report-editor` | 售前诊断 |
 | 签约前后定长期监测哪些题、出对客确认表，试跑后回写 | `geo-prompt-selection-builder`（选词，本地出口） | 选词 |
 | 签约后采集（试跑、正式基线、日常）、检查采集能不能用，出基线报告 | `geo-monitoring` | 监测 |
+| 基线出来后诊断为什么表现差、该优化什么 | `geo-gap-diagnosis` | 诊断 |
 | 指标统计（提及、引用、商品卡、情感，品牌怎么识别） | `geo-metrics` | 全部阶段 |
 
 ## 每个 Skill 负责什么
@@ -23,7 +24,8 @@
 | `geo-presales-report-builder` | 售前报告数据层组装、HTML 渲染 | 采集（`geo-monitoring`）；指标公式（`geo-metrics`） |
 | `geo-presales-report-audit` | 修改线上售前诊断报告的品牌提及识别结果 JSON（品牌名单和首现排序），出 Bad Case | 客户结论（report-editor） |
 | `geo-presales-report-editor` | 修改线上售前诊断报告的结论 CSV | 指标计算（`geo-metrics`） |
-| `geo-monitoring` | 采集和采集检查：`collect_answers.py` 是全库唯一的采集程序，售前 pipeline、选词研究预跑也调它；`audit_crawl_integrity.py` 在算指标前查字段层混用、引用定义丢失、空回答、未登记平台。签约后跑试跑、正式基线和日常采集；外加基线 HTML 报告、缺口交给内容团队 | 指标口径（`geo-metrics`） |
+| `geo-monitoring` | 采集和采集检查：`collect_answers.py` 是全库唯一的采集程序，售前 pipeline、选词研究预跑也调它；`audit_crawl_integrity.py` 在算指标前查字段层混用、引用定义丢失、空回答、未登记平台。签约后跑试跑、正式基线和日常采集，外加基线 HTML 报告 | 指标口径（`geo-metrics`）；缺口诊断与优化动作（`geo-gap-diagnosis`） |
+| `geo-gap-diagnosis` | 正式基线之后的缺口诊断：七层读数、推荐与事实标注、页面缺口、三道门与第一断点，产出带决定、载体、动作四要素和度量契约的优化机会诊断表 | 采集与完整性检查（`geo-monitoring`）；指标口径（`geo-metrics`）；写内容本身 |
 
 售前生词、品牌信息整理（Case Builder）和竞品核验原来是三个独立 Skill，已经退役：生词并进选词，Case 改由线上表单或本地 JSON 提供、用选词的 `normalize_case.py` 归一化，竞品照用 Case 里填的。
 
@@ -48,7 +50,7 @@
 
 **怎么生**：规则和本地选词完全一样，都在 `references/selection-rules.md`，按 8 步走（见下文「选词」）；线上和本地不一样的几步写在 `references/online-runner.md`：没有品牌方数据、没有浏览器登录态、研究预跑只放 1 道品类认知题、只交上传行。导出前 `validate_after_sales_set.py` 和 `export_upload_csv.py` 都要退出码 0。
 
-**输出**：每个市场一批题，30–60 道（超过 60 报错；不到 30 时脚本补一轮，补不到照常交付），每题 5 列：
+**输出**：每个市场一批题，30–60 道（超过 60 报错；不到 30 时脚本补一轮，补完仍不到 30 判失败、不交付），每题 5 列：
 
 ```text
 query, question_zh, topic, diagnosis_intent, tags
@@ -117,15 +119,19 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 | 7 | 写题：在高、中档发现行和已开放类型的行上出题，按决策差异定题数；每条产品线 × 每个市场 30–60 道，每个发现主题至少 10 道 | 提示词库、题库 JSON |
 | 8 | 校验与导出：validator 错误全改、告警逐条记处理；监测试跑后回来回写：改题、补竞品、定商品卡开关、复核主题 | 题库 JSON、对客确认表和 / 或上传 CSV |
 
-确定性校验用 `scripts/validate_after_sales_set.py`，只认现行结构，旧结构的历史题库直接报不支持。意图类型共八类：发现、问题解决、评估、对比、替代、验证、交易、售后；线上只出发现题，本地选了对应目标才出其他类型（交易、售后本期不出），开行条件与题面写法在 `references/type-branches.md`。
+确定性校验用 `scripts/validate_after_sales_set.py`，只认现行结构，旧结构的历史题库直接报不支持。意图类型共八类：发现、问题解决、评估、对比、替代、信任、交易、售后；线上只出发现题，本地选了对应目标才出其他类型（交易、售后本期不出），开行条件与题面写法在 `references/type-branches.md`。
 
-导出上传 CSV 的几条硬规则：一个市场 × 一条产品线一个文件，每个文件最多 60 条；`tags` 按 `config.tag_dimensions` 派生，不写意图类型名；问题解决、验证、交易、售后后端还没有枚举，不导出并打印题号；需修改的题不导出。
+导出上传 CSV 的几条硬规则：一个市场 × 一条产品线一个文件，每个文件最多 60 条；`tags` 按 `config.tag_dimensions` 派生，不写意图类型名；问题解决、信任、交易、售后后端还没有枚举，不导出并打印题号；需修改的题不导出。
 
 ## 监测：签约后的采集（`geo-monitoring`）
 
 只管把题跑出来：候选题先试跑；品牌方在对客确认表上挑完正式题后跑正式基线，之后日常采集。采集用 `skills/geo-monitoring/scripts/collect_answers.py`，采完先跑 `scripts/audit_crawl_integrity.py`，缺陷怎么处理见 `references/crawl-integrity.md`。试跑答案交回选词回写。
 
-另外两件事也在这里：用采集结果出单文件 HTML 基线报告，以及把定位到的缺口交给内容团队（缺口转动作表）。基线报告复用售前报告的数据层与渲染层，统计口径和售前报告是同一套，只改展示：意图类型放在地区那一行当筛选，页面多一个「引用率」指标、每题的运行记录抽屉和竞品逐题对比。
+另外一件事也在这里：用采集结果出单文件 HTML 基线报告。基线报告复用售前报告的数据层与渲染层，统计口径和售前报告是同一套，只改展示：意图类型放在地区那一行当筛选，页面多一个「引用率」指标、每题的运行记录抽屉和竞品逐题对比。
+
+## 诊断：基线之后的缺口诊断（`geo-gap-diagnosis`）
+
+正式基线出完以后，为什么品牌或某个 SKU 表现差、该优化什么，归这个 Skill。它读监测的采集目录和完整性检查结果，出「优化机会诊断表」：读数、推荐与事实标注、页面缺口、三道门与第一断点，最后给出决定（测试 / 继续观察 / 先补研究 / 暂缓 / 不做 / 转产品）和带度量契约的动作。断点对应的原因和动作写法、相对竞品怎么判，都在它的 `references/` 里，监测不再单独维护。
 
 ## 统计口径（`geo-metrics`）
 

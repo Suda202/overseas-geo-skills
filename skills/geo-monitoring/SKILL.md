@@ -1,6 +1,6 @@
 ---
 name: geo-monitoring
-description: Use when collecting GEO answers on a Prompt set — the 3-run quality trial per Prompt on each monitored platform, the formal Before baseline (7 runs per query × platform × country × language), daily or periodic collection and re-running failed cells — when checking whether a raw collection directory is trustworthy before any metric (field-layer mixing, lost reference definitions, empty citation fields, failed answers, unregistered platforms), and when building the baseline HTML report or handing located gaps to the content team. Owns the single collector (scripts/collect_answers.py, also used by the presales pipeline and the selection research pre-run), the per-platform field contract and the crawl integrity check. Do not use for researching, writing, adding, merging, picking or locking Prompts (geo-prompt-selection-builder and the client Base), for the early presales diagnosis report (geo-presales-report-builder), or for defining metric calibers or brand recognition (geo-metrics).
+description: Use when collecting GEO answers on a Prompt set — the 3-run quality trial per Prompt on each monitored platform, the formal Before baseline (7 runs per query × platform × country × language), daily or periodic collection and re-running failed cells — when checking whether a raw collection directory is trustworthy before any metric (field-layer mixing, lost reference definitions, empty citation fields, failed answers, unregistered platforms), and when building the baseline HTML report. Owns the single collector (scripts/collect_answers.py, also used by the presales pipeline and the selection research pre-run), the per-platform field contract and the crawl integrity check. Do not use for researching, writing, adding, merging, picking or locking Prompts (geo-prompt-selection-builder and the client Base), for the early presales diagnosis report (geo-presales-report-builder), for defining metric calibers or brand recognition (geo-metrics), or for diagnosing why the brand underperforms and deciding optimisation actions after the baseline (geo-gap-diagnosis).
 metadata:
   author: Overseas GEO Project
   version: "2.1.0"
@@ -29,6 +29,8 @@ metadata:
 
 ## 交给内容团队
 
-只在有基线读数之后做：用 [gap-cause-action-table.md](references/gap-cause-action-table.md)，从读数里定位缺口（零提及或低提及、无引用或引用质量低、负面情感或属性认知偏差、答案列表位置靠后、品类认知错位），读提及、引用和同一批采集的 query fan-out（ChatGPT `search_model_queries`、Grok `tool_usages` 的检索词）与延伸问题（Gemini `related_queries`、Grok `follow_up_suggestions`），从表里「可能原因」列挑最可能的原因并写明证据，再列出对应的「对应动作」作为优化方向。**ChatGPT 的子查询形态随 `task_result.model` 变化：`gpt-6` 起只有一条关键词堆叠式宽查询、不带 `site:`，检索层域名榜要改从 `search_result` 算，两代读数不可比**（判据见该表 *ChatGPT 两代形态不同*）。定动作前先找站内最接近的现有页面，有就优先改它；动作也可以是合并重叠页面，或在缺口还说不准时标「继续观察」（规则见该表使用说明第 3 步）。
+基线读数出来以后，缺口诊断、原因判断和优化动作归 `geo-gap-diagnosis`：它读本 skill 的采集目录和完整性检查结果，产出优化机会诊断表。本 skill 只负责把题按约定次数跑出来、查采集完整、出基线报告；query fan-out 和延伸问题的读法留在 [gap-cause-action-table.md](references/gap-cause-action-table.md)（**ChatGPT 的子查询形态随 `task_result.model` 变化：`gpt-6` 起只有一条关键词堆叠式宽查询、不带 `site:`，检索层域名榜要改从 `search_result` 算，两代读数不可比**）。
 
-分工固定：我们根据监测数据填缺口和原因两列，内容团队执行动作（写页面、结构化数据、第三方引用、发布到客户站点），本 skill 不产出内容本身。方向按基线报告的优化顺序排（[baseline-report.md](references/baseline-report.md) → *优化顺序*）。
+分工固定：我们根据监测数据定位缺口和原因，内容团队执行动作（写页面、第三方引用、发布到客户站点），监测和诊断都不产出内容本身。
+
+**采集强制联网**：`collect_answers.py` 默认 `web_search=true`，Scrapeless 文档写明这会让 ChatGPT 执行搜索，2026-11-16 实测 Hbrand、某车载品牌两批 ChatGPT 回答 100% 带 `search_result`。所以 ChatGPT 读数是「强制联网」口径，测不到自然联网率；Graphite 2026-08 实测强制搜索会让从不自然联网的题可见度平均偏 20 个点。前后两期必须同一口径才能比。
