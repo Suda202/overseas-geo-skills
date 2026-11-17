@@ -380,6 +380,132 @@
     "categories": [
      "antivirus software"
     ]
+   },
+   "免费额度不限次": {
+    "label": "免费额度与不限次",
+    "by": {
+     "737cac242519|UNITED STATES": "免费额度与不限次"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "免费额度与不限次": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "多引擎学校检测器分数对照": {
+    "label": "多引擎与学校检测器分数对照",
+    "by": {
+     "737cac242519|UNITED STATES": "多引擎与学校检测器分数对照"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "多引擎与学校检测器分数对照": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "支持的ai模型覆盖": {
+    "label": "支持的 AI 模型覆盖",
+    "by": {
+     "737cac242519|UNITED STATES": "支持的 AI 模型覆盖"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "支持的 AI 模型覆盖": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "文件上传长文检测": {
+    "label": "文件上传与长文检测",
+    "by": {
+     "737cac242519|UNITED STATES": "文件上传与长文检测"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "文件上传与长文检测": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "是否需要注册登录": {
+    "label": "是否需要注册登录",
+    "by": {
+     "737cac242519|UNITED STATES": "是否需要注册登录"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "是否需要注册登录": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "检测准确度": {
+    "label": "检测准确度",
+    "by": {
+     "737cac242519|UNITED STATES": "检测准确度"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "检测准确度": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "逐句标注判定原因": {
+    "label": "逐句标注与判定原因",
+    "by": {
+     "737cac242519|UNITED STATES": "逐句标注与判定原因"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "逐句标注与判定原因": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
    }
   },
   "audiences": {
@@ -435,6 +561,60 @@
     ],
     "categories": [
      "antivirus software"
+    ]
+   },
+   "提交前自查的大学生高中生": {
+    "label": "提交前自查的大学生与高中生",
+    "by": {
+     "737cac242519|UNITED STATES": "提交前自查的大学生与高中生"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "提交前自查的大学生与高中生": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "教师助教": {
+    "label": "教师与助教",
+    "by": {
+     "737cac242519|UNITED STATES": "教师与助教"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "教师与助教": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "用ai辅助写作的个人写作者": {
+    "label": "用 AI 辅助写作的个人写作者",
+    "by": {
+     "737cac242519|UNITED STATES": "用 AI 辅助写作的个人写作者"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "用 AI 辅助写作的个人写作者": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
     ]
    }
   },
@@ -582,6 +762,204 @@
     "categories": [
      "antivirus software"
     ]
+   },
+   "一周要批几十篇作文需要免费不限次的工具先做一遍初筛": {
+    "label": "一周要批几十篇作文，需要免费、不限次的工具先做一遍初筛",
+    "by": {
+     "737cac242519|UNITED STATES": "一周要批几十篇作文，需要免费、不限次的工具先做一遍初筛"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "一周要批几十篇作文，需要免费、不限次的工具先做一遍初筛": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "作业论文提交前自己先用免费工具查一遍": {
+    "label": "作业、论文提交前自己先用免费工具查一遍",
+    "by": {
+     "737cac242519|UNITED STATES": "作业、论文提交前自己先用免费工具查一遍"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "作业、论文提交前自己先用免费工具查一遍": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "同一篇文章在几个检测器上分数完全不一样不知道信哪个": {
+    "label": "同一篇文章在几个检测器上分数完全不一样，不知道信哪个",
+    "by": {
+     "737cac242519|UNITED STATES": "同一篇文章在几个检测器上分数完全不一样，不知道信哪个"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "同一篇文章在几个检测器上分数完全不一样，不知道信哪个": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "学校用的平台没有内置ai检测自己得找一个能对得上的": {
+    "label": "学校用的平台没有内置 AI 检测，自己得找一个能对得上的",
+    "by": {
+     "737cac242519|UNITED STATES": "学校用的平台没有内置 AI 检测，自己得找一个能对得上的"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "学校用的平台没有内置 AI 检测，自己得找一个能对得上的": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "批改前用免费工具对全班作文做初筛": {
+    "label": "批改前用免费工具对全班作文做初筛",
+    "by": {
+     "737cac242519|UNITED STATES": "批改前用免费工具对全班作文做初筛"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "批改前用免费工具对全班作文做初筛": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "提交前把分数学校turnitin的结果对齐": {
+    "label": "提交前把分数和学校 Turnitin 的结果对齐",
+    "by": {
+     "737cac242519|UNITED STATES": "提交前把分数和学校 Turnitin 的结果对齐"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "提交前把分数和学校 Turnitin 的结果对齐": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "求职奖学金这类申请文书提交前按雇主或学校的检测口径自查": {
+    "label": "求职、奖学金这类申请文书提交前，按雇主或学校的检测口径自查",
+    "by": {
+     "737cac242519|UNITED STATES": "求职、奖学金这类申请文书提交前，按雇主或学校的检测口径自查"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "求职、奖学金这类申请文书提交前，按雇主或学校的检测口径自查": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "用chatgpt等起草的文章发出前用免费工具确认会不会被检出": {
+    "label": "用 ChatGPT 等起草的文章，发出前用免费工具确认会不会被检出",
+    "by": {
+     "737cac242519|UNITED STATES": "用 ChatGPT 等起草的文章，发出前用免费工具确认会不会被检出"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "用 ChatGPT 等起草的文章，发出前用免费工具确认会不会被检出": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "自己的文章已经被判为ai要找出是哪几句被标记": {
+    "label": "自己的文章已经被判为 AI，要找出是哪几句被标记",
+    "by": {
+     "737cac242519|UNITED STATES": "自己的文章已经被判为 AI，要找出是哪几句被标记"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "自己的文章已经被判为 AI，要找出是哪几句被标记": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "英文不是母语自己写的文章反复被判断成ai生成": {
+    "label": "英文不是母语，自己写的文章反复被判断成 AI 生成",
+    "by": {
+     "737cac242519|UNITED STATES": "英文不是母语，自己写的文章反复被判断成 AI 生成"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "英文不是母语，自己写的文章反复被判断成 AI 生成": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "要给学生讲清楚这篇文章为什么被判ai得有句级证据解释": {
+    "label": "要给学生讲清楚这篇文章为什么被判 AI，得有句级证据和解释",
+    "by": {
+     "737cac242519|UNITED STATES": "要给学生讲清楚这篇文章为什么被判 AI，得有句级证据和解释"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "要给学生讲清楚这篇文章为什么被判 AI，得有句级证据和解释": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
    }
   },
   "topics": {
@@ -619,6 +997,78 @@
     ],
     "categories": [
      "antivirus software"
+    ]
+   },
+   "学校检测器口径对照": {
+    "label": "与学校检测器口径对照",
+    "by": {
+     "737cac242519|UNITED STATES": "与学校检测器口径对照"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "与学校检测器口径对照": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "免费ai检测工具选择": {
+    "label": "免费 AI 检测工具选择",
+    "by": {
+     "737cac242519|UNITED STATES": "免费 AI 检测工具选择"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "免费 AI 检测工具选择": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "教师批量初筛讲解": {
+    "label": "教师批量初筛与讲解",
+    "by": {
+     "737cac242519|UNITED STATES": "教师批量初筛与讲解"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "教师批量初筛与讲解": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "检测结果可信度误判排查": {
+    "label": "检测结果可信度与误判排查",
+    "by": {
+     "737cac242519|UNITED STATES": "检测结果可信度与误判排查"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "检测结果可信度与误判排查": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
     ]
    }
   },
@@ -712,6 +1162,96 @@
     "categories": [
      "antivirus software"
     ]
+   },
+   "aichecker": {
+    "label": "AI checker",
+    "by": {
+     "737cac242519|UNITED STATES": "AI checker"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "AI checker": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "aicontentdetector": {
+    "label": "AI content detector",
+    "by": {
+     "737cac242519|UNITED STATES": "AI content detector"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "AI content detector": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "aidetectiontool": {
+    "label": "AI detection tool",
+    "by": {
+     "737cac242519|UNITED STATES": "AI detection tool"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "AI detection tool": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "aidetector": {
+    "label": "AI detector",
+    "by": {
+     "737cac242519|UNITED STATES": "AI detector"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "AI detector": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
+   },
+   "aitextdetector": {
+    "label": "AI text detector",
+    "by": {
+     "737cac242519|UNITED STATES": "AI text detector"
+    },
+    "clients": [
+     "737cac242519"
+    ],
+    "names": {
+     "AI text detector": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai detector"
+    ]
    }
   }
  },
@@ -722,7 +1262,13 @@
    "market": "US",
    "category": "antivirus software",
    "updated": "2026-11-11"
+  },
+  "737cac242519|UNITED STATES": {
+   "who": "737cac242519",
+   "market": "UNITED STATES",
+   "category": "ai detector",
+   "updated": "2026-11-16"
   }
  },
- "updated": "2026-11-11"
+ "updated": "2026-11-16"
 }
