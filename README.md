@@ -198,7 +198,7 @@ python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 
 ### 引用来源分类与判读数据
 
-引用域名判成自有网站、竞品网站、媒体网站、社交平台、新闻稿平台、机构网站、其他，判定顺序和判据写在 `skills/geo-metrics/references/metric-scope-and-copy-contract.md`，补判流程在 `references/domain-judging-workflow.md`。
+引用域名判成自有网站、竞品网站、媒体网站、社交平台、新闻稿平台、机构网站、其他，判定顺序和判据写在 `skills/geo-metrics/references/metric-scope-and-copy-contract.md`，补判流程在 `skills/geo-metrics/references/domain-judging-workflow.md`。
 
 判定要点：
 
