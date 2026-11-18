@@ -185,6 +185,19 @@ check("官方域名传数组 → 第一个当主站，其余编号保留",
       and result["normalized"]["case_fields"].get("官方域名 2") == "https://th.brandy.example",
       json.dumps(result.get("errors"), ensure_ascii=False))
 
+# 6b. 同一个站的重复写法去重（Pbrand 的 该品牌官网 / www.该品牌官网；协议、大小写、末尾斜杠）
+result = normalize(mutate(lambda p: p["case"].__setitem__(
+    "官方域名", ["https://该品牌官网", "https://www.该品牌官网/", "http://WWW.Pbrand.COM"])))
+check("官方域名同一个站的重复写法 → 去重并告警",
+      result["ok"] and result["normalized"]["official_domains"] == ["https://该品牌官网"]
+      and [w["code"] for w in result["warnings"]] == ["duplicate_item", "duplicate_item"],
+      json.dumps(result.get("warnings") or result.get("errors"), ensure_ascii=False))
+result = normalize(mutate(lambda p: p["case"].__setitem__(
+    "官方域名", ["https://www.itiger.com", "https://itiger.com/hk", "https://www.itiger.com/hk/"])))
+check("官方域名不同市场路径保留，只去掉同一路径的重复写法",
+      result["ok"] and result["normalized"]["official_domains"] == ["https://www.itiger.com", "https://itiger.com/hk"],
+      json.dumps(result.get("errors"), ensure_ascii=False))
+
 # 7. 文本框字符串整段按一项接收，不按逗号拆
 result = normalize(mutate(lambda p: p["case"].__setitem__("核心目标客户与购买场景", "多猫家庭：白天无人照看，关注异味，和清理频次")))
 cf = result["normalized"]["case_fields"] if result["ok"] else {}

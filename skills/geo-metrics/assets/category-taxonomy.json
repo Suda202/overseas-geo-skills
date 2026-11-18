@@ -1,0 +1,29 @@
+{
+ "_说明": "品牌站索引的品类表。键沿用选词 skill 行业知识档案（geo-prompt-selection-builder/references/industry-knowledge）的英文品类词，industry 沿用 precollect-channels.json 的行业键。aliases 按包含关系匹配 Case 的「品类」、bank 的 product_line / category_aliases、词表文件名后缀，不区分大小写，长的先匹配。新品类出现时在这里加一条，不要改已有键。",
+ "categories": {
+  "property portal": {"industry": "其他", "label": "房产信息平台", "aliases": ["房产平台", "房产信息", "住宅房产", "property portal", "property listing"]},
+  "antivirus software": {"industry": "消费级软件与在线服务", "label": "电脑安全与清理软件", "aliases": ["安全与清理软件", "安全卫士", "antivirus", "security suite", "pc security"]},
+  "ai detector": {"industry": "消费级软件与在线服务", "label": "AI 内容检测工具", "aliases": ["ai detector", "ai checker", "ai content detector", "ai 检测"]},
+  "online brokerage": {"industry": "其他", "label": "个人证券账户", "aliases": ["证券账户", "券商", "brokerage", "broker", "trading app"]},
+  "dash cam": {"industry": "消费电子与智能家居", "label": "行车记录仪", "aliases": ["行车记录仪", "dash cam", "dashcam"]},
+  "earbud and charger": {"industry": "消费电子与智能家居", "label": "蓝牙耳机与充电器", "aliases": ["蓝牙耳机", "快充充电器", "tws", "earbuds", "earphones"]},
+  "motorcycle carplay screen": {"industry": "消费电子与智能家居", "label": "摩托车 CarPlay 屏", "aliases": ["摩托车无线 carplay", "motorcycle carplay", "carplay 屏"]},
+  "portable nas": {"industry": "其他", "label": "便携 NAS", "aliases": ["portable nas", "便携 nas", "personal cloud storage"]},
+  "ai nas": {"industry": "消费电子与智能家居", "label": "AI NAS", "aliases": ["ai nas"]},
+  "cloud gpu rental": {"industry": "开发者工具与云基础设施", "label": "GPU 云算力租赁", "aliases": ["gpu 云算力", "cloud gpu", "gpu cloud", "gpu rental"]},
+  "precision measuring instrument": {"industry": "工业品与零部件", "label": "精密量具", "aliases": ["calipers", "callipers", "borescope", "卡尺", "量具"]},
+  "video streaming": {"industry": "内容与流媒体", "label": "视频流媒体", "aliases": ["video-streaming", "video streaming", "视频流媒体", "流媒体"]},
+  "water purifier": {"industry": "消费电子与智能家居", "label": "净水器", "aliases": ["water-purifier", "water purifier", "净水器"]},
+  "corporate travel management": {"industry": "B2B 软件与 SaaS", "label": "企业差旅管理", "aliases": ["corporate-travel", "corporate travel", "企业差旅", "差旅"]}
+ },
+ "markets": {
+  "SG": ["singapore", "新加坡"],
+  "HK": ["hong kong", "香港"],
+  "US": ["united states", "usa", "美国"],
+  "UK": ["united kingdom", "英国"],
+  "KE": ["kenya", "肯尼亚"],
+  "NG": ["nigeria", "尼日利亚"],
+  "TH": ["thailand", "泰国"],
+  "MY": ["malaysia", "马来西亚"]
+ }
+}

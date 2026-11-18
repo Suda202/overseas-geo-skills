@@ -15,7 +15,12 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 识别前的正文清洗：去引用标记、图片、链接网址、HTML，删 AI 反问用户的追问块，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`（传 `follow_up_form`）、`strip_follow_up_form`、`strip_choice_lists`、`blank_merchant_columns` |
 | 答案是否有效、商品卡抽取 | `scripts/geo_presales_core/crawler.py`、`shopping.py` |
 | 引用网址规范化：跟踪参数、平台站内域名、域名后缀表 | `util.py` 的 `normalize_url`、`strip_tracking_params`、`is_platform_internal`、`COMMON_MULTI_LABEL_SUFFIXES` |
-| 引用来源分类与未判读门禁：自有 > 竞品 > 内置表与共享缓存 > 未判读；未判读引用超过 5% 停下补判 | `scripts/geo_presales_core/sources.py` 的 `classify_source`、`unjudged_coverage`、`enforce_judged`；规则见 [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md)「引用来源分类」 |
+| 词表域名自检：同一域名挂两个品牌、域名标签是别家品牌名、域名写法不规范 | `scripts/audit_lexicon_domains.py`；报告生成前对 Case 产出的词表跑一遍 |
+| 引用来源分类与未判读门禁：自有 > 竞品 > 内置表与共享缓存 > 未判读；未判读引用超过 5% 停下补判 | `scripts/geo_presales_core/sources.py` 的 `classify_source`、`unjudged_coverage`、`enforce_judged`；规则见 [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md)「引用来源分类」；政府/百科判断 `is_government`、`is_wiki`，注册域名 `util.registrable_domain`（含国家二级后缀与多租户平台），监测与诊断都调这几个，不另写。改动后跑 `tests/test_source_classification.py` |
+| 引用域名补判流程与数据：开放品牌官网推断、待判域名收集、补证据、判读自检、品牌站索引与品类归一 | `scripts/infer_brand_domains.py`、`collect_domain_candidates.py`、`enrich_domain_candidates.py`、`check_domain_judgments.py`、`build_brand_site_index.py`；数据在 `assets/`（`domain-categories.json` 共享缓存、`domain-categories-meta.json` 判读依据、`domain-brand-sites.json`、`category-taxonomy.json`）；流程见 [domain-judging-workflow.md](references/domain-judging-workflow.md)。2026-11-18 从 geo-presales-report-builder 迁来，旧路径留软链 |
+| 品类级开放品牌词表 | `assets/brand_lexicon.<品类>.json`（2026-11-18 从 geo-presales-report-builder 迁来） |
+| 试跑品牌计数：发现题、替代题每个平台答案点了几个品牌 | `scripts/trial_brand_count.py`（2026-11-18 从 geo-monitoring 迁来） |
+| 题库与试跑目录的公共读法：读题库、找试跑目录、按 manifest 归题、同类品牌与官网匹配 | `scripts/geo_presales_core/runs.py`；品牌计数、可改变性、缺口诊断都用这一份 |
 | 临时引用统计：采集目录 → 来源类别、域名榜、品牌官网、按主题和逐题的官网引用份额与引用率，带同一道门禁 | `scripts/citation_sources.py`；试跑读数、单次分析用它，不要自己另写统计脚本 |
 | 指标计算：提及率、声量份额、平均位置、引用份额、官网引用率、商品卡三项 | `scripts/geo_presales_core/metrics.py`、`deterministic.py`、`shopping.py` |
 | 每个指标用哪批样本、对客户能叫什么名字 | [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md) |
@@ -48,8 +53,9 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 
 ## 谁在调用
 
-- `geo-presales-report-builder`：`build_report_data.py`、`verify_report_data.py`、`infer_brand_domains.py`、`collect_domain_candidates.py`、`run_pipeline.py`（词表挖掘、情感阶段）、`attach_sentiment.py`（正向占比调 `geo_presales_core/sentiment.py`）
-- `geo-monitoring`：`build_baseline_html.py`（读共享域名缓存 `sources.load_cache`）、`trial_brand_count.py`、`changeability_domains.py`；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`
+- `geo-presales-report-builder`：`build_report_data.py`（默认读本 skill 的 `assets/domain-categories.json`）、`verify_report_data.py`、`run_pipeline.py`（词表挖掘、域名门禁、情感阶段）、`attach_sentiment.py`（正向占比调 `geo_presales_core/sentiment.py`）；引用域名补判走本 skill 的脚本
+- `geo-monitoring`：`build_baseline_html.py`（读共享域名缓存 `sources.load_cache`）、`changeability_domains.py`（题库与试跑目录读法来自 `runs.py`，引用抽取来自 `citations.py`，不再经由售前报告的 `build_report_data`）；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`，品牌计数用本 skill 的 `trial_brand_count.py`
+- `geo-gap-diagnosis`：`layer_readings.py`、`page_gap.py`、`label_batches.py`（品牌计数、引用抽取、正文字段）、`diagnose.py`（来源类型调 `classify_source`）
 - `geo-monitoring`（采集 `collect_answers.py`、采集完整性检查 `audit_crawl_integrity.py`）：`answer_validity`、`extract_product_cards`
 - `geo-presales-report-editor`：`geo_presales_editor/`（影子审计 CLI）
 - `geo-prompt-selection-builder`：`run_selection_mode.py` 线上运行时拷贝 `geo_presales_core`
@@ -58,11 +64,13 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 
 ## 改动后的回归
 
-- 单元测试：`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）、`geo-presales-report-audit/tests/test_scripts.py`（去引用）、`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感）。
+- 单元测试：`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）、`geo-presales-report-audit/tests/test_scripts.py`（去引用）、`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。
 - 端到端：用三份现有客户数据（一份售前报告、两份监测基线）跑售前报告数据层、校验、情感抽取、基线报告、试跑计数，输出与改前逐项比对。脚本见项目根 `.snapshots/geo-metrics-20261110/run_ref.sh` 与 `compare.py`，读数有变化必须逐条说明原因。
 
 ## 还没收进来的
 
 第二期（2026-11-10）已收进：逐品牌引用份额、逐题读数（`metrics.question_object_stats`）、引用抽取与计次（`citations.py`）、平台正文字段表（`crawler.ANSWER_FIELD`）、品牌词表读取（`lexicon.py`）、竞品站点名单（词表顶层 `competitor_site_domains`）；监测基线已不打统计补丁。
+
+2026-11-18 收进：引用域名补判的脚本与数据（原 geo-presales-report-builder 的 `assets/domain-*`、`category-taxonomy.json`、`brand_lexicon.*` 与 5 个脚本）、试跑品牌计数（原 geo-monitoring `trial_brand_count.py`）、题库与试跑目录读法（原 `changeability_domains.py` 里的 Resolver 等，现 `runs.py`）。仍留在原 skill、只调用 core 的：`changeability_domains.py`（可改变性是选词与监测的判断规则，不是指标）、`build_baseline_html.py` 与 `build_report_data.py`（报告组装）、`verify_report_data.py`、`audit_independent.py`（报告独立复算）。
 
 刻意保留的第二份实现：`verify_report_data.py`（独立复算，用来抓数据层的错）和报告页 `report-engine.js`（浏览器里多选现算，靠 `check_engine_parity.js` 对账）。改口径时这两处要一起改。清单在项目根 `docs/exec-plans/active/geo-metrics-skill-progress.md`。

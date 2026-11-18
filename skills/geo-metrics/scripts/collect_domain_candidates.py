@@ -19,9 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urlsplit
 
-REPO_SCRIPTS = Path(os.environ.get(
-    "GEO_PRESALES_SKILLS_ROOT", str(Path(__file__).resolve().parents[2])
-)) / "geo-metrics" / "scripts"
+REPO_SCRIPTS = Path(__file__).resolve().parent
 
 CITATION_FIELD = {
     "overview": "source",
@@ -78,9 +76,10 @@ def load_case(path: Path) -> dict:
 
 
 def load_cache(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    """与报告同一个读法（去 www、移动端前缀归一、校验类别），不另写一套。"""
+    sys.path.insert(0, str(REPO_SCRIPTS))
+    from geo_presales_core.sources import load_cache as core_load  # noqa: E402
+    return core_load(path) if path.exists() else {}
 
 
 def matches(host: str, domain: str) -> bool:
@@ -89,12 +88,76 @@ def matches(host: str, domain: str) -> bool:
     return host == domain or host.endswith("." + domain)
 
 
-def scan(collect_dir: Path, case: dict, cache: dict) -> list[dict]:
-    sys.path.insert(0, str(REPO_SCRIPTS))
-    from geo_presales_core.deterministic import KNOWN_HOST_TYPES  # noqa: E402
+def load_brand_index(path: Path | None) -> dict:
+    """品牌站索引：域名 → 品牌、品类。只用来给候选加备注，不参与类别判定。"""
+    if not path or not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
-    known = set(KNOWN_HOST_TYPES) | set(cache)
-    owned = list(case["domains"]) + [c["domain"] for c in case["competitors"] if c["domain"]]
+
+def brand_hint(host: str, index: dict) -> dict | None:
+    """按最长后缀找品牌站，返回 {brands, categories}；找不到返回 None。"""
+    best = ""
+    for known in index:
+        if matches(host, known) and len(known) > len(best):
+            best = known
+    if not best:
+        return None
+    entry = index[best]
+    return {"brands": entry.get("brands") or [], "categories": entry.get("categories") or [],
+            "industries": entry.get("industries") or []}
+
+
+def registrable_label(host: str) -> str:
+    """取可注册域名的第一段：example-brand.com.sg → example-brand。"""
+    parts = host.split(".")
+    two = ".".join(parts[-2:])
+    if two in {"com.sg", "com.hk", "com.my", "com.cn", "com.au", "co.uk", "co.nz", "co.ke", "com.tw"} and len(parts) >= 3:
+        return parts[-3]
+    return parts[-2] if len(parts) >= 2 else host
+
+
+def same_label_hint(host: str, case: dict) -> str | None:
+    """候选域名和本项目某个官网同标签、不同顶级域时给出提示（example-brand.com.sg ↔ example-brand.com）。
+    只提示，不自动判成竞品：不同顶级域下可能是不同公司，要人确认。"""
+    label = registrable_label(host)
+    candidates = [(case.get("brand") or "", d) for d in case.get("domains") or []]
+    candidates += [(c.get("name") or "", c.get("domain") or "") for c in case.get("competitors") or []]
+    for name, domain in candidates:
+        domain = normalize_host(domain)
+        if name and domain and registrable_label(domain) == label:
+            return name
+    return None
+
+
+def load_lexicon_domains(path: Path | None) -> list[str]:
+    """词表里所有品牌的官网域名（official_domains 或 domains）与 competitor_site_domains。"""
+    if not path or not path.exists():
+        return []
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    out: list[str] = []
+    for item in (raw.get("brands") if isinstance(raw, dict) else raw) or []:
+        for dom in (item.get("official_domains") or item.get("domains") or []):
+            out.append(normalize_host(dom))
+    if isinstance(raw, dict):
+        out += [normalize_host(d) for d in raw.get("competitor_site_domains") or []]
+    return [d for d in out if d]
+
+
+def scan(collect_dir: Path, case: dict, cache: dict, brand_index: dict | None = None,
+         lexicon_domains: list[str] | None = None) -> list[dict]:
+    """只收「报告里会落成未判读」的域名：判定直接调 core 的 classify_source，和报告同一个口径
+    （内置表、缓存最长匹配、机构后缀、多租户默认都算判过）。词表与 Case 的官网也排除。"""
+    sys.path.insert(0, str(REPO_SCRIPTS))
+    from geo_presales_core.sources import classify_source  # noqa: E402
+
+    owned = (list(case["domains"]) + [c["domain"] for c in case["competitors"] if c["domain"]]
+             + list(lexicon_domains or []))
+    config = {"domain_category_cache": cache}
 
     found: dict[str, dict] = defaultdict(lambda: {"count": 0, "titles": []})
     for platform, field in CITATION_FIELD.items():
@@ -118,17 +181,27 @@ def scan(collect_dir: Path, case: dict, cache: dict) -> list[dict]:
                         continue
                     if any(matches(host, d) for d in owned):
                         continue
-                    if any(matches(host, d) for d in known):
+                    if classify_source(host, config)["basis"] != "unjudged":
                         continue
                     found[host]["count"] += 1
                     title = str(entry.get("title") or entry.get("name") or entry.get("attribution") or "").strip()
                     if title and title not in found[host]["titles"] and len(found[host]["titles"]) < 2:
                         found[host]["titles"].append(title[:90])
 
-    return [
-        {"domain": host, "count": item["count"], "titles": item["titles"]}
-        for host, item in sorted(found.items(), key=lambda pair: (-pair[1]["count"], pair[0]))
-    ]
+    results = []
+    for host, item in sorted(found.items(), key=lambda pair: (-pair[1]["count"], pair[0])):
+        entry = {"domain": host, "count": item["count"], "titles": item["titles"]}
+        hint = brand_hint(host, brand_index or {})
+        if hint:
+            # 已知品牌站：提醒判读时看它是不是同类品牌，判「其他」并补进本项目的 competitor_site_domains
+            entry["known_brand"] = hint["brands"]
+            entry["known_categories"] = hint["categories"]
+            entry["known_industries"] = hint["industries"]
+        same = same_label_hint(host, case)
+        if same:
+            entry["same_label_as"] = same
+        results.append(entry)
+    return results
 
 
 def main() -> int:
@@ -137,11 +210,16 @@ def main() -> int:
     parser.add_argument("--case", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--lexicon", type=Path, help="品牌词表；词表里的品牌官网不进候选")
+    parser.add_argument("--brand-index", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "assets" / "domain-brand-sites.json",
+                        help="品牌站索引，默认 assets/domain-brand-sites.json；没有就不加备注")
     args = parser.parse_args()
 
     case = load_case(args.case)
     cache = load_cache(args.cache)
-    candidates = scan(args.collect, case, cache)
+    candidates = scan(args.collect, case, cache, load_brand_index(args.brand_index),
+                      load_lexicon_domains(args.lexicon))
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(candidates, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

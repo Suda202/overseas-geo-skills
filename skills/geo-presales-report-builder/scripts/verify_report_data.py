@@ -167,11 +167,15 @@ class Recomputer:
                                  or result.get("user_text") or "").strip()
                     matched = by_prompt.get(normalize_text(prompt)) if prompt else None
                     if not matched and not prompt:
+                        # 多轮采集：0001-r2.json 去掉 -rN 再对题号，否则第 2、3 次运行不计入
                         stem = path.stem.strip()
+                        base = re.sub(r"-r\d+$", "", stem)
                         if stem in known:
                             matched = stem
-                        elif stem.isdigit() and stem.zfill(4) in known:
-                            matched = stem.zfill(4)
+                        elif base in known:
+                            matched = base
+                        elif base.isdigit() and base.zfill(4) in known:
+                            matched = base.zfill(4)
                     # qid 在本模块是整数行号，matched 是补零字符串，统一后比较
                     if matched and str(matched).zfill(4) == str(qid).zfill(4):
                         paths.append(path)
@@ -688,8 +692,9 @@ def run_checks(report: dict, collect: Path) -> list[str]:
         qids = [q.get("qid") for q in questions]
         if any(qid is None for qid in qids):
             failures.append("meta.questions 存在缺失 qid 的条目")
-        elif sorted(qids) != list(range(1, len(qids) + 1)):
-            failures.append(f"meta.questions 的 qid 应为 1..{len(qids)} 连续")
+        elif len(set(qids)) != len(qids) or min(qids) < 1:
+            # 题库可用稳定 id（删题、改类型不重排），不再要求 1..N 连续；只查唯一且为正
+            failures.append(f"meta.questions 的 qid 有重复或非正：{sorted(qids)[:10]}")
         incomplete = [q.get("qid") for q in questions
                       if not str(q.get("en") or "").strip()
                       or not str(q.get("topic") or "").strip()]

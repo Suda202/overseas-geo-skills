@@ -317,13 +317,33 @@ def domain_matches(host: str, official_domain: str) -> bool:
     return bool(host and domain and (host == domain or host.endswith("." + domain)))
 
 
+# 多租户托管平台：每个子域是不同的作者或公司，按 Public Suffix List 私有段的做法当后缀处理，
+# 聚合时 marcushere.substack.com 与 anangsha.substack.com 是两个站，不并成一个 substack.com。
+# 平台根域本身（substack.com、medium.com）仍是一个站。
+MULTI_TENANT_SUFFIXES = {
+    "substack.com", "medium.com", "wordpress.com", "blogspot.com", "ghost.io", "tumblr.com",
+    "github.io", "gitlab.io", "pages.dev", "workers.dev", "netlify.app", "vercel.app",
+    "web.app", "firebaseapp.com", "webflow.io", "gitbook.io", "readthedocs.io",
+    "myshopify.com", "wixsite.com", "squarespace.com", "notion.site", "carrd.co",
+}
+
+
+# 国家代码顶级域下的通用二级标签：x.co.th、x.gov.ph、x.govt.nz 的注册域名保留三段。
+# 和 COMMON_MULTI_LABEL_SUFFIXES 并用：那张表按完整后缀列，覆盖不到的新市场靠这条规则兜底
+# （2026-11-18 从 geo-monitoring/changeability_domains.py 并进来，两边原来各写一套）。
+GENERIC_SLD = {"co", "com", "net", "org", "gov", "go", "ac", "edu", "or", "ne", "gob", "gouv",
+               "govt", "gv", "mil", "nic", "ltd", "plc", "sch", "in", "nom", "info", "biz"}
+
+
 def registrable_domain(host: str) -> str:
     host = normalize_host(host)
     parts = host.split(".")
     if len(parts) <= 2:
         return host
     suffix2 = ".".join(parts[-2:])
-    if suffix2 in COMMON_MULTI_LABEL_SUFFIXES and len(parts) >= 3:
+    if suffix2 in COMMON_MULTI_LABEL_SUFFIXES or suffix2 in MULTI_TENANT_SUFFIXES:
+        return ".".join(parts[-3:])
+    if len(parts[-1]) == 2 and parts[-2] in GENERIC_SLD:
         return ".".join(parts[-3:])
     return suffix2
 

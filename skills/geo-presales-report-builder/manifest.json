@@ -1,8 +1,8 @@
 {
   "name": "geo-presales-report-builder",
-  "version": "1.2.0",
+  "version": "1.3.1",
   "owner": "海外 GEO 项目",
-  "updated_at": "2026-09-20",
+  "updated_at": "2026-11-17",
   "status": "active",
   "maturity_tier": "production",
   "lifecycle_stage": "production",

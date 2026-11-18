@@ -421,22 +421,29 @@ def category_row(r, q, pooled, pg, P):
 
 
 def source_kind(host: str) -> str:
-    """inst（政府、百科）/ ugc（社区、视频、社媒）/ other（门户、媒体、攻略、厂商）。"""
+    """inst（政府、百科、机构）/ ugc（社区、视频、社媒）/ other（门户、媒体、攻略、厂商）。
+
+    按 hostname 走 core 的 classify_source（子域单独判过就用子域的），不先折成注册域名——
+    2026-11-18 前先折域名，community.example.com 这类单独判过的子域会被父域吃掉。
+    """
     import sys as _s
     from pathlib import Path as _P
     skills = _P(__file__).resolve().parents[2]
-    for extra in (skills / "geo-monitoring" / "scripts", skills / "geo-metrics" / "scripts"):
-        if str(extra) not in _s.path:
-            _s.path.insert(0, str(extra))
-    import changeability_domains as cd
-    from geo_presales_core.sources import load_cache
+    extra = skills / "geo-metrics" / "scripts"
+    if str(extra) not in _s.path:
+        _s.path.insert(0, str(extra))
+    from geo_presales_core.sources import classify_source, is_government, is_wiki, load_cache
+    from geo_presales_core.util import normalize_host
     global _SRC_CACHE
     if "_SRC_CACHE" not in globals():
         _SRC_CACHE = load_cache()
-    dom = cd.reg_domain(host)
-    if cd.is_gov(dom) or cd.is_wiki(dom):
+    h = normalize_host(host)
+    if is_government(h) or is_wiki(h):
         return "inst"
-    return "ugc" if cd.third_party_type(dom, _SRC_CACHE) == "ugc" else "other"
+    t = classify_source(h, {"domain_category_cache": _SRC_CACHE})["source_type"]
+    if t == "institutional":
+        return "inst"
+    return "ugc" if t == "ugc" else "other"
 
 
 def citation_row(r, q, pooled, group, crawl, official_seen, P):

@@ -59,7 +59,7 @@ def check_card(card: str) -> list[tuple[str, str]]:
         problems.append(("checkbox", text[max(0, CHECKBOX.search(text).start() - 20):][:60]))
     if 'class="product-card-title"' not in card:
         problems.append(("untitled", text.strip()[:60]))
-    for _, inner in BLOCK.findall(card):
+    for tag, inner in BLOCK.findall(card):
         if "product-card" in inner:  # 外层容器，里面还有块，跳过
             continue
         plain = html.unescape(TAG.sub("", inner)).strip()
@@ -67,7 +67,9 @@ def check_card(card: str) -> list[tuple[str, str]]:
             continue
         if plain.endswith(("?", "？")):
             problems.append(("question", plain[:80]))
-        if BOLD_LEAD.match(inner) or (plain.endswith((":", "：")) and len(plain) > 12):
+        # 卡片卖点里的 <li><strong>Desktop:</strong> …</li> 是带标签的条目，不是引导段；
+        # 只有 <p> 块里的加粗引导句才算卡片吞了正文（2026-11-17，某项目 934 张卡实测）。
+        if tag == "p" and (BOLD_LEAD.match(inner) or (plain.endswith((":", "：")) and len(plain) > 12)):
             problems.append(("lead", plain[:80]))
     return problems
 

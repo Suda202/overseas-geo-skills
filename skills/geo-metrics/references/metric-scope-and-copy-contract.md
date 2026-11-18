@@ -39,7 +39,7 @@
 | 提及率排名 | 在同一 Discovery 样本和冻结品牌集合中，按品牌提及率比较得到的相对名次 | 正文首次出现顺序、推荐顺序 |
 | 平均提及位置 | 品牌在被提及的 Discovery 回答正文中的首次合格出现位置取平均；只在品牌被提及时成立 | 提及率排名、模型对品牌优劣的语义排序 |
 | 引用份额 | 某来源、域名、页面或来源类型被引用的次数 ÷ 同一 Discovery 样本的全部引用次数。分子分母都按未去重次数计：同一回答多次引用同一来源计多次；去重只用于统计「有多少个不同来源」，不进份额。分母必须随数值一起确认 | 可见度、推荐率、流量占比、官网引用率 |
-| 官网引用率 | 正文至少引用一次品牌官网的 Discovery 回答数 ÷ Discovery 有效回答数；按回答计票，一条回答引用多次只算一次。分母是全部有效回答，不是被提及的回答 | 引用份额、带官网的提及率 |
+| 官网引用率 | 正文至少引用一次品牌官网的 Discovery 回答数 ÷ Discovery 有效回答数；按回答计票，一条回答引用多次只算一次。分母是全部有效回答，不是被提及的回答。品牌名下登记的域名合并计算：主站、子域名、市场独立站、302 跳回主站的域名、与主站同一份内容的镜像域名，命中任一即算一次；竞品按同一规则合并，不得一方合并、另一方只算主站（2026-11-17 Suda 定）。域名归属逐个核实——canonical 指向、跳转目标、页脚版权或备案、DNS CNAME、whois——不靠域名里有没有品牌词判断；已失效或跳去域名交易平台的域名不算 | 引用份额、带官网的提及率 |
 | 带官网的提及率 | 品牌被提及的 Discovery 回答中，正文同时引用了该品牌官网的回答占比；分母是「被提及的回答数」，必须随数值一起给出 | 引用份额、推荐率、点击率或流量 |
 
 客户文案、CSV、任务说明、字段说明和校验统一使用“平均提及位置”和“引用份额”。“平均提及排名”“引用占比”“官网引用占比”是废弃名称，不得继续输出。
@@ -115,14 +115,47 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 
 1. **自有网站**：host 等于或属于目标品牌的官网域名（`example.com` 与 `*.example.com`）。
 2. **竞品网站**：host 属于配置竞品或开放品牌的官网，或命中词表顶层的 `competitor_site_domains`。
-3. **域名表**：内置 `KNOWN_HOST_TYPES` → 共享缓存 `geo-presales-report-builder/assets/domain-categories.json`（按 host 精确匹配，再按后缀匹配，`blog.example.com` 命中 `example.com`）→ `.gov` / `.edu` 后缀。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`。
+3. **域名表**：内置 `KNOWN_HOST_TYPES` 与共享缓存 `geo-metrics/assets/domain-categories.json` 按最长匹配查：先精确匹配 host，再从最长的父域往上找，子域单独判过就用子域的（`support.apple.com` 不跟 `apple.com` 走），没判过才跟父域（`blog.example.com` 命中 `example.com`）；同一个键两边都有时缓存优先：缓存是覆盖表，人工纠错写进缓存就能推翻内置表，不用改代码。都不中再看机构后缀：`.gov` / `.edu` / `.mil`，或国家域名下的 `gov.xx` / `edu.xx` / `ac.xx` / `go.xx` / `gouv.xx`。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`；缓存键读入时去掉 `www.`，后缀规则写在代码里，不写进缓存。
 4. 以上都不命中 → **未判读**，展示时归「其他」。
 
+**子域跟父域**：判读尽量落在父域上，子域自动命中（`blog.example.com` 跟 `example.com`）；只有子域性质与父域不同才单独判子域——社区类（`community.`、`forum.`、`club.`）常常是社交平台而父域是企业站。判了子域没判父域，同域其他页面会整片落未判读，自检脚本会把这类父域列出来。
+
+**匹配优先级**：完整 hostname 有单独判读 → 用它；没有 → 最长父域的判读；父域也没有 → 多租户平台默认（`github.io`、`pages.dev`、`workers.dev`、`netlify.app`、`vercel.app`、`myshopify.com` 等按「其他」）→ 仍不中才算未判读。多租户平台下每个子域是不同的人或公司，根域不给单一类型，只给兜底默认，具体子域有证据时写进缓存覆盖。
+
+**聚合口径与分类分开**：
+
+- 域名维度（域名榜、引用份额）按**可注册域名**聚合，`www.`、`blog.`、`m.`、不同国家子域都归到同一个站；`registrable_domain` 负责这一步。
+- 来源类型按 **hostname** 判，允许同一根域名下不同类型。
+- 聚合后若一个根域名下出现多种类型，展示为「混合（媒体 62%、其他 38%）」，不拿多数类型掩盖差异。
+- 品牌归属（自有/竞品）不看子域继承，只按 Case 与词表的官网域名匹配：`ke.example-brand.com` 与 `ng.example-brand.com` 共享站点类型，但纳入自有引用统计要看项目配置的市场。
+
 实现只有一处：`scripts/geo_presales_core/sources.py` 的 `classify_source`。报告数据层（引用模块和回答抽屉）、监测基线、临时统计都调它。
+
+**判读判据**（按站点主体判，不按页面主题判；对齐 Profound 的 Citation Categories：看内容由谁生产、站点靠什么赚钱）：
+
+| 类别 | 判据（Profound Citation Categories 口径） | 反例与边界 |
+|---|---|---|
+| 自有网站 | 品牌直接拥有、控制或管理的站点：主域、子域、产品微站、帮助中心、文档站 | 按 Case 与词表的官网域名判，不看子域结构 |
+| 竞品网站 | 竞品拥有或控制的站点：首页、博客、新闻室、资源页 | 品牌方配置的竞品才计入，开放品牌按词表 |
+| 媒体网站（Earned Media） | 内容即产品，靠广告、联盟佣金或订阅变现：新闻媒体、杂志、行业媒体、编辑型测评（Wirecutter、PCMag）、联盟与比较站（NerdWallet、Investopedia）、广播电视、投稿制媒体（Forbes、HuffPost）、个人博客 | 企业博客、企业新闻室、以获客为导向的 lead-gen 站不算媒体，判「其他」。个人原创内容不等于社交平台：单作者自己运营的博客算媒体，即使托管在 WordPress.com |
+| 新闻稿平台（PR Wire） | 把企业公告分发给媒体的新闻稿服务：PR Newswire、Business Wire、GlobeNewswire、Accesswire | 企业自己的新闻室判「其他」 |
+| 机构网站（Institution） | 政府、教育、研究、公共利益非营利：政府站、大学、研究机构、学术出版（Nature、arXiv）、国际组织（UN、WHO）、专业协会（ABA、AMA）、公益组织、Wikipedia。TLD 自动判：`.gov` `.edu` `.mil` `.int`，以及国家域名下的 `.gov.` `.ac.` `.nhs.` `.gouv.` `.gob.` | 企业的帮助中心、开发者文档、新闻室（`support.apple.com`、`docs.docker.com`、`press.bmwgroup.com`）不算机构，判「其他」 |
+| 社交平台（Social） | 用户自由发布、曝光由投票、算法或关注关系决定：社交网络（Facebook、Instagram、X、TikTok、LinkedIn）、视频平台（YouTube）、讨论平台（Reddit、Discord）、问答（Quora、Stack Overflow）、开放发布平台（Medium、Substack）、消费者评价聚合（Yelp、TripAdvisor）、B2B 评价聚合（G2、Capterra、TrustRadius） | 厂商自建的支持论坛（`community.qnap.com`、`forum.synology.com`）与电商商品评价不算社交平台，判「其他」 |
+| 其他（Other） | 为卖产品、服务而存在：企业官网、SaaS、电商、服务业、公司博客与新闻室、厂商论坛、marketplace、课程平台（Coursera、Udemy）、招聘站、目录站、行业协会、lead-gen 站 | 做价格或规格比较、给出推荐的数据库算媒体（导购比较） |
+
+Profound 另有一条产品规则：全局引用量不足 100 次的域名归入 Other。那是它的数据映射口径，我们不采用——我们的「其他」表示站点类型，「未判读」单独用门禁统计，避免把长尾媒体错标成「其他」。Custom 自定义分类暂不支持，客户特殊需求先在 Case 里加 `competitor_site_domains` 或单独记档。
+
+判读写回共享缓存，不要只写报告目录下的副本：2026-11-18 发现两个项目的报告目录下有 128 条判读只存在本地副本里，下一次用共享缓存跑又全部变回未判读。
+
+**判读记录**（`assets/domain-categories-meta.json`，供复核，不参与代码判定）：每个判过的域名记 `category`、`evidence`（首页标题/About 摘要）、`confidence`（`high` / `medium` / `pending` / `legacy`：2026-11-18 前判的、没留依据，`first_seen` 记最早出现日期）、`source`（`rule` / `ai` / `human`）、`verified_at`。抓不到首页或证据不足的标 `pending`，保持原判不强行改；高频引用域名优先人工复核。
+
+站点身份会变，判读不是一次定终身。出现以下情况要重新核实并更新 `verified_at`：内容主题明显变化、首页或 About 页改版、商业模式变化（开始挂联盟或卖货）、历史判读与新抓到的页面冲突。复核时看内容性质和变现方式，不看建站工具——用了 WordPress 不代表是博客，也不代表归社交平台。
 
 **未判读门禁**（2026-11-13 Suda：「补判域名」老被跳过，结果悄悄落进「其他」，某制氧机客户 305/373、某车载品牌 36%）：
 
 - 「未判读」和缓存里判过的「其他」是两回事。前者没人看过，后者看过、确认不属于任何一类。
+- **长尾不强制判读**：单个域名在本次引用里不足 `min(100, 总引用 × 1%)`（下限 5）次的，记为「长尾未判」，展示归「其他」，但单独统计 `low_volume_*`，不进 5% 门禁。100 是 Profound 的口径；按 1% 收缩是为了避免几百条引用的项目把所有域名都判成长尾。
+- 长尾域名不写缓存：下次引用量涨上来会重新进入待判清单，不会因为一次「其他」固化。
 - 未判读引用（按未去重次数）超过全部引用的 5% 就停下：`build_report_data.py` 和 `citation_sources.py` 退出码 3，并写出待判清单（`<输出名>.domain-candidates.json` / `<输出目录>/domain-candidates.json`）；售前流水线和监测基线随之暂停。
 - 补判做法：逐条读域名和页面标题，判成上面五类之一，写回共享缓存后重跑。品牌官网不写缓存，改 Case 或词表的官网域名。
 - 确实不判时用 `--allow-unjudged-domains "<理由>"`（基线 config 写 `allow_unjudged_domains`）放行，理由记进 `report-data.json` 的 `meta.source_classification`，交付说明要写清「其他」这一项的可信度。

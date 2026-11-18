@@ -129,7 +129,7 @@ def stage_build(args, out: Path) -> None:
     cmd = [sys.executable, HERE / "build_report_data.py",
            "--collect", args.collect, "--questions", args.questions,
            "--case", args.case, "--lexicon", args.lexicon,
-           "--domain-cache", HERE.parent / "assets" / "domain-categories.json",
+           "--domain-cache", SKILLS / "geo-metrics" / "assets" / "domain-categories.json",
            "--out", report]
     if args.regions:
         cmd += ["--regions", args.regions]
@@ -154,7 +154,7 @@ def stage_build(args, out: Path) -> None:
             f"引用来源有超过 5% 的引用来自没判读过的域名，待判清单已写到 "
             f"{report.with_name(report.stem + '.domain-candidates.json')}。逐条读域名和页面标题，"
             f"判成 media_review/ugc/institutional/press_release/other，写回 "
-            f"{HERE.parent / 'assets' / 'domain-categories.json'} 后重跑；品牌官网改 Case 或词表，不写缓存。"
+            f"{SKILLS / 'geo-metrics' / 'assets' / 'domain-categories.json'} 后重跑；品牌官网改 Case 或词表，不写缓存。"
             f"确实不判时加 --allow-unjudged-domains \"<理由>\"。")
     if result.returncode != 0:
         raise SystemExit(f"[2 数据生成] 失败(退出码 {result.returncode}),流水线停止:{printable}")

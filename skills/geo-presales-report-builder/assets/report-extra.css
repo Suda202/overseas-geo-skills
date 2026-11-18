@@ -275,9 +275,13 @@
 .records-intent-select:focus { border-color: var(--gold); }
 
 /* 竞品情感矩阵：Theme × 品牌，单元格紧凑 */
+/* 全局 th 是 white-space:nowrap（表头不该折行），矩阵的主题列和内容列必须覆盖成可折行，
+   否则 105px 的列装不下「市场与产品覆盖有限」这类中文，会溢出到隔壁单元格（2026-11-17 实测）。 */
 #sentimentMatrix { table-layout: fixed; }
+#sentimentMatrix th,
+#sentimentMatrix td { white-space: normal; word-break: break-word; }
 #sentimentMatrix th:first-child,
-#sentimentMatrix td:first-child { width: auto; }
+#sentimentMatrix td:first-child { width: 22%; min-width: 168px; text-align: left; }
 
 /* 04 顶部：竞品情感占比迷你条形图 */
 .sentiment-overview-bars { display: flex; flex-direction: column; gap: 12px; }
@@ -675,3 +679,11 @@ hr.answer-rule {
 
 /* 多市场报告：问题明细行下标出该题在哪些市场问（2026-11-11） */
 .q-regions{display:block;margin-top:2px;font:400 11px/1.4 var(--sans);color:var(--quiet)}
+
+/* 引用来源类别下方的口径说明（自有网站包含哪些根域名） */
+.source-type-note {
+  margin: 10px 2px 0;
+  font: 500 12px/1.6 var(--sans);
+  color: var(--quiet);
+  letter-spacing: 0;
+}

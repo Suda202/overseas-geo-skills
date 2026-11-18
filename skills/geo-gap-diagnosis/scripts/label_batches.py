@@ -43,8 +43,9 @@ for extra in (SKILLS / "geo-monitoring" / "scripts", SKILLS / "geo-metrics" / "s
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
 
-import changeability_domains as cd  # noqa: E402,F401  （把报告数据层和 core 加进 sys.path）
-from changeability_domains import brd  # noqa: E402
+import changeability_domains as cd  # noqa: E402,F401  （把 core 加进 sys.path）
+from changeability_domains import brd  # noqa: E402  （core 的 citations 模块）
+from geo_presales_core.crawler import ANSWER_FIELD  # noqa: E402
 from de_cite_crawl import blank_merchant_columns, strip_citations  # noqa: E402
 from geo_presales_core.util import normalize_text  # noqa: E402
 
@@ -62,7 +63,7 @@ def load(readings_dir: Path):
 def body_of(answer: dict) -> str:
     payload = json.loads(Path(answer["file"]).read_text(encoding="utf-8"))
     task = payload.get("task_result") or {}
-    raw = str(task.get(brd.ANSWER_FIELD[answer["platform"]]) or "")
+    raw = str(task.get(ANSWER_FIELD[answer["platform"]]) or "")
     return blank_merchant_columns(strip_citations(raw, task.get("follow_up_form")))
 
 

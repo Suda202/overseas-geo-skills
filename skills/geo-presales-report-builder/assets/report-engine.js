@@ -256,11 +256,29 @@
       }).map(function (name) {
         return [name, share(bucketCounts[name] || 0), String(bucketCounts[name] || 0), (F.bucket_fill || {})[name] || ""];
       });
+      var SOURCE_SHORT = {"自有网站": "自有", "竞品网站": "竞品", "媒体网站": "媒体", "社交平台": "社交",
+                          "新闻稿平台": "新闻稿", "机构网站": "机构", "其他": "其他"};
+      function domainTypesOf(domain) {
+        var m = domainTypes.get(domain), entries = [], total = 0;
+        if (m) m.forEach(function (n, t) { entries.push([t, n]); total += n; });
+        entries.sort(function (a, b) {
+          return (b[1] - a[1]) || ((order.indexOf(BUCKET[a[0]] || "其他") - order.indexOf(BUCKET[b[0]] || "其他")));
+        });
+        return { entries: entries, total: total };
+      }
+      function domainMajority(domain) {
+        var x = domainTypesOf(domain);
+        return x.entries.length ? (BUCKET[x.entries[0][0]] || "其他") : "其他";
+      }
       function domainBucket(domain) {
-        var m = domainTypes.get(domain), best = null, bestN = -1;
-        if (!m) return "其他";
-        m.forEach(function (n, t) { if (n > bestN) { best = t; bestN = n; } });
-        return BUCKET[best] || "其他";
+        var x = domainTypesOf(domain);
+        if (!x.entries.length) return "其他";
+        if (x.entries.length === 1) return BUCKET[x.entries[0][0]] || "其他";
+        var parts = x.entries.slice(0, 3).map(function (e) {
+          var label = BUCKET[e[0]] || "其他";
+          return (SOURCE_SHORT[label] || label) + Math.floor(e[1] / x.total * 100) + "%";
+        });
+        return "混合（" + parts.join("、") + "）";
       }
       var domainCounts = [];
       domainTypes.forEach(function (m, d) {
@@ -272,9 +290,9 @@
       var domainRows = top(domainCounts).map(function (x) { return [x[0], share(x[1]), domainBucket(x[0])]; });
       var thirdParty = [];
       domainCounts.forEach(function (x) {
-        var bucket = domainBucket(x[0]);
-        if (thirdParty.length >= 5 || bucket === "自有网站" || bucket === "竞品网站") return;
-        thirdParty.push([x[0], share(x[1]), bucket]);
+        var majority = domainMajority(x[0]);
+        if (thirdParty.length >= 5 || majority === "自有网站" || majority === "竞品网站") return;
+        thirdParty.push([x[0], share(x[1]), domainBucket(x[0])]);
       });
       var mentionedAt = answers.map(function (a) { return a.m.some(function (x) { return x[0] === TARGET; }); });
       function sortedCounts(map) {

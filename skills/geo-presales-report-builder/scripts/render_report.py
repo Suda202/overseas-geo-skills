@@ -129,6 +129,7 @@ def build_body(meta: dict) -> str:
         '<span id="filterScope"></span></div>'
         '<div style="display:grid;gap:12px">'
         '<div class="filter-selects">'
+        '<select id="languageSelect" aria-label="语言筛选"></select>'
         '<select id="regionSelect" aria-label="地区筛选"></select>'
         '<select id="platformSelect" aria-label="平台筛选"></select>'
         '<select id="intentSelect" aria-label="意图类型筛选"></select>'

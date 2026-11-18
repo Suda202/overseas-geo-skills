@@ -9,7 +9,7 @@
 - 引用份额 = 某来源被引次数 ÷ 全部引用次数；引用率 = 至少引用一次该来源的有效回答 ÷ 有效回答。
 - 分类：core `sources.classify_source`（自有 > 竞品 > 内置表与共享缓存 > 未判读）。
 - 门禁：未判读引用超过 5% 时退出码 3，并在 --out 写 domain-candidates.json；判完写回
-  geo-presales-report-builder/assets/domain-categories.json 后重跑，或用 --allow-unjudged-domains 写明理由放行。
+  geo-metrics/assets/domain-categories.json 后重跑，或用 --allow-unjudged-domains 写明理由放行。
 
 用法：
     python3 -I citation_sources.py --collect <采集目录> [<采集目录> …] --questions <题库.csv> [<题库.csv> …] \\
@@ -46,7 +46,7 @@ from geo_presales_core.sources import (  # noqa: E402
     load_cache,
     unjudged_coverage,
 )
-from geo_presales_core.util import domain_matches, normalize_host  # noqa: E402
+from geo_presales_core.util import domain_matches, normalize_host, registrable_domain  # noqa: E402
 
 PLATFORMS = ("chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa")
 
@@ -150,9 +150,28 @@ def main(argv=None) -> int:
     total = len(all_c)
     cat = Counter(c["source_type"] for c in all_c)
     cat_ans = Counter(t for _, _, cs in answers for t in {c["source_type"] for c in cs})
-    dom = Counter(c["host"] for c in all_c)
-    dom_ans = Counter(h for _, _, cs in answers for h in {c["host"] for c in cs})
-    dom_type = {c["host"]: c["source_type"] for c in all_c}
+    # 域名维度按可注册域名聚合（www./blog./m. 归到同一个站），来源类型按 hostname 判，
+    # 同一根域名下出现多种类型时标「混合」并给占比（2026-11-18）。
+    def rdom(c):
+        return c.get("registrable_domain") or registrable_domain(c["host"])
+
+    dom = Counter(rdom(c) for c in all_c)
+    dom_ans = Counter(d for _, _, cs in answers for d in {rdom(c) for c in cs})
+    dom_types = defaultdict(Counter)
+    for c in all_c:
+        dom_types[rdom(c)][c["source_type"]] += 1
+
+    SHORT = {"brand_official": "自有", "competitor_official": "竞品", "media_review": "媒体",
+             "ugc": "社交", "press_release": "新闻稿", "institutional": "机构", "other": "其他"}
+
+    def type_label(counter):
+        if not counter:
+            return "其他"
+        total = sum(counter.values()) or 1
+        if len(counter) == 1:
+            return SOURCE_TYPES.get(next(iter(counter)), "其他")
+        parts = "、".join(f"{SHORT.get(k, '其他')}{round(v / total * 100)}%" for k, v in counter.most_common(3))
+        return f"混合（{parts}）"
 
     def hits(host, doms):
         return any(domain_matches(host, d) for d in doms)
@@ -182,12 +201,17 @@ def main(argv=None) -> int:
 
     summary = {
         "answers": n_ans, "answers_with_citations": sum(1 for *_, cs in answers if cs), "citations": total,
-        "source_classification": {k: coverage[k] for k in ("total_citations", "unjudged_citations", "unjudged_share", "limit")}
+        "source_classification": {k: coverage[k] for k in (
+            "total_citations", "unjudged_citations", "unjudged_share", "limit",
+            "low_volume_citations", "low_volume_share", "low_volume_domains", "low_volume_threshold")}
         | {"allowed_reason": args.allow_unjudged_domains.strip() if coverage["unjudged_share"] > coverage["limit"] else ""},
         "categories": [{"type": k, "label": SOURCE_TYPES[k], "citations": v, "share": round(v / total, 4),
                         "rate": round(cat_ans[k] / n_ans, 4)} for k, v in cat.most_common()],
-        "domains": [{"domain": h, "type": SOURCE_TYPES[dom_type[h]], "citations": v, "share": round(v / total, 4),
-                     "rate": round(dom_ans[h] / n_ans, 4)} for h, v in dom.most_common(args.top)],
+        "domains": [{"domain": d, "type": type_label(dom_types[d]),
+                     "composition": {SOURCE_TYPES.get(k, k): v2 for k, v2 in dom_types[d].most_common()}
+                     if len(dom_types[d]) > 1 else None,
+                     "citations": v, "share": round(v / total, 4),
+                     "rate": round(dom_ans[d] / n_ans, 4)} for d, v in dom.most_common(args.top)],
         "brand_sites": brands,
         "topics": [{"topic": k, "answers": v[0], "citations": v[1], "own_share": round(v[2] / v[1], 4) if v[1] else None,
                     "own_rate": round(v[3] / v[0], 4)} for k, v in topics.items()],

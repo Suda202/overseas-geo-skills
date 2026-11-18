@@ -38,13 +38,13 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SKILLS = HERE.parents[1]
-for extra in (HERE, SKILLS / "geo-metrics" / "scripts"):
-    if str(extra) not in sys.path:
-        sys.path.insert(0, str(extra))
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
 
-import changeability_domains as cd  # noqa: E402  （同时把售前报告数据层和 core 加进 sys.path）
-from changeability_domains import brd  # noqa: E402
+# 2026-11-18 从 geo-monitoring 迁到 geo-metrics：品牌计数是统计，归题与试跑目录读法在 core 的 runs.py
+import geo_presales_core.runs as cd  # noqa: E402  （沿用 cd 名：Resolver、find_runs、load_bank、q_text 等）
+from geo_presales_core.crawler import ANSWER_FIELD  # noqa: E402
+from geo_presales_core.lexicon import load_lexicon  # noqa: E402
 from de_cite_crawl import blank_merchant_columns, strip_citations  # noqa: E402
 from geo_presales_core.crawler import answer_validity  # noqa: E402
 import geo_presales_core.util as core_util  # noqa: E402
@@ -89,7 +89,7 @@ def build_brands(config: dict, lexicon_path: Path | None):
                 add(item.get("name") or item.get("brand"), as_list(item.get("aliases")))
     status = "无词表"
     if lexicon_path:
-        entries, _uncertain, status = brd.load_lexicon(lexicon_path)
+        entries, _uncertain, status = load_lexicon(lexicon_path)
         if status != "loaded":
             raise SystemExit(f"词表读不了（{status}）：{lexicon_path}")
         for entry in entries:
@@ -124,7 +124,7 @@ def collect(collect_dirs, questions, brands, types):
         rows, _csv = cd.run_questions_csv(run, issues)
         for pdir in sorted(run.glob("scraper.*")):
             platform = pdir.name.split(".", 1)[1]
-            if platform not in brd.ANSWER_FIELD:
+            if platform not in ANSWER_FIELD:
                 issues.append({"code": "UNKNOWN_PLATFORM", "dir": str(pdir)})
                 continue
             for rdir in sorted(p for p in pdir.iterdir() if p.is_dir()):
@@ -135,7 +135,7 @@ def collect(collect_dirs, questions, brands, types):
                         issues.append({"code": "BAD_JSON", "file": str(path)})
                         continue
                     task = payload.get("task_result") or {}
-                    raw = str(task.get(brd.ANSWER_FIELD[platform]) or "")
+                    raw = str(task.get(ANSWER_FIELD[platform]) or "")
                     echo = str(task.get("prompt") or task.get("user_query") or task.get("user_text") or "").strip()
                     qid, _method, code = resolver.resolve(echo, rows.get(path.stem), path.stem, rdir.name)
                     if not qid:

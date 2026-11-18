@@ -17,7 +17,7 @@
   var state = { region: "", platform: "", intent: "", topic: "", matrixMetric: "mention", shopLevel: "brand",
     expanded: {}, page: 1, drawerRun: {}, drawerPlat: {},
     // 多选筛选（引擎模式）：空数组 = 全部
-    sel: { regions: [], platforms: [], intents: [], topics: [] }, openMsel: null,
+    sel: { languages: [], regions: [], platforms: [], intents: [], topics: [] }, openMsel: null,
     sourcePage: { domains: 1, pages: 1, official: 1 } };
   var TYPE_PREFIX = META.type_topic_prefix || "类型:";
   // 情感、商品卡没有数据时整块不出，问题明细列、抽屉里的对应内容也不出（render_report.py 按数据写好开关）
@@ -124,6 +124,10 @@
   }
   function catTag(name) {
     if (!name) return "";
+    // 同一根域名下多种类型时，数据层给「混合（媒体62%、其他38%）」，样式按「混合」走，原文放提示里
+    if (String(name).indexOf("混合") === 0) {
+      return '<span class="cat-tag cat-混合" title="' + esc(name) + '">' + esc(name) + "</span>";
+    }
     return '<span class="cat-tag cat-' + esc(name) + '">' + esc(name) + "</span>";
   }
   function pctWidth(value) {
@@ -557,6 +561,16 @@
             '<div class="track"><div class="fill ' + esc(row[3] || "") + '" style="width:' + Math.max(2, (value / max) * 100) + '%"></div></div>' +
             '<b class="hb-num">' + esc(row[1]) + '</b><b class="hb-num">' + r("types", row[0]) + "</b></div>";
         }).join("") || emptyRow("暂无数据"));
+      // 「自有网站」不是只看一个域名：把计入该类的根域名列出来，客户才能核对口径。
+      var ownDomains = [];
+      ((META.objects || [])).forEach(function (o) {
+        if (o && o.role === "target") ownDomains = (o.domains || []).filter(function (d) { return d.indexOf(".") > 0; });
+      });
+      if (!ownDomains.length && META.official_domain) ownDomains = [META.official_domain];
+      if (ownDomains.length > 1) {
+        typesEl.innerHTML += '<p class="source-type-note">「自有网站」按 ' + ownDomains.length +
+          " 个已登记的根域名统计（含子域）：" + esc(ownDomains.join("、")) + "。其余品牌官网计入「竞品网站」。</p>";
+      }
     }
 
     var domainsEl = document.getElementById("sourceDomains");
@@ -808,7 +822,7 @@
 
     table.innerHTML = recordHead() + visible.map(function (topic) {
       var rows = groups[topic];
-      var isOpen = state.expanded[topic] !== false;
+      var isOpen = state.expanded[topic] === true;
       // 主题行取该主题切片的指标（按回答合计），不对逐题读数取平均
       var ts = ENGINE ? ENGINE.slice(withSel({ topics: [topic] })) : (SLICES[sliceKey(state.region, state.platform, topic)] || {});
       var k = ts.kpis || {};
@@ -835,7 +849,7 @@
           (HAS_SENTIMENT ? cell(record.sentiment) : "") +
           '<td class="center"><button class="detail-btn" type="button" data-detail="' + esc(record.qid) + '">查看</button></td></tr>';
       }).join("");
-      return '<tbody class="topic-group open" data-group-topic="' + esc(topic) + '">' + head + items + "</tbody>";
+      return '<tbody class="topic-group' + (isOpen ? " open" : "") + '" data-group-topic="' + esc(topic) + '">' + head + items + "</tbody>";
     }).join("");
     renderPagination(order.length, pages);
   }
@@ -1294,6 +1308,7 @@
   /* ---------- 多选筛选（引擎模式） ---------- */
 
   var MSEL_DIMS = [
+    { id: "languageSelect", key: "languages", all: "全部语言", unit: "种语言" },
     { id: "regionSelect", key: "regions", all: "全部地区", unit: "个地区" },
     { id: "platformSelect", key: "platforms", all: "全部平台", unit: "个平台" },
     { id: "intentSelect", key: "intents", all: "全部意图类型", unit: "种意图类型" },
@@ -1301,6 +1316,7 @@
   ];
   function mselValues(key) {
     var intentTopics = META.intent_topics || {};
+    if (key === "languages") return Object.keys(META.language_groups || {});
     if (key === "regions") return META.regions || [];
     if (key === "platforms") return META.platforms || [];
     if (key === "intents") return Object.keys(intentTopics);
@@ -1313,10 +1329,21 @@
   function mselShown(key) {
     // 整份报告只有一个取值的维度不出（主题看全量，不因收窄后只剩一个而消失）
     if (key === "topics") return (META.topics || []).length > 1;
+    if (key === "languages") return Object.keys(META.language_groups || {}).length > 1;
     return mselValues(key).length > 1;
   }
   function dimLabel(key, value) {
-    return key === "regions" ? ((META.region_labels || {})[value] || value) : value;
+    if (key === "regions") return (META.region_labels || {})[value] || value;
+    return value;
+  }
+  // 语言筛选驱动地区：选了语言就等于把地区收到这些市场（语言分组在 Case 里配置）
+  function regionsForLanguages(langs) {
+    var groups = META.language_groups || {};
+    var out = [];
+    (langs || []).forEach(function (l) {
+      (groups[l] || []).forEach(function (r) { if (out.indexOf(r) < 0) out.push(r); });
+    });
+    return out.filter(function (r) { return (META.regions || []).indexOf(r) >= 0; });
   }
   function renderMultiFilters() {
     var shown = 0;
@@ -1352,6 +1379,11 @@
     if (box) box.style.display = shown ? "" : "none";
   }
   function afterFilterChange(key) {
+    state.expanded = {};  // 改筛选后明细回到收起状态，不保留上一次展开的分组
+    if (key === "languages") {
+      state.sel.regions = regionsForLanguages(state.sel.languages);
+      renderMultiFilters();
+    }
     if (key === "intents") {
       var allowed = mselValues("topics");
       state.sel.topics = state.sel.topics.filter(function (t) { return allowed.indexOf(t) >= 0; });
@@ -1400,6 +1432,12 @@
     var bar = document.querySelector(".topbar");
     var box = document.getElementById("sharedFilter");
     if (bar && box) box.style.top = bar.offsetHeight + "px";
+    // 锚点跳转要避开吸顶的顶栏 + 筛选条：把两段高度写进 CSS 变量给 .section 的 scroll-margin-top 用，
+    // 否则点导航跳到「情感」「明细」，标题会被筛选条压住（2026-11-18 实测）。
+    if (bar && box) {
+      document.documentElement.style.setProperty("--section-anchor-offset",
+        (bar.offsetHeight + box.offsetHeight + 16) + "px");
+    }
   }
 
   function bindEvents() {

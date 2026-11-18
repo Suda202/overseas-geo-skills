@@ -214,7 +214,7 @@ Obrand 实测：recon 口径下 303 条回答、9720 条「题 × 品牌」行�
 
 ```bash
 python3 scripts/build_report_data.py --collect <dir> --questions <csv> --case <case> \
-  --lexicon <lexicon> --domain-cache assets/domain-categories.json --out build/report-data.json
+  --lexicon <lexicon> --domain-cache ../geo-metrics/assets/domain-categories.json --out build/report-data.json
 python3 scripts/attach_translations.py --report build/report-data.json \
   --batches build/translation-batches --out build/report-data.json
 python3 scripts/verify_report_data.py --report build/report-data.json --collect <dir>

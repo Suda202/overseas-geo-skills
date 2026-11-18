@@ -46,7 +46,7 @@ metadata:
 
 ```bash
 python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv> \
-  --case <Case.json 或 v8 题库.json> --lexicon assets/brand_lexicon.<品类>.json --out-dir <输出> \
+  --case <Case.json 或 v8 题库.json> --lexicon ../geo-metrics/assets/brand_lexicon.<品类>.json --out-dir <输出> \
   --brands "目标,配置1,配置2,配置3,开放1" --target <目标品牌> --brand-name <品牌> \
   [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 ```
@@ -67,35 +67,18 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    python3 ../geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
    ```
 
-   词表落 `assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。
+   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。
 
-   **开放品牌也要有官网域名**，否则它们的官网引用会落进「其他」、竞品网站被低估。域名不必手填，用引用来源推断：
+   **开放品牌官网域名推断**与**引用域名补判**都归 geo-metrics，流程见 [geo-metrics/references/domain-judging-workflow.md](../geo-metrics/references/domain-judging-workflow.md)：先推开放品牌官网域名（`infer_brand_domains.py`），再收待判域名（`collect_domain_candidates.py`，带 `--lexicon`）、补证据、判读写回 `geo-metrics/assets/domain-categories.json`，最后跑 `check_domain_judgments.py` 自检，退出码非 0 不许进第 4 步。
 
-   ```bash
-   python3 scripts/infer_brand_domains.py --collect <采集目录> \
-     --lexicon assets/brand_lexicon.<品类>.json \
-     --out build/brand-domains-inferred.json --candidates build/brand-domains-candidates.json
-   ```
-
-   高置信规则是「引用注册域的标签 == 品牌名/别名归一形式」（`viu.com`↔Viu）；推不出的（缩写类，如 `mgtv.com`↔Mango TV）进候选清单，**联网搜索或人工确认后**写回词表的 `official_domains`，不要用模糊相似度硬猜。目标与配置竞品的域名以 Case 为准，词表里的同名条目只做别名合并。
-
-3. **补判未登记的引用域名**（不是封闭集合）：
-
-   ```bash
-   python3 scripts/collect_domain_candidates.py --collect <采集目录> --case <Case.json> \
-     --cache assets/domain-categories.json --out build/domain-candidates.json
-   ```
-
-   逐条读域名与其页面标题判读类别，写回 `assets/domain-categories.json`。该文件随每次运行生长，判过的域名下次直接命中。
-
-   这一步有门禁：第 4 步 `build_report_data.py` 发现未判读的引用超过 5% 会以退出码 3 停下，并写出 `<输出名>.domain-candidates.json`，判完写回缓存再重跑。确实不判时加 `--allow-unjudged-domains "<理由>"`。分类实现和门禁在 geo-metrics core `sources.py`。
+3. **引用来源门禁**：第 4 步 `build_report_data.py` 发现未判读引用超过 5%（长尾域名不计）会以退出码 3 停下，并写出 `<输出名>.domain-candidates.json`，按上面的流程判完再重跑。确实不判时加 `--allow-unjudged-domains "<理由>"`。
 
 4. **生成数据**：
 
    ```bash
    python3 scripts/build_report_data.py --collect <采集目录> --questions <题库.csv> \
-     --case <Case.json> --lexicon assets/brand_lexicon.<品类>.json \
-     --domain-cache assets/domain-categories.json --out <输出>/report-data.json
+     --case <Case.json> --lexicon ../geo-metrics/assets/brand_lexicon.<品类>.json \
+     --domain-cache ../geo-metrics/assets/domain-categories.json --out <输出>/report-data.json
    ```
 
 5. **情感判读（Claim 层，可选；缺省时情感板块显示「待接入」）**：
@@ -106,7 +89,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    J=../geo-metrics/scripts/sentiment_sentences.py
    # 1) 抽取单元（evidence_text 候选，确定性）
    python3 $J extract --bank <题库.csv> --crawl-dir <采集目录> \
-     --lexicon assets/brand_lexicon.<品类>.json --output <输出>/sentiment-units.json
+     --lexicon ../geo-metrics/assets/brand_lexicon.<品类>.json --output <输出>/sentiment-units.json
    # 2) 语义暂停：抽取只出 claim → claims-raw.json（unit_index/brand/claim/sentiment）
    # 3) 聚类 1：claim → attribute（在去重清单上做，写 claim-attributes.json）
    python3 $J claims-cluster-list --input <输出>/claims-raw.json --key claim \
@@ -240,6 +223,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - **源码真相在本 skill,客户 HTML 只是产物**:任何修订都改 `scripts/` 与 `assets/` 后完整重跑数据层链路(build → attach_sentiment → attach_translations → verify → render),不得手改已渲染的单页 HTML——手改产物会在下次重渲染时被静默覆盖,且让产物与 `report-data.json` 脱钩。若修改了抽取器/清洗器或替换已交付报告,必须先在隔离输出目录重跑并按 [重跑与产物卫生](references/rerun-and-artifact-hygiene.md) 迁移 labels、对账旧新指标,通过后才替换正式文件。
 - `verify_report_data.py` 退出码为 0，且突变测试全部检出。
 - 在浏览器里切过筛选（含多选组合），确认没有空白模块或错位。
+- **域名判读自检通过**：`../geo-metrics/scripts/check_domain_judgments.py` 退出码 0（前 20 无未判读、判「其他」都有理由、其他占比不超 15%）。
 - **正文不得带平台残留文案**:逐条扫 `Go to product viewer dialog for this item.`(明细与情感证据两处都要,详见 [渲染规范](references/render-spec.md))。
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
 - 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
@@ -250,10 +234,10 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 ## 已知边界
 
 - **引用来源的展示类别固定 7 类**：自有网站 / 竞品网站 / 社交平台 / 媒体网站 / 新闻稿平台 / 机构网站 / 其他。以《引用来源分类》定义为准，不得增删。两条最容易搞错的边界：**目标品牌与全部竞品（配置竞品 + 开放竞品）的官网都进「自有网站」/「竞品网站」，不限于本批配置的那几个**——开放竞品的官网域名靠 `infer_brand_domains.py` 从引用来源推断、推不出的联网搜索补全（2026-09-22 改，此前规定开放竞品官网不进这一类）；**未命中默认类别的企业网站（含其他厂商官网、母公司站）归「其他」**——注意母公司站不算产品官网（如 tencent.com 不是 RivalY2 的官网，RivalY2 是 rivaly2.vip）。旧版的 `corporate_site`（企业网站）已取消，遇到历史值按「其他」处理。
-- 引用来源类别依赖 `assets/domain-categories.json` 的判读覆盖度。未判读的引用超过 5% 时数据层停下（门禁），不会再悄悄落进「其他」；放行时理由记在 `meta.source_classification`。
+- 引用来源类别依赖 `geo-metrics/assets/domain-categories.json` 的判读覆盖度。未判读的引用超过 5% 时数据层停下（门禁），不会再悄悄落进「其他」；放行时理由记在 `meta.source_classification`。
 - 开放品牌集是词表驱动的，词表没收录的品牌不会进入声量分母。补充词表要重新跑数据层。
 - 前端每个榜单只展示本主题所属产品线的品牌（目标 + 该线配置竞品 + 1 个开放竞品），是为了可读性；其余品牌仍进声量分母。需要完整分布时看 `report-data.json` 的 `competition` 与 `matrix`。
 - **采集目录的文件名必须是题库全局题号**（`0001.json`、`0001-r2.json`）。`details` 的键由文件名决定（`<地区>|<平台>|<题号>`），抽屉按题号回查；用原始批次名（如 `KECHG005_1.json`）会让抽屉显示「没有这道题的原始回答」（2026-11-11 实测）。
 - **题库可按市场写同一句提示词**（同一决策在 KE/NG 各挂一次）。此时 CSV 必须有 `region` 列（`KE`/`NG`），`build_report_data` 会按它限定题面匹配范围；缺列时后一道覆盖前一道，被覆盖的题在报告里显示无答案。
 - **只有一个平台时不出「跨平台」比较**：引擎在 `vals.length === 1` 时给单平台结论，不套共识/差距文案（否则写出「相差 0.0 个百分点」）。
-- 域名判读的 `assets/domain-categories.json` 只接受 `media_review` / `ugc` / `institutional` / `press_release` / `other`；品牌官网由 Case + 词表的 `official_domains` 判定，不要往缓存里写 `competitor`。
+- 域名判读的 `geo-metrics/assets/domain-categories.json` 只接受 `media_review` / `ugc` / `institutional` / `press_release` / `other`；品牌官网由 Case + 词表的 `official_domains` 判定，不要往缓存里写 `competitor`。

@@ -49,8 +49,9 @@ for extra in (SKILLS / "geo-monitoring" / "scripts", SKILLS / "geo-metrics" / "s
     if str(extra) not in sys.path:
         sys.path.insert(0, str(extra))
 
-import changeability_domains as cd  # noqa: E402  （同时把报告数据层和 core 加进 sys.path）
-from changeability_domains import brd  # noqa: E402
+import changeability_domains as cd  # noqa: E402  （同时把 core 加进 sys.path）
+from changeability_domains import brd  # noqa: E402  （core 的 citations 模块）
+from geo_presales_core.crawler import ANSWER_FIELD  # noqa: E402
 import trial_brand_count as tbc  # noqa: E402
 from audit_crawl_integrity import load_platform_contract  # noqa: E402
 from de_cite_crawl import blank_merchant_columns, strip_citations  # noqa: E402
@@ -203,7 +204,7 @@ def main(argv=None) -> int:
         web_search_flag = manifest.get("web_search")
         for pdir in sorted(run.glob("scraper.*")):
             platform = pdir.name.split(".", 1)[1]
-            if platform not in brd.ANSWER_FIELD:
+            if platform not in ANSWER_FIELD:
                 issues.append({"code": "UNKNOWN_PLATFORM", "dir": str(pdir)})
                 continue
             retrieval_fields = RETRIEVAL_OVERRIDE.get(platform, (contract.get(platform) or {}).get("retrieval") or [])
@@ -215,7 +216,7 @@ def main(argv=None) -> int:
                         issues.append({"code": "BAD_JSON", "file": str(path)})
                         continue
                     task = payload.get("task_result") or {}
-                    raw = str(task.get(brd.ANSWER_FIELD[platform]) or "")
+                    raw = str(task.get(ANSWER_FIELD[platform]) or "")
                     echo = str(task.get("prompt") or task.get("user_query") or task.get("user_text") or "").strip()
                     qid, _method, code = resolver.resolve(echo, rows.get(path.stem), path.stem, rdir.name)
                     if not qid:

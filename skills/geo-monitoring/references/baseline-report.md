@@ -41,7 +41,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 | `case_sensitive_aliases` | Abbreviations that collide with words (ERA); list every accepted casing (lyf / Lyf / LYF). Written to the brand lexicon's top level; geo-metrics core applies it |
 | `multi_label_suffixes` | Must already be in geo-metrics core `COMMON_MULTI_LABEL_SUFFIXES` (`gov.sg`, `edu.sg`, `per.sg` are); the build stops if one is missing — add it there, not here |
 | `competitor_site_domains` | Same-category platforms counted as 竞品网站 beyond the configured brands. Written to the brand lexicon's top level; geo-metrics core source classification applies it |
-| `domain_categories` | `ugc / media_review / press_release / institutional` domain lists, layered over the shared cache `geo-presales-report-builder/assets/domain-categories.json` (read first since 2026-11-13; before that only these lists were used and every other domain fell into 其他) |
+| `domain_categories` | `ugc / media_review / press_release / institutional` domain lists, layered over the shared cache `geo-metrics/assets/domain-categories.json` (read first since 2026-11-13; before that only these lists were used and every other domain fell into 其他) |
 | `allow_unjudged_domains` | Reason for building with more than 5% of citations from unjudged domains. Without it the build stops (exit 3) and writes `report-data.domain-candidates.json` next to the data file: judge each domain, add it to the shared cache, rebuild |
 | `sentiment` | `{units, claims, metrics}` paths; ignored until all three exist |
 | `translations` | Folder of `batch-*.zh.json` |

@@ -1041,7 +1041,7 @@ def main(argv=None) -> int:
                          if cfg.get("allow_unjudged_domains") else []))
         if rc == 3:
             raise SystemExit("引用来源有未判读域名超过 5%：按上面列出的待判清单逐条判读，写回 "
-                             "geo-presales-report-builder/assets/domain-categories.json 后重跑；"
+                             "geo-metrics/assets/domain-categories.json 后重跑；"
                              "确实不判时在 config 写 allow_unjudged_domains: \"<理由>\"")
         if rc:
             return rc

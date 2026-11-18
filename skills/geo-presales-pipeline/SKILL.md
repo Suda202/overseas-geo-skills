@@ -78,7 +78,7 @@ python3 scripts/run_pipeline.py \
 | 阶段 -1 采集未齐 | 用户确认调用量 | `--dry-run` 报数，确认后跑 `collect_answers.py` |
 | 阶段 0 采集校验退出码 2（阻断）或 1（警告） | `geo-monitoring`（references/crawl-integrity.md） | 按缺陷目录逐条定位到平台和文件，修采集或显式降级口径后续跑；不许带着缺陷算指标 |
 | 阶段 1 词表不存在 | 人工（Suda 或授权人） | 脚本已挖出候选 CSV，由人工冻结成 `brands[].name/aliases/type`。机器分不清品牌名和品类词，**这步不能自动化**；已有同品类冻结词表可直接复用 |
-| 阶段 2 引用来源未判读超过 5% | 模型或人工判读 | 打开 `report-data.domain-candidates.json`，逐条读域名和页面标题，判成 media_review / ugc / institutional / press_release / other，写回 `geo-presales-report-builder/assets/domain-categories.json`；品牌官网改 Case 或词表。不能按关键词自动打标 |
+| 阶段 2 引用来源未判读超过 5% | 模型或人工判读 | 打开 `report-data.domain-candidates.json`，逐条读域名和页面标题，判成 media_review / ugc / institutional / press_release / other，写回 `geo-metrics/assets/domain-categories.json`；品牌官网改 Case 或词表。不能按关键词自动打标 |
 | 阶段 2 数据生成失败 | `geo-presales-report-builder` | 读数据接口契约排障；不要绕过 build_report_data 手写数据 |
 | 阶段 3b Claim 抽取 | `geo-metrics`（references/sentiment.md） | 按 Claim 层契约逐单元拆原子 Claim；拿不准的进 review-queue 交 Suda 裁决 |
 | 阶段 3d / 3f 两趟聚类 | `geo-metrics`（references/sentiment.md） | claim→attribute、attribute→theme；维度优先于极性，theme 必须中性；输入是去重清单，同一 claim 只判一次 |

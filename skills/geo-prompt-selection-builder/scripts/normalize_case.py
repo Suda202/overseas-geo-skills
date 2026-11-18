@@ -155,11 +155,58 @@ def _string_list(case: dict, field: str, report: Report, required: bool = False)
     return items
 
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _domain_key(url: str) -> str:
+    """同一个站的写法归一：忽略协议、大小写、www. 前缀、默认端口和末尾斜杠。"""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").casefold()
+    if host.startswith("www."):
+        host = host[4:]
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port and port != _DEFAULT_PORTS.get(parsed.scheme.casefold()):
+        host = f"{host}:{port}"
+    key = f"{host}{parsed.path.rstrip('/')}"
+    return f"{key}?{parsed.query}" if parsed.query else key
+
+
 def _domains(case: dict, report: Report) -> list[str]:
-    """官方域名：一个网址或网址数组，第一个是品牌主站；子域名、市场独立站往后写。"""
-    items = _string_list(case, DOMAIN_KEY, report, required=True)
-    for index, item in enumerate(items, start=1):
-        _check_url(item, DOMAIN_KEY if len(items) == 1 else f"{DOMAIN_KEY}[{index}]", report)
+    """官方域名：一个网址或网址数组，第一个是品牌主站；子域名、市场独立站往后写。
+    指向同一个站的重复写法（协议、www.、大小写、末尾斜杠不同）去重，保留第一次出现的写法。"""
+    value = case.get(DOMAIN_KEY)
+    if _is_blank(value):
+        report.error("missing_field", DOMAIN_KEY, f"缺少必填字段 {DOMAIN_KEY}，至少需要 1 项")
+        return []
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        report.error("invalid_type", DOMAIN_KEY, f"{DOMAIN_KEY} 必须是字符串或字符串数组")
+        return []
+    items: list[str] = []
+    seen: dict[str, int] = {}
+    errors_before = len(report.errors)
+    for index, item in enumerate(value, start=1):
+        field = DOMAIN_KEY if len(value) == 1 else f"{DOMAIN_KEY}[{index}]"
+        if not isinstance(item, str) or not item.strip():
+            report.error("invalid_item", field, f"{DOMAIN_KEY} 第 {index} 项必须是非空字符串")
+            continue
+        text = _clean(item)
+        if _pending(text, field, report):
+            continue
+        _check_url(text, field, report)
+        key = _domain_key(text)
+        if key in seen:
+            report.warn("duplicate_item", field,
+                        f"{DOMAIN_KEY} 第 {index} 项与第 {seen[key]} 项是同一个站（{text}），已去重")
+            continue
+        seen[key] = index
+        items.append(text)
+    if not items and len(report.errors) == errors_before:
+        report.error("missing_field", DOMAIN_KEY, f"缺少必填字段 {DOMAIN_KEY}，至少需要 1 项")
     return items
 
 

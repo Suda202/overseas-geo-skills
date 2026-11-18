@@ -86,7 +86,7 @@ import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core
 # 域名后缀表、跟踪参数、平台站内域名都在 core util（geo-metrics），这里不再补丁。
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_DOMAIN_CACHE = SKILL_DIR / "assets" / "domain-categories.json"
+DEFAULT_DOMAIN_CACHE = SKILL_DIR.parent / "geo-metrics" / "assets" / "domain-categories.json"  # 2026-11-18 迁到 geo-metrics
 SCHEMA = "geo-presales-report-data/v1"
 # 运行标识，写进产物 meta 供人工追溯；不参与任何计算与校验。
 RUN_ID = os.environ.get("GEO_PRESALES_RUN_ID", "")
@@ -238,6 +238,28 @@ SOURCE_BUCKET = {
 }
 SOURCE_BUCKET_ORDER = ["自有网站", "社交平台", "媒体网站", "竞品网站", "新闻稿平台",
                        "机构网站", "其他"]
+SOURCE_SHORT = {"自有网站": "自有", "竞品网站": "竞品", "媒体网站": "媒体", "社交平台": "社交",
+                "新闻稿平台": "新闻稿", "机构网站": "机构", "其他": "其他"}
+
+
+def domain_bucket(counter) -> tuple[str, str]:
+    """可注册域名下的来源类型 → (展示文案, 多数类型)。
+
+    同一根域名下若是不同类型（如 example.com 企业站 + blog.example.com 媒体），
+    标「混合」并给出占比，不拿多数类型掩盖差异（Suda 2026-11-18）。
+    """
+    if not counter:
+        return "其他", "other"
+    total = sum(counter.values()) or 1
+    majority = counter.most_common(1)[0][0]
+    if len(counter) == 1:
+        return SOURCE_BUCKET.get(majority, ("其他", ""))[0], majority
+    ordered = sorted(counter.items(), key=lambda kv: (
+        -kv[1], SOURCE_BUCKET_ORDER.index(SOURCE_BUCKET.get(kv[0], ("其他", ""))[0])))
+    parts = "、".join(f"{SOURCE_SHORT.get(SOURCE_BUCKET.get(k, ('其他', ''))[0], '其他')}"
+                      f"{int(v / total * 100)}%"
+                      for k, v in ordered[:3])
+    return f"混合（{parts}）", majority
 COMPETITION_FILLS = ["blue", "cyan", "green", "amber", "red"]
 
 
@@ -342,6 +364,12 @@ def load_case(path: Path) -> dict:
     topic_labels = {str(k).strip(): str(v).strip()
                     for k, v in labels_raw.items() if str(k).strip() and str(v).strip()}
     # 地区显示名（可选）：{市场代码: 中文名}。切片键与 state 仍用代码，只换下拉里的文字。
+    # 语言分组（可选）：{"英语": ["SG", "HK-EN"], "繁体中文": ["HK-ZH"]}，决定页面「语言」筛选。
+    lang_raw = raw.get("语言分组") or raw.get("language_groups") or {}
+    if not isinstance(lang_raw, dict):
+        raise SystemExit("Case 的「语言分组」应为 {语言名: [市场代码]} 对象")
+    language_groups = {str(k).strip(): [str(x).strip().upper() for x in (v or [])]
+                       for k, v in lang_raw.items() if str(k).strip()}
     region_raw = raw.get("地区名称") or raw.get("region_labels") or {}
     if not isinstance(region_raw, dict):
         raise SystemExit("Case 的「地区名称」应为 {市场代码: 展示名} 对象")
@@ -355,6 +383,7 @@ def load_case(path: Path) -> dict:
         "topics_raw": pick("主题") or "",
         "topic_labels": topic_labels,
         "region_labels": region_labels,
+        "language_groups": language_groups,
     }
 
 
@@ -572,7 +601,9 @@ def build_question_bank(rows: list[dict], config: dict, topics: list[str]) -> di
     topic_index = {topic: index for index, topic in enumerate(topics)}
     questions = []
     for index, row in enumerate(rows, 1):
-        question_id = f"{index:04d}"
+        # 题号默认按行序；题库给了 id 列就用它（删题、改类型、调序都不再改变编号，
+        # 采集文件名与译文键都绑在题号上，编号一动全部错位）。
+        question_id = str(row.get("id") or "").strip() or f"{index:04d}"
         topic = str(row.get("topic") or "").strip()
         if topic not in topic_index:
             raise SystemExit(f"题库第 {index} 行主题 {topic!r} 不在 Case 主题内：{topics}")
@@ -653,10 +684,13 @@ def discover_sample_files(folder: Path, questions: list[dict]):
             grouped[qid].append(path)
             continue
         if not prompt:
-            # 题面缺失：回退到文件名题号，留痕
+            # 题面缺失：回退到文件名题号，留痕。多轮采集的文件名是 0001-r2.json，
+            # 去掉 -rN 再对题号，否则第 2、3 次运行会被当成没归属而丢掉（AIO 全部不回传题面）。
             stem = path.stem.strip()
+            base = re.sub(r"-r\d+$", "", stem)
             candidate = stem if stem in known_qids else (
-                stem.zfill(4) if stem.isdigit() and stem.zfill(4) in known_qids else None)
+                base if base in known_qids else (
+                    base.zfill(4) if base.isdigit() and base.zfill(4) in known_qids else None))
             if candidate:
                 grouped[candidate].append(path)
                 fallbacks.append({"code": "FILENAME_FALLBACK", "file": str(path),
@@ -1111,13 +1145,15 @@ def build_sources(metrics: dict, answers: list[dict],
     for answer in discovery:
         target_mention_by_answer[answer["answer_id"]] = target_of(answer)["mentioned"]
         for citation in answer["citations"]:
-            canonical = citation.get("canonical_url")
-            if not canonical:
-                continue
+            # 域名计数不看 canonical_url：没有规范化 URL 的引用也有 host，引擎侧同样计入，
+            # 这里跳过会让域名份额和渲染层对不上（2026-11-18 修）。
             source_type = citation.get("source_type") or "other"
             domain = citation.get("registrable_domain") or citation.get("host") or ""
             if domain:
                 domain_types[domain][source_type] += 1
+            canonical = citation.get("canonical_url")
+            if not canonical:
+                continue
             page_meta.setdefault(canonical, {"type": source_type})
             page_answers[canonical].add(answer["answer_id"])
             raw_page_counts[canonical] += 1
@@ -1158,8 +1194,7 @@ def build_sources(metrics: dict, answers: list[dict],
     domain_rows = []
     for domain, raw_count in _top(sorted(raw_domain_counts.items(),
                                          key=lambda kv: (-kv[1], kv[0])), source_limit):
-        counter = domain_types.get(domain)
-        bucket = SOURCE_BUCKET.get(counter.most_common(1)[0][0], ("其他", ""))[0] if counter else "其他"
+        bucket, _ = domain_bucket(domain_types.get(domain))
         share = raw_count / raw_total if raw_total else None
         domain_rows.append([domain, fmt_pct(share) if share is not None else "—", bucket])
 
@@ -1167,9 +1202,8 @@ def build_sources(metrics: dict, answers: list[dict],
     # 原 top8 常被竞品与官网占满，内容规划里的第三方面板会因此空着（2026-09-22 实测）。
     third_party_rows = []
     for domain, raw_count in sorted(raw_domain_counts.items(), key=lambda kv: (-kv[1], kv[0])):
-        counter = domain_types.get(domain)
-        bucket = SOURCE_BUCKET.get(counter.most_common(1)[0][0], ("其他", ""))[0] if counter else "其他"
-        if bucket in ("自有网站", "竞品网站"):
+        bucket, majority = domain_bucket(domain_types.get(domain))
+        if majority in ("brand_official", "competitor_official"):
             continue
         share = raw_count / raw_total if raw_total else None
         third_party_rows.append([domain, fmt_pct(share) if share is not None else "—", bucket])
@@ -1408,7 +1442,8 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         raw_intent = str(row.get("diagnosis_intent") or "").strip()
         backend = CSV_INTENT_MAP.get(raw_intent.casefold()) or CSV_INTENT_MAP.get(raw_intent)
         questions.append({
-            "qid": index,
+            # 与 build_question_bank 用同一套题号：题库给了 id 就用它，删题不重排
+            "qid": int(str(row.get("id") or "").strip() or index),
             "en": str(row["query"]).strip(),
             "zh": str(row.get("question_zh") or "").strip(),
             "topic": str(row.get("topic") or "").strip(),
@@ -1419,6 +1454,7 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         })
 
     return {
+        "language_groups": case.get("language_groups") or {},
         "brand": case["brand"],
         "brand_display": f"{case['brand']} ★",
         # 展示名要剥掉的品类/产品线后缀词表（渲染层 displayBrand 用）。
@@ -1710,6 +1746,10 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
         # 尾巴 `?utm_source=...)` 会漏成可见文本。
         chunk = _re.sub(r"\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)",
                         r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', chunk)
+        # 采集把链接截断时（`[IBKR website](<https://www.example-broker.example` 没有收尾的 `&gt;)`），
+        # 残留的 `](&lt;` 会被下面的裸网址规则包成 `<a>`，渲染出 `](&lt;<a…` 的坏文本。
+        # 这里先去掉这个悬空前缀，让后面的裸网址规则把 URL 正常渲染成链接（2026-11-17 某项目 0011-r2）。
+        chunk = _re.sub(r"\]\(\s*&lt;\s*(?=https?://)", "", chunk)
         chunk = _re.sub(r"(?<![\"'=])(https?://[^\s<]+)", r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>', chunk)
         # 成对加粗已转换，剩下的连续星号都是跨单元格断裂的碎片（**LG…/…Wa**），删掉
         chunk = _re.sub(r"\*{2,}", "", chunk)
@@ -2429,6 +2469,10 @@ def main(argv=None) -> int:
             "unjudged_share": coverage["unjudged_share"],
             "limit": coverage["limit"],
             "unjudged_domains": len(coverage["candidates"]),
+            "low_volume_citations": coverage["low_volume_citations"],
+            "low_volume_share": coverage["low_volume_share"],
+            "low_volume_domains": coverage["low_volume_domains"],
+            "low_volume_threshold": coverage["low_volume_threshold"],
             "allowed_reason": args.allow_unjudged_domains.strip()
             if coverage["unjudged_share"] > coverage["limit"] else "",
         }
