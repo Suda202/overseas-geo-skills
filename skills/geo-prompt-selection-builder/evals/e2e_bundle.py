@@ -29,7 +29,7 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 RUNNER = SKILL / "scripts" / "run_selection_mode.py"
-CASE_REL = Path("references/input-examples/b2c-example.json")
+CASE_REL = Path("references/input-examples/youku-b2c.json")
 ROOT = Path(tempfile.mkdtemp(prefix="sel-bundle-e2e-"))
 rows: list[tuple[str, bool, str]] = []
 

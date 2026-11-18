@@ -1,9 +1,9 @@
-# 2026-09-16 门禁脚本去 Abrand 形态耦合
+# 2026-09-16 门禁脚本去 Bewinch 形态耦合
 
 ## 触发
 
-Ebrand 案例（US / ChatGPT / 5 题 × 15 次重复）跑 `verify_report_data.py --self-test` 时，
-基线报 17 项失败，但逐条核实后**没有一项是数据错误**：17 项全部来自校验器写死 Abrand 案例的形态。
+Edgelight 案例（US / ChatGPT / 5 题 × 15 次重复）跑 `verify_report_data.py --self-test` 时，
+基线报 17 项失败，但逐条核实后**没有一项是数据错误**：17 项全部来自校验器写死 Bewinch 案例的形态。
 
 ## 改了什么
 
@@ -18,9 +18,9 @@ Ebrand 案例（US / ChatGPT / 5 题 × 15 次重复）跑 `verify_report_data.p
 
 ## 门禁结果
 
-Ebrand 案例：`baseline: 通过`，19 个注入错误全部检出，退出码 0。
+Edgelight 案例：`baseline: 通过`，19 个注入错误全部检出，退出码 0。
 
-Abrand 形态回归：`_mutations` 在 `tests/fixture_report_data.json` 上仍产出 19 条并正确取到 `MY||` / `SG||` 键，未破坏原形态。
+Bewinch 形态回归：`_mutations` 在 `tests/fixture_report_data.json` 上仍产出 19 条并正确取到 `MY||` / `SG||` 键，未破坏原形态。
 
 ## 未改动（仍为已知边界）
 

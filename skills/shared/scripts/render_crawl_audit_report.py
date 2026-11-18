@@ -18,7 +18,7 @@ findings.json 里，脚本本身不写死任何数据集。
 
 findings.json 结构（字段都可省）
     {
-      "title": "Bbrand smart dash cams · Discovery 题可见度统计",
+      "title": "Botslab smart dash cams · Discovery 题可见度统计",
       "summary_notes": ["摘要里要额外说的结论", ...],
       "audit_findings": ["### 1. 小标题\\n正文", ...],
       "unresolved": ["未判定项，一条一行", ...],
@@ -26,7 +26,7 @@ findings.json 结构（字段都可省）
     }
 
 用法
-    python3 render_crawl_audit_report.py --audit-dir <目录> [--target Bbrand]
+    python3 render_crawl_audit_report.py --audit-dir <目录> [--target Botslab]
 """
 
 from __future__ import annotations
@@ -37,21 +37,21 @@ from pathlib import Path
 
 # 归属展示用：域名 -> 品牌。只影响报告里的一列文字，不影响任何统计。
 OWNED_DOMAINS = {
-    "brand-b.example": "Bbrand（目标品牌）",
-    "rival-b1.example": "RivalB1（正式竞品）",
-    "rival-b5.example": "RivalB5（正式竞品）",
-    "rival-b6.example": "RivalB6（正式竞品）",
+    "botslab.com": "Botslab（目标品牌）",
+    "70mai.com": "70mai（正式竞品）",
+    "reolink.com": "Reolink（正式竞品）",
+    "aosulife.com": "aosu（正式竞品）",
     "eufy.com": "eufy",
     "arlo.com": "Arlo",
     "ring.com": "Ring",
-    "rival-b2.example": "RivalB2",
+    "viofo.com": "VIOFO",
     "blackvue.com": "BlackVue",
     "thinkware.com": "Thinkware",
-    "rival-b3.example": "RivalB3",
+    "vantrue.com": "Vantrue",
     "nextbase.com": "Nextbase",
     "garmin.com": "Garmin",
     "rexingusa.com": "Rexing",
-    "rival-b4.example": "RivalB4",
+    "redtigercam.com": "REDTIGER",
     "google.com": "Google Nest",
     "tapo.com": "TP-Link Tapo",
     "tp-link.com": "TP-Link Tapo",
@@ -427,7 +427,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--audit-dir", required=True)
-    parser.add_argument("--target", default="Bbrand")
+    parser.add_argument("--target", default="Botslab")
     parser.add_argument("--out", help="默认写到 <audit-dir>/audit-report.md")
     args = parser.parse_args()
     audit_dir = Path(args.audit_dir).expanduser().resolve()

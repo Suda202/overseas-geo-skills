@@ -38,7 +38,7 @@
 {
   "question_zh": "中文释义",
   "answer": "该题在该平台该市场的回答原文（最多 6000 字）",
-  "brands": [{"name": "Abrand ★", "domain": "brand-a.example", "rank": 1, "target": true}],
+  "brands": [{"name": "Bewinch ★", "domain": "bewinch.com", "rank": 1, "target": true}],
   "citations": [{"title": "页面标题", "url": "https://…", "host": "forbes.com"}]
 }
 ```
@@ -53,10 +53,10 @@
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `brand` | string | 目标品牌名，如 `Abrand` |
-| `brand_display` | string | 展示名，含 `★`，如 `Abrand ★` |
+| `brand` | string | 目标品牌名，如 `Bewinch` |
+| `brand_display` | string | 展示名，含 `★`，如 `Bewinch ★` |
 | `brand_suffixes` | string[] | 展示时从品牌名剥掉的品类/产品线后缀（`--brand-suffixes` 注入）；空数组时渲染层用内置净水器词表兜底 |
-| `official_domain` | string | 官网域名，如 `brand-a.example` |
+| `official_domain` | string | 官网域名，如 `bewinch.com` |
 | `category` | string | 品类中文名，如 `台式净饮机` |
 | `generated_at` | string | ISO 时间戳 |
 | `regions` | string[] | 市场代码，渲染为顶层 tab，如 `["MY","SG"]` |
@@ -98,7 +98,7 @@
   },
   "matrix": {
     "platforms": ["ChatGPT","AIO","Gemini","Perplexity"],
-    "mention":  [{"name":"Abrand ★","target":true,"vals":[64,51,52,54]}],
+    "mention":  [{"name":"Bewinch ★","target":true,"vals":[64,51,52,54]}],
     "share":    [{"name":"…","target":true,"vals":[27,16,22,19]}],
     "rank":     [{"name":"…","target":true,"vals":[4.1,3.8,4.4,4.6]}],
     "sent":     [{"name":"…","target":true,"vals":[100,66.7,100,100]}],
@@ -123,8 +123,8 @@
     "matrix": {
       "columns": ["正向率","正向句","负向句"],
       "rows": [
-        {"brand":"Abrand","target":true,"values":["96.3%","157","6"]},
-        {"brand":"RivalA1","values":["81.7%","107","24"]}
+        {"brand":"Bewinch","target":true,"values":["96.3%","157","6"]},
+        {"brand":"Coway","values":["81.7%","107","24"]}
       ]
     }
   },
@@ -136,7 +136,7 @@
         "shopping_mode_rate": {"numerator": 25, "denominator": 68, "raw": 0.368, "display": "37%"},
         "shopping_mode_rate_by_intent": {"discovery": {"…": "…"}},
         "all_intent_shopping_answers": 32,
-        "target": {"name": "Abrand", "shopping_visibility": {"numerator": 2, "denominator": 25, "…": "…"},
+        "target": {"name": "Bewinch", "shopping_visibility": {"numerator": 2, "denominator": 25, "…": "…"},
                    "shopping_exposure_rate": {"…": "…"}, "average_card_position": {"…": "…"}, "card_count": 3},
         "brands": [], "products": [], "target_products": [],
         "competitor_products_where_target_absent": [], "merchants": [],
@@ -219,7 +219,7 @@
 - `discovery` 是布尔，取该题的诊断意图是否为 `discovery`；`target_in_question` 是布尔，取题面是否点名目标品牌（用与正文识别同一套别名匹配）；`mentioned` 是布尔，取目标品牌在该题的有效回答里是否出现过；该题在本切片无有效答案时 `mentioned` 为 `null`（与 `rank` 的 `—` 同步）。
 - `mention_rank`（本题的提及率排名，按提及回答数在全部纳入对象里排并列名次，本品没被提到为 `—`）、`position`（本品被提到时的平均提及位置）、`citation_rate`（正文至少引用一次官网的回答 ÷ 有效回答）给问题明细用；`rank` 是旧字段（本品平均位置，没提到时写对象总数），保留兼容。
 - 前三者原是内容规划「官网阵地」清单的取数判据（内容规划模块 2026-11-07 已从 HTML 删掉，字段保留）：**`(discovery || target_in_question) && !mentioned`** 才是内容缺口。理由是该题的目标品牌为被期待对象——发现题里用户没点名品牌，品牌本该争夺一席；题面点名目标品牌时，AI 说不出它的话就是缺口；而题面只点名竞品的评价题、以及只问品类选择标准的品类认知题不算。**不要**让渲染层去比 `intent` 的中文标签或 `mention_rate` 的百分比字符串。
-- `sentiment` 仅情绪题有值，其余为 `null`。**该列是目标品牌口径**（目标品牌在该题该切片判读句子的正向情感占比）；`—` 表示目标品牌在该切片无正负句，属正常空值，不是回填缺陷——发现题的回答常只罗列品牌（中性提及），评价题问竞品时目标品牌可能不在答案里（Abrand 实测：有值 126 条，其余 `—` 全部核实为真实无正负句）。抽屉内「每个回答的逐品牌情感」是另一个功能（`details[key].sentiment`），两者定位不同。
+- `sentiment` 仅情绪题有值，其余为 `null`。**该列是目标品牌口径**（目标品牌在该题该切片判读句子的正向情感占比）；`—` 表示目标品牌在该切片无正负句，属正常空值，不是回填缺陷——发现题的回答常只罗列品牌（中性提及），评价题问竞品时目标品牌可能不在答案里（Bewinch 实测：有值 126 条，其余 `—` 全部核实为真实无正负句）。抽屉内「每个回答的逐品牌情感」是另一个功能（`details[key].sentiment`），两者定位不同。
 - **`details[key].sentiment` 有提及门禁**：只列该回答里**真的被判出过句子**的品牌（`build_answer_sentiment` 按 `(question_id, region, platform)` 匹配判读结果），没提到的品牌不出现。聚合板块（主题矩阵、品牌占比条）是全批次统计，换展示品牌可整体替换；逐回答**不得硬塞**——客户中途换竞品的完整规则见 [客户中途换竞品](competitor-swap.md)。
 - `mention_rate`/`share`/`citation_share` 是该题在该切片下的值。
 

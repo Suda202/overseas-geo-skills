@@ -27,7 +27,7 @@ def hosts(*pairs):
 class TestInfer(unittest.TestCase):
     def brands(self):
         return [
-            {"name": "Ybrand", "aliases": ["Ybrand", "某平台"], "official_domains": ["brandy.example"]},
+            {"name": "YOUKU", "aliases": ["YOUKU", "优酷"], "official_domains": ["youku.tv"]},
             {"name": "Viu", "aliases": ["Viu"]},
             {"name": "Bilibili", "aliases": ["Bilibili", "哔哩哔哩", "B站"]},
             {"name": "Mango TV", "aliases": ["MangoTV", "Mango TV", "芒果TV", "芒果"]},
@@ -40,8 +40,8 @@ class TestInfer(unittest.TestCase):
         self.assertEqual(["bilibili.tv"], inferred["Bilibili"])
 
     def test_already_declared_domains_are_not_reinferred(self):
-        inferred, _ = MODULE.infer(hosts(("brandy.example", 9), ("viu.com", 1)), self.brands())
-        self.assertNotIn("Ybrand", inferred)          # 目标由 Case 决定，不重复推断
+        inferred, _ = MODULE.infer(hosts(("youku.tv", 9), ("viu.com", 1)), self.brands())
+        self.assertNotIn("YOUKU", inferred)          # 目标由 Case 决定，不重复推断
 
     def test_abbreviations_go_to_candidates_not_inference(self):
         """mgtv.com ↔ Mango TV 是缩写，归一后不相等，必须留给搜索/人工，不能硬猜。"""

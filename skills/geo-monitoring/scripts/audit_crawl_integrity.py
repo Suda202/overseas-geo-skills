@@ -89,7 +89,7 @@ MARKER_BARE = re.compile(r"(?<!\()\[([^\]\n]{1,80})\]\[(\d+)\]")
 MARKER_ANY = re.compile(r"\[([^\]\n]{1,80})\]\[(\d+)\]")
 # D6 — 采集在改写字词。这些是实测抓到的损坏，不是启发式猜测：
 # 带连字符的词被替换成不成词的片段。新增案例请追加，不要用正则去猜——
-# 产品名与型号（G3-Pro、RivalA4-A1）与真损坏无法靠形状区分。
+# 产品名与型号（G3-Pro、Waterdrop-A1）与真损坏无法靠形状区分。
 KNOWN_TEXT_CORRUPTION = {
     "plug-and-dline": "plug-and-play",
     "faucet-mipe": "faucet-mounted",

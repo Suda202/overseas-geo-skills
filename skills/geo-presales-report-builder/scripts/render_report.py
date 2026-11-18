@@ -205,7 +205,7 @@ def build_body(meta: dict) -> str:
             )
             body.append(shop_panel("商品卡提及率", "出现商品卡的回答里，有该品牌（SKU）商品卡的回答占比。只数商品卡，不含正文提及。", "shopVis"))
             body.append(shop_panel("商品卡平均位置", "该品牌（SKU）商品卡在每条回答里最靠前那张的位置取平均，数值越小越靠前。", "shopPos"))
-            # offers 没返回时不出这一栏：全是 0% 是采集缺口，不是品牌表现（2026-11-11 Obrand）
+            # offers 没返回时不出这一栏：全是 0% 是采集缺口，不是品牌表现（2026-11-11 Oraimo）
             if meta.get("shopping_offers_returned", True):
                 body.append(shop_panel("官网购买链接覆盖率", "出现该品牌（SKU）商品卡的回答里，商品卡带官网购买链接的回答占比。", "shopLink"))
             body.append("</div>")
@@ -330,7 +330,7 @@ def check_javascript(js: str, source: Path) -> None:
 def slim_for_html(data: dict) -> dict:
     """剥掉渲染层用不到的大字段，再嵌进 HTML。
 
-    记录级的 `brands` 是每题 × 全部纳入对象的统计（Abrand 有 96 个对象），
+    记录级的 `brands` 是每题 × 全部纳入对象的统计（Bewinch 有 96 个对象），
     45 个切片合计约 20MB，而渲染层一个字段都没用到——页面只用切片级的
     `competition`/`matrix`。它保留在 report-data.json 里供归档与下游读取，
     但不进 HTML，否则单文件会从 3.6MB 涨到 22MB。

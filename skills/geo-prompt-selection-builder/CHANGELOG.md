@@ -1,6 +1,6 @@
 ## 3.19.2（2026-11-17）官方域名去重
 
-- 触发依据：Suda 2026-11-17「把官方域名去重加上」。Pbrand 的 `该品牌官网` 与 `www.该品牌官网` 这类同一个站的重复写法此前按不同项收，会重复进 `official_domains`。
+- 触发依据：Suda 2026-11-17「把官方域名去重加上」。PETKIT 的 `petkit.com` 与 `www.petkit.com` 这类同一个站的重复写法此前按不同项收，会重复进 `official_domains`。
 - `normalize_case.py`：`_domains` 改为单独实现，按「忽略协议、大小写、`www.` 前缀、默认端口、末尾斜杠」归一后去重，保留第一次出现的写法并给 `duplicate_item` 告警；不同路径（`/hk`、`/sg`）按不同站保留。其他多值字段的精确重复仍按错误处理，行为不变。
 - 文档：`references/input-contract.md` 官方域名一行补去重规则。
 - 回归：`e2e_input_contract.py` 55/55（新增两条：重复写法去重并告警、不同市场路径保留）。
@@ -38,7 +38,7 @@
 - **机制**：提示不再要求写处理记录，`config.warning_decisions` 不再读；结论只分两档（Not ready / Ready），不再按一手数据或假设级证据封顶 Usable。推翻 10-31、11-02（审核清单 D5）的口径。
 - **W36 没改**：清单原本建议只查数字，用 10-22 盲评样本复测后撤回。139 题里盲评判条件不合格 40 道：完整 W36 报 57 道、命中 38 道；只查数字只报 2 道、命中 1 道。关键词比对误报约三分之一，但不能删。
 - 同步：output-contract.md 门禁一节重写；selection-rules.md、SKILL.md、demand-side-signals.md、online-runner.md、runner TASK 的处理记录说法；shared/prompt-generation-principles.md 去掉 `audience_terms`。
-- 验收：8 份客户题库（brand-o KE/NG、某车载品牌、Bbrand、Ubrand、Dbrand、某制氧机客户两份，共 535 题；约束条件表补了占位品牌情况）新旧两版对比，报错逐条一致（Dbrand 门禁 68 的 1 条照报，其余 0），提示只少了清单里列的编号，7 份结论从 Usable 变 Ready。test_validate 55 passed、test_prompt_gates 通过、verify_workflow 53/53、e2e_input_contract 53/53、e2e_language_check 35/35、e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_precollect 36/36、e2e_industry_kb 15/15、e2e_bundle 11/11；check_skill_terms 无命中。改前快照 `.snapshots/validator-slim-20261113-185912/`。
+- 验收：8 份客户题库（oraimo KE/NG、路拓、Botslab、INSIZE、EcoHash、思特森两份，共 535 题；约束条件表补了占位品牌情况）新旧两版对比，报错逐条一致（EcoHash 门禁 68 的 1 条照报，其余 0），提示只少了清单里列的编号，7 份结论从 Usable 变 Ready。test_validate 55 passed、test_prompt_gates 通过、verify_workflow 53/53、e2e_input_contract 53/53、e2e_language_check 35/35、e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_precollect 36/36、e2e_industry_kb 15/15、e2e_bundle 11/11；check_skill_terms 无命中。改前快照 `.snapshots/validator-slim-20261113-185912/`。
 
 ## 3.17.0（2026-11-13）补充内容改多文件上传；删 question_types 兼容；应用商店按 App 名称搜
 
@@ -49,7 +49,7 @@
 - runner：prepare 把上传文件拷进 `inputs/supplement/`；precollect 把它作为第四类「补充内容」读进 `signals.csv`，PDF 和图片列在 `summary.json` 的 `to_read`；登记检查同样适用（出处写「补充内容：」也算登记）。没传文件这一类记 skipped。demand-side-signals.md 不再从工作目录排除，品牌方上传了搜索数据时读「GSC 与搜索词报告怎么用」。TASK 和 online-runner.md 同步改；补充内容不再是「品牌方说明、只作参考」。
 - **删 question_types 兼容**：导出脚本和 output-contract.md 删掉「旧模板带这四列照收、忽略」的说法，上传只有五列，后端按 `diagnosis_intent` 定口径；shared/canonical-intent-mapping.md 的「过渡字段」两段改写成现行口径。`check_skill_terms.py` 把 `question_types`、`purchase_intent`、`persona_name`、`scene_name` 列为退役说法。
 - **应用商店按 App 名称搜**：`shared/scripts/collect_reviews.py` 的 google-play、app-store 收应用 ID 或名称；给名称时先用 DataForSEO app_searches 在该市场搜，只取标题含这个名称的第一个应用，搜不到记失败、不取别的应用。plan.json 的 `app_ids` 改为 `app_names`（一份名单两个商店共用），PLAN 任务不再让 agent 找应用 ID。
-- 回归：e2e_input_contract 53/53（新增补充内容 5 个文件读取、传字符串、超 15 个、格式不支持、文件不存在、超 20 MB）；e2e_precollect 36/36（新增补充内容拷贝与读取、没登记只记 warning、没上传记 skipped；流媒体用例改按 App 名称）；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_bundle 7/7、e2e_industry_kb 15/15；check_skill_terms 无命中。真实付费验证 collect_reviews 按名称搜：App Store「Trip.com」匹配到 681752345 并取 25 条评价；Google Play「Sbrand Security」没有同名应用，按设计记失败（共 0.0031 美元）。read_supplement 用 某安全软件真实导出（GSC 5 个 CSV、Semrush、Google Ads 搜索词 xlsx、知识库 md）核对：GSC 维度导出（国家、设备、网页、图表）不再混进信号。本次没动 validator；3.18.0 validator 精简合入后复跑：test_validate 55 passed、verify_workflow 53/53，上面各项 e2e 照旧全过。改前快照 `.snapshots/supplement-files-20261113-185909/`。
+- 回归：e2e_input_contract 53/53（新增补充内容 5 个文件读取、传字符串、超 15 个、格式不支持、文件不存在、超 20 MB）；e2e_precollect 36/36（新增补充内容拷贝与读取、没登记只记 warning、没上传记 skipped；流媒体用例改按 App 名称）；e2e_repair_loop 11/11、e2e_review_loop 14/14、e2e_bundle 7/7、e2e_industry_kb 15/15；check_skill_terms 无命中。真实付费验证 collect_reviews 按名称搜：App Store「Trip.com」匹配到 681752345 并取 25 条评价；Google Play「360 Total Security」没有同名应用，按设计记失败（共 0.0031 美元）。read_supplement 用 360 安全卫士真实导出（GSC 5 个 CSV、Semrush、Google Ads 搜索词 xlsx、知识库 md）核对：GSC 维度导出（国家、设备、网页、图表）不再混进信号。本次没动 validator；3.18.0 validator 精简合入后复跑：test_validate 55 passed、verify_workflow 53/53，上面各项 e2e 照旧全过。改前快照 `.snapshots/supplement-files-20261113-185909/`。
 
 ## 3.16.0（2026-11-13）输入合同按线上新表单改
 
@@ -84,7 +84,7 @@
 - `collect_answers.py` 从 `geo-presales-report-builder/scripts/` 移到 `geo-monitoring/scripts/`；`geo-presales-crawl-integrity` 退役，脚本 `audit_crawl_integrity.py` 进 `geo-monitoring/scripts/`，平台字段合同、数据分层契约、缺陷目录进 `geo-monitoring/references/`，原 SKILL.md 正文改成 `geo-monitoring/references/crawl-integrity.md`。
 - 本 skill 跟着改：`run_selection_mode.py` 的 `PARTIAL_COPIES` 改拷 geo-monitoring 的采集程序、检查脚本和平台合同（不再拷 report-builder 的整个 `scripts/`），TASK 里研究预跑命令换路径；selection-rules.md、online-runner.md、client-facing-base.md 的采集路径；runner-ops.md 部署清单写明要带哪些文件；`e2e_gateway.py` 换路径。**研发部署线上选词时要同步换成新路径。**
 - 其他 skill 同步：pipeline、report-builder（`run_pipeline.py` 从 geo-monitoring 调采集和检查）、report-audit、geo-metrics 的 SKILL.md 与 references，shared 的 `render_crawl_audit_report.py`、`skill-layout-conventions.md`。改前快照 `.agents/skills/.snapshots/migrate-collect-20261112-190006/`，旧文件在废纸篓 `migrate-collect-20261112/`。
-- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_input_contract 42/42、e2e_repair_loop 11/11、e2e_review_loop 14/14；按 `PARTIAL_COPIES` 拷出的工作目录里 `collect_answers.py --dry-run` 正常；某制氧机客户 collect_us_r2 上新旧 `audit_crawl_integrity.py` 输出逐键一致，`collect_answers.py --check-only` 45/45，`run_pipeline.py` 跑过采集检查、采集校验、词表、数据生成，停在译文暂停点；report-builder、report-audit、report-editor、sentiment-judge 单元测试通过。`e2e_gateway.py`（付费）没跑。
+- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 62/62；e2e_input_contract 42/42、e2e_repair_loop 11/11、e2e_review_loop 14/14；按 `PARTIAL_COPIES` 拷出的工作目录里 `collect_answers.py --dry-run` 正常；思特森 collect_us_r2 上新旧 `audit_crawl_integrity.py` 输出逐键一致，`collect_answers.py --check-only` 45/45，`run_pipeline.py` 跑过采集检查、采集校验、词表、数据生成，停在译文暂停点；report-builder、report-audit、report-editor、sentiment-judge 单元测试通过。`e2e_gateway.py`（付费）没跑。
 
 ## 3.14.3（2026-11-12）第二轮审核 R1–R20：试跑后回写归选词；语言不设白名单；门禁 12 认品牌别名
 
@@ -137,7 +137,7 @@
 
 - **题量只在 selection-rules.md 第 7 步定义**：每条产品线 × 每个市场候选题 30–60 道。超过 60 由告警改为报错（门禁 47，成本上限）；不到 30 仍是告警 W47，按产品线 × 市场计数（原来只按产品线）。删掉第 6 步、client-facing-base.md 里的「候选题不设上限」。主题个数不设限写进第 6 步。
 - **线上补题轮**：`run_selection_mode.py` 检查通过但不到 30 道时写 `TOPUP.md` 补一轮（先开中档我方补充行和假设行，再用低档行，不许同义改写；`--repair-rounds 0` 不补）；补完没过检查退回原题库；仍不够照常交付，`result.json` 记 `top_up` 和一条 warning。e2e_repair_loop 加 4 例（11/11）。
-- **约束条件表门禁不再能绕过**：`brand_status` 必填；矩阵行或题挂了约束条件却没有 `attribute_plan` 报错；题的 `attribute_ref` 必须在表里；表条目可带 `product_line`，只管那条产品线的题（门禁 67、68）。online-runner.md 补第 3 步。**影响**：3.11.0 之前写的题库（某制氧机客户、Ubrand、某车载品牌、Bbrand、brand-o）重跑 validator 会因缺品牌情况报错，维护这些题库时先补约束条件表。
+- **约束条件表门禁不再能绕过**：`brand_status` 必填；矩阵行或题挂了约束条件却没有 `attribute_plan` 报错；题的 `attribute_ref` 必须在表里；表条目可带 `product_line`，只管那条产品线的题（门禁 67、68）。online-runner.md 补第 3 步。**影响**：3.11.0 之前写的题库（思特森、INSIZE、路拓、Botslab、oraimo）重跑 validator 会因缺品牌情况报错，维护这些题库时先补约束条件表。
 - **`write_prompt_reasons.py` 降档也看主约束**：原来只拿 `constraints`（买家说法关键词）去对约束条件表，关键词很少和选项同名，主约束明显劣势的题不降档；现在 `attribute_ref` 和关键词都看，带 `product_line` 的条目按产品线取。门禁 68 的范围在 output-contract.md 写明，其余条件列入人工检查。
 - **已开放类型的行要判档**：validator 按 `business_goals` 判哪些类型已开放（`opened_types`），这些行缺业务优先级报错、高中档没题给 W48（原来只查发现行）。W59 只管发现主题，删掉其他类型「至少 5 道」（替代每竞品 1 道、交易每线 1 道，结构上凑不满）。
 - **交易、售后**：没有对应目标，本期只登记、不判档不出题；删掉 type-branches.md「品牌方把官网直购、客服列为目标可提到中」。「开放时要改的地方」改写成「还没开放的部分」（线上非发现、交易售后、后端枚举三块）。
@@ -194,7 +194,7 @@
 
 ## 3.11.0（2026-11-12）对客 Base 加「约束条件」表：品牌情况、公开硬事实上的相对竞品；业务优先级依据写赢面
 
-触发依据：Suda 2026-11-12。Dbrand 客户指出词库里有他们没有的能力（按秒计费、自带模型托管）。官网首页写了按秒计费，文档写的是按小时，我们按首页记成了品牌能力；品牌能力清单只在内部 notes，品牌方看不到也改不了。Suda 定：按约束条件逐条判品牌有没有、和竞品比的公开硬事实，放进对客表；参照 Value Proposition Canvas（匹配要按客群、要有证据）和 Playing to Win（赢面写进业务优先级依据）。
+触发依据：Suda 2026-11-12。EcoHash 客户指出词库里有他们没有的能力（按秒计费、自带模型托管）。官网首页写了按秒计费，文档写的是按小时，我们按首页记成了品牌能力；品牌能力清单只在内部 notes，品牌方看不到也改不了。Suda 定：按约束条件逐条判品牌有没有、和竞品比的公开硬事实，放进对客表；参照 Value Proposition Canvas（匹配要按客群、要有证据）和 Playing to Win（赢面写进业务优先级依据）。
 
 - **约束条件表**（client-facing-base.md）：`约束条件 | 品牌情况 | 相对竞品 | 相对竞品依据 | 产品线 | 市场`，一个选项一行，第七张表。品牌情况 有 / 没有 / 待确认，「没有」要有明确证据，哪里都没写的是待确认、照常出题、出题原因写「待核实」；出处只记 JSON `brand_status_basis`，不进对客表。相对竞品 明显优势 / 明显劣势 / 持平 / 未知，只判价格、规格、数量、计费方式、区域这类公开硬事实，比不出来填未知。不判重要性、不放目标客户和场景。表名不叫属性池：名单就是三张表的约束条件选项，里面有品牌没有的条件，属性池又是 2.19.0 退役的旧口径。
 - selection-rules.md：第 2 步品牌官网的出处规则（文档、控制台、条款、规格表优先于首页和宣传页，冲突填待确认并记品牌事实核查）；第 3 步品牌情况、相对竞品只判硬事实，「品牌明显劣势」就是相对竞品为明显劣势的行；第 5 步业务优先级依据写赢面，品牌方点名的行不因赢面降档，我们补充的行起决定作用的条件明显劣势或品牌没有的可降为低；第 7 步降档由脚本从约束条件表推，题上手写 `brand_weakness` 只用于表达不了的情况。
@@ -205,7 +205,7 @@
 
 ## 3.10.0（2026-11-11）对客表不再限发现行；「只出发现」只管线上
 
-触发依据：Suda 2026-11-11「多维表格没有这个限制啊，只是线上有限制而已」。Dbrand 按品牌方要求出了对比、替代、评估、验证四类，`check_client_base.py` 却要求把这几行从对客表删掉。
+触发依据：Suda 2026-11-11「多维表格没有这个限制啊，只是线上有限制而已」。EcoHash 按品牌方要求出了对比、替代、评估、验证四类，`check_client_base.py` 却要求把这几行从对客表删掉。
 
 - selection-rules.md → 1、5、7，type-branches.md，client-facing-base.md，output-contract.md `slices`，SKILL.md：线上一条命令跑只出发现题；本地选词按品牌方在 `config.business_goals` 选的目标开放对应类型（判档、进对客表、出题、聚主题），没选的目标照旧只登记。
 - `check_client_base.py` 不再把非发现行当问题，这些行照常查业务优先级和依据。
@@ -233,7 +233,7 @@
 
 ## 3.8.1（2026-11-11）多产品线共用一个 Base 的三条运维坑
 
-Suda 定，起因是某制氧机客户第二期加了 DA400 Air：同一份对客表装两条产品线时连踩三个坑，都是「编号必须跨产品线唯一」这条规则被违反造成的。
+Suda 定，起因是思特森第二期加了 DA400 Air：同一份对客表装两条产品线时连踩三个坑，都是「编号必须跨产品线唯一」这条规则被违反造成的。
 
 - 切片编号撞车：两条线都从 M-001 起，矩阵里出现同名切片，题目链接按编号解析会挂到另一条线的行上。改成接续编号（M-015 起）。
 - 题号撞车：两条线都从 Q001 起，`write_prompt_reasons.py` 按题号匹配会错配。改成接续编号（Q046 起）。
@@ -337,7 +337,7 @@ Suda 定，起因是某制氧机客户第二期加了 DA400 Air：同一份对�
 
 - `net.py reddit <帖子 URL> --proxy`：网页版取评论，解析 `<shreddit-comment>`；只有顶层评论，折叠的「N more replies」和主帖正文取不到；搜索词不支持（提示先 `net.py search`）。顺带修正境内模式的说法：RSS 连不上，网页版经代理可以。
 - `run_selection_mode.py` 的 Reddit 渠道：RSS 搜索失败（403 或没有帖子）时改用 `net.py search "reddit <词>"` 拿帖子链接、按 URL 判相关性；读帖 RSS 失败时改 `--proxy`，一个渠道最多 `PRECOLLECT_PROXY_PAGES`=2 帖付费，额度用完的帖子在 reason 里写明。`summary.json` 的社区渠道多 `proxy_pages`。解析器兼容网页版的「作者 · N 赞 · 日期 · 链接」元信息。
-- 渠道表加 `scope` 字段：RTINGS 只测它自己的约 28 个品类（电视、显示器、耳机、吸尘器、床垫、路由器、相机、跑鞋等），客户品类不在其中时计划里可以跳过并写原因；没写 scope 的固定渠道仍然不能跳。2026-11-11 实测 Bbrand 行车记录仪在 RTINGS 没有对应分类，那次「rtings 没有相关页面」是品类本身没有。
+- 渠道表加 `scope` 字段：RTINGS 只测它自己的约 28 个品类（电视、显示器、耳机、吸尘器、床垫、路由器、相机、跑鞋等），客户品类不在其中时计划里可以跳过并写原因；没写 scope 的固定渠道仍然不能跳。2026-11-11 实测 Botslab 行车记录仪在 RTINGS 没有对应分类，那次「rtings 没有相关页面」是品类本身没有。
 - `evals/e2e_precollect.py` 29 → 30 项：RSS 403 改网页版、网页版额度用完、写了 scope 的站可跳过。
 
 ## 3.6.0（2026-11-11）搜索服务：Scrapeless、DataForSEO 采集收成 HTTP 接口，密钥只放服务端
@@ -414,7 +414,7 @@ Suda 定，起因是某制氧机客户第二期加了 DA400 Air：同一份对�
 
 ## 3.3.6（2026-11-10）品牌别名改收「认不出的写法＋不含品牌名的自有产品」，产品提及计入母品牌
 
-触发依据：Suda 2026-11-10 定口径「不含品牌名的子品牌和产品，提及计入母品牌」（与 Profound Asset Hierarchies 一致，原文「every mention of a sub-asset also counts toward OpenAI, the parent brand」）；同日基线读数证明别名会改变提及数：同一套识别去掉全部别名，Abrand 提及少 7%、Tbrand 少 5%，Bbrand 不变。另外本 skill 两处说法与 PRD 矛盾：`input-contract.md` 写「产品系列名和型号不从品牌方收」，PRD 和研发文档写的是品牌别名包含产品系列名。只改字段说明，字段名、表单、`normalize_case.py` 不动。
+触发依据：Suda 2026-11-10 定口径「不含品牌名的子品牌和产品，提及计入母品牌」（与 Profound Asset Hierarchies 一致，原文「every mention of a sub-asset also counts toward OpenAI, the parent brand」）；同日基线读数证明别名会改变提及数：同一套识别去掉全部别名，Bewinch 提及少 7%、Trip.Biz 少 5%，Botslab 不变。另外本 skill 两处说法与 PRD 矛盾：`input-contract.md` 写「产品系列名和型号不从品牌方收」，PRD 和研发文档写的是品牌别名包含产品系列名。只改字段说明，字段名、表单、`normalize_case.py` 不动。
 
 - `input-contract.md`「品牌别名」与 `client-facing-base.md` 业务范围「品牌别名」改为：
   - 收：品牌名本身认不出的写法（全称、简称或缩写、旧名、本地语言名），以及不含品牌名的自有产品名和子品牌名（如 LG 的 PuriCare），提到它们也计入本品牌提及。

@@ -108,7 +108,7 @@ class ContractTests(unittest.TestCase):
 
     def test_answer_validity_ignores_reference_definition_lines(self):
         # 引用定义行是采集交付的引用数据，不是助手正文；URL 和标题里的词不能参与失败页判定
-        # （brand_t scraper.chatgpt/SG/0025.json、0026.json 实测）。
+        # （trip-biz scraper.chatgpt/SG/0025.json、0026.json 实测）。
         body = (
             "FCM covers the region well.\n\n"
             "[1]: https://www.fcmtravel.com/en-sg/one-login-technology/Singapore?utm_source=chatgpt.com "
@@ -264,15 +264,15 @@ class AliasMatchingTests(unittest.TestCase):
     """泰文/中文别名在连续文字里的匹配，以及跨对象撞名的最长优先消解。
 
     泰文无空格，品牌别名前后紧邻同文种字母也是 `\\w`；旧实现一律加词边界，
-    导致泰语市场的别名永不命中、提及率被静默少算。见《UNI_A-乙大学泰语称呼冻结》。
+    导致泰语市场的别名永不命中、提及率被静默少算。见《CAU-中农大泰语称呼冻结》。
     """
 
-    UNI_A = "มหาวิทยาลัยอัลฟา"
-    UNI_B = "มหาวิทยาลัยอัลฟาตอนใต้"
+    CAU = "มหาวิทยาลัยเกษตรจีน"
+    SCAU = "มหาวิทยาลัยเกษตรจีนตอนใต้"
 
     def test_thai_alias_matches_inside_running_text(self):
-        spans = find_alias_spans("แนะนำมหาวิทยาลัยอัลฟาตั้งอยู่ที่ปักกิ่ง", [self.UNI_A])
-        self.assertEqual([item["matched_text"] for item in spans], [self.UNI_A])
+        spans = find_alias_spans("แนะนำมหาวิทยาลัยเกษตรจีนตั้งอยู่ที่ปักกิ่ง", [self.CAU])
+        self.assertEqual([item["matched_text"] for item in spans], [self.CAU])
 
     def test_cjk_alias_matches_inside_running_text(self):
         spans = find_alias_spans("我在看红果短剧很开心", ["红果短剧"])
@@ -284,11 +284,11 @@ class AliasMatchingTests(unittest.TestCase):
         self.assertEqual(len(find_alias_spans("ShortMax", ["Max"])), 0)
 
     def test_cross_object_longest_alias_wins(self):
-        # 乙大学 `มหาวิทยาลัยอัลฟา` 是乙大学南校区 `มหาวิทยาลัยอัลฟาตอนใต้` 的前缀，
+        # 中农大 `มหาวิทยาลัยเกษตรจีน` 是华南农大 `มหาวิทยาลัยเกษตรจีนตอนใต้` 的前缀，
         # 同一位置只算更长的那个对象。
         candidates = [
-            {"alias": self.UNI_A, "matched_text": self.UNI_A, "start": 0, "end": len(self.UNI_A), "object_id": "target"},
-            {"alias": self.UNI_B, "matched_text": self.UNI_B, "start": 0, "end": len(self.UNI_B), "object_id": "competitor-01"},
+            {"alias": self.CAU, "matched_text": self.CAU, "start": 0, "end": len(self.CAU), "object_id": "target"},
+            {"alias": self.SCAU, "matched_text": self.SCAU, "start": 0, "end": len(self.SCAU), "object_id": "competitor-01"},
         ]
         self.assertEqual(
             [item["object_id"] for item in resolve_alias_spans(candidates)],
@@ -304,16 +304,16 @@ class AliasMatchingTests(unittest.TestCase):
         self.assertEqual(len(resolve_alias_spans(candidates)), 2)
 
     def test_prepare_answers_does_not_credit_target_for_longer_competitor_alias(self):
-        """端到端：答案只含乙大学南校区长串时，乙大学不得被记成提及。"""
+        """端到端：答案只含华南农大长串时，中农大不得被记成提及。"""
         config = {
             "run_id": "R-thai",
             "rank_policy": "first_mention",
             "sample_policy": "first_valid",
             "objects": [
                 {"object_id": "target", "canonical_name": "China Agricultural University",
-                 "role": "target", "aliases": [self.UNI_A], "official_domains": ["uni-a.example"], "display_order": 1},
+                 "role": "target", "aliases": [self.CAU], "official_domains": ["cau.edu.cn"], "display_order": 1},
                 {"object_id": "competitor-01", "canonical_name": "South China Agricultural University",
-                 "role": "competitor", "aliases": [self.UNI_B], "official_domains": ["uni-b.example"], "display_order": 2},
+                 "role": "competitor", "aliases": [self.SCAU], "official_domains": ["scau.edu.cn"], "display_order": 2},
             ],
         }
         question_bank = {"questions": [{
@@ -323,7 +323,7 @@ class AliasMatchingTests(unittest.TestCase):
             "funnel_intent": "recommendation",
             "generation_sequence": 1,
         }]}
-        answer = "มหาวิทยาลัยอัลฟาตอนใต้ตั้งอยู่ในกว่างโจว"
+        answer = "มหาวิทยาลัยเกษตรจีนตอนใต้ตั้งอยู่ในกว่างโจว"
         crawl = {"samples": [{
             "sample_id": "q01-r01", "question_id": "q01", "repeat_index": 1,
             "analysis_eligible": True, "answer_text": answer, "ranking_text": answer,

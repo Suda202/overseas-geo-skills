@@ -66,7 +66,7 @@ def prepare_answers(run_root: Path, config: dict, question_bank: dict, crawl: di
         write_text(evidence_path, answer_text)
         objects = all_objects(config)
         # 品牌匹配按对象各跑一次会漏掉跨对象撞名：泰文无空格、别名又不带词边界，
-        # 短别名会落进别的对象的长别名里（乙大学 vs 乙大学南校区）。先把所有对象的候选
+        # 短别名会落进别的对象的长别名里（中农大 vs 华南农大）。先把所有对象的候选
         # 跨度汇总，做一次最长优先不重叠消解，再回填到各自对象。拉丁别名带词边界，
         # 跨对象消解对它是空操作，既有结果不变。
         resolved_spans: dict[str, list[dict]] = defaultdict(list)

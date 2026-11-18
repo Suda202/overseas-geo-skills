@@ -63,7 +63,7 @@ for path in sorted(EXAMPLES.glob("*.json")) + sorted(TEMPLATES.glob("b2?-example
           result["normalized"]["competitor_selection"]["status"] == "client_input"
           and result["normalized"]["competitor_selection"]["selection_count"] == len(payload["case"]["竞品"]))
 
-base = load(EXAMPLES / "b2c-example.json")
+base = load(EXAMPLES / "youku-b2c.json")
 
 
 def mutate(fn) -> dict:
@@ -100,10 +100,10 @@ check("旧名「本期产品线」→ 按「产品线」收，renamed_field 告�
       json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
 
 # 4c. 公司名称是选填（2026-11-13）：照收进 case_fields；旧名「公司名」按「公司名称」收
-result = normalize(mutate(lambda p: p["case"].update({"公司名称": "某平台信息技术（北京）有限公司"})))
+result = normalize(mutate(lambda p: p["case"].update({"公司名称": "优酷信息技术（北京）有限公司"})))
 check("公司名称 → 通过并进 case_fields",
       result["ok"] and not result["warnings"]
-      and result["normalized"]["case_fields"].get("公司名称") == "某平台信息技术（北京）有限公司",
+      and result["normalized"]["case_fields"].get("公司名称") == "优酷信息技术（北京）有限公司",
       json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
 
 # 4d. 补充内容是多文件上传（3.17.0）：表格取非品牌查询，文本按段落，PDF 和图片交给 agent 读
@@ -114,7 +114,7 @@ import read_supplement  # noqa: E402
 
 tmp = Path(tempfile.mkdtemp(prefix="supplement-e2e-"))
 (tmp / "gsc-queries.csv").write_text("Top queries,Clicks,Impressions\nbest chinese drama app,12,340\n"
-                                     "ybrand thai sub,40,900\nwhere to watch thai bl series free,3,120\n", encoding="utf-8")
+                                     "youku thai sub,40,900\nwhere to watch thai bl series free,3,120\n", encoding="utf-8")
 with zipfile.ZipFile(tmp / "semrush-keywords.xlsx", "w") as z:
     z.writestr("xl/workbook.xml", '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
@@ -138,7 +138,7 @@ check("补充内容传 5 个文件（相对路径）→ 通过，按 JSON 所在
       result["ok"] and files == [str((tmp / f).resolve()) for f in upload]
       and result["normalized"]["case_fields"].get("补充内容 2") == "semrush-keywords.xlsx",
       json.dumps(result.get("errors") or [Path(f).name for f in files], ensure_ascii=False))
-sigs, summ = read_supplement.read_files([Path(f) for f in files], ["Ybrand", "某平台"])
+sigs, summ = read_supplement.read_files([Path(f) for f in files], ["YOUKU", "优酷"])
 by = {}
 for sig in sigs:
     by.setdefault(sig["来源类型"], []).append(sig)
@@ -161,9 +161,9 @@ for name, value, want in (
         ("单个超 20 MB", ["too-big.csv"], "file_too_large")):
     result = normalize(mutate(lambda p, v=value: p["case"].__setitem__("补充内容", v)), base_dir=tmp)
     check(f"补充内容{name} → {want}", want in codes(result), f"实际错误码={codes(result)}")
-result = normalize(mutate(lambda p: p["case"].__setitem__("公司名", "某平台")))
+result = normalize(mutate(lambda p: p["case"].__setitem__("公司名", "优酷")))
 check("旧名「公司名」→ 按「公司名称」收，renamed_field 告警",
-      result["ok"] and result["normalized"]["case_fields"].get("公司名称") == "某平台"
+      result["ok"] and result["normalized"]["case_fields"].get("公司名称") == "优酷"
       and [w["code"] for w in result["warnings"]] == ["renamed_field"],
       json.dumps(result.get("errors") or result.get("warnings"), ensure_ascii=False))
 
@@ -179,17 +179,17 @@ check("品牌别名填「无」→ 通过，brand_aliases 为空",
       result["ok"] and result["normalized"]["brand_aliases"] == [] and result["normalized"]["case_fields"]["品牌别名 1"] == "无")
 
 # 6. 官方域名可填多个，第一个是主站
-result = normalize(mutate(lambda p: p["case"].__setitem__("官方域名", ["https://brandy.example", "https://th.brandy.example"])))
+result = normalize(mutate(lambda p: p["case"].__setitem__("官方域名", ["https://youku.tv", "https://th.youku.tv"])))
 check("官方域名传数组 → 第一个当主站，其余编号保留",
-      result["ok"] and result["normalized"]["official_domain"] == "https://brandy.example"
-      and result["normalized"]["case_fields"].get("官方域名 2") == "https://th.brandy.example",
+      result["ok"] and result["normalized"]["official_domain"] == "https://youku.tv"
+      and result["normalized"]["case_fields"].get("官方域名 2") == "https://th.youku.tv",
       json.dumps(result.get("errors"), ensure_ascii=False))
 
-# 6b. 同一个站的重复写法去重（Pbrand 的 该品牌官网 / www.该品牌官网；协议、大小写、末尾斜杠）
+# 6b. 同一个站的重复写法去重（PETKIT 的 petkit.com / www.petkit.com；协议、大小写、末尾斜杠）
 result = normalize(mutate(lambda p: p["case"].__setitem__(
-    "官方域名", ["https://该品牌官网", "https://www.该品牌官网/", "http://WWW.Pbrand.COM"])))
+    "官方域名", ["https://petkit.com", "https://www.petkit.com/", "http://WWW.PETKIT.COM"])))
 check("官方域名同一个站的重复写法 → 去重并告警",
-      result["ok"] and result["normalized"]["official_domains"] == ["https://该品牌官网"]
+      result["ok"] and result["normalized"]["official_domains"] == ["https://petkit.com"]
       and [w["code"] for w in result["warnings"]] == ["duplicate_item", "duplicate_item"],
       json.dumps(result.get("warnings") or result.get("errors"), ensure_ascii=False))
 result = normalize(mutate(lambda p: p["case"].__setitem__(
@@ -218,7 +218,7 @@ FAILURES = [
         {"名称": f"Extra {i}", "官网域名": f"https://extra-{i}.example"} for i in range(4 - len(p["case"]["竞品"]))),
      "count_out_of_range"),
     ("竞品重名", lambda p: p["case"]["竞品"][1].__setitem__("名称", p["case"]["竞品"][0]["名称"]), "duplicate_item"),
-    ("官网不是完整网址", lambda p: p["case"].__setitem__("官方域名", "brandy.example"), "invalid_url"),
+    ("官网不是完整网址", lambda p: p["case"].__setitem__("官方域名", "youku.tv"), "invalid_url"),
     ("竞品带未定义字段", lambda p: p["case"]["竞品"][0].__setitem__("适用主题", [1]), "unknown_field"),
     ("字段名拼错", lambda p: p["case"].__setitem__("业务目的", "x"), "unknown_field"),
     ("options 带已停用的 generation_stage", lambda p: p["options"].__setitem__("generation_stage", "selection"), "unknown_field"),

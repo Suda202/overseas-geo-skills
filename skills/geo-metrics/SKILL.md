@@ -40,7 +40,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 - 同一别名只归一个品牌：报告数据层按首次登记的品牌归属、丢弃后来的重名；core 配置入口遇到重名直接报错。
 - **别名收什么**（每个客户、每个品牌各自补，目标品牌由品牌方填，竞品由我们或 AI 查官网补、人工确认，不做跨客户共享）：
   - 收：品牌名本身认不出的写法，即全称、简称或缩写、旧名、本地语言名；不含品牌名、且 AI 常单独提起的自有产品名和子品牌名（LG 的 PuriCare：AI 只写 PuriCare 时才需要它，总写成 LG PuriCare 就靠品牌名认出），命中计入母品牌，口径见 [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md)「品牌提及率」。
-  - 不收：带品牌名的产品名（Bbrand H1，品牌名已能认出）；只差大小写、空格、连字符的写法；型号清单；通用品类词（Calipers、CMM，会把整个品类算给一个品牌）。
+  - 不收：带品牌名的产品名（Botslab G980H，品牌名已能认出）；只差大小写、空格、连字符的写法；型号清单；通用品类词（Calipers、CMM，会把整个品类算给一个品牌）。
   - 易混淆、不能算作本品牌的名称（同集团其他品牌、同名公司、被收购后单独经营的品牌）不进别名，由品牌方逐案确认。
   - 出报告前跑 `scripts/reconcile_brand_recognition.py` 查拼写漏判和常用词误判。词表里没有的、不含品牌名的产品名它查不到，要看 `mine_brand_lexicon.py` 列出的未知大写词。
 

@@ -96,7 +96,7 @@ CURRENCY_PATTERNS = [
     ("INR", r"₹|\bINR\b"),
 ]
 # A Discovery Prompt must ask for candidates. "How do I fix X" questions get
-# advice back and no brand list (Pbrand 2026-10-15: 0 brands in 5 ChatGPT runs).
+# advice back and no brand list (PETKIT 2026-10-15: 0 brands in 5 ChatGPT runs).
 # The rule lives in shared/scripts/prompt_gates.py so both prompt validators agree.
 _SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
 if str(_SHARED_SCRIPTS) not in sys.path:

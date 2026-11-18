@@ -29,7 +29,7 @@
 ## 执行流程
 
 1. **确认输入**：题库（v8 JSON 或 upload CSV）、采集目录（`scraper.*/<区域>/NNNN.json`）、品牌来源。品牌来源二选一：
-   - 单品牌：`--aliases 'Ybrand,某平台,บียู,บียู'`（须含当地文字转写，漏转写会系统性漏提；可加 `--brand` 指定写入 `brand` 字段的名称）。
+   - 单品牌：`--aliases 'YOUKU,优酷,ยูคุ,ยูคู'`（须含当地文字转写，漏转写会系统性漏提；可加 `--brand` 指定写入 `brand` 字段的名称）。
    - 多品牌：`--lexicon <品牌词表.json>`，每条单元带 `brand` 与 `brand_type`，用于竞品情感矩阵。词表两种格式均可：`brands[].name/aliases/type` 数组（report-builder 落点，首选），或「标准名 → 别名 list」dict（report-audit / shared 落点，`_` 开头的键视为元数据，标准名自身自动算一个别名，`type` 缺省为空）。两种模式共用同一别名匹配（大小写、词边界处理一致）。
 2. **确定性抽取**：
 
@@ -42,14 +42,14 @@
    # 单品牌（向后兼容）
    python3 <skills>/geo-metrics/scripts/sentiment_sentences.py extract \
      --bank <题库.json> --crawl-dir <采集目录> \
-     --aliases 'Ybrand,某平台,บียู,บียู' --output units.json
+     --aliases 'YOUKU,优酷,ยูคุ,ยูคู' --output units.json
    ```
 
    脚本先逐条校验采集题面与题库 `user_question` 一致，不一致即停止——题库修订后用旧采集数据算指标是无效样本。题面缺失时先尝试从 `metadata.rawUrl` 的 `q=` 参数还原（AIO/overview 全部、ChatGPT 部分记录没有 `prompt` 字段）；仍拿不到就按编号映射抽取，计入 `meta.unverified_prompt_answers` 并在 stderr 告警，不静默当作已校验。正文按平台取字段：overview 取 `task_result.content`，其余取 `task_result.result_text`（与批次统计引擎 `ANSWER_FIELD` 对齐）。然后去引用、按行与表格单元格切分、按别名过滤，同一句提到多个品牌时逐品牌各出一条单元，`meta.distinct_unit_count` 记录去重句数。
 3. **抽取 Claim（只出 Claim）**：逐单元完整读,按 [Claim 层契约](claim-layer-contract.md) 拆出**原子 Claim**。一句话里含多个观点就拆多条(如「强大但配置复杂、价格不透明」拆成 3 条)。**claim 是标准化后的语义判断**(如「价格高」「未公开定价页」),同义说法写成同一短语,不是原文摘抄。禁止关键词自动打标。产出 `claims-raw.json`,每条只给 `unit_index / brand / claim / sentiment`:
 
    ```json
-   [{"unit_index": 12, "brand": "Abrand", "claim": "未公开定价页", "sentiment": "negative"}]
+   [{"unit_index": 12, "brand": "Bewinch", "claim": "未公开定价页", "sentiment": "negative"}]
    ```
 
    **本环节不产出 attribute / theme**——它们由下面两趟聚类产出。单元很多时可分批读。
@@ -108,4 +108,4 @@
 
 ## 改动后
 
-修改抽取或计算脚本后运行 `python3 -m unittest discover -s geo-metrics/tests`；修改判读规则后用已验证基准（Ybrand 泰国 92 句）复判抽样核对口径没有漂移。
+修改抽取或计算脚本后运行 `python3 -m unittest discover -s geo-metrics/tests`；修改判读规则后用已验证基准（YOUKU 泰国 92 句）复判抽样核对口径没有漂移。

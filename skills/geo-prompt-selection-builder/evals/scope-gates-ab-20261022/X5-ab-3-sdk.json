@@ -2,9 +2,9 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
+  "brand_name": "Botslab",
   "aliases": [],
-  "official_domain": "https://www.brand-b.example",
+  "official_domain": "https://www.botslab.com",
   "category": "smart dash cam",
   "business_model": "B2C",
   "region": "US",
@@ -12,7 +12,7 @@
   "generation_stage": "discovery",
   "lifecycle_status": "hypothesis",
   "evidence_status": "after_sales_signal",
-  "prompt_version": "brand-b-dashcam-us-en-discovery-v0.1",
+  "prompt_version": "botslab-dashcam-us-en-discovery-v0.1",
   "customer_confirmation": {
    "status": "pending",
    "scope_status": "pending",
@@ -25,16 +25,16 @@
    "note": "The three competitors are frozen by the Case and were not added, dropped or verified in this run. They are used only for attribute position judgement, never inside a Discovery Prompt.",
    "competitors": [
     {
-     "name": "RivalB1",
-     "domain": "https://www.rival-b1.example"
+     "name": "70mai",
+     "domain": "https://www.70mai.com"
     },
     {
-     "name": "RivalB2",
-     "domain": "https://www.rival-b2.example"
+     "name": "VIOFO",
+     "domain": "https://www.viofo.com"
     },
     {
-     "name": "RivalB3",
-     "domain": "https://www.rival-b3.example"
+     "name": "Vantrue",
+     "domain": "https://www.vantrue.com"
     }
    ]
   },
@@ -119,7 +119,7 @@
      "Q09"
     ],
     "carrier_topic": "T3",
-    "evidence": "Buyers ask for maximum exterior coverage (Q03) and search '4 channel dash cam' (Q09, low confidence autocomplete). H1 records front plus rear, left and right from outside (official page), while RivalB3 N5 spends two of its four channels on cabin cameras and the VisionPano 40 spec lists two cabin cameras.",
+    "evidence": "Buyers ask for maximum exterior coverage (Q03) and search '4 channel dash cam' (Q09, low confidence autocomplete). G980H records front plus rear, left and right from outside (official page), while Vantrue N5 spends two of its four channels on cabin cameras and the VisionPano 40 spec lists two cabin cameras.",
     "missing": "The official page states the layout but no page compares the exterior-only four-channel arrangement with the cabin-heavy four-channel rivals."
    },
    {
@@ -136,7 +136,7 @@
      "Q09"
     ],
     "carrier_topic": "T2",
-    "evidence": "A buyer wants continuous recording while parked, not only impact-triggered clips (Q01), and the category search term pairs '4 channel' with parking mode (Q09). All three brands offer parking mode with a hardwire kit; the official Bbrand page contradicts itself on whether the kit is required.",
+    "evidence": "A buyer wants continuous recording while parked, not only impact-triggered clips (Q01), and the category search term pairs '4 channel' with parking mode (Q09). All three brands offer parking mode with a hardwire kit; the official Botslab page contradicts itself on whether the kit is required.",
     "missing": "One page that states the parking modes (sentry, collision, time-lapse) and the 24-hour limit consistently; the FAQ and the hero currently disagree."
    },
    {
@@ -154,7 +154,7 @@
      "Q11"
     ],
     "carrier_topic": "T2",
-    "evidence": "Buyers ask what extra equipment is needed (Q02) and search whether parking mode needs a hardwire kit or drains the battery (Q10, Q11, low confidence autocomplete). Bbrand sells a Type-C hardwire kit but the product page does not answer the drain question beyond a warning about unprotected lighter sockets.",
+    "evidence": "Buyers ask what extra equipment is needed (Q02) and search whether parking mode needs a hardwire kit or drains the battery (Q10, Q11, low confidence autocomplete). Botslab sells a Type-C hardwire kit but the product page does not answer the drain question beyond a warning about unprotected lighter sockets.",
     "missing": "A battery-drain answer (cut-off voltage, consumption, or the constant-power caveat) written where AI can read it, plus a clear 'what is in the box vs what you must buy' line."
    },
    {
@@ -171,7 +171,7 @@
      "Q05"
     ],
     "carrier_topic": "T3",
-    "evidence": "Buyers name RivalO1 STARVIS 2 explicitly and want plate legibility at night (Q04, Q05). The Bbrand page only says 'Enhanced Low-Light Capture' and names no sensor, so the public layer cannot settle whether the brand leads, matches or trails; the two competitors publish STARVIS 2 part numbers.",
+    "evidence": "Buyers name Sony STARVIS 2 explicitly and want plate legibility at night (Q04, Q05). The Botslab page only says 'Enhanced Low-Light Capture' and names no sensor, so the public layer cannot settle whether the brand leads, matches or trails; the two competitors publish STARVIS 2 part numbers.",
     "missing": "The sensor part number or an equivalent night-capture claim the brand party will stand behind; until then the row stays 待确认 and changeability stays 中."
    },
    {
@@ -188,7 +188,7 @@
      "Q06"
     ],
     "carrier_topic": "T3",
-    "evidence": "Buyers set a resolution bar before price (Q04, Q06). Front 3K plus three 1080P channels beats the RivalB3 N5 front 1944P and the VisionPano 40 front 2.5K on the product pages collected; RivalB1 and RivalB2 pages were not collected, so this is a lead against the two pages we hold, not against the whole frozen set.",
+    "evidence": "Buyers set a resolution bar before price (Q04, Q06). Front 3K plus three 1080P channels beats the Vantrue N5 front 1944P and the VisionPano 40 front 2.5K on the product pages collected; 70mai and VIOFO pages were not collected, so this is a lead against the two pages we hold, not against the whole frozen set.",
     "missing": "No single spec table that can be quoted as 'front 3K, rear/left/right 1080P, four channels at once'."
    },
    {
@@ -205,7 +205,7 @@
      "Q06"
     ],
     "carrier_topic": "T2",
-    "evidence": "The accessory question (Q02) and the pre-price checklist (Q06) both show installation is weighed before purchase. H1 uses a tool-free magnetic snap-on mount while the N5 uses a 3M adhesive mount, but the advantage is a spec line, not an explained benefit.",
+    "evidence": "The accessory question (Q02) and the pre-price checklist (Q06) both show installation is weighed before purchase. G980H uses a tool-free magnetic snap-on mount while the N5 uses a 3M adhesive mount, but the advantage is a spec line, not an explained benefit.",
     "missing": "A short install page or FAQ showing what a four-camera install involves and what the magnetic mount removes."
    },
    {
@@ -222,7 +222,7 @@
      "Q09"
     ],
     "carrier_topic": "T2",
-    "evidence": "SD card support appears on a buyer's pre-price checklist (Q06) and the category term pairs four channels with parking (Q09). 128GB is included and 512GB is the maximum, against the RivalB3 N5's 1TB ceiling; four-channel parking capture is exactly where the ceiling matters.",
+    "evidence": "SD card support appears on a buyer's pre-price checklist (Q06) and the category term pairs four channels with parking (Q09). 128GB is included and 512GB is the maximum, against the Vantrue N5's 1TB ceiling; four-channel parking capture is exactly where the ceiling matters.",
     "missing": "How many hours of four-channel and parking footage a 128GB and a 512GB card hold, so the shorter ceiling can be framed rather than hidden."
    },
    {
@@ -239,7 +239,7 @@
      "Q08"
     ],
     "carrier_topic": "T1",
-    "evidence": "A buyer doubts high review scores after reading failure and service complaints about another brand (Q08), and a budget-constrained buyer spells out reliability expectations (Q04). No public reliability data for Bbrand was collected, so the position is unsettled rather than favourable or unfavourable.",
+    "evidence": "A buyer doubts high review scores after reading failure and service complaints about another brand (Q08), and a budget-constrained buyer spells out reliability expectations (Q04). No public reliability data for Botslab was collected, so the position is unsettled rather than favourable or unfavourable.",
     "missing": "Third-party or verified-owner evidence about unit failure rates and support response; the official site carries none."
    },
    {
@@ -256,7 +256,7 @@
      "Q06"
     ],
     "carrier_topic": "T1",
-    "evidence": "Heat is one item on a buyer checklist (Q06) and one buyer explicitly wants a camera that survives hot summers without battery swelling (Q07). The supercapacitor rating (-20 °C to 70 °C) is published and the RivalB3 N5 also uses a supercapacitor, so the dimension is parity and matters to a subset of buyers.",
+    "evidence": "Heat is one item on a buyer checklist (Q06) and one buyer explicitly wants a camera that survives hot summers without battery swelling (Q07). The supercapacitor rating (-20 °C to 70 °C) is published and the Vantrue N5 also uses a supercapacitor, so the dimension is parity and matters to a subset of buyers.",
     "missing": "Nothing blocking; the rating is published. The brand can add a plain-language heat claim, but the dimension is unlikely to change the shortlist."
    },
    {
@@ -273,7 +273,7 @@
      "Q12"
     ],
     "carrier_topic": "T1",
-    "evidence": "A buyer weighs reported service quality against review scores (Q08) and a warranty autocomplete exists for a rival (Q12, low confidence). Bbrand publishes a 1-year warranty while the VisionPano 40 page carries 24 months; the term is a policy decision content cannot close, so the Prompt is kept in the monitoring layer inside the category Topic.",
+    "evidence": "A buyer weighs reported service quality against review scores (Q08) and a warranty autocomplete exists for a rival (Q12, low confidence). Botslab publishes a 1-year warranty while the VisionPano 40 page carries 24 months; the term is a policy decision content cannot close, so the Prompt is kept in the monitoring layer inside the category Topic.",
     "missing": "A brand decision on warranty length, or an extended-warranty offer, before this can move."
    },
    {
@@ -290,7 +290,7 @@
      "Q06"
     ],
     "carrier_topic": "T1",
-    "evidence": "One buyer asks to be told about any extra equipment needed (Q02) and another puts SD card support on the pre-price checklist (Q06). The H1 includes a 128GB card and a tool-free mount while the rivals sell hardwire kits and some accessories separately, so the position is parity-to-slight-lead depending on the bundle.",
+    "evidence": "One buyer asks to be told about any extra equipment needed (Q02) and another puts SD card support on the pre-price checklist (Q06). The G980H includes a 128GB card and a tool-free mount while the rivals sell hardwire kits and some accessories separately, so the position is parity-to-slight-lead depending on the bundle.",
     "missing": "An explicit in-the-box list per SKU, because the page shows a $25-$40 hardwire kit and a $32 side camera without saying what the base box contains."
    },
    {
@@ -307,7 +307,7 @@
      "Q08"
     ],
     "carrier_topic": "",
-    "no_carrier_reason": "Buyers frame budgets at $100 and $200 while the H1 lists at $209; price is a commercial lever, so no content Prompt measures it.",
+    "no_carrier_reason": "Buyers frame budgets at $100 and $200 while the G980H lists at $209; price is a commercial lever, so no content Prompt measures it.",
     "evidence": "Budget ceilings appear in two quotes (Q04, Q08) and the official page lists $209 against a $299 regular price.",
     "missing": "A pricing or bundle decision from the brand party."
    },
@@ -324,7 +324,7 @@
      "Q03"
     ],
     "carrier_topic": "",
-    "no_carrier_reason": "The Case's applicability boundary excludes fleet and professional monitoring use, and the H1 records the exterior only; rideshare and cabin buyers are served by the rivals' cabin-channel models, so no Prompt is written.",
+    "no_carrier_reason": "The Case's applicability boundary excludes fleet and professional monitoring use, and the G980H records the exterior only; rideshare and cabin buyers are served by the rivals' cabin-channel models, so no Prompt is written.",
     "evidence": "Coverage demand exists (Q03), but it is phrased as exterior coverage; cabin demand is not in the collected quotes and sits outside the Case boundary.",
     "missing": "A product decision, not content."
    }
@@ -356,12 +356,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -396,7 +396,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],

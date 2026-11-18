@@ -58,7 +58,7 @@
 
 归一后的标准名使用正式竞品完整名称（例如 `NVIDIA Cosmos`），并将所有已确认别名映射到该名称；排名取合并后任一别名在去引用正文中的最早位置。无法排除两种解释且会改变排名时，记录不确定性并停止写入，不能由多数猜测决定。
 
-批次示例：输入竞品为 `NVIDIA Cosmos` 时，`NVIDIA`、`NVIDIA Isaac`、`NVIDIA Omniverse`、`GR00T` 或 `nivida Cosmos` 只有在回答将其作为同一候选/平台时才归一为 `NVIDIA Cosmos`；输入竞品为 `Qbrand AI` 时，回答明确区分的 `Qbrand Robotics` 保持独立；`Figure` 与 `Figure AI` 在回答作为同一公司候选时归一。
+批次示例：输入竞品为 `NVIDIA Cosmos` 时，`NVIDIA`、`NVIDIA Isaac`、`NVIDIA Omniverse`、`GR00T` 或 `nivida Cosmos` 只有在回答将其作为同一候选/平台时才归一为 `NVIDIA Cosmos`；输入竞品为 `Aether AI` 时，回答明确区分的 `AETHER Robotics` 保持独立；`Figure` 与 `Figure AI` 在回答作为同一公司候选时归一。
 
 ### 第二遍：逐条复算
 

@@ -7,11 +7,11 @@
 
 `remove_citations` 原先对去引用后的**所有剩余 `<a>`** 一律「连锚文本一起删除」（商品卡容器内的除外）。这条规则本意是清掉引用来源名、favicon 文本和 `+1`，但把**句子里作为内容出现的链接**也一并删了，于是正文丢句子成分、甚至丢真实品牌提及。
 
-Task 246（Kbrand）实证两条：
+Task 246（KeepBalance）实证两条：
 
 1. **丢品牌提及**：`chatgpt #10119` 的正文原文是
-   `<li><p><strong><a class="decorated-link" href="https://www.rival-k2.example/">RivalK2</a></strong> — certified nutritionists provide ongoing 1:1 consultations…</p></li>`。
-   删除锚文本后正文成了 `The clearest matches are: — certified nutritionists provide…`，句子没有主语，`RivalK2` 从品牌序列里消失，只剩 `RivalK1`。
+   `<li><p><strong><a class="decorated-link" href="https://www.personanutrition.com/">Persona Nutrition</a></strong> — certified nutritionists provide ongoing 1:1 consultations…</p></li>`。
+   删除锚文本后正文成了 `The clearest matches are: — certified nutritionists provide…`，句子没有主语，`Persona Nutrition` 从品牌序列里消失，只剩 `Rootine`。
 2. **丢句子主语**：Gemini 购物卡的商品名在描述句里以 `<product-link>` 内联出现，例如 `The <product-link><a>Garden of Life Vitamin Code Family</a></product-link> offers raw whole food nutrition…`。删除后成了 `The offers raw whole food nutrition…`。同样的句子在 gemini #10113、#10120、#10144、#10147、#10153 共 5 条记录中出现。
 
 缺陷类型：**清洗层（去引用）过度删除**。

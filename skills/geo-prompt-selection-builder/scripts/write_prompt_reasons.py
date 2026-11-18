@@ -11,7 +11,7 @@
 需求信号表叫「需求信号」，提示词库有「提示词优先级」。旧 Base 不迁移，脚本报「不支持的旧结构」并以退出码 2 结束。
 
 用法（在客户目录下跑，lark-cli 只能写当前目录）：
-    python3 -I write_prompt_reasons.py --base <token> --bank bank.json --brand Nina [--alias Nbrand] [--noun 工具] [--write]
+    python3 -I write_prompt_reasons.py --base <token> --bank bank.json --brand Nina [--alias Antalpha] [--noun 工具] [--write]
     python3 -I write_prompt_reasons.py --from-dump <目录> --bank bank.json --brand Nina    # 读 <表名>.ndjson，只预览
 多市场每个市场的题库各给一次 --bank。预览产物：--preview out.json（每道题算出的字段）。
 退出码：0 正常；1 有题算不出；2 读不到 Base，或是不支持的旧结构 Base。

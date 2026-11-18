@@ -29,4 +29,4 @@
 
 ## 第一版阈值的来历
 
-`diagnose.py` 的 PARAMS 没有外部标准。`min_valid` 7 沿用正式基线每格 7 次；`hold_margin` 10 个点、`retr_low` 20%、`mention_ok` 30%、推荐占比 50% 是 2026-11-16 用某车载品牌（ChatGPT 美国 7 次）和 Hbrand（三平台新加坡 5 次）两份数据定的起点，积累客户后按诊断结果和人工复核的一致情况校准。
+`diagnose.py` 的 PARAMS 没有外部标准。`min_valid` 7 沿用正式基线每格 7 次；`hold_margin` 10 个点、`retr_low` 20%、`mention_ok` 30%、推荐占比 50% 是 2026-11-16 用路拓（ChatGPT 美国 7 次）和 Housebell（三平台新加坡 5 次）两份数据定的起点，积累客户后按诊断结果和人工复核的一致情况校准。

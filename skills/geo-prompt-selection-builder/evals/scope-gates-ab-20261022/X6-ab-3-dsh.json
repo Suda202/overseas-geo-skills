@@ -2,9 +2,9 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
-  "official_domain": "https://www.brand-b.example",
-  "product_line": "Bbrand H1 multi-channel dash cam",
+  "brand_name": "Botslab",
+  "official_domain": "https://www.botslab.com",
+  "product_line": "Botslab G980H multi-channel dash cam",
   "category": "smart dash cam",
   "business_model": "B2C",
   "generation_stage": "discovery",
@@ -50,7 +50,7 @@
      "break-in trigger speed",
      "heat while parked"
     ],
-    "business_question": "For buyers who park on the street or in a lot, does AI treat Bbrand as a real parking-monitoring option, or does the hardwire/accessory requirement knock it out?",
+    "business_question": "For buyers who park on the street or in a lot, does AI treat Botslab as a real parking-monitoring option, or does the hardwire/accessory requirement knock it out?",
     "possible_action": "Rewrite the parking-mode block on the product page so trigger, runtime and hardwire requirement agree, and state what is in the box; this is the P1 evidence gap.",
     "note": "Carries both P1 Attributes. The product-page FAQ already contradicts the first-screen 24/7 claim, which is why changeability is high here."
    },
@@ -67,9 +67,9 @@
      "card capacity for four channels",
      "clip retrieval after an incident"
     ],
-    "business_question": "Where buyers want more than a front camera, does AI name Bbrand for four-way coverage, and is the coverage claim legible as evidence rather than a spec line?",
+    "business_question": "Where buyers want more than a front camera, does AI name Botslab for four-way coverage, and is the coverage claim legible as evidence rather than a spec line?",
     "possible_action": "Publish comparison-ready coverage proof (which camera records what, at what resolution) and a clip-retrieval walkthrough.",
-    "note": "Holds the coverage attribute where the H1 front 3K beats the collected multi-channel pages; weight sits here because it is the brand's clearest spec advantage."
+    "note": "Holds the coverage attribute where the G980H front 3K beats the collected multi-channel pages; weight sits here because it is the brand's clearest spec advantage."
    }
   ],
   "attribute_plan": [
@@ -85,7 +85,7 @@
      "Q10",
      "Q11"
     ],
-    "reason": "Q10 and Q11 are direct problem questions (parking mode without hardwire; battery drain) and Q02 asks what else must be bought. Category norm is parity — RivalB3 states parking mode needs a separately sold hardwire kit, and Bbrand sells a fuse-tap kit too — yet Bbrand buries the requirement in the product FAQ under a first-screen '24/7 Parking Protection' claim. Capability exists and the category is level, so this is an evidence gap one page closes: 高 changeability.",
+    "reason": "Q10 and Q11 are direct problem questions (parking mode without hardwire; battery drain) and Q02 asks what else must be bought. Category norm is parity — Vantrue states parking mode needs a separately sold hardwire kit, and Botslab sells a fuse-tap kit too — yet Botslab buries the requirement in the product FAQ under a first-screen '24/7 Parking Protection' claim. Capability exists and the category is level, so this is an evidence gap one page closes: 高 changeability.",
     "carriers": [
      "BOT-US-T2-D02",
      "BOT-US-T2-D03",
@@ -103,7 +103,7 @@
      "Q01",
      "Q09"
     ],
-    "reason": "Q01 asks for continuous parked recording, not collision-only. The collected RivalB3 N5 page publishes buffered motion detection (10 s pre-roll + 30 s after), adjustable motion zones and two continuous low-bitrate modes, while the Bbrand page describes only a 1-minute collision clip plus 1 fps time-lapse up to 24 h — and its own FAQ contradicts the first-screen 24/7 claim. Position trails on trigger richness; whether the capability itself is absent is unconfirmed, so it stays 中 rather than 低.",
+    "reason": "Q01 asks for continuous parked recording, not collision-only. The collected Vantrue N5 page publishes buffered motion detection (10 s pre-roll + 30 s after), adjustable motion zones and two continuous low-bitrate modes, while the Botslab page describes only a 1-minute collision clip plus 1 fps time-lapse up to 24 h — and its own FAQ contradicts the first-screen 24/7 claim. Position trails on trigger richness; whether the capability itself is absent is unconfirmed, so it stays 中 rather than 低.",
     "carriers": [
      "BOT-US-T2-D01",
      "BOT-US-T2-D07",
@@ -122,7 +122,7 @@
      "Q03",
      "Q09"
     ],
-    "reason": "Maximum exterior coverage is the buyer's stated goal (Q03) and the brand's clearest spec lead: H1 front 3K + rear/left/right 1080P versus RivalB3 N5 front 2.7K and RivalB4 VisionPano 40 front 2.5K (official pages, Internet Archive snapshots). The claim is already published, so the remaining work is third-party reinforcement, not a page gap: 中.",
+    "reason": "Maximum exterior coverage is the buyer's stated goal (Q03) and the brand's clearest spec lead: G980H front 3K + rear/left/right 1080P versus Vantrue N5 front 2.7K and REDTIGER VisionPano 40 front 2.5K (official pages, Internet Archive snapshots). The claim is already published, so the remaining work is third-party reinforcement, not a page gap: 中.",
     "carriers": [
      "BOT-US-T3-D01",
      "BOT-US-T3-D02"
@@ -135,7 +135,7 @@
     "importance": "高",
     "changeability": "中",
     "relative_position": "待确认",
-    "settle_with": "Brand material: night-vision sensor model and sample night footage showing a readable plate; the Bbrand page only says 'Enhanced Low-Light Capture'.",
+    "settle_with": "Brand material: night-vision sensor model and sample night footage showing a readable plate; the Botslab page only says 'Enhanced Low-Light Capture'.",
     "evidence": [
      "Q04",
      "Q05"
@@ -156,7 +156,7 @@
      "Q04",
      "Q05"
     ],
-    "reason": "Buyers use STARVIS 2 as a proxy for night quality (Q05), and both collected competitor titles state the sensor while the Bbrand page states none. Publishing the sensor is a separate action from proving night output, so it stays its own row. Whether the H1 actually carries a comparable sensor is unconfirmed — treat as evidence gap first, capability gap only if the brand says so.",
+    "reason": "Buyers use STARVIS 2 as a proxy for night quality (Q05), and both collected competitor titles state the sensor while the Botslab page states none. Publishing the sensor is a separate action from proving night output, so it stays its own row. Whether the G980H actually carries a comparable sensor is unconfirmed — treat as evidence gap first, capability gap only if the brand says so.",
     "carriers": [
      "BOT-US-T1-D05"
     ]
@@ -171,7 +171,7 @@
     "evidence": [
      "Q07"
     ],
-    "reason": "A hot car in summer is the failure buyers fear (Q07: battery swelling). Bbrand publishes a supercapacitor rated -20 °C to 70 °C and RivalB3 markets a supercapacitor for the same reason, so the category is level and the fact is already published — reinforcement work, not a page gap.",
+    "reason": "A hot car in summer is the failure buyers fear (Q07: battery swelling). Botslab publishes a supercapacitor rated -20 °C to 70 °C and Vantrue markets a supercapacitor for the same reason, so the category is level and the fact is already published — reinforcement work, not a page gap.",
     "carriers": [
      "BOT-US-T2-D09"
     ]
@@ -187,7 +187,7 @@
      "Q08",
      "Q12"
     ],
-    "reason": "The Case names after-sales confidence as a purchase barrier and Q08/Q12 show buyers checking service and warranty before buying. On the collected pages RivalB4 offers 24 months (2 years plus a 6-month extension) and a 30-day money-back guarantee, while Bbrand advertises 1 year; the Bbrand warranty page terms were not collected. Trails on the published term, but clearer terms and returns content can still move what AI says, so 中.",
+    "reason": "The Case names after-sales confidence as a purchase barrier and Q08/Q12 show buyers checking service and warranty before buying. On the collected pages REDTIGER offers 24 months (2 years plus a 6-month extension) and a 30-day money-back guarantee, while Botslab advertises 1 year; the Botslab warranty page terms were not collected. Trails on the published term, but clearer terms and returns content can still move what AI says, so 中.",
     "carriers": [
      "BOT-US-T1-D03"
     ]
@@ -203,7 +203,7 @@
      "Q04",
      "Q08"
     ],
-    "reason": "Budget is an explicit buyer constraint ($200 in Q08, $100 in Q04). On the collected snapshots the H1 4-camera lists at $209 against $299.99 for the RivalB4 VisionPano 40 and $379.99 for the RivalB3 N5, so the entry price leads — but price is a copyable, fast-moving claim, so it is graded for parity and kept experimental.",
+    "reason": "Budget is an explicit buyer constraint ($200 in Q08, $100 in Q04). On the collected snapshots the G980H 4-camera lists at $209 against $299.99 for the REDTIGER VisionPano 40 and $379.99 for the Vantrue N5, so the entry price leads — but price is a copyable, fast-moving claim, so it is graded for parity and kept experimental.",
     "carriers": [
      "BOT-US-T1-D02"
     ]
@@ -235,7 +235,7 @@
      "Q06",
      "Q02"
     ],
-    "reason": "Q06 lists SD-card support as a pre-purchase check and the clip has to be findable after an incident. Capacity and app retrieval are published (128 GB included, 512 GB max, 5.8 GHz Wi-Fi); the RivalB3 N5 page goes to 1 TB, so capacity is parity-to-behind rather than a lead.",
+    "reason": "Q06 lists SD-card support as a pre-purchase check and the clip has to be findable after an incident. Capacity and app retrieval are published (128 GB included, 512 GB max, 5.8 GHz Wi-Fi); the Vantrue N5 page goes to 1 TB, so capacity is parity-to-behind rather than a lead.",
     "carriers": [
      "BOT-US-T3-D05",
      "BOT-US-T3-D06"
@@ -288,16 +288,16 @@
    "note": "The Case's three competitors are frozen and are not re-verified here; no Competitor Prompts exist at the discovery stage, so they appear in no Prompt wording.",
    "competitors": [
     {
-     "name": "RivalB1",
-     "domain": "https://www.rival-b1.example"
+     "name": "70mai",
+     "domain": "https://www.70mai.com"
     },
     {
-     "name": "RivalB2",
-     "domain": "https://www.rival-b2.example"
+     "name": "VIOFO",
+     "domain": "https://www.viofo.com"
     },
     {
-     "name": "RivalB3",
-     "domain": "https://www.rival-b3.example"
+     "name": "Vantrue",
+     "domain": "https://www.vantrue.com"
     }
    ]
   },
@@ -362,12 +362,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -402,7 +402,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],
@@ -426,7 +426,7 @@
    "intent_key": "category-shortlist-baseline",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "",
    "evidence_refs": [
@@ -458,7 +458,7 @@
    "intent_key": "category-budget-value",
    "region": "US",
    "journey_stage": "交易",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "experimental",
    "attribute_ref": "Price & Total Cost of Ownership",
    "evidence_refs": [
@@ -493,7 +493,7 @@
    "intent_key": "category-warranty-returns",
    "region": "US",
    "journey_stage": "交易",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "experimental",
    "attribute_ref": "Warranty & Return Confidence",
    "evidence_refs": [
@@ -526,7 +526,7 @@
    "intent_key": "category-night-plate",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night Plate Legibility",
    "evidence_refs": [
@@ -558,7 +558,7 @@
    "intent_key": "category-starvis-sensor",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Camera Sensor Transparency",
    "evidence_refs": [
@@ -592,7 +592,7 @@
    "intent_key": "parking-continuous-recording",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Mode Runtime & Triggers",
    "evidence_refs": [
@@ -623,7 +623,7 @@
    "intent_key": "parking-mode-baseline",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Mode Runtime & Triggers",
    "evidence_refs": [
@@ -655,7 +655,7 @@
    "intent_key": "parking-no-hardwire",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Power & Hardwire Setup",
    "evidence_refs": [
@@ -688,7 +688,7 @@
    "intent_key": "parking-battery-drain",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Power & Hardwire Setup",
    "evidence_refs": [
@@ -721,7 +721,7 @@
    "intent_key": "parking-hardware-included",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Power & Hardwire Setup",
    "evidence_refs": [
@@ -755,7 +755,7 @@
    "intent_key": "parking-street-overnight",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking-Lot Hit-and-Run Capture",
    "evidence_refs": [
@@ -788,7 +788,7 @@
    "intent_key": "parking-lot-hit-and-run",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking-Lot Hit-and-Run Capture",
    "evidence_refs": [
@@ -819,7 +819,7 @@
    "intent_key": "parking-four-channel-runtime",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Mode Runtime & Triggers",
    "evidence_refs": [
@@ -853,7 +853,7 @@
    "intent_key": "parking-break-in-trigger",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking Mode Runtime & Triggers",
    "evidence_refs": [
@@ -886,7 +886,7 @@
    "intent_key": "parking-heat-battery-safety",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Heat Tolerance & Battery Safety",
    "evidence_refs": [
@@ -917,7 +917,7 @@
    "intent_key": "coverage-breadth",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Multi-Channel Exterior Coverage",
    "evidence_refs": [
@@ -948,7 +948,7 @@
    "intent_key": "coverage-simultaneous",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Multi-Channel Exterior Coverage",
    "evidence_refs": [
@@ -979,7 +979,7 @@
    "intent_key": "coverage-side-blind-spot",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Side & Rear Camera Quality",
    "evidence_refs": [
@@ -1012,7 +1012,7 @@
    "intent_key": "coverage-rear-quality-parity",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Side & Rear Camera Quality",
    "evidence_refs": [
@@ -1043,7 +1043,7 @@
    "intent_key": "storage-card-capacity",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Footage Retrieval & Storage",
    "evidence_refs": [
@@ -1076,7 +1076,7 @@
    "intent_key": "retrieval-after-accident",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Footage Retrieval & Storage",
    "evidence_refs": [

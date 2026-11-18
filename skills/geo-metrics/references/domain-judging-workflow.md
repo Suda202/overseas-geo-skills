@@ -19,12 +19,10 @@
 | 文件 | 是否随仓库发布 | 说明 |
 |---|---|---|
 | `category-taxonomy.json` | 是 | 通用品类表 |
-| `domain-categories.json` | 是（过滤后） | 只保留不含任何客户/竞品名的域名与类别；原始缓存里带品牌名的域名会被剔除 |
-| `domain-categories-meta.json` | 是（同上过滤） | 与被保留域名对应的判读依据 |
+| `domain-categories.json` | 是 | 站点类型缓存；域名键不点客户，直接发布 |
+| `domain-categories-meta.json` | 是 | 判读依据；依据里不写客户名 |
 | `domain-brand-sites.json` | 否 | 记着域名属于哪个项目、是本品牌还是竞品 |
 | `brand_lexicon.*.json` | 否 | 具体客户的品牌清单 |
-
-过滤用 `shared/scripts/export_public_domain_cache.py`（内部工具，不随仓库发布），与 `redact_publish_tree.py` 共用同一份词表，导出后 `scan` 必须 0 命中。新环境拿到的是过滤后的子集，缺的域名按下面的流程从自己的采集数据补判。
 
 ## 开放品牌的官网域名
 

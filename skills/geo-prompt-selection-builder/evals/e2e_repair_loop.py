@@ -33,7 +33,7 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parents[1]
 RUNNER = SKILL / "scripts" / "run_selection_mode.py"
 FIXTURE = SKILL / "evals" / "fixtures" / "online-sample-bank.json"
-CASE = SKILL / "references" / "input-examples" / "b2c-example.json"
+CASE = SKILL / "references" / "input-examples" / "youku-b2c.json"
 FIXTURE_COUNT = len(json.loads(FIXTURE.read_text(encoding="utf-8"))["questions"])
 
 FAKE_AGENT = '''

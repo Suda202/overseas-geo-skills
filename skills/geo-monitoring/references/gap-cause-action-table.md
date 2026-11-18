@@ -24,7 +24,7 @@ AI 回答前会自己拆出一批检索查询（query fan-out）。把它和品�
 
 **Gemini `related_queries` 不是 fan-out**：它是平台推荐用户下一步问的延伸问题（「Compare X vs Y」「Recommend … by budget」），不是 AI 检索用的词，不能用来判检索层或站内覆盖。能读的是 AI 把这个问题往哪些子主题、比较关系和下一步决策上延伸；报告里单列「延伸问题」，选词里登记为「模型建议问题」。同性质的还有 Grok `follow_up_suggestions`（15 份全有）、Alexa `suggestions`；Perplexity 的 `related_prompt` 2026-11-04 抽查最近 207 份全空。AI 反问用户的条件（AI 追问）也不是 fan-out：ChatGPT 有结构化字段 `follow_up_form.questions`（每题列出要用户补的条件，如品牌、容量、预算，`gpt-6` 带这个字段的答案里约一半有值），其他平台没有字段、从正文末尾读；选词里登记为「AI 追问」。
 
-**没有子查询说明这次没触发检索或平台没返回，不是采集失败，也不按零计。** 判断「有没有返回」先看 `task_result.model`，不要按文件时间——旧批次的文件修改时间可能被下游脚本刷新成当天，字段仍是 `null`（Hbrand `基线-20261021` 就踩过这个坑）。
+**没有子查询说明这次没触发检索或平台没返回，不是采集失败，也不按零计。** 判断「有没有返回」先看 `task_result.model`，不要按文件时间——旧批次的文件修改时间可能被下游脚本刷新成当天，字段仍是 `null`（Housebell `基线-20261021` 就踩过这个坑）。
 
 ### ChatGPT 两代形态不同，口径不能通用（2026-10-29 实测）
 
@@ -43,15 +43,15 @@ ChatGPT 在 2026-10 换到 `gpt-6` 后，fan-out 从「多路语义分解」变�
 **`gpt-6` 的子查询是复杂查询，不是简单查询。** 它不把复合条件拆成多条简单子查询，而是把品类、属性、地名、年份、价格、候选品牌全压进一条宽检索串：
 
 ```
-best earbuds longest battery life available in Kenya 2026 prices Obrand Soundcore battery life
-Singapore 2026 condo prices under S$1 million 2 bedroom property listings websites apps RivalH1 rival-h2.example SRX EdgeProp
+best earbuds longest battery life available in Kenya 2026 prices Oraimo Soundcore battery life
+Singapore 2026 condo prices under S$1 million 2 bedroom property listings websites apps PropertyGuru 99.co SRX EdgeProp
 ```
 
 这些子查询几乎不带问句（真问句开头 1%）、不带并列或比较连接词（4.6%），所以**条数少不等于检索变简单**：整题承载的约束总量反而比两代前更高。
 
 由此生出三条读法变化：
 
-1. **`site:` 定向统计在 `gpt-6` 下失效，改从 `search_result` 算检索层排名。** 用 `task_result.search_result` 里每条结果的域名做去重计数，得到「AI 去哪拿答案」的域名分布；定向没有消失，只是从 `site:` 换成了自然语言点名站点（`... RTINGS`、`... Jumia`、`... RivalH1 rival-h2.example SRX`）。但站点点名率很低（30% 题提及具体站点，其中落在核心媒体/电商的只是一部分），**信源建设方向以 `search_result` 域名榜为主，子查询点名只作旁证**。
+1. **`site:` 定向统计在 `gpt-6` 下失效，改从 `search_result` 算检索层排名。** 用 `task_result.search_result` 里每条结果的域名做去重计数，得到「AI 去哪拿答案」的域名分布；定向没有消失，只是从 `site:` 换成了自然语言点名站点（`... RTINGS`、`... Jumia`、`... PropertyGuru 99.co SRX`）。但站点点名率很低（30% 题提及具体站点，其中落在核心媒体/电商的只是一部分），**信源建设方向以 `search_result` 域名榜为主，子查询点名只作旁证**。
 2. **不能再用「子查询里有没有出现词 X」判断 AI 有没有理解某个条件。** 它不拆，所以词在不在都说明不了意图；`gpt-6` 子查询里塞进的候选品牌名单，才是它预设的答案域，比词频更有信息量。
 3. **「AI 自补属性词」这条用法仍在，但价值下降。** `gpt-6` 新增词频率最高的是 `2026`（600 次）、`prices`（247）、`best`（246）和一批品牌名，回声与套话占比更高；只有题面完全没有、又不属于这几类的词才值得看。
 
@@ -75,7 +75,7 @@ Singapore 2026 condo prices under S$1 million 2 bedroom property listings websit
 
 **补题用法**：fan-out、延伸问题和 AI 追问都可以当补充主题或问题的线索，但不能直接变成题。
 
-1. **只用 AI 主动补进来、题面里没有的部分。** 例：Ebrand 题面没问保修，ChatGPT 仍去检索 `warranty` 25 次、`certifications` 21 次，说明 AI 把它们当成这个品类的决策点，可用来查约束条件有没有漏项。复述题面的部分不能用。
+1. **只用 AI 主动补进来、题面里没有的部分。** 例：Edgelight 题面没问保修，ChatGPT 仍去检索 `warranty` 25 次、`certifications` 21 次，说明 AI 把它们当成这个品类的决策点，可用来查约束条件有没有漏项。复述题面的部分不能用。
 2. **只算假设，要用真人信号证实。** AI 生成的追问不等于真人需求。Gemini 的 `related_queries` 读起来最像现成的问题，但它是 AI 推荐用户下一步问什么。先在搜索数据、评价、社区或销售记录里找到对应的真人说法，再过三道门（有证据、买家会问、带来独立的决策价值），才能进候选题；题面用真人的说法写，不照抄子查询。
 3. **先进候选池，不直接改正式题。** 正式题锁版后，增删改题都要另立版本、受影响的组重跑基线。fan-out 发现的新方向先放候选池，下一轮刷新时按属性优先级决定加不加。
 4. **新主题看需求，不看题数。** 一组子查询指向一个现有主题之外的共同需求、而且预期面对另一组竞品，才单独开主题；否则作为属性或限定条件挂到现有主题下。

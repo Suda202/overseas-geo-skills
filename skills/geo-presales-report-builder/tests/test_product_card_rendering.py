@@ -36,12 +36,12 @@ class TestProductCardRendering(unittest.TestCase):
     def test_localized_product_headers_use_same_card_renderer(self):
         answer = """| id | 商品 | 价格 | 评分 | 商家 | 图片 |
 |------|------|------|------|------|------|
-| 1 | **Abrand G3 台式 RO 净水器** | $593.11 | ⭐ 0.0 | [\\$593.11 - Abrand](https://example.com/p) | <img src=\"https://example.com/p.jpg\" /> |
+| 1 | **Bewinch G3 台式 RO 净水器** | $593.11 | ⭐ 0.0 | [\\$593.11 - Bewinch](https://example.com/p) | <img src=\"https://example.com/p.jpg\" /> |
 """
         rendered = self.builder.markdown_to_html(answer)
         self.assertEqual(rendered.count('class="product-card"'), 1)
         self.assertEqual(rendered.count("product-card-img"), 1)
-        self.assertIn("Abrand G3 台式 RO 净水器", rendered)
+        self.assertIn("Bewinch G3 台式 RO 净水器", rendered)
         self.assertIn("$593.11", rendered)
         self.assertNotIn("**", rendered)
 

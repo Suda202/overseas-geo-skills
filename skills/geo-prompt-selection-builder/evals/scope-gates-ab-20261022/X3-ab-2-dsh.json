@@ -2,8 +2,8 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
-  "official_domain": "https://www.brand-b.example",
+  "brand_name": "Botslab",
+  "official_domain": "https://www.botslab.com",
   "generation_stage": "discovery",
   "lifecycle_status": "hypothesis",
   "evidence_status": "after_sales_signal",
@@ -13,16 +13,16 @@
    "prompt_set_status": "pending"
   },
   "competitors": [
-   "RivalB1",
-   "RivalB2",
-   "RivalB3"
+   "70mai",
+   "VIOFO",
+   "Vantrue"
   ],
   "competitor_selection": {
    "status": "frozen_in_case",
    "names": [
-    "RivalB1",
-    "RivalB2",
-    "RivalB3"
+    "70mai",
+    "VIOFO",
+    "Vantrue"
    ],
    "note": "Carried from the Case unchanged. Not used in this Discovery-stage set; no competitor Prompts are written at this stage."
   },
@@ -134,7 +134,7 @@
     "attribute": "Multi-Angle Exterior Coverage",
     "priority": "P1",
     "class": "Differentiator",
-    "reason": "Q03 asks for maximum exterior coverage and Q09 shows four-channel demand; this is where the H1 four-camera configuration is a real differentiator rather than parity.",
+    "reason": "Q03 asks for maximum exterior coverage and Q09 shows four-channel demand; this is where the G980H four-camera configuration is a real differentiator rather than parity.",
     "carried_by": [
      "T3Q1",
      "T3Q2",
@@ -302,7 +302,7 @@
    "market": "US",
    "language": "en",
    "product_lines": [
-    "H1 4-channel dash cam"
+    "G980H 4-channel dash cam"
    ],
    "audiences": [
     "Safety-focused private car owners",
@@ -321,9 +321,9 @@
     "shared garage"
    ],
    "formal_competitors": [
-    "RivalB1",
-    "RivalB2",
-    "RivalB3"
+    "70mai",
+    "VIOFO",
+    "Vantrue"
    ],
    "substitutes_or_status_quo": [
     "front-and-rear two-channel camera",
@@ -401,12 +401,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -441,7 +441,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],

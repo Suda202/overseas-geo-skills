@@ -140,7 +140,7 @@ def clean_text(raw: str) -> str:
 # brand-joiners found in this corpus ( - & . ' + ).
 WORD = r"[A-Z][A-Za-z0-9]*(?:[&.'+][A-Za-z0-9]+)*"
 TOKEN_RE = re.compile(r"\b" + WORD + r"\b")
-# 2- and 3-word runs of capitalised words (e.g. "RivalA1 Malaysia",
+# 2- and 3-word runs of capitalised words (e.g. "Coway Malaysia",
 # "Water Filter Guru", "British Berkefeld").
 NGRAM_RE = re.compile(r"\b" + WORD + r"(?:\s+" + WORD + r"){1,2}\b")
 
@@ -226,7 +226,7 @@ def classify(cand: str, alias_map, stop):
 
     Longest-alias-first so that "Aqua Kent Singapore" resolves to the brand
     "Aqua Kent" instead of being swallowed by the bare "Aqua" stopword, and
-    "Abrand's" resolves via possessive stripping.
+    "Bewinch's" resolves via possessive stripping.
     """
     low = cand.lower().strip()
     if low.endswith("'s"):
@@ -241,7 +241,7 @@ def classify(cand: str, alias_map, stop):
         if len(alias) < len(low) and low.startswith(alias) and \
                 low[len(alias)] in " -+/&":
             return brand
-    # An n-gram whose head word is a known brand ("RivalA1 Malaysia").
+    # An n-gram whose head word is a known brand ("Coway Malaysia").
     parts = low.split()
     if len(parts) > 1 and parts[0] in alias_map:
         return alias_map[parts[0]]

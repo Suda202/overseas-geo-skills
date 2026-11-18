@@ -3,7 +3,7 @@
 
 为什么要独立一份：`verify_report_data.py` 复算时复用生产的 `discover_sample_files` 映射，
 「文件 → 题目」归属错了它跟着错，对账永远平。这个脚本自己重建映射，所以能查出归属错误
-（Obrand 2026-11-11 就是靠它确认 303 个文件 0 错位，同时挖出运行次数排序和裸词别名两个 bug）。
+（Oraimo 2026-11-11 就是靠它确认 303 个文件 0 错位，同时挖出运行次数排序和裸词别名两个 bug）。
 
 用法：
     python3 -I audit_independent.py --case-dir <含 build/ 与 collect/ 的任务目录>
@@ -38,7 +38,7 @@ with open(BASE + '/build/questions.csv', encoding='utf-8-sig', newline='') as f:
     for i, row in enumerate(csv.DictReader(f), 1):
         qs.append(dict(qid=i, query=row['query'], topic=row['topic'], regions=[x.strip() for x in row['region'].split(',')]))
 case = json.load(open(BASE + '/build/case.json'))
-lex = json.load(open(BASE + '/build/brand_lexicon.brand_o.json'))
+lex = json.load(open(BASE + '/build/brand_lexicon.oraimo.json'))
 report = json.load(open(BASE + '/build/report-data.json'))
 TARGET = case['品牌']
 OFFICIAL = re.sub(r'^www\.', '', urlparse(case['官方域名']).netloc or case['官方域名'])
@@ -211,7 +211,7 @@ recomputed = {f'{r}||{t}': metrics(sel(r, t)) for r, t in slice_keys}
 def pct(s):
     if s in (None, '—', ''): return None
     return float(str(s).rstrip('%')) / 100
-TOP = ['Obrand', 'RivalO2', 'Apple', 'Samsung', 'RivalO4', 'RivalO1']
+TOP = ['Oraimo', 'Anker', 'Apple', 'Samsung', 'UGREEN', 'Sony']
 rows, diffs = [], []
 def cmp(slice_, metric, rep, mine, tol=0.0006):
     if rep is None and mine is None: ok = True
@@ -222,8 +222,8 @@ def cmp(slice_, metric, rep, mine, tol=0.0006):
 for key, rc in recomputed.items():
     s = report['slices'][key]
     cmp(key, '有效回答数', s['_counts']['valid_answers'], rc['valid'], 0)
-    cmp(key, '提及率[Obrand]/kpis', pct(s['kpis']['mention_rate']), rc['brands'][TARGET]['rate'])
-    cmp(key, 'SOV[Obrand]/kpis', pct(s['kpis']['share_of_voice']), rc['brands'][TARGET]['sov'])
+    cmp(key, '提及率[Oraimo]/kpis', pct(s['kpis']['mention_rate']), rc['brands'][TARGET]['rate'])
+    cmp(key, 'SOV[Oraimo]/kpis', pct(s['kpis']['share_of_voice']), rc['brands'][TARGET]['sov'])
     ca = {b['name']: b for b in s['competition_all']}
     for nm in names:
         b = ca.get(nm)
@@ -279,14 +279,14 @@ missing_in_facts = [a['file'] for a in answers if (a['reg'], a['qid'], a['n']) n
 cit_fact = sum(len(fa['c']) for fa in F['answers'])
 cit_mine = sum(len(a['cites']) for a in answers)
 
-# ---------- brand_o 出现 ----------
+# ---------- oraimo 出现 ----------
 ora = []
 for a in answers:
-    for m in re.finditer('brand_o', a['text'], re.I):
+    for m in re.finditer('oraimo', a['text'], re.I):
         s = max(0, m.start() - 120); e = min(len(a['text']), m.end() + 120)
         ora.append(dict(file=a['file'], pos=m.start(), in_footnote=bool(FOOT.search(a['text'][max(0,a['text'].rfind('\n',0,m.start())):m.end()+200]) and a['text'][a['text'].rfind('\n',0,m.start())+1:].lstrip().startswith('[')), context=a['text'][s:e].replace('\n', ' ')))
 
-prod_terms = [dict(file=a['file'], term=m.group(0)) for a in answers for m in re.finditer(r'spacebuds|freepods|airbuds|brand_o|orabuds|powermini', a['text'] + ' '.join(a['cards']), re.I)]
+prod_terms = [dict(file=a['file'], term=m.group(0)) for a in answers for m in re.finditer(r'spacebuds|freepods|airbuds|oraimo|orabuds|powermini', a['text'] + ' '.join(a['cards']), re.I)]
 # ---------- 抽样 ----------
 random.seed(SEED)
 sample = random.sample(F['answers'], 10)
@@ -300,7 +300,7 @@ result = dict(
     prompt_mismatch=mismatches, region_not_allowed=region_bad, coverage_missing=cover_missing,
     comparisons_total=len(rows), record_brand_rows=rec_rows, diffs=diffs,
     facts=dict(n_label_mismatch_vs_filename=n_label_mismatch, answers=fact_n, mismatches=len(fact_diff), mismatch_detail=fact_diff[:60], not_in_facts=missing_in_facts, citations_in_facts_c=cit_fact, citations_mine=cit_mine),
-    brand_o_product_terms=prod_terms, brand_o_total=len(ora), brand_o_files=sorted({o['file'] for o in ora}), brand_o_hits=ora,
+    oraimo_product_terms=prod_terms, oraimo_total=len(ora), oraimo_files=sorted({o['file'] for o in ora}), oraimo_hits=ora,
     sample=samp, casesensitive_variant_diff_count=len(vb_diff), casesensitive_variant_diff=vb_diff[:80],
     all_rows=rows,
 )
@@ -308,5 +308,5 @@ json.dump(result, open(OUT + f'/recompute{SUFFIX}.json', 'w'), ensure_ascii=Fals
 print('files', nfiles, 'valid', result['valid_total'], 'prompt_mismatch', len(mismatches), 'region_bad', len(region_bad), 'coverage_missing', len(cover_missing))
 print('comparisons', len(rows), 'record rows', rec_rows, 'diffs', len(diffs))
 print('facts answers', fact_n, 'facts mismatch', len(fact_diff), 'not_in_facts', len(missing_in_facts), 'cites facts/mine', cit_fact, cit_mine)
-print('brand_o product-line terms', len(prod_terms)); print('brand_o total', len(ora), 'files', result['brand_o_files'])
+print('oraimo product-line terms', len(prod_terms)); print('oraimo total', len(ora), 'files', result['oraimo_files'])
 print('casesensitive variant answers differing', len(vb_diff))

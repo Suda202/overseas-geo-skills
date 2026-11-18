@@ -30,7 +30,7 @@
 - **首次填充要幂等，写入后必须回读行数**：清空示例行那一步如果没真的删掉（`record-list` 写文件失败、路径不对、脚本误判「没有记录要删」），接着写入就会整表翻倍，而成对出现的重复行在表格里很难一眼看出来。做法：清空后回读一次确认 0 行再写；写完全表按主字段统计唯一值，行数不等于唯一值就是有重复，按主字段去重留在前一份、删掉后一份，删前存快照。业务范围这种每行都不同的表，重复后是整块复制，按「项目」去掉是一行还是多行就能判断；同一项目名合法多行的（核心目标客户与购买场景、竞品），先按「项目＋内容」去重，再给行名加编号便于区分。单值行（品牌、市场、语言、官方域名）的「市场」字段留空，不和项目值重复。
 - **品牌方能看到 Base 之后只做增量部署**：不整表删了重建（会换掉 record_id，关联字段全断）。每次部署前后跑 `python3 -I <项目根>/.agents/skills/geo-prompt-selection-builder/scripts/diff_base_against_spec.py --base <token> --spec <spec.json>`（在客户目录下跑，lark-cli 只能写当前目录），0 差异才算部署完。默认主键：主题＝主题+市场，提示词矩阵＝切片编号，提示词库＝编号，需求信号＝输入编号，业务范围＝项目，品牌事实核查＝事实项，约束条件＝约束条件。
 - **多个市场共用一份 Base**：每张表在主字段后加「市场」字段。各市场都一样的事实写一行、市场多选；各市场不同的（官网路径、本地叫法、法规、别名、竞品）每个市场一行，同名放在一起。提示词按意图和语言合并：同意图同语言的一行多选市场；语言不同的每种语言一行（各自审核、各自挑正式题）。需求信号单选市场。只属于一个市场的编号带市场前缀（`KR-R001`、`AN-KR-T1-D01`），切片编号不带。每个市场在需求信号、提示词矩阵、提示词库各建一个筛选视图。测量仍按市场分开：题库 JSON、validator、版本、基线一个市场一份。
-- **列序按实际填充率排，不按字段重要性排**：常填的靠前，大面积空的靠后。判断依据是这份表跑完后的真实填充率，不是字段在逻辑上重不重要。实测（某制氧机客户，198 条信号）：需求信号的「月搜索量」只有 4.5% 有值、「引用它的问题」17.7%，两个都收在尾部；把月搜索量放在「出处」后面会让品牌方看到一大片空白，误以为表没填完。主题表同理，「父关键词」「月搜索量」提到「主题优先级依据」前面，因为依据里要引用这两个数，先看数再看解释。改列序前先统计填充率，不凭直觉调。
+- **列序按实际填充率排，不按字段重要性排**：常填的靠前，大面积空的靠后。判断依据是这份表跑完后的真实填充率，不是字段在逻辑上重不重要。实测（思特森，198 条信号）：需求信号的「月搜索量」只有 4.5% 有值、「引用它的问题」17.7%，两个都收在尾部；把月搜索量放在「出处」后面会让品牌方看到一大片空白，误以为表没填完。主题表同理，「父关键词」「月搜索量」提到「主题优先级依据」前面，因为依据里要引用这两个数，先看数再看解释。改列序前先统计填充率，不凭直觉调。
 - **主字段按关联格里要显示什么来选**：需求信号以「原话」为主字段（品牌方只读中文时用「译文」），提示词库以「提示词」为主字段，提示词矩阵以「切片编号」为主字段。
 - 不用合并单元格；空单元格在插行删行时更安全。
 
@@ -107,12 +107,12 @@
 |-|-|
 | 发现 | Which automatic litter boxes work for three cats in a small apartment? |
 | 问题解决 | Why does my apartment still smell like cat litter even though I scoop every day? |
-| 评估 | Is the Pbrand Pura Max suitable for kittens under 3 months? |
-| 对比 | Pbrand vs Litter-Robot: which is better for multiple cats? |
+| 评估 | Is the PETKIT Pura Max suitable for kittens under 3 months? |
+| 对比 | PETKIT vs Litter-Robot: which is better for multiple cats? |
 | 替代 | What are good alternatives to Litter-Robot for a small apartment? |
-| 信任 | Are there common complaints about Pbrand litter boxes? |
-| 交易 | Where can I buy the Pbrand Pura Max in Singapore? |
-| 售后 | How do I reset the Pbrand Pura Max after a sensor error? |
+| 信任 | Are there common complaints about PETKIT litter boxes? |
+| 交易 | Where can I buy the PETKIT Pura Max in Singapore? |
+| 售后 | How do I reset the PETKIT Pura Max after a sensor error? |
 
 ## 主题
 

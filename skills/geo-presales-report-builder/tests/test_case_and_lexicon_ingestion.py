@@ -1,6 +1,6 @@
 """Case 与品牌词表接入的通用性测试。
 
-覆盖两条多品类/多语言实测踩到的坑（2026-09-22，Ybrand 泰国数据集）：
+覆盖两条多品类/多语言实测踩到的坑（2026-09-22，YOUKU 泰国数据集）：
   * 题库主题是当地语言、Case 主题是中文，需要对得上；
   * 词表结构与 Case 名称写法不统一时，不能静默把元数据当成品牌、
     也不能把同一个品牌拆成两个对象（声量分母会被污染）。
@@ -27,9 +27,9 @@ class TestCaseTopicLabels(unittest.TestCase):
         return path
 
     def base(self, **extra):
-        return {"品牌名称": "Ybrand", "官方域名": "https://brandy.example",
+        return {"品牌名称": "YOUKU", "官方域名": "https://youku.tv",
                 "品类": "华语视频流媒体平台",
-                "竞品 1": "RivalY1 International", "竞品 1 官网域名": "https://iq.com",
+                "竞品 1": "iQIYI International", "竞品 1 官网域名": "https://iq.com",
                 **extra}
 
     def test_topic_labels_are_read_from_case(self):
@@ -61,18 +61,18 @@ class TestLexiconShapes(unittest.TestCase):
     def test_nested_brands_dict_keeps_aliases_and_ignores_metadata(self):
         """{"brands": {名: 别名}} 要能用，且 target/note/tiers 这类顶层元数据不能被当成品牌。"""
         entries, _, status = MODULE.load_lexicon(self.write({
-            "target": "Ybrand", "note": "说明文字", "tiers": {"1_frozen": ["Ybrand"]},
-            "brands": {"Ybrand": ["Ybrand", "某平台"], "Netflix": ["Netflix"]}}))
+            "target": "YOUKU", "note": "说明文字", "tiers": {"1_frozen": ["YOUKU"]},
+            "brands": {"YOUKU": ["Youku", "优酷"], "Netflix": ["Netflix"]}}))
         self.assertEqual("loaded", status)
         names = sorted(e["name"] for e in entries)
-        self.assertEqual(["Netflix", "Ybrand"], names)      # 没有 target/note/tiers
-        ybrand = next(e for e in entries if e["name"] == "Ybrand")
-        self.assertIn("某平台", ybrand["aliases"])
+        self.assertEqual(["Netflix", "YOUKU"], names)      # 没有 target/note/tiers
+        youku = next(e for e in entries if e["name"] == "YOUKU")
+        self.assertIn("优酷", youku["aliases"])
 
 
 class TestNameTokensSubset(unittest.TestCase):
     def test_case_name_longer_than_lexicon_name_matches(self):
-        self.assertTrue(MODULE._name_tokens_subset("rivaly1", "rivaly1 international"))
+        self.assertTrue(MODULE._name_tokens_subset("iqiyi", "iqiyi international"))
         self.assertTrue(MODULE._name_tokens_subset("hbo", "hbo max"))
 
     def test_unrelated_or_partial_words_do_not_match(self):
@@ -88,18 +88,18 @@ class TestNameTokensSubset(unittest.TestCase):
 
 class TestConfigMergesCompetitorByTokenSubset(unittest.TestCase):
     def test_lexicon_entry_folds_into_case_competitor(self):
-        case = {"brand": "Ybrand", "official_domain": "brandy.example", "category": "",
-                "competitors": [{"name": "RivalY1 International", "domain": "iq.com"}],
+        case = {"brand": "YOUKU", "official_domain": "youku.tv", "category": "",
+                "competitors": [{"name": "iQIYI International", "domain": "iq.com"}],
                 "topics_raw": "华语视频平台"}
         entries = [
-            {"name": "RivalY1", "domains": [], "aliases": ["RivalY1", "爱奇艺"],
+            {"name": "iQIYI", "domains": [], "aliases": ["iQIYI", "爱奇艺"],
              "type": "competitor_open"},
             {"name": "Netflix", "domains": [], "aliases": ["Netflix"], "type": "competitor_open"},
         ]
         config = MODULE.build_config(case, ["华语视频平台"], entries, {})
         names = [o["canonical_name"] for o in config["objects"]]
-        # RivalY1 并入配置竞品，不另起一个开放品牌对象
-        self.assertNotIn("RivalY1", names)
+        # iQIYI 并入配置竞品，不另起一个开放品牌对象
+        self.assertNotIn("iQIYI", names)
         self.assertEqual(3, len(config["objects"]))          # target + competitor + Netflix
         competitor = next(o for o in config["objects"] if o["role"] == "competitor")
         self.assertIn("爱奇艺", competitor["aliases"])

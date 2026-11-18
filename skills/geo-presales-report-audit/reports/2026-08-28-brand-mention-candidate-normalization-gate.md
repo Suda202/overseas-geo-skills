@@ -14,7 +14,7 @@
 |-|-|-|
 | `chatgpt + #8175` | `Sure Petcare #1` | `SureFeed #1` |
 | `chatgpt + #8176` | `Sure Petcare #3, Catit #4` | `Catit #3, Sure Petcare #4` |
-| `gemini + #8167` | `Pbrand #1, CATLINK #2` | 恢复 `PETLIBRO #3, Litter-Robot #4` |
+| `gemini + #8167` | `PETKIT #1, CATLINK #2` | 恢复 `PETLIBRO #3, Litter-Robot #4` |
 | `gemini + #8173` | `Sure Petcare #2` | `SureFeed #2` |
 | `gemini + #8179` | `oneisall #4` | `Oneisall #4` |
 | `gemini + #8186` | `oneisall #3` | `Oneisall #3` |

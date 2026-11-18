@@ -1,5 +1,5 @@
 {
- "source": "80-代码/选词工具-harness-AB（2026-10-22 harness A/B，Bbrand 行车记录仪 US）",
+ "source": "80-代码/选词工具-harness-AB（2026-10-22 harness A/B，Botslab 行车记录仪 US）",
  "review": "独立盲评逐题判「依据贴合」「不重复」，下列为判否的题在题库中的顺序号（1 起）。依据贴合按约束列口径修正：Q04/Q08 约束列写了 100/200 美元以内，价格题判贴合。",
  "constraints_annotation": "每题 constraints 由独立子代理按题面标注，约束列已有的写法原样照抄",
  "blind_review_fail": {

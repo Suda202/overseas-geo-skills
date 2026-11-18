@@ -128,7 +128,7 @@ def check_matrix_v2(rows, prompt_rows):
         # 低档行默认不出题（2026-11-05）：没挂题的发现行要在依据末尾写「本期不出：业务优先级低，原因……」；为补高、中覆盖挂了题的不报
         if TIER[tier] == 2 and not carried and rtype == "发现" and "本期不出" not in basis:
             problems.append(f"提示词矩阵 {sid}：业务优先级为低，依据末尾要写「本期不出：业务优先级低，原因……」")
-        # 本期不出的理由不能是试跑读数：品牌读数不进选题（Hbrand 2026-11-04 M-024、M-025）
+        # 本期不出的理由不能是试跑读数：品牌读数不进选题（Housebell 2026-11-04 M-024、M-025）
         reason = basis.split("本期不出", 1)
         if len(reason) == 2 and re.search(r"\d+\s*/\s*\d+|\d+\s*次|0 次|没提到|未提及", reason[1]):
             problems.append(f"提示词矩阵 {sid}：「本期不出」的理由写了试跑读数；品牌读数不进选题，改写题或重判这一行")

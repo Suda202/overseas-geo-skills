@@ -18,7 +18,7 @@
 - 统计层默认原则（2026-11-10 Suda）：引用默认统计全部意图类型，各类型切片都算出来；展示哪一批由报告按需求决定。
 
 - 提及类指标（提及率、提及率排名、声量份额、平均提及位置）只统计发现＋替代（11-06 前的旧类型「品类认知」题面不点名品牌，并入这一组）；问题解决不统计提及率（11-11 Suda 定），筛到只剩问题解决题时显示「当前筛选下不统计」；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
-- 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Bbrand H1 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
+- 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Botslab G980H 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
 - 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"]]`、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
 - 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）2026-11-10 起与售前同一套口径，不再打补丁：题库写真实意图类型，取代 10-22 的「所有题都计入提及率、全部类型引用只合并发现和品类认知」。
 
@@ -66,7 +66,7 @@
 **ChatGPT 只认带商品目录的购物卡**（2026-11-11 Suda 定）：`products[]` 条目带 `id`、`cite`（如 `turn0product7`）、`offers`、`price` 之一才算商品卡，判断在 `shopping.chatgpt_catalog_backed`。不带的条目不计，包括两类：
 
 - 没有商品目录的市场里，回答用卡片版式展示的商品推荐。肯尼亚、尼日利亚实测，回答页上的卡没有价格、商家、购买入口，图片是网页配图，`products` 只剩 `title` 和 `query`。OpenAI 原文 "Shopping is currently live for ChatGPT users in the U.S."（https://chatgpt.com/merchants/）。
-- 非商品条目，如「RivalH1」「Facebook Marketplace」。
+- 非商品条目，如「PropertyGuru」「Facebook Marketplace」。
 
 全项目实测：美国 1,333 条带目录证据、2 条不带；肯尼亚、尼日利亚 10,822 条全不带。一个市场全是这类条目时，该市场商品卡数为 0，报告按「本次采集没有商品卡」整块不出。
 
@@ -81,12 +81,12 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 | 商品卡触发率 | Profound Shopping Mode Rate | 出现商品卡的回答数 ÷ 有效回答数 | `shopping_mode_rate` |
 | 商品卡提及率 | Profound Shopping Visibility Score | 至少有一张本品牌商品卡的回答数 ÷ 出现商品卡的回答数。只数商品卡里的品牌，不含正文提及 | `brands[].shopping_visibility` |
 | 商品卡平均位置 | Average Position | 每条出现本品牌卡的回答里，本品牌最靠前那张卡的位置，取平均 | `brands[].average_card_position` |
-| 官网购买链接覆盖率 | Writesonic Direct Purchase Link（按回答计） | 出现本品牌商品卡的回答里，这些卡至少带一个官网购买链接的回答占比。官网 = 链接域名是品牌官网，或商家名带品牌名（「Bbrand」「RivalB1 Official」） | `brands[].official_link_coverage` |
+| 官网购买链接覆盖率 | Writesonic Direct Purchase Link（按回答计） | 出现本品牌商品卡的回答里，这些卡至少带一个官网购买链接的回答占比。官网 = 链接域名是品牌官网，或商家名带品牌名（「Botslab」「70mai Official」） | `brands[].official_link_coverage` |
 
 百分比一律保留 1 位小数，和报告其他指标同一精度（core 调用 `percent(n, d, 1)`，前端 `report-engine.js` 的 `corePercent` 同式）；整数时不写小数点（72% 不写 72.0%）。2026-11-09 Suda 发现核心洞察 8.5% 与模块表格 8% 对不上，就是这里原来取整到整数造成的。
 例：100 条 ChatGPT 回答，60 条出了商品卡，其中 18 条有本品的卡、入选时平均在第 2.5 位：商品卡触发率 60%，商品卡提及率 30%（18 ÷ 60），商品卡平均位置 2.5。
 
-**品牌级、SKU 级分开算**：上表是品牌级（本品任意一张卡都算）。SKU 级只看本品，同样三项——SKU 商品卡提及率（出现该 SKU 卡的回答 ÷ 出现商品卡的回答，分母和品牌级相同）、SKU 商品卡平均位置（该 SKU 在每条回答里最靠前那张卡的位置取平均）、SKU 官网购买链接覆盖率（出现该 SKU 卡的回答里带官网购买链接的占比），内部字段 `target_skus[]`。覆盖率用回答计，不用 offer 份额：份额会被第三方商家数量稀释（Bbrand ChatGPT 本品 offer 里官网只占 40%，但每条出现 Bbrand 卡的回答都带官网链接，覆盖率 100%）。同一款产品 AI 会写成好几种标题，所以先按归并表（`build_report_data.py --sku-map`，每条是「SKU 名 + 正则」，按顺序第一条命中卡标题的胜出）归到型号再数；配件单列；都不中的记「未识别型号」——Google 系（AIO、AI Mode）的卡标题常不带型号（「Bbrand Dash Cam Car Security Camera」），这一行会比较大。各 SKU 的提及率相加可以超过品牌级，因为一条回答可能同时出现两个 SKU。归并表按客户写，放在客户的评测目录（Bbrand：`10-售前诊断报告/评测数据/brand-b/售后/选词-20261106/report-h1/sku-map.json`）。
+**品牌级、SKU 级分开算**：上表是品牌级（本品任意一张卡都算）。SKU 级只看本品，同样三项——SKU 商品卡提及率（出现该 SKU 卡的回答 ÷ 出现商品卡的回答，分母和品牌级相同）、SKU 商品卡平均位置（该 SKU 在每条回答里最靠前那张卡的位置取平均）、SKU 官网购买链接覆盖率（出现该 SKU 卡的回答里带官网购买链接的占比），内部字段 `target_skus[]`。覆盖率用回答计，不用 offer 份额：份额会被第三方商家数量稀释（Botslab ChatGPT 本品 offer 里官网只占 40%，但每条出现 Botslab 卡的回答都带官网链接，覆盖率 100%）。同一款产品 AI 会写成好几种标题，所以先按归并表（`build_report_data.py --sku-map`，每条是「SKU 名 + 正则」，按顺序第一条命中卡标题的胜出）归到型号再数；配件单列；都不中的记「未识别型号」——Google 系（AIO、AI Mode）的卡标题常不带型号（「Botslab Dash Cam Car Security Camera」），这一行会比较大。各 SKU 的提及率相加可以超过品牌级，因为一条回答可能同时出现两个 SKU。归并表按客户写，放在客户的评测目录（Botslab：`10-售前诊断报告/评测数据/botslab/售后/选词-20261106/report-g980h/sku-map.json`）。
 
 `brands[].shopping_exposure_rate`（有本品卡的回答 ÷ 有效回答，等于触发率 × 提及率）只留在数据里，不展示。
 
@@ -109,7 +109,7 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 
 ## 引用来源分类（引用类别）
 
-报告里的「引用类别」不是采回来的字段，是**我们自己判**的。采集结果只有 URL、host 和来源名（`content_references` / `citations` 里没有 `source_type`），不判就会全部落进「其他」——2026-11-11 某制氧机客户两份售前报告就是这样，305/373 条引用全是「其他」。
+报告里的「引用类别」不是采回来的字段，是**我们自己判**的。采集结果只有 URL、host 和来源名（`content_references` / `citations` 里没有 `source_type`），不判就会全部落进「其他」——2026-11-11 思特森两份售前报告就是这样，305/373 条引用全是「其他」。
 
 判定顺序固定，先命中先返回：
 
@@ -151,7 +151,7 @@ Profound 另有一条产品规则：全局引用量不足 100 次的域名归入
 
 站点身份会变，判读不是一次定终身。出现以下情况要重新核实并更新 `verified_at`：内容主题明显变化、首页或 About 页改版、商业模式变化（开始挂联盟或卖货）、历史判读与新抓到的页面冲突。复核时看内容性质和变现方式，不看建站工具——用了 WordPress 不代表是博客，也不代表归社交平台。
 
-**未判读门禁**（2026-11-13 Suda：「补判域名」老被跳过，结果悄悄落进「其他」，某制氧机客户 305/373、某车载品牌 36%）：
+**未判读门禁**（2026-11-13 Suda：「补判域名」老被跳过，结果悄悄落进「其他」，思特森 305/373、路拓 36%）：
 
 - 「未判读」和缓存里判过的「其他」是两回事。前者没人看过，后者看过、确认不属于任何一类。
 - **长尾不强制判读**：单个域名在本次引用里不足 `min(100, 总引用 × 1%)`（下限 5）次的，记为「长尾未判」，展示归「其他」，但单独统计 `low_volume_*`，不进 5% 门禁。100 是 Profound 的口径；按 1% 收缩是为了避免几百条引用的项目把所有域名都判成长尾。

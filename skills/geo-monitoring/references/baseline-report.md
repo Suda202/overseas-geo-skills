@@ -1,6 +1,6 @@
 # 基线报告（HTML）
 
-Formal-baseline results go to the brand party as one HTML file (the candidate baseline was retired 2026-10-23; old candidate-baseline reports built with this script stay valid), never as Base tables (Suda 2026-10-21). A Base dashboard can only SUM / AVG / MAX / MIN and cannot divide across rows, so every rate had to be precomputed per filter combination (Hbrand: 1,344 helper rows), and a dashboard-level filter cannot be created through the API. The HTML is precomputed and verified too, but filters freely. The Base keeps only what the brand party confirms or edits (AI 认知差距 stays on 提示词库).
+Formal-baseline results go to the brand party as one HTML file (the candidate baseline was retired 2026-10-23; old candidate-baseline reports built with this script stay valid), never as Base tables (Suda 2026-10-21). A Base dashboard can only SUM / AVG / MAX / MIN and cannot divide across rows, so every rate had to be precomputed per filter combination (Housebell: 1,344 helper rows), and a dashboard-level filter cannot be created through the API. The HTML is precomputed and verified too, but filters freely. The Base keeps only what the brand party confirms or edits (AI 认知差距 stays on 提示词库).
 
 Script: `scripts/build_baseline_html.py`. It reuses `geo-presales-report-builder` (build_report_data → verify_report_data → render_report) and the sentiment pipeline in `geo-metrics` (`scripts/sentiment_sentences.py`, `references/sentiment.md`). Since 2026-11-10 it uses the same metric calibers as the presales report with no run-time statistic patches (brand recognition, source classification and citation scope all come from `geo-metrics`); it only adapts display — the region layer carries the intent type, and the page adds the 引用率 KPI, per-run drawer and per-question comparison table.
 
@@ -82,7 +82,7 @@ Sentiment and translations are prepared before the report is built, so the repor
 - 有效回答不到 7 条（3 次试跑）只算预判：「有引用的回答 4 条」「多出 3 条」两个次数门槛按回答数等比例缩，最少 2 条（3 次试跑就是 2 条、2 条）；7 次基线跑完再定正式档。
 - 可改变性只回答能不能改，不回答值不值得做：提及率已经很高的题也可能判高。
 - 每题输出被引最多的竞品页面网址，作为改官网的参照；不参与定档。
-- 阈值（20%、40 个百分点、3 条、40%、4 条）都是参数，按某车载品牌一个客户定的，多积累客户后再校准。
+- 阈值（20%、40 个百分点、3 条、40%、4 条）都是参数，按路拓一个客户定的，多积累客户后再校准。
 
 ## 优化顺序 (Suda 2026-10-23)
 
@@ -99,14 +99,14 @@ Applies to Discovery and Alternatives Prompts only; named-brand types put the br
 | 已打平或领先 | t > 20% and L − t < 30 points | Last — the job is to hold; monitoring continues unchanged |
 | 来源追不上 | No executable source intervention has been identified after reviewing pages, evidence and available resources | Record the source constraints and feasible actions for manual review; no automatic tier change |
 
-Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — inherited from business importance) → pattern as above → 相对竞品 (优势 before 持平; judged after the baseline for Prompts with a gap — the client Base has no attribute pool since 2026-11-04; leave it out of the order where not yet judged). Source structure describes possible interventions and evidence gaps. Citation shares alone do not establish changeability or alter the selection tier. The thresholds (20%, 30 points) were set on Hbrand's 15 answers per Prompt; with 7 runs per cell a 50% reading carries roughly ±37 points on a single platform and about ±19 pooled over four platforms (1.96 × √(p(1−p)/n)), so patterns are assigned on the pooled reading only — never per platform — and a Prompt within the pooled margin of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
+Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P1 / P2 / P3 in older Bases — inherited from business importance) → pattern as above → 相对竞品 (优势 before 持平; judged after the baseline for Prompts with a gap — the client Base has no attribute pool since 2026-11-04; leave it out of the order where not yet judged). Source structure describes possible interventions and evidence gaps. Citation shares alone do not establish changeability or alter the selection tier. The thresholds (20%, 30 points) were set on Housebell's 15 answers per Prompt; with 7 runs per cell a 50% reading carries roughly ±37 points on a single platform and about ±19 pooled over four platforms (1.96 × √(p(1−p)/n)), so patterns are assigned on the pooled reading only — never per platform — and a Prompt within the pooled margin of a threshold is reported with both neighbouring patterns rather than forced into one. Show the pattern and the order in 问题明细, one value per Prompt, 「第 N 档（提示词优先级 · pattern · 相对竞品）」, one line per market. It stays in the report: the client Base no longer has an 优化顺序 column (removed 2026-11-01), and the selection 提示词优先级 is never rewritten.
 
 ## Display rules
 
 - Zero reads 「0%」, never 「0.0%」. A run with no citations reads 「无引用」 (its 引用份额 has no denominator); 「—」 is kept for values with no denominator, e.g. 声量份额 when no brand was mentioned, or a topic made only of named-brand Prompts whose citation aggregates under 全部类型 have no eligible answers (its per-Prompt rows still show).
 - Citation pills show the full source name and number (the presales style cut them at 120–180 px), link to the run's own citation, and are restored as pills in the translation.
 - Answer HTML is cleaned of crawler leftovers: empty-target images, empty links, `[text](<url>)`, `---`, ChatGPT widget residue (`:::writing`, `{#each}`, `{@body}`, `<Entity value=…>`), LaTeX (written as × ÷ ≥ ≈), double-escaped entities and markdown escapes. Translated tables (flattened to `a | b |` lines) are rebuilt as tables; heading-style `1.` lines keep their own numbers. The remaining few hits in 渲染残留自检 are answers the crawler cut off mid-markup.
-- Payload is gzipped into the page and unpacked in the browser; Hbrand with 5 runs' answers and translations is about 6 MB (15 MB uncompressed, which the app side panel could not open).
+- Payload is gzipped into the page and unpacked in the browser; Housebell with 5 runs' answers and translations is about 6 MB (15 MB uncompressed, which the app side panel could not open).
 
 ## 平台自报参照 (Suda 2026-11-04)
 
@@ -123,6 +123,6 @@ Order: tier (提示词库 提示词优先级 — 高 / 中 / 低; 优先级 or P
 
 ## Known gaps
 
-- Hbrand 2026-10-21: ChatGPT `search_model_queries` was empty in all 380 answers and Gemini returned related questions in 11 of 380, so Query Fan-outs is mostly empty. **Resolved 2026-10-29**: the collector was not broken — 10-28 and 10-29 batches returned the field in 100% of answers. That batch predates the fix; the files' mtimes were later refreshed by a downstream script, so judge emptiness by `task_result.model` and field content, never by file time.
+- Housebell 2026-10-21: ChatGPT `search_model_queries` was empty in all 380 answers and Gemini returned related questions in 11 of 380, so Query Fan-outs is mostly empty. **Resolved 2026-10-29**: the collector was not broken — 10-28 and 10-29 batches returned the field in 100% of answers. That batch predates the fix; the files' mtimes were later refreshed by a downstream script, so judge emptiness by `task_result.model` and field content, never by file time.
 - ChatGPT fan-out shape changed with `gpt-6` (2026-10-29): one wide keyword-stuffed query instead of 2–3 decomposed ones, no `site:` operators. See [gap-cause-action-table.md](gap-cause-action-table.md) → *ChatGPT 两代形态不同*. Readings across the two model generations are not comparable.
 - Not in the report: 推荐率, 决胜率 (ad-hoc for comparison Prompts), 事实准确率 (retest table), Shopping GEO, 平台自报参照 (GSC / Bing AI reports; see above).

@@ -277,7 +277,7 @@ def patch_report_data(path: Path, cfg, questions, intent):
     for s in data["slices"].values():
         tm = (s.get("sentiment") or {}).get("theme_matrix") or {}
         if tm.get("themes"):
-            # 展示品牌都没有信号的主题行不展示（Hbrand 的「价格与费用」只来自未展示的开放品牌）
+            # 展示品牌都没有信号的主题行不展示（Housebell 的「价格与费用」只来自未展示的开放品牌）
             keep = [t for t in tm["themes"]
                     if any((tm["matrix"].get(t, {}).get(b) or {}).get("pos", 0) + (tm["matrix"].get(t, {}).get(b) or {}).get("neg", 0)
                            for b in tm.get("brands") or [])]

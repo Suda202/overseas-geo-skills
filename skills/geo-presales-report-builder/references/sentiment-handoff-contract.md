@@ -22,7 +22,7 @@ sentiment-claims/
 由 `prep_sentiment_handoff.py split --units --brands --out-dir` 生成。数组,每条:
 
 ```json
-{"idx": 189, "brand": "Abrand", "region": "MY", "platform": "chatgpt",
+{"idx": 189, "brand": "Bewinch", "region": "MY", "platform": "chatgpt",
  "question_id": "0017", "intent": "Discovery", "sentence": "…"}
 ```
 
@@ -42,7 +42,7 @@ sentiment-claims/
 
 ## 3. `sentiment-claims/judged-sentences.json` — 判读句子表
 
-由 `prep_sentiment_handoff.py assemble --units --labels-dir --brands --out` **确定性生成,不要手写**(2026-09-17 前靠人肉整理,Abrand 案例已验证脚本输出与人肉版集合一致):
+由 `prep_sentiment_handoff.py assemble --units --labels-dir --brands --out` **确定性生成,不要手写**(2026-09-17 前靠人肉整理,Bewinch 案例已验证脚本输出与人肉版集合一致):
 
 ```json
 {"<品牌>": {"positive": [{"idx":200,"region":"MY","platform":"chatgpt",
@@ -57,14 +57,14 @@ sentiment-claims/
 语义归纳:把该品牌判读句子归成 4–8 组「标签 + 成员」:
 
 ```json
-{"brand": "Abrand",
+{"brand": "Bewinch",
  "positive": [{"label": "免安装零管线", "count": 37, "indices": [0, 5, 6, ...],
    "evidence": {"sentence": "<原文整句>", "region": "MY", "platform": "chatgpt",
                 "question_id": "0012"}}],
  "negative": [...]}
 ```
 
-- `indices` 指向 judged-sentences.json 里该品牌**同方向数组的下标**(0..N-1),**不是全局 idx**——Abrand 案例中 RivalA1 曾把全局 idx 写进来,导致该品牌观点组在报告切片时被静默丢弃。
+- `indices` 指向 judged-sentences.json 里该品牌**同方向数组的下标**(0..N-1),**不是全局 idx**——Bewinch 案例中 Coway 曾把全局 idx 写进来,导致该品牌观点组在报告切片时被静默丢弃。
 - 每个方向的各组 indices 必须**互斥且穷尽**(并集 = 全部句子),`count` 必须等于 `indices` 长度。
 - 写完必须跑门禁,退出码非 0 不得进入 attach:
 

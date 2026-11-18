@@ -35,11 +35,11 @@ def make_case(root: str, tamper_prompt: bool = False) -> tuple[str, str]:
 
     crawl = os.path.join(root, "crawl")
     answers = {
-        1: "แนะนำ **Ybrand** เลย ([Google Play][1])<FollowUp label=\"x\" query=\"y\"/>\n"
-           "| แพลตฟอร์ม | จุดเด่น |\n|---|---|\n| Ybrand ดีมาก | RivalY1 ก็มี ybrandapp ไม่นับ |\n"
+        1: "แนะนำ **YOUKU** เลย ([Google Play][1])<FollowUp label=\"x\" query=\"y\"/>\n"
+           "| แพลตฟอร์ม | จุดเด่น |\n|---|---|\n| YOUKU ดีมาก | iQIYI ก็มี youkuapp ไม่นับ |\n"
            "[1]: https://example.com \"Google Play\"",
-        2: "Ybrand appears here but question is out of scope",
-        3: "ผมเลือก RivalY1 มากกว่า Ybrand เพราะซับดีกว่า\nประโยคที่ไม่มีแบรนด์",
+        2: "YOUKU appears here but question is out of scope",
+        3: "ผมเลือก iQIYI มากกว่า YOUKU เพราะซับดีกว่า\nประโยคที่ไม่มีแบรนด์",
     }
     for platform in ("chatgpt", "gemini"):
         outdir = os.path.join(crawl, f"scraper.{platform}", "TH")
@@ -60,9 +60,9 @@ def run(*argv: str) -> subprocess.CompletedProcess:
 
 LEXICON = {
     "brands": [
-        {"name": "Abrand", "aliases": ["Abrand", "Abrand G3"], "type": "target"},
-        {"name": "RivalA2", "aliases": ["RivalA2"], "type": "competitor_configured"},
-        {"name": "RivalA5", "aliases": ["RivalA5", "RivalA5"], "type": "competitor_open"},
+        {"name": "Bewinch", "aliases": ["Bewinch", "Bewinch G3"], "type": "target"},
+        {"name": "Novita", "aliases": ["Novita"], "type": "competitor_configured"},
+        {"name": "AquaTru", "aliases": ["AquaTru", "Aquatru"], "type": "competitor_open"},
     ]
 }
 BANK_CSV_HEADER = ["query", "question_zh", "topic", "diagnosis_intent", "tags", "question_types"]
@@ -83,7 +83,7 @@ def make_lexicon_case(root: str, prompt_mode: str = "rawurl") -> tuple[str, str,
     crawl = os.path.join(root, "crawl")
     outdir = os.path.join(crawl, "scraper.overview", "MY")
     os.makedirs(outdir)
-    task = {"content": "**Abrand** and RivalA2 both work well here.\nRivalA5 is cheaper."}
+    task = {"content": "**Bewinch** and Novita both work well here.\nAquaTru is cheaper."}
     if prompt_mode == "rawurl":
         task["metadata"] = {"rawUrl": "https://www.google.com/search?q="
                             + urllib.parse.quote(BANK_CSV_ROW[0]) + "&gl=MY"}
@@ -110,17 +110,17 @@ class MultiBrandExtractTests(unittest.TestCase):
             self.assertEqual(meta["brand_mode"], "lexicon")
             # AIO answer body read from task_result.content
             texts = sorted({u["unit"] for u in payload["units"]})
-            self.assertIn("RivalA5 is cheaper.", texts)
+            self.assertIn("AquaTru is cheaper.", texts)
             # two sentences mention >=1 brand -> 2 distinct units, 3 brand units
             self.assertEqual(meta["distinct_unit_count"], 2)
             self.assertEqual(meta["unit_count"], 3)
             self.assertEqual(meta["by_brand_type"],
                              {"competitor_configured": 1, "competitor_open": 1, "target": 1})
             self.assertEqual(meta["by_brand"],
-                             {"Abrand": 1, "RivalA2": 1, "RivalA5": 1})
+                             {"Bewinch": 1, "Novita": 1, "AquaTru": 1})
             # the sentence naming two brands yields one unit per brand
             both = [u for u in payload["units"] if "both work well" in u["unit"]]
-            self.assertEqual(sorted(u["brand"] for u in both), ["Abrand", "RivalA2"])
+            self.assertEqual(sorted(u["brand"] for u in both), ["Bewinch", "Novita"])
             self.assertTrue(all(u["question_id"] == "0001" for u in payload["units"]))
             # region comes from scraper.<platform>/<REGION>/<NNNN>.json
             self.assertTrue(all(u["region"] == "MY" for u in payload["units"]))
@@ -138,11 +138,11 @@ class MultiBrandExtractTests(unittest.TestCase):
             for repeat in range(1, 6):
                 json.dump({"status": "success", "task_result": {
                     "prompt": BANK_CSV_ROW[0],
-                    "result_text": f"Abrand repeat {repeat} is mentioned."}},
+                    "result_text": f"Bewinch repeat {repeat} is mentioned."}},
                     open(os.path.join(outdir, f"0001-r{repeat:02d}.json"), "w"))
             out = os.path.join(root, "units.json")
             proc = run("extract", "--bank", bank, "--crawl-dir", crawl,
-                       "--aliases", "Abrand", "--brand", "Abrand", "--output", out)
+                       "--aliases", "Bewinch", "--brand", "Bewinch", "--output", out)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             payload = json.load(open(out))
             units = payload["units"]
@@ -179,10 +179,10 @@ class MultiBrandExtractTests(unittest.TestCase):
             bank, crawl = make_case(root)
             out = os.path.join(root, "units.json")
             run("extract", "--bank", bank, "--crawl-dir", crawl,
-                "--aliases", "Ybrand", "--brand", "Ybrand_TH", "--output", out)
+                "--aliases", "YOUKU", "--brand", "YOUKU-TH", "--output", out)
             payload = json.load(open(out))
             self.assertEqual(payload["meta"]["brand_mode"], "aliases")
-            self.assertTrue(all(u["brand"] == "Ybrand_TH" for u in payload["units"]))
+            self.assertTrue(all(u["brand"] == "YOUKU-TH" for u in payload["units"]))
             self.assertTrue(all(u["region"] == "TH" for u in payload["units"]))
             self.assertEqual(payload["meta"]["distinct_unit_count"],
                              payload["meta"]["unit_count"])
@@ -203,17 +203,17 @@ class MultiBrandExtractTests(unittest.TestCase):
             result = json.load(open(units))
             idx = {u["brand"]: i for i, u in enumerate(result["units"])}
             labels = os.path.join(root, "labels.json")
-            json.dump({"positive": [idx["Abrand"]], "negative": []}, open(labels, "w"))
+            json.dump({"positive": [idx["Bewinch"]], "negative": []}, open(labels, "w"))
             out_csv = os.path.join(root, "s.csv")
             proc = run("compute", "--units", units, "--labels", labels,
-                       "--brand", "Abrand", "--out-csv", out_csv)
+                       "--brand", "Bewinch", "--out-csv", out_csv)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             rows = list(csv.DictReader(open(out_csv, encoding="utf-8-sig")))
-            self.assertEqual([r["brand"] for r in rows], ["Abrand"])
+            self.assertEqual([r["brand"] for r in rows], ["Bewinch"])
             bad = os.path.join(root, "bad.json")
-            json.dump({"positive": [idx["RivalA2"]], "negative": []}, open(bad, "w"))
+            json.dump({"positive": [idx["Novita"]], "negative": []}, open(bad, "w"))
             proc = run("compute", "--units", units, "--labels", bad,
-                       "--brand", "Abrand", "--out-csv", out_csv)
+                       "--brand", "Bewinch", "--out-csv", out_csv)
             self.assertNotEqual(proc.returncode, 0)
 
 
@@ -228,7 +228,7 @@ class PlatformNoiseTests(unittest.TestCase):
             path = os.path.join(crawl, "scraper.overview", "MY", "0001.json")
             payload = json.load(open(path))
             payload["task_result"]["content"] = (
-                f"**Abrand** and RivalA2 both work well here. RivalA5 Carafe{self.NOISE} is cheaper.")
+                f"**Bewinch** and Novita both work well here. AquaTru Carafe{self.NOISE} is cheaper.")
             json.dump(payload, open(path, "w"))
 
             out = os.path.join(root, "units.json")
@@ -247,7 +247,7 @@ class ExtractTests(unittest.TestCase):
             bank, crawl = make_case(root)
             out = os.path.join(root, "units.json")
             proc = run("extract", "--bank", bank, "--crawl-dir", crawl,
-                       "--aliases", "Ybrand,某平台,บียู", "--output", out)
+                       "--aliases", "YOUKU,优酷,ยูคุ", "--output", out)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             payload = json.load(open(out))
             # scope: q-001 + q-003 on two platforms = 4 answers; q-002 excluded
@@ -256,11 +256,11 @@ class ExtractTests(unittest.TestCase):
             units = payload["units"]
             texts = [u["unit"] for u in units]
             # citation pill, FollowUp widget, ref-def line all stripped
-            self.assertTrue(any(u == "แนะนำ **Ybrand** เลย" for u in texts), texts)
+            self.assertTrue(any(u == "แนะนำ **YOUKU** เลย" for u in texts), texts)
             self.assertFalse(any("Google Play" in u or "FollowUp" in u for u in texts))
-            # table row split into cells; boundary guard: 'ybrandapp' cell not matched
-            self.assertIn("Ybrand ดีมาก", texts)
-            self.assertNotIn("RivalY1 ก็มี ybrandapp ไม่นับ", texts)
+            # table row split into cells; boundary guard: 'youkuapp' cell not matched
+            self.assertIn("YOUKU ดีมาก", texts)
+            self.assertNotIn("iQIYI ก็มี youkuapp ไม่นับ", texts)
             # brandless line filtered out
             self.assertFalse(any("ไม่มีแบรนด์" in u for u in texts))
             # per platform: q1 yields 2 units, q3 yields 1 -> 3 × 2 platforms
@@ -271,7 +271,7 @@ class ExtractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             bank, crawl = make_case(root, tamper_prompt=True)
             proc = run("extract", "--bank", bank, "--crawl-dir", crawl,
-                       "--aliases", "Ybrand", "--output", os.path.join(root, "u.json"))
+                       "--aliases", "YOUKU", "--output", os.path.join(root, "u.json"))
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("题面完整性失败", proc.stderr)
 
@@ -281,7 +281,7 @@ class ComputeTests(unittest.TestCase):
         bank, crawl = make_case(root)
         out = os.path.join(root, "units.json")
         run("extract", "--bank", bank, "--crawl-dir", crawl,
-            "--aliases", "Ybrand", "--output", out)
+            "--aliases", "YOUKU", "--output", out)
         return out
 
     def test_compute_rates_and_csv(self) -> None:
@@ -329,7 +329,7 @@ class ComputeRegionKeyTests(unittest.TestCase):
 
     采集按 scraper.<platform>/<REGION>/NNNN.json 分层，idx 是区域内编号，
     港/新同题回答 idx 相同。只以 (platform, idx) 去重会合并两地、低报回答数
-    ——实测 Tbrand 港新报 38 条、实为 52 条。
+    ——实测 Trip.Biz 港新报 38 条、实为 52 条。
     """
 
     def test_answers_with_pg_separates_regions(self) -> None:
@@ -345,12 +345,12 @@ class ComputeRegionKeyTests(unittest.TestCase):
                 os.makedirs(outdir)
                 json.dump({"status": "success", "task_result": {
                     "prompt": "which is best",
-                    "result_text": f"Ybrand is the best pick in {region}."}},
+                    "result_text": f"YOUKU is the best pick in {region}."}},
                     open(os.path.join(outdir, "0001.json"), "w"))
 
             units = os.path.join(root, "units.json")
             run("extract", "--bank", bank, "--crawl-dir", crawl,
-                "--aliases", "Ybrand", "--output", units)
+                "--aliases", "YOUKU", "--output", units)
 
             labels = os.path.join(root, "labels.json")
             json.dump({"positive": [0, 1], "negative": []}, open(labels, "w"))

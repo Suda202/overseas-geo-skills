@@ -33,4 +33,4 @@ metadata:
 
 分工固定：我们根据监测数据定位缺口和原因，内容团队执行动作（写页面、第三方引用、发布到客户站点），监测和诊断都不产出内容本身。
 
-**采集强制联网**：`collect_answers.py` 默认 `web_search=true`，Scrapeless 文档写明这会让 ChatGPT 执行搜索，2026-11-16 实测 Hbrand、某车载品牌两批 ChatGPT 回答 100% 带 `search_result`。所以 ChatGPT 读数是「强制联网」口径，测不到自然联网率；Graphite 2026-08 实测强制搜索会让从不自然联网的题可见度平均偏 20 个点。前后两期必须同一口径才能比。
+**采集强制联网**：`collect_answers.py` 默认 `web_search=true`，Scrapeless 文档写明这会让 ChatGPT 执行搜索，2026-11-16 实测 Housebell、路拓两批 ChatGPT 回答 100% 带 `search_result`。所以 ChatGPT 读数是「强制联网」口径，测不到自然联网率；Graphite 2026-08 实测强制搜索会让从不自然联网的题可见度平均偏 20 个点。前后两期必须同一口径才能比。

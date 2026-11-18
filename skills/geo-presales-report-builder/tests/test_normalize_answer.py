@@ -14,7 +14,7 @@ spec.loader.exec_module(MODULE)
 
 class TestPlatformNoise(unittest.TestCase):
     def test_anchor_artefact_is_dropped_without_gluing_names(self):
-        raw = f"RivalA5 Carafe{MODULE.PRODUCT_VIEWER_NOISE}is a good pick"
+        raw = f"AquaTru Carafe{MODULE.PRODUCT_VIEWER_NOISE}is a good pick"
         out = MODULE.normalize_answer_html(raw)
         self.assertNotIn(MODULE.PRODUCT_VIEWER_NOISE, out)
         # 必须断开而不是直接删除，否则两个词会粘成一个

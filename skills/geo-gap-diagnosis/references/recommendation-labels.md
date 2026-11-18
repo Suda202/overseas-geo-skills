@@ -12,7 +12,7 @@
 | 值 | 编码 | 判据 | 例 |
 |---|---|---|---|
 | 首推 | D-TOP | 明确说它是第一选择、最佳、最推荐（"best overall"、"my top pick"、"go with X"） | "If you want one display, get the CHIGEE AIO-5." |
-| 推荐 | D-REC | 推荐给用户选，或列为某场景下的推荐（"best for X"、"a strong option for…"），但不是唯一首选 | "Rbrand W702S Plus is a good pick if you want offline maps." |
+| 推荐 | D-REC | 推荐给用户选，或列为某场景下的推荐（"best for X"、"a strong option for…"），但不是唯一首选 | "Carpuride W702S Plus is a good pick if you want offline maps." |
 | 仅列举 | R-LIST | 出现在名单、表格、事实陈述里，没有让用户选它的话 | 列表第 4 项只写参数 |
 | 有条件不推荐 | Q-FIT | 承认是好产品，但因价格、复杂度、规模、兼容性等约束不建议在本题场景用；必须写出约束 | "Great screen, but overkill for short commutes." |
 | 劝退 | X-WARN | 明确劝用户别选、说它有风险或不适合 | "I'd avoid X — frequent disconnects." |
@@ -26,11 +26,11 @@
 - 「best overall」「my top pick」「my pick for / best for + 题面的主需求」算 D-TOP；「best for / my pick for + 题面之外或更窄的子需求」（premium、7 寸、功能最多、预算款）算 D-REC。例：题问 Harley，「Best overall Harley option」是 D-TOP；题问宝马导航底座，「Best overall 7-inch option」是 D-REC。
 - 「不能直装」「需要另买转接件」「不适合这台车」是适配约束，记 Q-FIT；只有明确叫人别买、说有风险才记 X-WARN。
 - 只列参数、价格、购买链接，没有推荐措辞的条目记 R-LIST，即使它在名单里排前面。
-- 叫用户去用它的祈使句算推荐：「use / try / consider / explore / check / approach / start with X」「you can source via X」「a candidate to interview」记 D-REC；几家并列「start with A or B」也是 D-REC，不是 D-TOP。办手续必须经过的渠道（「apply via the the national housing portal」「log in via Singpass」）不是在几个选项里推荐，记 R-LIST。
+- 叫用户去用它的祈使句算推荐：「use / try / consider / explore / check / approach / start with X」「you can source via X」「a candidate to interview」记 D-REC；几家并列「start with A or B」也是 D-REC，不是 D-TOP。办手续必须经过的渠道（「apply via the HDB Flat Portal」「log in via Singpass」）不是在几个选项里推荐，记 R-LIST。
 - 「exercise caution with X」「watch out for scams on X」是风险提示，记 X-WARN。
 - 验证题里「X is legit / a real platform」是事实确认，记 R-LIST。
 
-2026-11-16 某车载品牌首次抽检 51 条，一致率 86%；7 条分歧里 5 条是 D-TOP 和 D-REC 的边界（不影响推荐占比），1 条 X-WARN 应为 Q-FIT，1 条 D-REC 应为 R-LIST（影响推荐占比）。上面三条边界据此补写。同日 Hbrand 首次抽检 51 条一致 42 条（82%，低于 85%）：分歧集中在祈使句被记成 R-LIST，按规则补写上面三条，并把 Hbrand 全部 R-LIST 复核重标。
+2026-11-16 路拓首次抽检 51 条，一致率 86%；7 条分歧里 5 条是 D-TOP 和 D-REC 的边界（不影响推荐占比），1 条 X-WARN 应为 Q-FIT，1 条 D-REC 应为 R-LIST（影响推荐占比）。上面三条边界据此补写。同日 Housebell 首次抽检 51 条一致 42 条（82%，低于 85%）：分歧集中在祈使句被记成 R-LIST，按规则补写上面三条，并把 Housebell 全部 R-LIST 复核重标。
 - 「门槛高」「价格更高」是事实陈述，没有劝阻语气时记 R-LIST，不记 Q-FIT 或 X-WARN。
 - 通用免责声明（"check compatibility before buying"）不算劝退。
 - 商品卡、购物列里出现品牌名但正文没讲的，记 R-LIST。
@@ -46,8 +46,8 @@
 模型每批交回一个 JSONL，每行一条回答：
 
 ```json
-{"answer_id": "…", "labels": {"Rbrand": {"code": "Q-FIT", "constraint": "只能投屏，不能离线导航", "quote": "…逐字原句…"}},
- "fact_errors": [{"brand": "Rbrand", "quote": "…", "correct": "…", "basis": "约束条件表 C-03"}],
+{"answer_id": "…", "labels": {"Carpuride": {"code": "Q-FIT", "constraint": "只能投屏，不能离线导航", "quote": "…逐字原句…"}},
+ "fact_errors": [{"brand": "Carpuride", "quote": "…", "correct": "…", "basis": "约束条件表 C-03"}],
  "unverified_facts": ["…"]}
 ```
 

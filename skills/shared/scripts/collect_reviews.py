@@ -17,9 +17,9 @@
                   只打星没写字的评价不收（实测约四成）；外语评价取原文，不取 Google 的机器翻译
 
     python3 -I collect_reviews.py trustpilot www.example.com --depth 40 --sort newest --out <目录>
-    python3 -I collect_reviews.py google-play com.ybrand.phone --country th --lang th --depth 150 --out <目录>
+    python3 -I collect_reviews.py google-play com.youku.phone --country th --lang th --depth 150 --out <目录>
     python3 -I collect_reviews.py app-store 336141475 --country tw --lang zh-Hant --out <目录>
-    python3 -I collect_reviews.py google-play "Ybrand" --country th --lang th --out <目录>
+    python3 -I collect_reviews.py google-play "Youku" --country th --lang th --out <目录>
     python3 -I collect_reviews.py google-shopping "automatic litter box" --country us --lang en --products 3 --depth 20 --out <目录>
     python3 -I collect_reviews.py google-maps "Din Tai Fung Paragon Singapore" --country sg --lang en --match "Din Tai Fung" --sort lowest --out <目录>
 

@@ -15,7 +15,7 @@ from .util import ContractError, extract_urls, normalize_text, sha256_obj
 #
 # 2026-09-16 补：实测 `I encountered an error doing what you asked. Could you try again?`
 # 与 `I am unable to generate a response at this time.` 在旧表下判为有效，
-# 会让失败页静默进入可见度分母（brand_b topic_2 实测分母 90 应为 89）。
+# 会让失败页静默进入可见度分母（botslab topic_2 实测分母 90 应为 89）。
 #
 # **已知边界**：这是纯词法匹配，没有长度或位置约束，因此含这些词写的**短**正常回答
 # 会被判成失败页、静默剔出分母（例如用户评价「我的第一台出过问题但售后很快换新」）。
@@ -25,7 +25,7 @@ from .util import ContractError, extract_urls, normalize_text, sha256_obj
 # 后续若发现某批数据有效回答数偏低，先查这里。
 #
 # 2026-09-18 补：签名**只在剔除引用定义行后**匹配。引用定义行（`[1]: url "标题"`）是采集交付的引用数据，
-# 不是助手正文；URL 和标题里的词会和签名拼出跨词匹配（Tbrand scraper.chatgpt/SG/0025、0026 实测）。
+# 不是助手正文；URL 和标题里的词会和签名拼出跨词匹配（Trip.Biz scraper.chatgpt/SG/0025、0026 实测）。
 #
 # 2026-11-13 只留三类实测拦对过的（Suda「删这三条」）：空回答、页面污染、报错页。登录页、拒答、占位符三条
 # 删掉：全库（评测数据、交付、历史归档）一次真命中都没有，登录页那条还把 6 条正常回答（讲怎么在 App、
@@ -33,7 +33,7 @@ from .util import ContractError, extract_urls, normalize_text, sha256_obj
 # 原 REFUSAL 里的平台故障说法「unable to generate a response」并进报错页。
 INVALID_SIGNATURES = [
     # 页面污染：采集把 Google 页面框架（复制/分享面板、反馈按钮）连同侧栏来源卡片摘要一起抓进了正文。
-    # 2026-10-10 实测 Bbrand 端到端 scraper.overview/US/0005 首次尝试：免责声明之后 35% 的正文
+    # 2026-10-10 实测 Botslab 端到端 scraper.overview/US/0005 首次尝试：免责声明之后 35% 的正文
     # 是界面文字和 Reddit/Facebook 网友原话（「I like my Thinkware X1000」），会凭空制造品牌提及。
     # 不能只剥掉按钮文字当作有效——污染段边界不可靠，整条重采。放在 ERROR_PAGE 前，原因才报得准。
     ("PAGE_CHROME", re.compile(

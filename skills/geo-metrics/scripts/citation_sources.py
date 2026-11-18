@@ -2,7 +2,7 @@
 """引用来源统计：采集目录 → 来源类别、域名榜、品牌官网、逐题官网引用份额与引用率。
 
 临时统计（试跑读数、给客户的单次分析）用这一条命令，不再各自写脚本——自己写的脚本最容易漏掉
-「补判未登记域名」，结果全落进「其他」（2026-11-13 某车载品牌第一版 36% 是「其他」）。
+「补判未登记域名」，结果全落进「其他」（2026-11-13 路拓第一版 36% 是「其他」）。
 
 口径（geo-metrics/references/metric-scope-and-copy-contract.md）：
 - 引用计次：core `_citation_entries`，新格式按平台 cited_count，未去重。
@@ -13,7 +13,7 @@
 
 用法：
     python3 -I citation_sources.py --collect <采集目录> [<采集目录> …] --questions <题库.csv> [<题库.csv> …] \\
-        --lexicon <品牌词表.json> --out <输出目录> [--official rbrand.com] [--cache <缓存>] \\
+        --lexicon <品牌词表.json> --out <输出目录> [--official carpuride.com] [--cache <缓存>] \\
         [--allow-unjudged-domains "<理由>"]
 
 --questions 给一份时所有采集目录共用；给多份时和 --collect 一一对应（文件 NNNN 对题库第 N 行）。

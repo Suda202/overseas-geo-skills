@@ -9,7 +9,7 @@ sentiment 字段。正向率口径为 正向句 ÷（正向句 + 负向句），
 用法：
     python3 attach_sentiment.py --report report-data.json \
         --units sentiment-units.json --labels-dir sentiment-batches \
-        --brands "Abrand,RivalA1,RivalA3,RivalA2,RivalA4" --target Abrand \
+        --brands "Bewinch,Coway,Sterra,Novita,Waterdrop" --target Bewinch \
         --out report-data.json
 """
 

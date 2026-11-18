@@ -132,19 +132,19 @@ class StructuredResultTests(unittest.TestCase):
                 {
                     "wordid": 1,
                     "platform": "test",
-                    "answer_text": "<p>Chatham 先出现，然后是 Lbrand。</p>",
+                    "answer_text": "<p>Chatham 先出现，然后是 Lit by Larry。</p>",
                     "sentiment": "neutral",
                     "brand_rankings": [
-                        {"brand_name": "Lbrand", "rank_pos": 1}
+                        {"brand_name": "Lit by Larry", "rank_pos": 1}
                     ],
                 },
                 {
                     "wordid": 2,
                     "platform": "test",
-                    "answer_text": "<p>Lbrand 值得考虑。</p>",
+                    "answer_text": "<p>Lit by Larry 值得考虑。</p>",
                     "sentiment": "positive",
                     "brand_rankings": [
-                        {"brand_name": "Lbrand", "rank_pos": 1}
+                        {"brand_name": "Lit by Larry", "rank_pos": 1}
                     ],
                 },
             ],
@@ -160,24 +160,24 @@ class StructuredResultTests(unittest.TestCase):
 
     def test_gemini_source_chip_is_removed_before_brand_ranking(self) -> None:
         cleaned, removed = STRUCTURED.remove_citations(
-            '<div class="source-inline-chip-container"><button><span class="source-title">Pbrand</span></button></div>'
-            '<p>PETLIBRO appears before Pbrand in the answer body.</p>'
+            '<div class="source-inline-chip-container"><button><span class="source-title">PETKIT</span></button></div>'
+            '<p>PETLIBRO appears before PETKIT in the answer body.</p>'
         )
-        self.assertEqual(cleaned, "PETLIBRO appears before Pbrand in the answer body.")
-        self.assertEqual(removed, ["Pbrand"])
+        self.assertEqual(cleaned, "PETLIBRO appears before PETKIT in the answer body.")
+        self.assertEqual(removed, ["PETKIT"])
 
     def test_bolded_inline_entity_link_keeps_its_text(self) -> None:
         """Task 246 #10119：句首品牌名位于 <strong> 内联链接中，删除锚文本会丢品牌提及。"""
 
         cleaned, removed = STRUCTURED.remove_citations(
             '<ul><li><p><strong><span class="contents">'
-            '<a class="decorated-link" href="https://www.rival-k2.example/">RivalK2</a>'
+            '<a class="decorated-link" href="https://www.personanutrition.com/">Persona Nutrition</a>'
             "</span></strong> — certified nutritionists provide ongoing 1:1 consultations.</p></li>"
-            '<li><p><strong><a class="decorated-link" href="https://rival-k1.example/">RivalK1</a></strong>'
+            '<li><p><strong><a class="decorated-link" href="https://rootine.co/">Rootine</a></strong>'
             " — emphasizes ongoing progress tracking.</p></li></ul>"
         )
-        self.assertIn("RivalK2 — certified nutritionists", cleaned)
-        self.assertIn("RivalK1 — emphasizes ongoing", cleaned)
+        self.assertIn("Persona Nutrition — certified nutritionists", cleaned)
+        self.assertIn("Rootine — emphasizes ongoing", cleaned)
         self.assertEqual(removed, [])
 
     def test_trailing_source_label_link_is_deleted(self) -> None:
@@ -225,7 +225,7 @@ class StructuredResultTests(unittest.TestCase):
     def test_rank_uses_first_normalized_body_occurrence(self) -> None:
         catalog = [
             {
-                "canonical_name": "Lbrand",
+                "canonical_name": "Lit by Larry",
                 "aliases": ["Lit by Aria", "Lit byarry"],
                 "eligible": True,
             },
@@ -237,7 +237,7 @@ class StructuredResultTests(unittest.TestCase):
             ),
             [
                 {"brand_name": "Chatham", "rank_pos": 1},
-                {"brand_name": "Lbrand", "rank_pos": 2},
+                {"brand_name": "Lit by Larry", "rank_pos": 2},
             ],
         )
 
@@ -310,7 +310,7 @@ class StructuredResultTests(unittest.TestCase):
                     "wordid": 1,
                     "brand_rankings": [
                         {"brand_name": "Chatham", "rank_pos": 1},
-                        {"brand_name": "Lbrand", "rank_pos": 2},
+                        {"brand_name": "Lit by Larry", "rank_pos": 2},
                     ],
                 }
             ]
@@ -386,7 +386,7 @@ class StructuredResultTests(unittest.TestCase):
     def test_null_answer_is_preserved_and_marked_unavailable_for_semantic_review(self) -> None:
         payload = self.base_payload()
         payload["rows"][0]["answer_text"] = None
-        bundle = STRUCTURED.build_review_bundle(payload, "Lbrand")
+        bundle = STRUCTURED.build_review_bundle(payload, "Lit by Larry")
         self.assertFalse(bundle["rows"][0]["semantic_review_available"])
         self.assertEqual(bundle["rows"][0]["cleaned_text"], "")
 
@@ -401,8 +401,8 @@ class StructuredResultTests(unittest.TestCase):
         self.assertIn("failed=0", result.stdout)
 
     def test_prepare_records_explicit_target_brand(self) -> None:
-        bundle = STRUCTURED.build_review_bundle(self.base_payload(), "Lbrand")
-        self.assertEqual(bundle["target_brand"], "Lbrand")
+        bundle = STRUCTURED.build_review_bundle(self.base_payload(), "Lit by Larry")
+        self.assertEqual(bundle["target_brand"], "Lit by Larry")
 
 
 DE_CITE_SCRIPT = ROOT.parent / "geo-metrics" / "scripts" / "de_cite_crawl.py"
@@ -453,12 +453,12 @@ class DeCiteCrawlTests(unittest.TestCase):
     def test_removes_citation_markers_and_definition_lines(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             ok, proc, rows = run_de_cite(tmp, (
-                "Top brands are RivalB2 and RivalB3. ([TechRadar][1])\n\n"
+                "Top brands are VIOFO and Vantrue. ([TechRadar][1])\n\n"
                 '[1]: https://www.techradar.com/best-dash-cams "TechRadar"'
             ))
             self.assertTrue(ok, proc.stdout + proc.stderr)
             body = rows[0]["body_markdown"]
-            self.assertIn("RivalB2", body)
+            self.assertIn("VIOFO", body)
             self.assertNotIn("TechRadar", body)
             self.assertNotIn("techradar.com", body)
 
@@ -468,12 +468,12 @@ class DeCiteCrawlTests(unittest.TestCase):
                 tmp,
                 "Intro.\n\n| id | goods | price | rating | merchants | picture |\n"
                 "|---|---|---|---|---|---|\n"
-                "| 1 | **RivalB2 - A229 Pro 3CH Dash Cam** | $299 | 4.4 | "
+                "| 1 | **VIOFO - A229 Pro 3CH Dash Cam** | $299 | 4.4 | "
                 "[$299.99 - Best Buy](https://www.bestbuy.com/x) | |\n",
             )
             self.assertTrue(ok, proc.stdout + proc.stderr)
             row = rows[0]
-            self.assertIn("RivalB2 - A229 Pro", row["body_ranking"])
+            self.assertIn("VIOFO - A229 Pro", row["body_ranking"])
             self.assertNotIn("Best Buy", row["body_ranking"])
             # body_markdown 保留原始形态；排名只看 body_ranking
             self.assertIn("Best Buy", row["body_markdown"])
@@ -532,7 +532,7 @@ class VerifyBrandExtractionTests(unittest.TestCase):
     def test_correct_extraction_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             proc, report = self.run_verify(
-                tmp, "RivalB2 leads, then RivalB3.", ["RivalB2", "RivalB3"])
+                tmp, "VIOFO leads, then Vantrue.", ["VIOFO", "Vantrue"])
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             self.assertEqual(report["order_mismatch"], [])
             self.assertEqual(report["name_variants"], {})
@@ -541,38 +541,38 @@ class VerifyBrandExtractionTests(unittest.TestCase):
         """回归：同一品牌被写成多种大小写，未归一会让它占两个名次。"""
         with tempfile.TemporaryDirectory() as tmp:
             proc, report = self.run_verify(
-                tmp, "Brandx and BRANDX are options.", ["Brandx", "BRANDX"])
+                tmp, "Lamtto and LAMTTO are options.", ["Lamtto", "LAMTTO"])
             self.assertEqual(proc.returncode, 2)
-            self.assertEqual(report["name_variants"], {"brandx": ["BRANDX", "Brandx"]})
+            self.assertEqual(report["name_variants"], {"lamtto": ["LAMTTO", "Lamtto"]})
 
     def test_order_mismatch_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             proc, report = self.run_verify(
-                tmp, "RivalB2 leads, then RivalB3.", ["RivalB3", "RivalB2"])
+                tmp, "VIOFO leads, then Vantrue.", ["Vantrue", "VIOFO"])
             self.assertEqual(proc.returncode, 2)
             self.assertEqual(len(report["order_mismatch"]), 1)
             self.assertEqual(
-                report["order_mismatch"][0]["observed"], ["RivalB2", "RivalB3"])
+                report["order_mismatch"][0]["observed"], ["VIOFO", "Vantrue"])
 
     def test_brand_absent_from_body_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            proc, report = self.run_verify(tmp, "RivalB2 leads.", ["RivalB2", "Garmin"])
+            proc, report = self.run_verify(tmp, "VIOFO leads.", ["VIOFO", "Garmin"])
             self.assertEqual(proc.returncode, 2)
             self.assertEqual(report["brand_not_in_body"][0]["brand"], "Garmin")
 
     def test_lexicon_recall_flags_missing_brand(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             proc, report = self.run_verify(
-                tmp, "RivalB2 and RivalB3 are options.", ["RivalB2"],
-                lexicon={"RivalB2": ["rivalb2"], "RivalB3": ["rivalb3"]})
+                tmp, "VIOFO and Vantrue are options.", ["VIOFO"],
+                lexicon={"VIOFO": ["viofo"], "Vantrue": ["vantrue"]})
             self.assertEqual(len(report["suspected_missed_brands"]), 1)
-            self.assertEqual(report["suspected_missed_brands"][0]["brand"], "RivalB3")
+            self.assertEqual(report["suspected_missed_brands"][0]["brand"], "Vantrue")
 
     def test_lexicon_metadata_keys_are_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             proc, report = self.run_verify(
-                tmp, "RivalB2 leads.", ["RivalB2"],
-                lexicon={"_comment": "note", "RivalB2": ["rivalb2"]})
+                tmp, "VIOFO leads.", ["VIOFO"],
+                lexicon={"_comment": "note", "VIOFO": ["viofo"]})
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             self.assertEqual(report["suspected_missed_brands"], [])
 

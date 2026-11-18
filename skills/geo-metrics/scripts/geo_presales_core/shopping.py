@@ -75,8 +75,8 @@ UNMATCHED_SKU = "未识别型号"
 
 def sku_of(card: dict, sku_map: list[dict]) -> str:
     """本品商品卡归到哪个 SKU：按 ``config["sku_map"]`` 的顺序，第一条正则命中卡标题（或 offer 里的
-    product_name）的胜出；都不中记「未识别型号」。同一款产品 AI 会写成好几种标题（「H1 4-Camera
-    Multi-Channel」「H1 4-Channel Multi-Camera」），所以按型号 + 路数归并，不按标题原样数（2026-11-07）。"""
+    product_name）的胜出；都不中记「未识别型号」。同一款产品 AI 会写成好几种标题（「G980H 4-Camera
+    Multi-Channel」「G980H 4-Channel Multi-Camera」），所以按型号 + 路数归并，不按标题原样数（2026-11-07）。"""
     text = " ".join(filter(None, [_text(card.get("title")), _text(card.get("offer_product_name"))]))
     for rule in sku_map or []:
         if re.search(rule["pattern"], text, re.I):
@@ -116,7 +116,7 @@ def chatgpt_catalog_backed(raw: dict) -> bool:
     ChatGPT 购物卡来自商品目录，条目带 ``id``、``cite``（turn0productN）、``offers`` 或 ``price``。
     没有商品目录的市场（肯尼亚、尼日利亚实测）回答里也有带图的商品推荐，Scrapeless 照样放进
     ``products``，但只有 ``title`` 和 ``query``：回答页上没有价格、商家和购买入口，图片是网页配图。
-    这类条目和「RivalH1」「Facebook Marketplace」这种非商品条目一样，不算商品卡。
+    这类条目和「PropertyGuru」「Facebook Marketplace」这种非商品条目一样，不算商品卡。
     全项目实测：美国 1,333 条带目录证据、2 条不带；肯尼亚、尼日利亚 10,822 条全不带。
     """
     return bool(_text(raw.get("id")) or _text(raw.get("cite")) or raw.get("offers") or _text(raw.get("price")))
@@ -220,7 +220,7 @@ def attribute_cards(cards: list[dict] | None, objects: list[dict]) -> list[dict]
     在指标里单独计数，不丢弃也不猜。
 
     官方店：offer 域名命中该品牌官网域名，或商家名命中该品牌别名（Google 的 stores
-    链接常是 `/goto?url=…` 跳转串，域名对不上，只能看商家名，如「RivalB1 Official」）。
+    链接常是 `/goto?url=…` 跳转串，域名对不上，只能看商家名，如「70mai Official」）。
     """
     if cards is None:
         return None
@@ -240,7 +240,7 @@ def attribute_cards(cards: list[dict] | None, objects: list[dict]) -> list[dict]
                 object_id = _match_object(row.get("offer_product_name"), objects)
                 method = "offer_product_name" if object_id else None
         if not object_id:
-            # AIO 的卡常只写型号（「G3」「G5」），卖家却是品牌官方店（「Abrand」）。
+            # AIO 的卡常只写型号（「G3」「G5」），卖家却是品牌官方店（「Bewinch」）。
             # 只在全部可识别商家名指向同一个品牌时归属；指向多个品牌视为歧义，保持未归属。
             merchant_owners = {_match_object(o.get("merchant"), objects) for o in row["offers"]} - {None}
             if len(merchant_owners) == 1:

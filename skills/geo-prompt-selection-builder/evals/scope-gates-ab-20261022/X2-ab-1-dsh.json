@@ -2,8 +2,8 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
-  "official_domain": "https://www.brand-b.example",
+  "brand_name": "Botslab",
+  "official_domain": "https://www.botslab.com",
   "region": "US",
   "locale": "en",
   "generation_stage": "discovery",
@@ -34,16 +34,16 @@
    "note": "Frozen presales set; not added to, dropped or re-verified in this run. No Competitor Prompts at the discovery stage.",
    "competitors": [
     {
-     "name": "RivalB1",
-     "official_domain": "https://www.rival-b1.example"
+     "name": "70mai",
+     "official_domain": "https://www.70mai.com"
     },
     {
-     "name": "RivalB2",
-     "official_domain": "https://www.rival-b2.example"
+     "name": "VIOFO",
+     "official_domain": "https://www.viofo.com"
     },
     {
-     "name": "RivalB3",
-     "official_domain": "https://www.rival-b3.example"
+     "name": "Vantrue",
+     "official_domain": "https://www.vantrue.com"
     }
    ]
   },
@@ -53,7 +53,7 @@
     "topic": "Dash Cam Selection",
     "parent_demand": "best dash cam / dash cam brands (Google autocomplete seeds '4 channel dash cam', 'dash cam warranty')",
     "search_demand_note": "Parent demand anchored on category-level autocomplete and Reddit r/Dashcam buying threads; no comparable volume data was collected, so demand is directional only.",
-    "business_question": "With no condition attached, which dash cams and brands does AI put on a US buyer's shortlist, and does Bbrand appear?",
+    "business_question": "With no condition attached, which dash cams and brands does AI put on a US buyer's shortlist, and does Botslab appear?",
     "possible_action": "Category baseline for natural visibility; a zero or low reading points at category-level content and third-party roundups, not at one SKU page.",
     "role": "core",
     "facets": [
@@ -96,7 +96,7 @@
     "parent_demand": "dash cam parking mode (autocomplete: 'dash cam parking mode without hardwire', 'dash cam parking mode drain battery')",
     "search_demand_note": "Parent demand anchored on parking-mode autocomplete and a Reddit thread asking for continuous parked recording; volume unknown, demand direction confirmed by two source types.",
     "business_question": "When a buyer wants the car watched while parked, does AI describe parking mode as continuous, and does it say what installation and power it needs?",
-    "possible_action": "Fix the headline/FAQ contradiction on the H1 page (24/7 protection vs dedicated hardwire kit required), publish a parking-mode installation and power-draw page, and seed third-party reviews with parking footage.",
+    "possible_action": "Fix the headline/FAQ contradiction on the G980H page (24/7 protection vs dedicated hardwire kit required), publish a parking-mode installation and power-draw page, and seed third-party reviews with parking footage.",
     "role": "core",
     "facets": [
      {
@@ -149,9 +149,9 @@
     "topic_id": "T3",
     "topic": "Accident Evidence",
     "parent_demand": "4 channel dash cam / dash cam night vision (autocomplete seed '4 channel dash cam with parking mode'; Reddit night plate-capture threads)",
-    "search_demand_note": "Parent demand anchored on 4-channel autocomplete plus two Reddit threads that name night plate capture and RivalO1 STARVIS explicitly; volume unknown.",
+    "search_demand_note": "Parent demand anchored on 4-channel autocomplete plus two Reddit threads that name night plate capture and Sony STARVIS explicitly; volume unknown.",
     "business_question": "When evidence quality is the job, does AI recommend multi-angle coverage and name the night/low-light proof needed to read a plate?",
-    "possible_action": "Publish the sensor/HDR spec and real night plate footage, and comparison content that puts 3K front + three 1080p cameras next to dual-camera options; this is where the H1's four-camera lead can be made citable.",
+    "possible_action": "Publish the sensor/HDR spec and real night plate footage, and comparison content that puts 3K front + three 1080p cameras next to dual-camera options; this is where the G980H's four-camera lead can be made citable.",
     "role": "core",
     "facets": [
      {
@@ -193,7 +193,7 @@
     "changeability": "高",
     "relative_competitor": "劣势（证据缺口）",
     "gap_type": "evidence gap",
-    "evidence": "Q04 (true 4K + STARVIS 2 to read plates at night), Q05 (buyers repeat the STARVIS advice), Q06 (night footage checked before price). Official H1 page publishes only 'Night Vision · Enhanced Low-Light Capture' with no sensor model, no HDR and no sample night footage (fact check 夜视传感器型号 → 提供材料); 4-camera H1 front is 3K. Competitor pages publish STARVIS 2 / HDR.",
+    "evidence": "Q04 (true 4K + STARVIS 2 to read plates at night), Q05 (buyers repeat the STARVIS advice), Q06 (night footage checked before price). Official G980H page publishes only 'Night Vision · Enhanced Low-Light Capture' with no sensor model, no HDR and no sample night footage (fact check 夜视传感器型号 → 提供材料); 4-camera G980H front is 3K. Competitor pages publish STARVIS 2 / HDR.",
     "carrier_prompts": [
      "T3-D01",
      "T3-D02",
@@ -210,7 +210,7 @@
     "changeability": "高",
     "relative_competitor": "持平",
     "gap_type": "evidence gap",
-    "evidence": "Q01 (continuous parked recording, not only when bumped), Q02 (what else must be bought), Q09 (4-channel + parking mode), Q10 (parking without hardwire), Q11 (battery drain). Own page headline '24/7 Parking Protection' contradicts its FAQ 'A dedicated hardwire kit is required', time-lapse capped at 24 h (fact check 停车监控是否需要另购配件 → 改官网). RivalB3 N5 states hardwire required and sold separately, so the capability is category parity; the contradiction is the gap.",
+    "evidence": "Q01 (continuous parked recording, not only when bumped), Q02 (what else must be bought), Q09 (4-channel + parking mode), Q10 (parking without hardwire), Q11 (battery drain). Own page headline '24/7 Parking Protection' contradicts its FAQ 'A dedicated hardwire kit is required', time-lapse capped at 24 h (fact check 停车监控是否需要另购配件 → 改官网). Vantrue N5 states hardwire required and sold separately, so the capability is category parity; the contradiction is the gap.",
     "carrier_prompts": [
      "T2-D01",
      "T2-D02",
@@ -230,7 +230,7 @@
     "changeability": "中",
     "relative_competitor": "领先",
     "gap_type": "none (spec published; lead not yet third-party citable)",
-    "evidence": "Q03 (maximum exterior coverage), Q09 (4-channel). H1: front 3K + rear/left/right 1080p on four cameras, published on the product page; RivalB3 N5 front 2.7K, RivalB4 VisionPano 40 front 2.5K (scope fact 2). Spec is readable on the official page, so changeability is 中 rather than an evidence gap.",
+    "evidence": "Q03 (maximum exterior coverage), Q09 (4-channel). G980H: front 3K + rear/left/right 1080p on four cameras, published on the product page; Vantrue N5 front 2.7K, REDTIGER VisionPano 40 front 2.5K (scope fact 2). Spec is readable on the official page, so changeability is 中 rather than an evidence gap.",
     "carrier_prompts": [
      "T3-D03"
     ]
@@ -243,8 +243,8 @@
     "importance": "高",
     "changeability": "中",
     "relative_competitor": "待确认",
-    "gap_type": "needs competitor terms (RivalB2 / RivalB3 / RivalB1 warranty pages were not collected)",
-    "evidence": "Q12 (warranty searched before buying), Q08 (service quality decides trust). Bbrand page states 1-Year Warranty, money-back guarantee and 24/7 customer service; RivalB4 VP40 publishes 2 years. The frozen competitors' terms are not in the research, so no verdict is inferred.",
+    "gap_type": "needs competitor terms (VIOFO / Vantrue / 70mai warranty pages were not collected)",
+    "evidence": "Q12 (warranty searched before buying), Q08 (service quality decides trust). Botslab page states 1-Year Warranty, money-back guarantee and 24/7 customer service; REDTIGER VP40 publishes 2 years. The frozen competitors' terms are not in the research, so no verdict is inferred.",
     "carrier_prompts": [
      "T1-D05"
     ]
@@ -258,7 +258,7 @@
     "changeability": "中",
     "relative_competitor": "待确认",
     "gap_type": "needs competitor operating-temperature specs",
-    "evidence": "Q07 (hot summers, internal battery swelling), Q06 (heat tolerance on the pre-price checklist). H1 publishes supercapacitor -20 °C to 70 °C; competitor operating ranges were not collected.",
+    "evidence": "Q07 (hot summers, internal battery swelling), Q06 (heat tolerance on the pre-price checklist). G980H publishes supercapacitor -20 °C to 70 °C; competitor operating ranges were not collected.",
     "carrier_prompts": [
      "T1-D04"
     ]
@@ -286,7 +286,7 @@
     "changeability": "中",
     "relative_competitor": "领先",
     "gap_type": "none (promotion-driven; price is a live variable)",
-    "evidence": "Q04 ($100 cap), Q08 ($200 cap), Q06 (price checked last). H1 sale price $209 against $299 list; RivalB3 N5 lists $379.99. Price moves with promotions, so the Prompt sits in the experimental layer.",
+    "evidence": "Q04 ($100 cap), Q08 ($200 cap), Q06 (price checked last). G980H sale price $209 against $299 list; Vantrue N5 lists $379.99. Price moves with promotions, so the Prompt sits in the experimental layer.",
     "carrier_prompts": [
      "T1-D03"
     ]
@@ -300,7 +300,7 @@
     "changeability": "中",
     "relative_competitor": "劣势",
     "gap_type": "capability gap (hardware capacity)",
-    "evidence": "Q06 (SD card support on the checklist), Q01/Q09 (long parked recording). H1 includes 128 GB and supports up to 512 GB; RivalB3 N5 supports up to 1 TB. Capacity is a hardware limit, not a content gap.",
+    "evidence": "Q06 (SD card support on the checklist), Q01/Q09 (long parked recording). G980H includes 128 GB and supports up to 512 GB; Vantrue N5 supports up to 1 TB. Capacity is a hardware limit, not a content gap.",
     "carrier_prompts": [
      "T2-D07"
     ]
@@ -343,11 +343,11 @@
    "market": "US",
    "language": "en",
    "product_lines": [
-    "Bbrand H1 4-channel dash cam"
+    "Botslab G980H 4-channel dash cam"
    ],
    "audiences": [
-    "注重安全记录的个人车主",
-    "需要多方向记录的驾驶者"
+    "注重行车安全和事故取证的私家车车主",
+    "需要多方向行车记录和停车监控的驾驶者"
    ],
    "journey_tasks": [
     "发现",
@@ -361,9 +361,9 @@
     "multi-day parking"
    ],
    "formal_competitors": [
-    "RivalB1",
-    "RivalB2",
-    "RivalB3"
+    "70mai",
+    "VIOFO",
+    "Vantrue"
    ],
    "substitutes_or_status_quo": [
     "phone as a dash cam",
@@ -400,7 +400,7 @@
     },
     {
      "slice": "ride-hail / interior cabin recording",
-     "reason": "no buyer quote supports it and the H1 records exterior directions, not a cabin camera."
+     "reason": "no buyer quote supports it and the G980H records exterior directions, not a cabin camera."
     }
    ]
   },
@@ -422,12 +422,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -462,7 +462,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],
@@ -481,7 +481,7 @@
    "user_question": "What are the best dash cams for everyday driving?",
    "zh_translation": "日常开车使用，哪几款行车记录仪最值得推荐？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "无限定条件",
    "intent_key": "general_dash_cam_selection",
@@ -518,7 +518,7 @@
    "user_question": "Which dash cam brands are the most reliable and easiest to get support from?",
    "zh_translation": "哪些行车记录仪品牌最可靠、出问题后最容易找到人处理？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "偏好标准",
    "intent_key": "reliability_support_trust",
@@ -552,7 +552,7 @@
    "user_question": "Which dash cams under $200 are worth buying?",
    "zh_translation": "预算 200 美元以内，哪些行车记录仪值得买？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "experimental",
    "constraint_type": "约束",
    "intent_key": "budget_under_200",
@@ -589,7 +589,7 @@
    "user_question": "Which dash cams keep working through hot summers without the battery swelling?",
    "zh_translation": "哪些行车记录仪能扛住炎热夏天，不会出现电池鼓包？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "约束",
    "intent_key": "hot_climate_durability",
@@ -624,7 +624,7 @@
    "user_question": "Which dash cams have the longest warranty and the easiest return policy?",
    "zh_translation": "哪些行车记录仪的保修期最长、退货政策最省心？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "偏好标准",
    "intent_key": "warranty_returns",
@@ -659,7 +659,7 @@
    "user_question": "Which dash cams are best for keeping an eye on a parked car overnight?",
    "zh_translation": "夜里车停在外面，哪款行车记录仪最适合持续看护？",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "无限定条件",
    "intent_key": "overnight_parking",
@@ -696,7 +696,7 @@
    "user_question": "Which dash cams record continuously while parked instead of only when the car is hit?",
    "zh_translation": "哪些行车记录仪停车时能一直录像，而不是只有被撞时才录？",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "偏好标准",
    "intent_key": "continuous_parking",
@@ -730,7 +730,7 @@
    "user_question": "What are the best dash cams for 24/7 parking monitoring that won't drain the car battery?",
    "zh_translation": "想 24 小时停车监控又不耗光电瓶，哪几款行车记录仪最合适？",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "约束",
    "intent_key": "parking_power_drain",
@@ -767,7 +767,7 @@
    "user_question": "Which dash cams can run parking mode without hardwiring to the fuse box?",
    "zh_translation": "哪些行车记录仪不用接保险盒硬接线也能用停车监控？",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "约束",
    "intent_key": "parking_without_hardwire",
@@ -804,7 +804,7 @@
    "user_question": "Which dash cams include the hardwire kit and accessories needed for parking mode?",
    "zh_translation": "哪些行车记录仪直接附带停车监控所需的硬接线和配件？",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "约束",
    "intent_key": "parking_kit_included",
@@ -840,7 +840,7 @@
    "user_question": "Which 4-channel dash cams cover the sides of the car while it is parked?",
    "zh_translation": "哪些四路行车记录仪在停车时也能拍到车身两侧？",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "constraint_type": "目标用户",
    "intent_key": "parked_side_coverage",
@@ -877,7 +877,7 @@
    "user_question": "Which dash cams record the longest time-lapse parking footage before the memory card fills up?",
    "zh_translation": "哪些行车记录仪的停车缩时录影能录得最久、不容易把内存卡写满？",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "experimental",
    "constraint_type": "偏好标准",
    "intent_key": "parking_recording_duration",
@@ -915,7 +915,7 @@
    "user_question": "What extra equipment do I need to keep a dash cam recording while my car is parked overnight?",
    "zh_translation": "要让行车记录仪在熄火停车后整夜继续录像，我还需要另外买哪些配件？",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "experimental",
    "constraint_type": "约束",
    "intent_key": "parking_equipment_info",
@@ -951,7 +951,7 @@
    "user_question": "Which dash cams capture license plates clearly at night?",
    "zh_translation": "哪些行车记录仪在夜里能清楚拍到车牌？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "无限定条件",
    "intent_key": "night_plate_legibility",
@@ -986,7 +986,7 @@
    "user_question": "Which dash cams have the best low-light sensor for driving at night?",
    "zh_translation": "夜间行车，哪款行车记录仪的低光传感器最好？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "偏好标准",
    "intent_key": "low_light_sensor",
@@ -1022,8 +1022,8 @@
    "zh_translation": "想拿到车头、车尾和两侧的画面作为事故证据，哪些行车记录仪能做到？",
    "journey_stage": "发现",
    "audience": [
-    "注重安全记录的个人车主",
-    "需要多方向记录的驾驶者"
+    "注重行车安全和事故取证的私家车车主",
+    "需要多方向行车记录和停车监控的驾驶者"
    ],
    "group_role": "core",
    "constraint_type": "目标用户",
@@ -1062,8 +1062,8 @@
    "zh_translation": "哪些四路行车记录仪夜间每一路都清晰到能看清车牌？",
    "journey_stage": "发现",
    "audience": [
-    "注重安全记录的个人车主",
-    "需要多方向记录的驾驶者"
+    "注重行车安全和事故取证的私家车车主",
+    "需要多方向行车记录和停车监控的驾驶者"
    ],
    "group_role": "core",
    "constraint_type": "约束",
@@ -1101,7 +1101,7 @@
    "user_question": "Which dash cams produce usable night footage on roads with no street lights?",
    "zh_translation": "在没有路灯的路上，哪些行车记录仪拍出的夜间画面仍然可用？",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "constraint_type": "约束",
    "intent_key": "unlit_road_night_footage",

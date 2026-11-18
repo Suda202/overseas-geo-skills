@@ -28,7 +28,7 @@
 | `grok` | `task_result.full_response`（`raw_response` 带 `<grok:render>` 标签，不用） | `footnotes`（以 card id 为键的对象，按出现次数各一条） | `web_search_results`、`x_search_results`；`tool_usages` 是 Grok 自己的检索子查询 | `footnotes` |
 | `alexa` | `task_result.md_text`（不带引用标记） | `references`；引用位置只在 `raw_text` 的 `{ref cite_<id>}` | 无 | `sources` |
 
-Perplexity、Copilot、Grok、Alexa 四平台按 2026-10-21 实采核验（Vbrand 1 题 + Bbrand 5 题，US）。**Alexa 引用不完整**：`raw_text` 里 20 次引用只有 5 次的 id 能在 `references` 里找到，其余计次数但无 URL，Alexa 的引用份额、来源排行不可采信。
+Perplexity、Copilot、Grok、Alexa 四平台按 2026-10-21 实采核验（Vidnix 1 题 + Botslab 5 题，US）。**Alexa 引用不完整**：`raw_text` 里 20 次引用只有 5 次的 id 能在 `references` 里找到，其余计次数但无 URL，Alexa 的引用份额、来源排行不可采信。
 
 `related_queries`、`search_model_queries`、`ads`、`products` 都不是来源列表。
 
@@ -44,7 +44,7 @@ Perplexity、Copilot、Grok、Alexa 四平台按 2026-10-21 实采核验（Vbran
 | `gemini` | `products[]`；购买选项在 `stores[]` | — |
 | `perplexity`、`copilot`、`grok`、`alexa` | 无（Alexa 的 `products` 未核验，暂不接） | 不支持购物指标，不按 0 计 |
 
-Gemini 与 AI Mode 只在有商品时才交付 `products` 键，缺键与「未触发」在字段上无法区分；同期 Bbrand 美国 Gemini 68/75 条带卡、Abrand 新马 0/100，按未触发处理。Gemini 商品卡约 75% 的标题不出现在正文，未与页面 DOM 核验。
+Gemini 与 AI Mode 只在有商品时才交付 `products` 键，缺键与「未触发」在字段上无法区分；同期 Botslab 美国 Gemini 68/75 条带卡、Bewinch 新马 0/100，按未触发处理。Gemini 商品卡约 75% 的标题不出现在正文，未与页面 DOM 核验。
 
 ## 字段代数（新旧格式批次）
 

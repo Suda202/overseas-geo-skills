@@ -126,7 +126,7 @@ def _cited_count_entries(platform: str, task_result: dict):
     """新格式引用条目：直接按供应商的 `cited_count` 计次数。
 
     `cited_count` 是**未去重的引用次数**（供应商按正文 pill 统计，实测与正文逐条一致：
-    Bbrand 探针 2026-10-13，ChatGPT 14=14、Gemini 16=16、AI Mode 15=15、Perplexity 3=3；
+    Botslab 探针 2026-10-13，ChatGPT 14=14、Gemini 16=16、AI Mode 15=15、Perplexity 3=3；
     当天新采的 ChatGPT 3=3）。字段已按 URL 去重，所以一条来源就是一行数据 + 一个次数。
 
     返回 None 表示这批是旧格式（字段里没有任何 `cited_count`），调用方回退到正文 pill 计数。

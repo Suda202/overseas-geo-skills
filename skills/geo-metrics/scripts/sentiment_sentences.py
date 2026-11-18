@@ -137,7 +137,7 @@ def load_bank(path: str) -> list[dict]:
 
 
 
-# Scrapeless 锚点残留文案（`RivalA5 CarafeGo to product viewer dialog for this item.`），
+# Scrapeless 锚点残留文案（`AquaTru CarafeGo to product viewer dialog for this item.`），
 # 常量与报告渲染、词表挖掘共用 geo-metrics 的 de_cite_crawl。
 PRODUCT_VIEWER_NOISE = de_cite.PRODUCT_VIEWER_NOISE
 
@@ -714,7 +714,7 @@ def main() -> None:
     p_extract.add_argument("--bank", required=True, help="题库：v8 JSON 或 upload CSV（query/question_types/tags）")
     p_extract.add_argument("--crawl-dir", required=True, help="采集目录（含 scraper.*/<区域>/NNNN.json）")
     p_extract.add_argument("--aliases", default=None,
-                           help="单品牌模式：逗号分隔别名，须含当地文字转写，如 'Ybrand,某平台,บียู,บียู'")
+                           help="单品牌模式：逗号分隔别名，须含当地文字转写，如 'YOUKU,优酷,ยูคุ,ยูคู'")
     p_extract.add_argument("--lexicon", default=None,
                            help="多品牌模式：品牌词表 JSON（brands[].name/aliases/type），每条单元带 brand")
     p_extract.add_argument("--brand", default=None, help="单品牌模式下写入 brand 字段的品牌名（默认取首个别名）")

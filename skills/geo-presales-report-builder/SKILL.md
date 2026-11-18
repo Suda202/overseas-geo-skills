@@ -1,6 +1,6 @@
 ---
 name: geo-presales-report-builder
-description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Bbrand H1 template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
+description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Botslab G980H template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
   version: "2.9.0"
@@ -12,7 +12,7 @@ metadata:
 
 把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 售前诊断报告。
 
-**所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Bbrand H1 预览（`10-售前诊断报告/评测数据/brand-b/售后/选词-20261106/report-h1/购物面板预览/Bbrand-H1-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
+**所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Botslab G980H 预览（`10-售前诊断报告/评测数据/botslab/售后/选词-20261106/report-g980h/购物面板预览/Botslab-G980H-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
 
 负责：读取 Scrapeless 采集 JSON、按国家/平台/主题切分、复用后端指标管线算全部指标、渲染 HTML。
 
@@ -135,7 +135,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    python3 scripts/attach_translations.py --report <输出>/report-data.json      --batches <输出>/translation-batches --out <输出>/report-data.json
    ```
 
-   缺条目会直接报错，确需部分交付加 `--allow-partial`。回填时会做**截断门禁**：长回答的译文/原文长度比显著低于全批中位时列出疑似截断条目（Abrand 案例：8 条 5-7.5K 字符回答被翻译代理截到约六成、键齐全静默入库），默认警告并写入 `meta.translation_length_suspects`，加 `--strict-length` 升级为阻断；疑似条目重翻后重跑本命令覆盖。**译文体积大致翻倍**，加入后单文件 HTML 会明显变大。
+   缺条目会直接报错，确需部分交付加 `--allow-partial`。回填时会做**截断门禁**：长回答的译文/原文长度比显著低于全批中位时列出疑似截断条目（Bewinch 案例：8 条 5-7.5K 字符回答被翻译代理截到约六成、键齐全静默入库），默认警告并写入 `meta.translation_length_suspects`，加 `--strict-length` 升级为阻断；疑似条目重翻后重跑本命令覆盖。**译文体积大致翻倍**，加入后单文件 HTML 会明显变大。
 
 7. **校验**：
 
@@ -161,7 +161,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    退出码非 0 不得交付。它扫每条回答的中英文正文：卡里吞进了脚注、勾选框、追问句、加粗引导段，卡没有标题，`[文字](<url>)` 坏链接，以及没转成卡的 markdown 图（页面上显示成「!链接」）。改 `_render_inline_card` 或清洗规则后，另找一份不同品牌的 report-data 一起跑（规则写在 `references/render-spec.md`「卡片的组成」）。
 
-   门禁的输出要看全，不要 `| tail -1`：`verify_report_data.py` 失败时最后一行是切片统计，不是失败原因（2026-11-11 Obrand 就这样漏看了 14 项问题明细条数不一致）。
+   门禁的输出要看全，不要 `| tail -1`：`verify_report_data.py` 失败时最后一行是切片统计，不是失败原因（2026-11-11 Oraimo 就这样漏看了 14 项问题明细条数不一致）。
 
 8. **渲染**：
 
@@ -171,7 +171,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    渲染前会做 JavaScript 语法检查；语法错误会直接中断，不产出白页。
 
-9. **浏览器验证**：打开产物，逐个切国家 / 平台 / 主题，确认各模块有数、无空白、无变形。改了 JS 或 CSS 后必须重做这一步。脚本化遍历的已知坑：tab 按钮每次切换都被 `buildTabs()` 用 innerHTML 重建，**开头缓存的按钮引用第一次点击后即失效、后续点击静默无效**（Abrand 案例两轮「45 切片全通过」实际只反复测了一个切片）——每次点击前必须重新 querySelector。
+9. **浏览器验证**：打开产物，逐个切国家 / 平台 / 主题，确认各模块有数、无空白、无变形。改了 JS 或 CSS 后必须重做这一步。脚本化遍历的已知坑：tab 按钮每次切换都被 `buildTabs()` 用 innerHTML 重建，**开头缓存的按钮引用第一次点击后即失效、后续点击静默无效**（Bewinch 案例两轮「45 切片全通过」实际只反复测了一个切片）——每次点击前必须重新 querySelector。
 
 ## 指标口径
 
@@ -216,7 +216,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - `slices`：预算切片，键 `<region>|<platform>|<topic>`（topic 位写主题名，或「类型:发现」这类意图类型切片），只覆盖单选组合。供 `verify_report_data.py` 独立复算、上传 CSV 与下游读取。
 - `facts`：逐条有效回答的原始事实（提到哪些品牌、第几位、每条引用的官网归属 / 域名 / 来源类型 / 页面、商品卡）＋ `attach_sentiment.py` 补进的 Claim。页面用 `assets/report-engine.js` 按多选筛选把回答挑出来，用与 Python 同一套公式现算出与切片同结构的数据，各模块的渲染代码不分两套。
 
-有 `facts` 时 HTML 不嵌预算切片（Bbrand 12.9MB → 3.9MB）。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎，KPI、可见度榜与矩阵、引用模块、情感、商品卡、问题明细逐项比对，必须全部一致；改任何一侧的口径都要两侧一起改。监测基线报告（`geo-monitoring/build_baseline_html.py`）改写了切片口径，渲染前去掉 `facts`，仍是单选读预算切片。
+有 `facts` 时 HTML 不嵌预算切片（Botslab 12.9MB → 3.9MB）。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎，KPI、可见度榜与矩阵、引用模块、情感、商品卡、问题明细逐项比对，必须全部一致；改任何一侧的口径都要两侧一起改。监测基线报告（`geo-monitoring/build_baseline_html.py`）改写了切片口径，渲染前去掉 `facts`，仍是单选读预算切片。
 
 ## 交付门槛
 
@@ -227,13 +227,13 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - **正文不得带平台残留文案**:逐条扫 `Go to product viewer dialog for this item.`(明细与情感证据两处都要,详见 [渲染规范](references/render-spec.md))。
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
 - 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
-- `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Abrand 实例)。
+- `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Bewinch 实例)。
 - 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。商品卡同理（`--shopping-cards 关`，或本次采集一张商品卡都没有）。
 - 产物归档到 `10-售前诊断报告/评测数据/<品牌名>/` 对应任务目录，与可见度统计并列。
 
 ## 已知边界
 
-- **引用来源的展示类别固定 7 类**：自有网站 / 竞品网站 / 社交平台 / 媒体网站 / 新闻稿平台 / 机构网站 / 其他。以《引用来源分类》定义为准，不得增删。两条最容易搞错的边界：**目标品牌与全部竞品（配置竞品 + 开放竞品）的官网都进「自有网站」/「竞品网站」，不限于本批配置的那几个**——开放竞品的官网域名靠 `infer_brand_domains.py` 从引用来源推断、推不出的联网搜索补全（2026-09-22 改，此前规定开放竞品官网不进这一类）；**未命中默认类别的企业网站（含其他厂商官网、母公司站）归「其他」**——注意母公司站不算产品官网（如 tencent.com 不是 RivalY2 的官网，RivalY2 是 rivaly2.vip）。旧版的 `corporate_site`（企业网站）已取消，遇到历史值按「其他」处理。
+- **引用来源的展示类别固定 7 类**：自有网站 / 竞品网站 / 社交平台 / 媒体网站 / 新闻稿平台 / 机构网站 / 其他。以《引用来源分类》定义为准，不得增删。两条最容易搞错的边界：**目标品牌与全部竞品（配置竞品 + 开放竞品）的官网都进「自有网站」/「竞品网站」，不限于本批配置的那几个**——开放竞品的官网域名靠 `infer_brand_domains.py` 从引用来源推断、推不出的联网搜索补全（2026-09-22 改，此前规定开放竞品官网不进这一类）；**未命中默认类别的企业网站（含其他厂商官网、母公司站）归「其他」**——注意母公司站不算产品官网（如 tencent.com 不是 WeTV 的官网，WeTV 是 wetv.vip）。旧版的 `corporate_site`（企业网站）已取消，遇到历史值按「其他」处理。
 - 引用来源类别依赖 `geo-metrics/assets/domain-categories.json` 的判读覆盖度。未判读的引用超过 5% 时数据层停下（门禁），不会再悄悄落进「其他」；放行时理由记在 `meta.source_classification`。
 - 开放品牌集是词表驱动的，词表没收录的品牌不会进入声量分母。补充词表要重新跑数据层。
 - 前端每个榜单只展示本主题所属产品线的品牌（目标 + 该线配置竞品 + 1 个开放竞品），是为了可读性；其余品牌仍进声量分母。需要完整分布时看 `report-data.json` 的 `competition` 与 `matrix`。

@@ -6,18 +6,18 @@
 
 ## 现象
 
-Task 246（Kbrand）报告 JSON 中，`chatgpt` + `wordid 10119`（发现类问题 Q007「营养师指导」）的 `brand_rankings` 只有 `RivalK1`，漏掉 `RivalK2`。
+Task 246（KeepBalance）报告 JSON 中，`chatgpt` + `wordid 10119`（发现类问题 Q007「营养师指导」）的 `brand_rankings` 只有 `Rootine`，漏掉 `Persona Nutrition`。
 
 原始 `answer_text` 里该品牌确实存在，位于句首的加粗内联链接中：
 
 ```html
 <li><p><strong><span class="contents">
-  <a class="decorated-link" href="https://www.rival-k2.example/">RivalK2<span …><svg …></svg></span></a>
+  <a class="decorated-link" href="https://www.personanutrition.com/">Persona Nutrition<span …><svg …></svg></span></a>
 </span></strong> — certified nutritionists provide ongoing 1:1 consultations and can adjust supplement plans as needs change.</p></li>
-<li><p><strong><a class="decorated-link" href="https://rival-k1.example/">RivalK1</a></strong> — emphasizes ongoing progress tracking …</p></li>
+<li><p><strong><a class="decorated-link" href="https://rootine.co/">Rootine</a></strong> — emphasizes ongoing progress tracking …</p></li>
 ```
 
-同一回答里 `RivalK1` 抽取正常，只有同样位于句首链接内的 `RivalK2` 丢失。该回答正文后续还有一句 `Persona and RivalK1 are primarily individualized rather than family nutrition-care platforms.`，两个品牌在这一句中都出现。
+同一回答里 `Rootine` 抽取正常，只有同样位于句首链接内的 `Persona Nutrition` 丢失。该回答正文后续还有一句 `Persona and Rootine are primarily individualized rather than family nutrition-care platforms.`，两个品牌在这一句中都出现。
 
 ## 判定依据
 
@@ -35,7 +35,7 @@ Task 246（Kbrand）报告 JSON 中，`chatgpt` + `wordid 10119`（发现类问�
 
 1. 定位后端把 `answer_text` 转去引用正文的实现，确认是否与 `structured_result_audit.remove_citations` 修复前的行为一致（对剩余 `<a>` 一律连锚文本删除）。
 2. 若同源，移植同一判定：把「引用链接」与「句子内的内容链接」分开，后者解包保留文字。
-3. 加确定性回归用例，输入即上面这段 HTML，断言正文保留 `RivalK2 — certified nutritionists …`，且 `RivalK2` 出现在品牌序列中。
+3. 加确定性回归用例，输入即上面这段 HTML，断言正文保留 `Persona Nutrition — certified nutritionists …`，且 `Persona Nutrition` 出现在品牌序列中。
 
 ## 复现样本
 
@@ -44,10 +44,10 @@ Task 246（Kbrand）报告 JSON 中，`chatgpt` + `wordid 10119`（发现类问�
 | Task | 246 |
 | platform + wordid | `chatgpt` + `10119` |
 | 问题 | Which family nutrition supplement brands provide ongoing nutritionist guidance and progress feedback? |
-| 当前品牌序列 | `RivalK1` |
-| 期望品牌序列 | `RivalK2` → `RivalK1` |
+| 当前品牌序列 | `Rootine` |
+| 期望品牌序列 | `Persona Nutrition` → `Rootine` |
 | 原始正文位置 | `<local-path>`，`platform=chatgpt`、`wordid=10119` 的 `answer_text` |
-| 审计层修复后一致性 | 修复清洗层后重跑该条，品牌序列即恢复为 `RivalK2` → `RivalK1` |
+| 审计层修复后一致性 | 修复清洗层后重跑该条，品牌序列即恢复为 `Persona Nutrition` → `Rootine` |
 
 ## 备注
 

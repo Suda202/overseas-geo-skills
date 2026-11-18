@@ -2,10 +2,10 @@
   "citation_cases": [
     {
       "name": "Gemini 非链接来源组件整体排除",
-      "input_html": "<p>正文先写 PETLIBRO，随后写 Pbrand。</p><div class=\"source-inline-chip-container\"><button><span class=\"source-title\">Pbrand</span></button></div>",
-      "expected_cleaned": "正文先写 PETLIBRO，随后写 Pbrand。",
+      "input_html": "<p>正文先写 PETLIBRO，随后写 PETKIT。</p><div class=\"source-inline-chip-container\"><button><span class=\"source-title\">PETKIT</span></button></div>",
+      "expected_cleaned": "正文先写 PETLIBRO，随后写 PETKIT。",
       "expected_removed": [
-        "Pbrand"
+        "PETKIT"
       ]
     },
     {
@@ -36,56 +36,56 @@
   "ranking_cases": [
     {
       "name": "开放同类竞品按首次出现顺序计入",
-      "cleaned_text": "先比较 Chatham，随后是 MiaDonna，最后回到 Lbrand。",
+      "cleaned_text": "先比较 Chatham，随后是 MiaDonna，最后回到 Lit by Larry。",
       "entity_catalog": [
-        {"canonical_name": "Lbrand", "aliases": [], "eligible": true},
+        {"canonical_name": "Lit by Larry", "aliases": [], "eligible": true},
         {"canonical_name": "MiaDonna", "aliases": [], "eligible": true},
         {"canonical_name": "Chatham", "aliases": [], "eligible": true}
       ],
       "expected": [
         {"brand_name": "Chatham", "rank_pos": 1},
         {"brand_name": "MiaDonna", "rank_pos": 2},
-        {"brand_name": "Lbrand", "rank_pos": 3}
+        {"brand_name": "Lit by Larry", "rank_pos": 3}
       ]
     },
     {
       "name": "跨正文别名统一为一个标准品牌",
-      "cleaned_text": "Lit by Aria 的设计接近 Lbrand，Lit byarry 也指同一品牌。",
+      "cleaned_text": "Lit by Aria 的设计接近 Lit by Larry，Lit byarry 也指同一品牌。",
       "entity_catalog": [
         {
-          "canonical_name": "Lbrand",
+          "canonical_name": "Lit by Larry",
           "aliases": ["Lit by Aria", "Lit byarry"],
           "eligible": true
         }
       ],
-      "expected": [{"brand_name": "Lbrand", "rank_pos": 1}]
+      "expected": [{"brand_name": "Lit by Larry", "rank_pos": 1}]
     },
     {
       "name": "merchant 媒体机构和履历品牌不自动计入",
-      "cleaned_text": "Marketplace 销售 Lbrand。Review Site 引用了 GIA；创始人曾任职 Tiffany。Chatham 是当前替代选择。",
+      "cleaned_text": "Marketplace 销售 Lit by Larry。Review Site 引用了 GIA；创始人曾任职 Tiffany。Chatham 是当前替代选择。",
       "entity_catalog": [
         {"canonical_name": "Marketplace", "aliases": [], "eligible": false},
         {"canonical_name": "Review Site", "aliases": [], "eligible": false},
         {"canonical_name": "GIA", "aliases": [], "eligible": false},
         {"canonical_name": "Tiffany", "aliases": [], "eligible": false},
-        {"canonical_name": "Lbrand", "aliases": [], "eligible": true},
+        {"canonical_name": "Lit by Larry", "aliases": [], "eligible": true},
         {"canonical_name": "Chatham", "aliases": [], "eligible": true}
       ],
       "expected": [
-        {"brand_name": "Lbrand", "rank_pos": 1},
+        {"brand_name": "Lit by Larry", "rank_pos": 1},
         {"brand_name": "Chatham", "rank_pos": 2}
       ]
     },
     {
       "name": "同一标准品牌多次出现仍只排名一次",
-      "cleaned_text": "MiaDonna 先出现，随后是 Lbrand，最后再次出现 MIADONNA。",
+      "cleaned_text": "MiaDonna 先出现，随后是 Lit by Larry，最后再次出现 MIADONNA。",
       "entity_catalog": [
-        {"canonical_name": "Lbrand", "aliases": [], "eligible": true},
+        {"canonical_name": "Lit by Larry", "aliases": [], "eligible": true},
         {"canonical_name": "MiaDonna", "aliases": ["MIADONNA"], "eligible": true}
       ],
       "expected": [
         {"brand_name": "MiaDonna", "rank_pos": 1},
-        {"brand_name": "Lbrand", "rank_pos": 2}
+        {"brand_name": "Lit by Larry", "rank_pos": 2}
       ]
     },
     {
@@ -98,15 +98,15 @@
     },
     {
       "name": "已列候选即使不满足核心需求仍保留排名",
-      "cleaned_text": "候选依次为 Pbrand、CATLINK、PETLIBRO 和 Litter-Robot；其中后两者不能统一控制全部设备。",
+      "cleaned_text": "候选依次为 PETKIT、CATLINK、PETLIBRO 和 Litter-Robot；其中后两者不能统一控制全部设备。",
       "entity_catalog": [
-        {"canonical_name": "Pbrand", "aliases": [], "eligible": true},
+        {"canonical_name": "PETKIT", "aliases": [], "eligible": true},
         {"canonical_name": "CATLINK", "aliases": [], "eligible": true},
         {"canonical_name": "PETLIBRO", "aliases": [], "eligible": true},
         {"canonical_name": "Litter-Robot", "aliases": [], "eligible": true}
       ],
       "expected": [
-        {"brand_name": "Pbrand", "rank_pos": 1},
+        {"brand_name": "PETKIT", "rank_pos": 1},
         {"brand_name": "CATLINK", "rank_pos": 2},
         {"brand_name": "PETLIBRO", "rank_pos": 3},
         {"brand_name": "Litter-Robot", "rank_pos": 4}
@@ -134,14 +134,14 @@
     },
     {
       "name": "回答明确区分的相似父子品牌保持独立",
-      "cleaned_text": "Qbrand AI builds causal world models, while Qbrand Robotics is a separate autonomy stack.",
+      "cleaned_text": "Aether AI builds causal world models, while AETHER Robotics is a separate autonomy stack.",
       "entity_catalog": [
-        {"canonical_name": "Qbrand AI", "aliases": [], "eligible": true},
-        {"canonical_name": "Qbrand Robotics", "aliases": [], "eligible": true}
+        {"canonical_name": "Aether AI", "aliases": [], "eligible": true},
+        {"canonical_name": "AETHER Robotics", "aliases": [], "eligible": true}
       ],
       "expected": [
-        {"brand_name": "Qbrand AI", "rank_pos": 1},
-        {"brand_name": "Qbrand Robotics", "rank_pos": 2}
+        {"brand_name": "Aether AI", "rank_pos": 1},
+        {"brand_name": "AETHER Robotics", "rank_pos": 2}
       ]
     }
   ],

@@ -2,8 +2,8 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
-  "official_domain": "https://www.brand-b.example",
+  "brand_name": "Botslab",
+  "official_domain": "https://www.botslab.com",
   "category": "smart dash cam",
   "business_model": "B2C",
   "region": "US",
@@ -11,7 +11,7 @@
   "generation_stage": "discovery",
   "lifecycle_status": "hypothesis",
   "evidence_status": "after_sales_signal",
-  "prompt_version": "brand-b-dashcam-us-en-discovery-v0.1",
+  "prompt_version": "botslab-dashcam-us-en-discovery-v0.1",
   "customer_confirmation": {
    "status": "pending",
    "scope_status": "pending",
@@ -60,7 +60,7 @@
      "Q03",
      "Q09"
     ],
-    "note": "H1 records front plus rear, left and right from outside; RivalB3 N5 and RivalB4 VisionPano 40 spend their four channels on cabin cameras, so the exterior four-side story is a published brand lead."
+    "note": "G980H records front plus rear, left and right from outside; Vantrue N5 and REDTIGER VisionPano 40 spend their four channels on cabin cameras, so the exterior four-side story is a published brand lead."
    },
    {
     "attribute": "Parking mode recording",
@@ -101,7 +101,7 @@
      "Q04",
      "Q05"
     ],
-    "note": "Buyers name RivalO1 STARVIS 2; the brand page only says 'enhanced low-light capture' and names no sensor, so the position cannot be settled from the public layer."
+    "note": "Buyers name Sony STARVIS 2; the brand page only says 'enhanced low-light capture' and names no sensor, so the position cannot be settled from the public layer."
    },
    {
     "attribute": "Warranty, returns and support",
@@ -114,7 +114,7 @@
      "Q08",
      "Q12"
     ],
-    "note": "Bbrand lists a 1-year warranty against RivalB4's 24 months; the term is a policy gap content cannot close, so it is carried inside the category Topic rather than getting its own Topic."
+    "note": "Botslab lists a 1-year warranty against REDTIGER's 24 months; the term is a policy gap content cannot close, so it is carried inside the category Topic rather than getting its own Topic."
    },
    {
     "attribute": "Video resolution and sensor",
@@ -152,7 +152,7 @@
     "evidence": [
      "Q06"
     ],
-    "note": "128GB included, 512GB maximum, same ceiling as RivalB4; matters most for long parking capture."
+    "note": "128GB included, 512GB maximum, same ceiling as REDTIGER; matters most for long parking capture."
    },
    {
     "attribute": "Heat tolerance and power durability",
@@ -165,7 +165,7 @@
      "Q07",
      "Q06"
     ],
-    "note": "Supercapacitor rated -20 C to 70 C; RivalB3 N5 also uses a supercapacitor, so the claim is parity plus a published temperature range."
+    "note": "Supercapacitor rated -20 C to 70 C; Vantrue N5 also uses a supercapacitor, so the claim is parity plus a published temperature range."
    },
    {
     "attribute": "Price and value",
@@ -178,7 +178,7 @@
      "Q04",
      "Q08"
     ],
-    "note": "Buyers frame budgets at $100 and $200 while H1 sells at $209; price is a business lever, not a content lever."
+    "note": "Buyers frame budgets at $100 and $200 while G980H sells at $209; price is a business lever, not a content lever."
    },
    {
     "attribute": "Build quality and reliability",
@@ -202,7 +202,7 @@
     "evidence": [
      "Q03"
     ],
-    "no_carrier_reason": "The H1 records the exterior only; rideshare and cabin-coverage buyers fall outside the Case's applicability boundary and are served by the competitors' cabin-channel models, so no Prompt is written."
+    "no_carrier_reason": "The G980H records the exterior only; rideshare and cabin-coverage buyers fall outside the Case's applicability boundary and are served by the competitors' cabin-channel models, so no Prompt is written."
    },
    {
     "attribute": "Night screen glare",
@@ -228,16 +228,16 @@
    "verified_by_competitor_research": false,
    "competitors": [
     {
-     "name": "RivalB1",
-     "domain": "https://www.rival-b1.example"
+     "name": "70mai",
+     "domain": "https://www.70mai.com"
     },
     {
-     "name": "RivalB2",
-     "domain": "https://www.rival-b2.example"
+     "name": "VIOFO",
+     "domain": "https://www.viofo.com"
     },
     {
-     "name": "RivalB3",
-     "domain": "https://www.rival-b3.example"
+     "name": "Vantrue",
+     "domain": "https://www.vantrue.com"
     }
    ],
    "usage": "No Competitor Prompts at the discovery stage; the names are used only for entity-leakage checks."
@@ -282,12 +282,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -322,7 +322,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],
@@ -380,7 +380,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Heat tolerance and power durability",
    "evidence_refs": [
@@ -411,7 +411,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Warranty, returns and support",
    "evidence_refs": [
@@ -442,7 +442,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Price and value",
    "evidence_refs": [
@@ -509,7 +509,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Build quality and reliability",
    "evidence_refs": [
@@ -539,7 +539,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -570,7 +570,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -600,7 +600,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Installation effort",
    "evidence_refs": [
@@ -633,7 +633,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking power supply",
    "evidence_refs": [
@@ -665,7 +665,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -699,7 +699,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "交易",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking power supply",
    "evidence_refs": [
@@ -734,7 +734,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Storage capacity",
    "evidence_refs": [
@@ -764,7 +764,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Installation effort",
    "evidence_refs": [
@@ -798,7 +798,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Exterior multi-direction coverage",
    "evidence_refs": [
@@ -832,7 +832,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Exterior multi-direction coverage",
    "evidence_refs": [
@@ -862,7 +862,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Exterior multi-direction coverage",
    "evidence_refs": [
@@ -895,7 +895,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night plate capture",
    "evidence_refs": [
@@ -919,16 +919,16 @@
   {
    "question_id": "T3-D04",
    "topic_id": "T3",
-   "user_question": "Which dash cams use a RivalO1 STARVIS 2 sensor for clear footage in low light?",
+   "user_question": "Which dash cams use a Sony STARVIS 2 sensor for clear footage in low light?",
    "zh_translation": "哪些行车记录仪用索尼 STARVIS 2 传感器，弱光下画面清楚？",
-   "monitoring_prompt": "Which dash cams use a RivalO1 STARVIS 2 sensor for clear footage in low light?",
+   "monitoring_prompt": "Which dash cams use a Sony STARVIS 2 sensor for clear footage in low light?",
    "region": "US",
    "prompt_type": "Discovery",
    "intent_key": "sensor_low_light",
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Video resolution and sensor",
    "evidence_refs": [
@@ -962,7 +962,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Exterior multi-direction coverage",
    "evidence_refs": [
@@ -992,7 +992,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night plate capture",
    "evidence_refs": [
@@ -1027,7 +1027,7 @@
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Exterior multi-direction coverage",
    "evidence_refs": [

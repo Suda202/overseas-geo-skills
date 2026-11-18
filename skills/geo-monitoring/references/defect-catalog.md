@@ -10,9 +10,9 @@
 
 **根因**：标记逻辑把整个响应体当成回答文本，连带检索结果（`search_result`、`sse_data`）一起匹配。品牌官网出现在模型的检索结果里，就被计成了一次「提及」。
 
-**实测证据**（Bbrand，2026-09-16，`security-camera-results-20260916-145031`）：
+**实测证据**（Botslab，2026-09-16，`security-camera-results-20260916-145031`）：
 
-`mention-summary.json` 记录 Bbrand 提及 4 次、提及率 4.44%。逐字段核查：
+`mention-summary.json` 记录 Botslab 提及 4 次、提及率 4.44%。逐字段核查：
 
 | 文件 | 回答正文命中 | search_result 命中 | sse_data 命中 |
 |---|---:|---:|---:|
@@ -21,7 +21,7 @@
 | `scraper.chatgpt/US/0034.json` | 0 | 4 | 11 |
 | `scraper.chatgpt/US/0036.json` | 0 | 4 | 11 |
 
-命中的是 `www.brand-b.example` 的博客《Best Home Security Camera Brands for Homeowners in 2026 – Bbrand》，标题与题目高度对应。其余 86 个文件里的 `brand-b` 命中是 JSON 键名 `mentioned_brand-b` 本身。**按回答正文口径，真实提及率是 0/89，不是 4.44%。**
+命中的是 `www.botslab.com` 的博客《Best Home Security Camera Brands for Homeowners in 2026 – Botslab》，标题与题目高度对应。其余 86 个文件里的 `botslab` 命中是 JSON 键名 `mentioned_botslab` 本身。**按回答正文口径，真实提及率是 0/89，不是 4.44%。**
 
 **检测**：`audit_crawl_integrity.py` 的 `MENTION_FLAG_LAYER_MIXING`。
 
@@ -38,7 +38,7 @@
 **实测证据**：
 
 - Gemini：`security-camera-results-20260916-145031/scraper.gemini/US/0012.json`、`0017.json` 正文只有 `[2]:`、`[3]:` 等，缺 `[1]:`；`citations` 数组仍保留该条。
-- AIMode：`brand-b 爬虫数据/scraper.aimode/0001.json` 标记引用 1、4、5、6、7、10–24，定义行只有 10–24，**开头 9 条被截断**；`citations` 数组共 24 条完整。
+- AIMode：`botslab 爬虫数据/scraper.aimode/0001.json` 标记引用 1、4、5、6、7、10–24，定义行只有 10–24，**开头 9 条被截断**；`citations` 数组共 24 条完整。
 
 **检测**：`MISSING_REFERENCE_DEFINITION`。
 
@@ -50,7 +50,7 @@
 | aimode/0001 `[4]` | PCMag | PCMag | ✅ |
 | aimode/0001 `[5]` | YouTube | YouTube | ✅ |
 | aimode/0001 `[6]` | Reddit | Reddit | ✅ |
-| aimode/0001 `[7]` | RivalB4 Official | RivalB4 Official | ✅ |
+| aimode/0001 `[7]` | REDTIGER Official | REDTIGER Official | ✅ |
 | gemini/0012 `[1]` | Dash Cam Insight | Dash Cam Insight | ✅ |
 
 回退必须在产出里标注来源，不能与前向匹配混为一谈。
@@ -86,7 +86,7 @@
 **实测证据**：
 
 - `security-camera-results-20260916-145031/scraper.gemini/US/0018.json`：正文为 `I encountered an error doing what you asked. Could you try again?`（65 字符）。
-- `brand-b 爬虫数据/scraper.overview/0029.json`：正文为空。
+- `botslab 爬虫数据/scraper.overview/0029.json`：正文为空。
 
 **检测**：`EMPTY_ANSWER`、`FAILED_ANSWER`。
 
@@ -100,7 +100,7 @@
 
 **现象**：响应体里出现不成词的片段、被替换的同音/形近词，或正文在句中戛然而止。字段层面全部正常，任何按字段取数的流程都不会报错，**只有逐字读正文才会发现**。
 
-**实测证据**（Abrand 2026-09-15，全部出现在 Perplexity）：
+**实测证据**（Bewinch 2026-09-15，全部出现在 Perplexity）：
 
 | 文件 | 正文原文 | 应为 |
 |---|---|---|
@@ -113,7 +113,7 @@
 
 **检测**：`TEXT_CORRUPTION`，含三部分——`corrupted_words`（命中 `KNOWN_TEXT_CORRUPTION` 词表）、`truncated_tail`（尾部截断）。
 
-**词表维护**：`KNOWN_TEXT_CORRUPTION` 是**显式清单，不是启发式**。产品名与型号（`G3-Pro`、`RivalA4-A1`）同真损坏在形状上无法区分，用正则猜会大量误报。发现新损坏时追加进清单。
+**词表维护**：`KNOWN_TEXT_CORRUPTION` 是**显式清单，不是启发式**。产品名与型号（`G3-Pro`、`Waterdrop-A1`）同真损坏在形状上无法区分，用正则猜会大量误报。发现新损坏时追加进清单。
 
 **处理**：警告级，不阻断指标计算；但**受影响条目的原文与译文不得直接交付给客户**，须先人工校正，或在报告里标注该条为采集异常。若同一平台的损坏持续出现，反馈给采集供应商时附上文件与原文片段。
 
@@ -137,9 +137,9 @@
 
 | 形态 | 平台 | 实测规模（旧批次） |
 |---|---|---|
-| 同 URL 不同 `#:~:text=` 片段拆成多条 | Gemini | brand-a 59/74 条回答受影响 |
-| **完全相同 URL**（同一片段）重复 | Gemini | brand-t 31/78 条回答、52 处 |
-| 「裸桩 + 完整」成对：同 URL 列两遍，一条只有站点名（`title`/`snippet` 空），一条带完整标题摘要 | AIO、AI Mode | AIO brand-a 71/78 条、201 对（100% 此模式）；AI Mode brand-b 33/37 条 |
+| 同 URL 不同 `#:~:text=` 片段拆成多条 | Gemini | bewinch 59/74 条回答受影响 |
+| **完全相同 URL**（同一片段）重复 | Gemini | trip-biz 31/78 条回答、52 处 |
+| 「裸桩 + 完整」成对：同 URL 列两遍，一条只有站点名（`title`/`snippet` 空），一条带完整标题摘要 | AIO、AI Mode | AIO bewinch 71/78 条、201 对（100% 此模式）；AI Mode botslab 33/37 条 |
 
 **裸桩识别**（AIO 旧数据，已验证）：裸桩 `title` 空且 `favicon` 有；完整条目 `title` 有且 `favicon` 无。成因是响应里「正文引用 chip + 来源列表条目」被拍进同一个 `source` 字段。
 

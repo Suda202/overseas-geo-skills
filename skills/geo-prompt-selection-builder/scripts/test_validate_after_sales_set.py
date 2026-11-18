@@ -357,7 +357,7 @@ class OldStructureTests(unittest.TestCase):
 
 QUOTES = [
     {"输入编号": "Q01", "原话": "I want something that records continuously while parked.", "约束条件": "停车持续录像"},
-    {"输入编号": "Q04", "原话": "true 4K with a RivalO1 STARVIS 2 sensor for plates at night", "约束条件": "STARVIS 2、夜间车牌、100 美元以内"},
+    {"输入编号": "Q04", "原话": "true 4K with a Sony STARVIS 2 sensor for plates at night", "约束条件": "STARVIS 2、夜间车牌、100 美元以内"},
     {"输入编号": "Q08", "原话": "poor customer service despite good reviews", "约束条件": "客服、200 美元以内"},
     {"输入编号": "Q09", "原话": "4 channel dash cam with parking mode", "约束条件": "四路、停车模式"},
 ]
@@ -420,7 +420,7 @@ class ScopeGateTests(unittest.TestCase):
         self.assertEqual(self.outside([("Which 4-channel dash cams have parking mode?", "Coverage", ["四路"], ["Q09"])]), "")
         self.assertEqual(self.outside([("Which 4-channel dash cams have parking mode?", "Coverage", ["4 路"], ["Q09"])]), "")
 
-    def test_bare_cjk_one_is_not_a_number_without_a_measure_word(self) -> None:  # Nbrand 2026-10-23
+    def test_bare_cjk_one_is_not_a_number_without_a_measure_word(self) -> None:  # Antalpha 2026-10-23
         # 一般 / 一直 / 一起 / 一有 are adverbs, not the quantity 1; gate 36 used to
         # fail all four as 「数字 1」 on ordinary Traditional-Chinese prompts.
         for query in ("除了一般聊天機器人，有哪些 AI 會接即時行情？",
@@ -430,7 +430,7 @@ class ScopeGateTests(unittest.TestCase):
             self.assertEqual(self.outside([(query, "Condition", [], ["Q01"])]), "", query)
 
     def test_numbers_that_are_not_conditions_pass(self) -> None:  # F4
-        rows = [("Which dash cams use RivalO1 STARVIS 2 sensors for 24/7 parking monitoring in 2026?", "Night", [], ["Q01"])]
+        rows = [("Which dash cams use Sony STARVIS 2 sensors for 24/7 parking monitoring in 2026?", "Night", [], ["Q01"])]
         self.assertEqual(self.outside(rows), "")
 
     def test_declared_condition_outside_evidence_fails(self) -> None:  # F5, F10
@@ -511,7 +511,7 @@ class CompetitorUseCaseGateTests(unittest.TestCase):
     GATE = "Competitor Prompt has no use case"
 
     def bank(self, constraints) -> dict[str, object]:
-        data = scoped_bank([("Is Hbrand or RivalH1 better for HDB rentals?", "", constraints, ["Q01"])])
+        data = scoped_bank([("Is Housebell or PropertyGuru better for HDB rentals?", "", constraints, ["Q01"])])
         data["questions"][0]["prompt_type"] = "Competitor"
         data["config"]["slices"][0]["prompt_type"] = "Competitor"
         return data

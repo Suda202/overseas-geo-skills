@@ -26,18 +26,18 @@ from pathlib import Path
 REF_DEF = re.compile(r"^\s*\[\d+\]:\s*\S+.*$", re.M)
 REF_MARKER_PAREN = re.compile(r"\(\[[^\]\n]{1,80}\]\[\d+\]\)")
 REF_MARKER_BARE = re.compile(r"\[[^\]\n]{1,80}\]\[\d+\]")
-# alt 里可能有转义方括号（`![\[Direct from Japan\] RivalO2 … | Shopee](<url>)`），旧写法 `[^\]]*` 在 `\]` 处断开，
-# 整段 alt 漏进正文被算成提及（2026-11-11 全库 10,276 条去重回答里 73 条，Obrand 13 条）
+# alt 里可能有转义方括号（`![\[Direct from Japan\] Anker … | Shopee](<url>)`），旧写法 `[^\]]*` 在 `\]` 处断开，
+# 整段 alt 漏进正文被算成提及（2026-11-11 全库 10,276 条去重回答里 73 条，Oraimo 13 条）
 IMAGE = re.compile(r"!\[(?:\\.|[^\]\\\n])*\]\([^)\n]*\)")
 MD_LINK = re.compile(r"\[([^\]\n]*)\]\([^)\n]*\)")
 # 标签名必须紧跟 `<`，免得把「< $100 … >」这类正文吃掉；不限长度：ChatGPT 的 <img> 常超 300 字，
-# 它的 title 是被引网页标题（「Bbrand dashcam Pro vs. …」），漏删就会被算成提及
+# 它的 title 是被引网页标题（「Botslab dashcam Pro vs. …」），漏删就会被算成提及
 HTML_TAG = re.compile(r"<[A-Za-z/!][^<>]*>")
-# 裸网址不是正文提及（www.rival-b2.example 里的 rivalb2 不算）
+# 裸网址不是正文提及（www.viofo.com 里的 viofo 不算）
 BARE_URL = re.compile(r"https?://\S+|www\.\S+")
-# markdown 反斜杠转义：Gemini 把正文里的标点全转义（「rival-h2\.example」「OrangeTee \& Tie」），
-# ChatGPT 也有「Hbrand.com\.」「\$」。不还原就按字面匹配不到带点的品牌名——Hbrand 基线
-# Gemini 漏了 74 条 rival-h2.example 提及（2026-10-29）。`|` 不还原：表格里的 `\|` 是单元格内容，
+# markdown 反斜杠转义：Gemini 把正文里的标点全转义（「99\.co」「OrangeTee \& Tie」），
+# ChatGPT 也有「Housebell.com\.」「\$」。不还原就按字面匹配不到带点的品牌名——Housebell 基线
+# Gemini 漏了 74 条 99.co 提及（2026-10-29）。`|` 不还原：表格里的 `\|` 是单元格内容，
 # 还原后会被 blank_merchant_columns 当成分列符。
 # Scrapeless 商品卡锚点残留文案，会粘在商品名后面（「DispenserGo」）；报告渲染、词表挖掘都用这一份
 PRODUCT_VIEWER_NOISE = "Go to product viewer dialog for this item."
@@ -68,14 +68,14 @@ def answer_text(payload: dict, platform: str) -> str:
 
 
 # AI 反问用户、让用户选的追问块不算品牌提及（2026-11-11 Suda 定）：选项里的品牌只是 AI 在问
-# 「你用哪个牌子」，不是它推荐或评价了谁。Obrand 不扣时 Tecno、Infinix 提及率 32%，扣后 2%。
+# 「你用哪个牌子」，不是它推荐或评价了谁。Oraimo 不扣时 Tecno、Infinix 提及率 32%，扣后 2%。
 # 两步，都只看结构和版式、不看行业：
 #   1. ChatGPT 表单：`follow_up_form` 字段渲染进了 result_text（问题标题、`- [x]` 选项、多选的纯文本
 #      选项行、`{#if}` 残留、提交按钮）。用字段定位这一段、按位置删，不按选项字符串全文替换——
 #      选项里的 Samsung 在正文推荐里也会出现。
 #   2. 没有表单字段的普通追问：向用户提问的句子后紧跟 2 条以上短列表项，连问句一起删。
 # 旧的「连续复选框行整段删」已撤回：没有表单的回答里它触发 19 次，全是正文自检清单
-# （Abrand、Hbrand、Nbrand、Ubrand 的 `- [ ] Confirm …`），表单那部分由第 1 步按字段删。
+# （Bewinch、Housebell、Antalpha、INSIZE 的 `- [ ] Confirm …`），表单那部分由第 1 步按字段删。
 LIST_ITEM = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.+?)\s*$")
 ASKS_USER = re.compile(r"\byou\b|\byour\b|\bwhich\b|\bwhat\b|你|您|哪", re.I)
 # Markdown 标题里的问句是小节名，后面的列表是正文（安全软件题的「### What problems can they help with?」）
@@ -95,7 +95,7 @@ def follow_up_form_span(text: str, form) -> tuple[int, int] | None:
     """ChatGPT 追问表单在正文里的起止位置；字段缺失或定位不到时返回 None。
 
     起点取第一个问题标题的最后一段（真正的提问句）：标题字段偶尔把前面的推荐语也解析进来
-    （Obrand 266 份里 16 份，如「My verdict: Get the RivalO2 30W …」），取整段会把推荐删掉。
+    （Oraimo 266 份里 16 份，如「My verdict: Get the Anker 30W …」），取整段会把推荐删掉。
     终点是提交按钮那一行；按钮之后 ChatGPT 自己写的收尾句保留为正文。
     """
     if not isinstance(form, dict):

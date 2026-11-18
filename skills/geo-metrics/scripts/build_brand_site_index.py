@@ -109,7 +109,7 @@ def _lexicon(lexicon: dict) -> list[dict]:
     entries = []
     for item in (lexicon.get("brands") if isinstance(lexicon, dict) else None) or []:
         # 只有显式标了 target / competitor 的才记角色；开放品牌（type 为空或 open、competitor_open）
-        # 是开放挖掘进词表的，可能是内容方而不是竞品（Hbrand 的 Stacked Homes 是媒体）
+        # 是开放挖掘进词表的，可能是内容方而不是竞品（Housebell 的 Stacked Homes 是媒体）
         t = str(item.get("type") or "").lower()
         role = "target" if t == "target" else "competitor" if t == "competitor" else "open"
         for dom in (item.get("official_domains") or item.get("domains") or []):

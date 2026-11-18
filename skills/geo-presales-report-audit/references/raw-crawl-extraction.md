@@ -46,7 +46,7 @@ python3 ../geo-metrics/scripts/de_cite_crawl.py \
 ```json
 [{
   "answer_id": "chatgpt:BOT-T1-D01:0001",
-  "brands": [{"brand": "RivalB2", "evidence": "首次出现处的正文片段"}],
+  "brands": [{"brand": "VIOFO", "evidence": "首次出现处的正文片段"}],
   "excluded_entities": [{"name": "Best Buy", "reason": "商品卡 merchants 列渠道"}],
   "new_entities": [],
   "uncertainties": []
@@ -79,13 +79,13 @@ python3 scripts/verify_brand_extraction.py \
 | 3 标准名一致性 | 同一品牌被写成多种大小写，即将占两个名次 |
 | 4 召回 | 标准词典命中的品牌在记录中缺失 |
 
-第 3 项是硬性前置。**已实证**：分片抽取时两个分片各写了一种大小写，未归一直接算排名，`Brandx`/`BRANDX` 与 `Brandz`/`BRANDZ` 各被拆成两行、各占一个名次，品牌总数从 20 虚增到 22。
+第 3 项是硬性前置。**已实证**：分片抽取时两个分片各写了一种大小写，未归一直接算排名，`Lamtto`/`LAMTTO` 与 `Wolfbox`/`WOLFBOX` 各被拆成两行、各占一个名次，品牌总数从 20 虚增到 22。
 
 第 4 项需要 `--lexicon`；不给则跳过。词典是每个 Case 的资产，放 `assets/brand_lexicon.<case>.json`，键是标准名、值是正文里出现过的写法；下划线开头的键视为元信息。
 
 ## 已知陷阱（均有一手证据）
 
-- **merchants 列的品牌名不是品牌首现**。品牌自营店（"$149.99 - eufy"、`RivalB2 Direct`）属销售渠道，不计入首现位置。若改用「计入」，受影响回答的首现顺序会变。
+- **merchants 列的品牌名不是品牌首现**。品牌自营店（"$149.99 - eufy"、`VIOFO Direct`）属销售渠道，不计入首现位置。若改用「计入」，受影响回答的首现顺序会变。
 - **goods 列无品牌前缀的纯型号行不计入**（"Nexus 5"、"DR970X-2CH Plus II"）。
 - **正文引用标记是否等于原站 citation pill 无法从 JSON 证实**，需原始 HTML。按项目既有口径把交付的 Markdown 标记作为回退证据。
 - **回答正文比供应商引用字段更完整**：实测过字段为空而正文有 4 次标记的回答，也实测过正文丢定义行而字段完整的回答。两个方向都存在，不能固定信一侧。

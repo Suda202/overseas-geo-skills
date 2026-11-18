@@ -2,8 +2,8 @@
  "schema_version": "overseas-geo-question-bank/v8",
  "mode": "after-sales-strategic-topics",
  "config": {
-  "brand_name": "Bbrand",
-  "official_domain": "https://www.brand-b.example",
+  "brand_name": "Botslab",
+  "official_domain": "https://www.botslab.com",
   "generation_stage": "discovery",
   "region": "US",
   "lifecycle_status": "hypothesis",
@@ -15,12 +15,12 @@
   },
   "audiences": [
    {
-    "audience": "注重安全记录的个人车主",
+    "audience": "注重行车安全和事故取证的私家车车主",
     "basis": "Case 目标客户（1）；Q04、Q05、Q06、Q07、Q08",
     "asks_differently": "夜间能否拍清车牌、传感器、耐热、可靠性与售后"
    },
    {
-    "audience": "需要多方向记录的驾驶者",
+    "audience": "需要多方向行车记录和停车监控的驾驶者",
     "basis": "Case 目标客户（2）；Q01、Q02、Q03、Q09、Q10、Q11",
     "asks_differently": "车外覆盖范围、通道数、停车持续录像、接电方式与电瓶耗电"
    }
@@ -32,7 +32,7 @@
     "name_zh": "多路行车记录仪",
     "role": "category_observation",
     "parent_demand_anchor": "dash cam / 4 channel dash cam（Google 自动补全种子词，Q09）",
-    "business_question": "买家要「看清车身四周」时，AI 会不会把四路/多路方案列进来，Bbrand 是否在候选名单内。",
+    "business_question": "买家要「看清车身四周」时，AI 会不会把四路/多路方案列进来，Botslab 是否在候选名单内。",
     "possible_action": "自有内容补齐「四路 vs 三路」「盲区覆盖」对比页；第三方评测与清单收录。",
     "facets": {
      "coverage_breadth": "T1-D01",
@@ -68,7 +68,7 @@
     "name_zh": "夜间行车录像",
     "role": "buying_scenario",
     "parent_demand_anchor": "无对应自动补全种子词；需求来自 r/Dashcam 反复出现的夜间车牌问题（Q04、Q05），搜索需求侧标记为待补。",
-    "business_question": "夜间取证场景，AI 用哪些标准排序，Bbrand 是否因未公开传感器与实拍样张而缺席。",
+    "business_question": "夜间取证场景，AI 用哪些标准排序，Botslab 是否因未公开传感器与实拍样张而缺席。",
     "possible_action": "官网补传感器型号、夜间实拍样张与车牌对比；第三方夜测收录。",
     "facets": {
      "plate_legibility": "T3-D01",
@@ -86,7 +86,7 @@
     "name_zh": "耐用与售后",
     "role": "buying_scenario",
     "parent_demand_anchor": "dash cam warranty（Google 自动补全种子词，Q12）覆盖保修面；耐热面仅有社区语言（Q07），无搜索种子词，标记为待补。",
-    "business_question": "买家担心「用一两年就坏、夏天鼓包、售后没人管」时，AI 推荐哪些品牌，Bbrand 的超级电容与保修条款是否被看见。",
+    "business_question": "买家担心「用一两年就坏、夏天鼓包、售后没人管」时，AI 推荐哪些品牌，Botslab 的超级电容与保修条款是否被看见。",
     "possible_action": "公开耐温测试与保修/退换条款页；把 1 年保修与 money-back 写进产品页首屏。",
     "facets": {
      "heat_battery_failure": "T4-D01, T4-D02",
@@ -106,7 +106,7 @@
     "priority": "P1",
     "importance": "high",
     "changeability": "high",
-    "relative_position": "领先：H1 四路（前 3K + 后/左/右 1080P），RivalB3 N5 四路但前摄 2.7K（各家官网快照）",
+    "relative_position": "领先：G980H 四路（前 3K + 后/左/右 1080P），Vantrue N5 四路但前摄 2.7K（各家官网快照）",
     "gap_type": "capability advantage",
     "evidence_refs": [
      "Q03",
@@ -125,7 +125,7 @@
     "priority": "P1",
     "importance": "high",
     "changeability": "high",
-    "relative_position": "持平：RivalB3 N5 同样提供 24/7 parking guard 与四种停车模式",
+    "relative_position": "持平：Vantrue N5 同样提供 24/7 parking guard 与四种停车模式",
     "gap_type": "parity",
     "evidence_refs": [
      "Q01",
@@ -145,7 +145,7 @@
     "priority": "P1",
     "importance": "high",
     "changeability": "high",
-    "relative_position": "持平：RivalB3 N5 也要求硬线并单卖套件；Bbrand 官网 24/7 卖点与 FAQ「需专用硬线套件」自相矛盾",
+    "relative_position": "持平：Vantrue N5 也要求硬线并单卖套件；Botslab 官网 24/7 卖点与 FAQ「需专用硬线套件」自相矛盾",
     "gap_type": "evidence gap",
     "evidence_refs": [
      "Q02",
@@ -165,7 +165,7 @@
     "priority": "P1",
     "importance": "high",
     "changeability": "medium",
-    "relative_position": "待确认（证据缺口）：RivalB3 N5 公开 RivalO1 STARVIS 2 IMX675 与夜间车牌表述，Bbrand 官网只写 Enhanced Low-Light Capture，未写传感器型号",
+    "relative_position": "待确认（证据缺口）：Vantrue N5 公开 Sony STARVIS 2 IMX675 与夜间车牌表述，Botslab 官网只写 Enhanced Low-Light Capture，未写传感器型号",
     "gap_type": "evidence gap",
     "evidence_refs": [
      "Q04",
@@ -186,7 +186,7 @@
     "priority": "P1",
     "importance": "high",
     "changeability": "high",
-    "relative_position": "持平：Bbrand 与 RivalB3 N5 均用超级电容；Bbrand 公开 -20°C~70°C，RivalB3 未给数值",
+    "relative_position": "持平：Botslab 与 Vantrue N5 均用超级电容；Botslab 公开 -20°C~70°C，Vantrue 未给数值",
     "gap_type": "parity",
     "evidence_refs": [
      "Q06",
@@ -205,7 +205,7 @@
     "priority": "P2",
     "importance": "medium",
     "changeability": "high",
-    "relative_position": "持平：H1 随附 128GB、最高 512GB；RivalB3 套装也含 256/512GB 卡",
+    "relative_position": "持平：G980H 随附 128GB、最高 512GB；Vantrue 套装也含 256/512GB 卡",
     "gap_type": "parity",
     "evidence_refs": [
      "Q06"
@@ -238,7 +238,7 @@
     "priority": "P2",
     "importance": "medium-high",
     "changeability": "high",
-    "relative_position": "待确认：Bbrand 1 年保修 + money-back；RivalB3/RivalB2/RivalB1 保修条款本轮未核",
+    "relative_position": "待确认：Botslab 1 年保修 + money-back；Vantrue/VIOFO/70mai 保修条款本轮未核",
     "gap_type": "evidence gap",
     "evidence_refs": [
      "Q08",
@@ -323,16 +323,16 @@
    "note": "Case 冻结三家，本轮不增删、不核验；discovery 阶段不使用竞品名。",
    "competitors": [
     {
-     "name": "RivalB1",
-     "official_domain": "https://www.rival-b1.example"
+     "name": "70mai",
+     "official_domain": "https://www.70mai.com"
     },
     {
-     "name": "RivalB2",
-     "official_domain": "https://www.rival-b2.example"
+     "name": "VIOFO",
+     "official_domain": "https://www.viofo.com"
     },
     {
-     "name": "RivalB3",
-     "official_domain": "https://www.rival-b3.example"
+     "name": "Vantrue",
+     "official_domain": "https://www.vantrue.com"
     }
    ]
   },
@@ -354,11 +354,11 @@
    "market": "US",
    "language": "en",
    "product_lines": [
-    "Bbrand Smart Dash Cams / H1 4-channel"
+    "Botslab Smart Dash Cams / G980H 4-channel"
    ],
    "audiences": [
-    "注重安全记录的个人车主",
-    "需要多方向记录的驾驶者"
+    "注重行车安全和事故取证的私家车车主",
+    "需要多方向行车记录和停车监控的驾驶者"
    ],
    "journey_tasks": [
     "发现",
@@ -374,9 +374,9 @@
     "hot climate"
    ],
    "formal_competitors": [
-    "RivalB1",
-    "RivalB2",
-    "RivalB3"
+    "70mai",
+    "VIOFO",
+    "Vantrue"
    ],
    "substitutes_or_status_quo": [
     "single-channel dash cam",
@@ -471,12 +471,12 @@
    },
    {
     "输入编号": "Q04",
-    "原话": "I specifically need true 4K video quality with a RivalO1 STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
+    "原话": "I specifically need true 4K video quality with a Sony STARVIS 2 sensor for capturing license plates at night, plus a reliable 24/7 parking mode that records while the car is off.",
     "约束": "STARVIS 2、夜间车牌、100 美元以内"
    },
    {
     "输入编号": "Q05",
-    "原话": "I see in all these reddit posts that you need RivalO1 starvis or something?",
+    "原话": "I see in all these reddit posts that you need Sony starvis or something?",
     "约束": "传感器"
    },
    {
@@ -511,7 +511,7 @@
    },
    {
     "输入编号": "Q12",
-    "原话": "rivalb2 dash cam warranty",
+    "原话": "viofo dash cam warranty",
     "约束": "保修"
    }
   ],
@@ -561,7 +561,7 @@
    "intent_key": "four-channel-simultaneous-recording",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Multi-channel coverage",
    "evidence_refs": [
@@ -590,7 +590,7 @@
    "intent_key": "three-vs-four-channel-coverage",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Multi-channel coverage",
    "evidence_refs": [
@@ -620,7 +620,7 @@
    "intent_key": "four-channel-budget",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Price & value",
    "evidence_refs": [
@@ -650,7 +650,7 @@
    "intent_key": "memory-card-and-storage",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Storage & recording capacity",
    "evidence_refs": [
@@ -680,7 +680,7 @@
    "intent_key": "continuous-parking-recording",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -706,7 +706,7 @@
    "intent_key": "parking-mode-without-hardwire",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking power & installation",
    "evidence_refs": [
@@ -734,7 +734,7 @@
    "intent_key": "parking-battery-drain",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking power & installation",
    "evidence_refs": [
@@ -762,7 +762,7 @@
    "intent_key": "parking-kit-and-extras",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking power & installation",
    "evidence_refs": [
@@ -790,7 +790,7 @@
    "intent_key": "overnight-parking-monitoring",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -819,7 +819,7 @@
    "intent_key": "parking-impact-alert",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -848,7 +848,7 @@
    "intent_key": "four-camera-parking-recording",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "需要多方向记录的驾驶者",
+   "audience": "需要多方向行车记录和停车监控的驾驶者",
    "group_role": "core",
    "attribute_ref": "Parking mode recording",
    "evidence_refs": [
@@ -877,7 +877,7 @@
    "intent_key": "night-license-plate",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night vision & plate capture",
    "evidence_refs": [
@@ -903,7 +903,7 @@
    "intent_key": "night-driving-footage",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night vision & plate capture",
    "evidence_refs": [
@@ -920,16 +920,16 @@
   {
    "question_id": "T3-D03",
    "topic_id": "T3",
-   "user_question": "Which dash cams use RivalO1 STARVIS 2 sensors for low-light recording?",
-   "zh_translation": "哪些行车记录仪用 RivalO1 STARVIS 2 传感器做低照度录像？",
-   "monitoring_prompt": "Which dash cams use RivalO1 STARVIS 2 sensors for low-light recording?",
+   "user_question": "Which dash cams use Sony STARVIS 2 sensors for low-light recording?",
+   "zh_translation": "哪些行车记录仪用 Sony STARVIS 2 传感器做低照度录像？",
+   "monitoring_prompt": "Which dash cams use Sony STARVIS 2 sensors for low-light recording?",
    "prompt_type": "Discovery",
    "analysis_type": "visibility",
    "formal_visibility_eligible": true,
    "intent_key": "starvis2-low-light",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night vision & plate capture",
    "evidence_refs": [
@@ -957,7 +957,7 @@
    "intent_key": "rear-and-side-night-vision",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night vision & plate capture",
    "evidence_refs": [
@@ -986,7 +986,7 @@
    "intent_key": "budget-low-light",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Night vision & plate capture",
    "evidence_refs": [
@@ -1015,7 +1015,7 @@
    "intent_key": "summer-battery-heat",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Heat tolerance",
    "evidence_refs": [
@@ -1041,7 +1041,7 @@
    "intent_key": "supercapacitor-heat-durability",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Heat tolerance",
    "evidence_refs": [
@@ -1069,7 +1069,7 @@
    "intent_key": "hot-car-overheat-recording",
    "region": "US",
    "journey_stage": "解决问题",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Heat tolerance",
    "evidence_refs": [
@@ -1096,7 +1096,7 @@
    "intent_key": "warranty-and-support",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Warranty & after-sales support",
    "evidence_refs": [
@@ -1123,7 +1123,7 @@
    "intent_key": "long-term-reliability",
    "region": "US",
    "journey_stage": "发现",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Build quality & long-term reliability",
    "evidence_refs": [
@@ -1149,7 +1149,7 @@
    "intent_key": "return-if-quality-disappoints",
    "region": "US",
    "journey_stage": "交易",
-   "audience": "注重安全记录的个人车主",
+   "audience": "注重行车安全和事故取证的私家车车主",
    "group_role": "core",
    "attribute_ref": "Warranty & after-sales support",
    "evidence_refs": [

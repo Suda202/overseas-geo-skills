@@ -211,10 +211,10 @@ class Recomputer:
                         repeat: int = 1) -> dict[str, list[dict]]:
         """按对象回填的品牌跨度，与数据层同口径做跨对象最长优先不重叠消解。
 
-        泰文/CJK 别名不带词边界，短别名会落进别的对象的长别名里（乙大学
-        `มหาวิทยาลัยอัลฟา` ⊂ 乙大学南校区 `มหาวิทยาลัยอัลฟาตอนใต้`）。数据层在
-        `prepare_answers` 里跨对象消解，这里必须同口径，否则复算会把乙大学南校区那条
-        同时记成乙大学，凭空报出差异。拉丁别名带词边界，消解对它是空操作。
+        泰文/CJK 别名不带词边界，短别名会落进别的对象的长别名里（中农大
+        `มหาวิทยาลัยเกษตรจีน` ⊂ 华南农大 `มหาวิทยาลัยเกษตรจีนตอนใต้`）。数据层在
+        `prepare_answers` 里跨对象消解，这里必须同口径，否则复算会把华南农大那条
+        同时记成中农大，凭空报出差异。拉丁别名带词边界，消解对它是空操作。
         """
         key = (region, platform_dir, qid, repeat)
         if key not in self._resolved_spans_cache:
@@ -684,7 +684,7 @@ def run_checks(report: dict, collect: Path) -> list[str]:
         if not has_sentiment:
             failures.append("sentiment_claims_status=complete 但全部切片情感样本为 0")
     # 题数由题库决定：按采集次数展开是 75 行、按真实题目是 5 行，都不是固定值。
-    # 这里只校验结构自洽，不写死条数（旧版写死 50 是 Abrand 案例的形态）。
+    # 这里只校验结构自洽，不写死条数（旧版写死 50 是 Bewinch 案例的形态）。
     questions = meta.get("questions") or []
     if not questions:
         failures.append("meta.questions 为空")

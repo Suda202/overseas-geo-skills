@@ -94,7 +94,7 @@ class TestCheckClaims(Base):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_global_idx_misuse_is_caught(self):
-        # Abrand/RivalA1 实例:indices 误用全局 idx(2 越界于同方向数组)
+        # Bewinch/Coway 实例:indices 误用全局 idx(2 越界于同方向数组)
         self.write("claims/A-claims.json", {
             "brand": "A",
             "positive": [{"label": "好", "count": 2, "indices": [0, 2],

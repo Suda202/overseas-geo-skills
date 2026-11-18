@@ -44,10 +44,10 @@ class TestThemeKeywords(unittest.TestCase):
 
 class TestBrandTableTarget(unittest.TestCase):
     def test_target_flag_follows_argument_not_hardcoded_brand(self):
-        counts = {"Ybrand": (3, 1), "RivalY1": (1, 2), "RivalY2": (0, 0)}
-        table = MODULE.build_brand_table([], {}, list(counts), counts, lambda u: True, "Ybrand")
+        counts = {"YOUKU": (3, 1), "iQIYI": (1, 2), "WeTV": (0, 0)}
+        table = MODULE.build_brand_table([], {}, list(counts), counts, lambda u: True, "YOUKU")
         flags = {row["brand"]: row["target"] for row in table["rows"]}
-        self.assertEqual({"Ybrand": True, "RivalY1": False, "RivalY2": False}, flags)
+        self.assertEqual({"YOUKU": True, "iQIYI": False, "WeTV": False}, flags)
 
 
 class TestThemeMatrix(unittest.TestCase):

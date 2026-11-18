@@ -86,7 +86,7 @@
 {
   "confirmation_status": "partial",
   "confirmed_fields": ["竞品"],
-  "sources": [{ "url": "https://www.example-biz.example", "summary": "官网产品与服务页" }]
+  "sources": [{ "url": "https://www.trip.biz", "summary": "官网产品与服务页" }]
 }
 ```
 
@@ -178,5 +178,5 @@ python3 evals/e2e_input_contract.py
 
 示例 payload：
 
-- B2B：[input-examples/b2b-example.json](input-examples/b2b-example.json)（含 `handoff`）
-- B2C：[input-examples/b2c-example.json](input-examples/b2c-example.json)
+- B2B：[input-examples/tripbiz-b2b.json](input-examples/tripbiz-b2b.json)（含 `handoff`）
+- B2C：[input-examples/youku-b2c.json](input-examples/youku-b2c.json)

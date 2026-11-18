@@ -78,7 +78,7 @@ from geo_presales_core.util import (  # noqa: E402
 )
 
 # 去引用清洗：品牌匹配必须跑在剥离了引用标记与商品卡商家列的正文上，否则被引文章的
-# 标题（如 "...car cameras by Garmin, Nextbase, RivalB1 and more"）里的品牌会被
+# 标题（如 "...car cameras by Garmin, Nextbase, 70mai and more"）里的品牌会被
 # find_alias_spans 当成提及——这是 geo-presales-report-audit 已记录的错误类型
 # 「引用锚文本公司名误计为品牌」。引用统计仍用原文，标记要被解出来。
 import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core 同目录）
@@ -182,7 +182,7 @@ _citation_entries = core_citations._citation_entries
 # 题库 diagnosis_intent -> 后端 diagnostic_intent。
 # 键取 shared/canonical-intent-mapping.md 的全集，两种拼写都收：规范表写的是
 # `Prompt Type: Verification`，但题库实际用的是 `verification`，缺了会直接中断构建
-# （Abrand 题库只有 4 种意图，换到 brand_e 的 6 种才暴露）。
+# （Bewinch 题库只有 4 种意图，换到 edgelight 的 6 种才暴露）。
 CSV_INTENT_MAP = {
     "discovery": "discovery",
     "competitor": "competitor",
@@ -447,7 +447,7 @@ load_lexicon = core_lexicon.load_lexicon
 def _name_tokens_subset(a: str, b: str) -> bool:
     """归一化名字 a 的词元集合是否被 b 完整包含（用于词表条目并入 Case 对象）。
 
-    「RivalY1」⊂「RivalY1 International」→ True；「Viu」vs「ViuTV」→ False（词元不等）。
+    「iQIYI」⊂「iQIYI International」→ True；「Viu」vs「ViuTV」→ False（词元不等）。
     两侧都去空后比较，任一侧为空则 False。
     """
     ta = {t for t in re.split(r"[^\w]+", a) if t}
@@ -514,7 +514,7 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
             if entry_domains & set(obj["official_domains"]):
                 match = obj
                 break
-            # 名称词元包含：Case 写「RivalY1 International」而词表写「RivalY1」时，
+            # 名称词元包含：Case 写「iQIYI International」而词表写「iQIYI」时，
             # 仅靠全名相等与域名交集都匹配不上，条目会另起一个「开放品牌」对象，
             # 把同一个品牌的提及量拆到两处、静默污染声量分母（2026-09-22 实测）。
             # 用词元集合判断，避免 "Viu"/"ViuTV" 这类子串误并。
@@ -659,7 +659,7 @@ def discover_sample_files(folder: Path, questions: list[dict]):
     只按题面归属会把这两个平台整批丢成 ``UNMATCHED_SAMPLE_FILE``——实测 AIO 归零、全量分母从
     264 掉到 152。这类缺失是平台结构决定的，不是采集错误。
 
-    为什么回退要留痕：文件名题号**不总是**题号（brand_b 那批是 5 题 × 15 次重复，``0001.json``
+    为什么回退要留痕：文件名题号**不总是**题号（botslab 那批是 5 题 × 15 次重复，``0001.json``
     不是第 1 题）。所以回退只在「题面为空」时启用，且必须记 ``FILENAME_FALLBACK``，不静默错配；
     题面存在但对不上任何题时仍报 ``UNMATCHED_SAMPLE_FILE``，那才是真错位。
 
@@ -731,7 +731,7 @@ def load_samples(collect_dir: Path, region: str, platform: str,
     text_field = ANSWER_FIELD[platform]
     # 题库按市场写时只匹配本市场问的题：其他市场独有的题不该出现在这个目录，也不该报缺文件。
     # 同一句提示词在几个市场都问，要写成一行、region 填「KE,NG」，不要拆成两行——拆开后
-    # by_prompt 里后一道覆盖前一道，被覆盖的题显示「无答案」（2026-11-11 Obrand 实测 26 对）。
+    # by_prompt 里后一道覆盖前一道，被覆盖的题显示「无答案」（2026-11-11 Oraimo 实测 26 对）。
     region_questions = [q for q in questions if not q.get("regions") or region in q["regions"]]
     files, discover_issues = discover_sample_files(folder, region_questions)
     issues = [*discover_issues]
@@ -1187,7 +1187,7 @@ def build_sources(metrics: dict, answers: list[dict],
     # 域名引用份额与 KPI 官网引用份额、类别、页面同口径：分子是该域名被引用的
     # 「未去重次数」，分母是全切片未去重引用总数。core 的 top_domains.answer_count
     # 是「去重到回答」的数（引用过该域名的回答数），只能用于挑选/排序，不能当分子——
-    # 否则域名被系统性低估（Abrand 实例：唯一官网域名 brand-a.example 被算成 2.0%，
+    # 否则域名被系统性低估（Bewinch 实例：唯一官网域名 bewinch.com 被算成 2.0%，
     # 而官网引用份额 4.5%，同一件事对不上）。这里改用 domain_types 累加的未去重次数，
     # 榜单也按未去重次数排（并列按域名字典序，保证可复算）。
     raw_domain_counts = {d: sum(c.values()) for d, c in domain_types.items()}
@@ -1404,7 +1404,7 @@ def parse_args(argv=None):
                         help="逗号分隔的品类/产品线后缀，渲染时从品牌展示名剥掉（如 LED,Display）；"
                              "留空则渲染层用内置净水器词表兜底")
     parser.add_argument("--sku-map", type=Path,
-                        help="本品 SKU 归并表 JSON：[{\"name\": \"H1 四路\", \"pattern\": \"H1.*4[- ]?(camera|channel)\"}]，"
+                        help="本品 SKU 归并表 JSON：[{\"name\": \"G980H 四路\", \"pattern\": \"G980H.*4[- ]?(camera|channel)\"}]，"
                              "按顺序第一条命中卡标题的胜出；不传就不出 SKU 级")
     parser.add_argument("--shopping-cards", choices=["开", "关", ""], default="",
                         help="这条产品线统计不统计商品卡（选词 config.shopping_cards 的结论）；"
@@ -1529,7 +1529,7 @@ _HTML_UNWRAP = re.compile(
     r"|ProductComparisonTable)\b[^>]*>", re.I)
 _HTML_BR = re.compile(r"<\s*br\s*/?\s*>", re.I)
 # 兜底删残留标签。必须排除 `<https://…>` 这种尖括号包裹的链接（markdown 里写
-# `[Shop RivalB2](<url>)` 是常见写法），否则整条 URL 被当标签删掉，链接变成空括号——
+# `[Shop VIOFO](<url>)` 是常见写法），否则整条 URL 被当标签删掉，链接变成空括号——
 # 正文卡片里的 Shop 链接一直因此丢失（2026-11-09 查商品卡位置时发现）。
 _HTML_LEFT = re.compile(r"<\s*/?\s*[a-zA-Z][a-zA-Z0-9]*\b[^>]*>")
 _HTML_LEFT_SAFE = re.compile(r"<\s*(?!https?://)[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?>")
@@ -1581,7 +1581,7 @@ def _protect_card_images(value: str) -> str:
 
 # ChatGPT 的另一种卡片写法：整行 markdown 图 `![商品图标题](<https://images.openai.com/…>)`，
 # 下面跟 `` `Best overall` ``、`## 1. 名称`、描述。原来没处理，渲染成「!链接」，卡片也没出
-# （2026-11-11 Obrand 9 条回答 35 张图）。alt 里会有转义方括号（`\[Direct from Japan\]`）。
+# （2026-11-11 Oraimo 9 条回答 35 张图）。alt 里会有转义方括号（`\[Direct from Japan\]`）。
 _MD_CARD_IMG_LINE = re.compile(
     r"^\s*!\[((?:\\.|[^\]\\\n])*)\]\(<?(https?://[^\s<>)]+)>?\)\s*$", re.M)
 _MD_ESCAPE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!|<>~])")
@@ -1640,7 +1640,7 @@ def normalize_answer_html(text: str) -> str:
     最后才展开布局标签——顺序反了会留下孤立属性。
     """
     value = str(text or "")
-    # Scrapeless 锚点残留文案：它紧贴在商品名后（`RivalA5 CarafeGo to product
+    # Scrapeless 锚点残留文案：它紧贴在商品名后（`AquaTru CarafeGo to product
     # viewer dialog for this item.`），必须换成空格而不是直接删，否则两个名字
     # 会粘成一个词；同一常量在 mine_brand_lexicon.py 用于挖词表时的清洗。
     value = value.replace(PRODUCT_VIEWER_NOISE, " ")
@@ -1675,12 +1675,12 @@ def _highlight_text_only(html_chunk: str, names: list[str]) -> str:
     """只给**文本**加品牌高亮，绝不碰标签属性。
 
     高亮原先作用在整串上，结果把 `<span>` 插进了 href 里：
-    `<a href="https://<span class="brand-hl">RivalA1</span>-new.com/...">`——
+    `<a href="https://<span class="brand-hl">Coway</span>-new.com/...">`——
     href 被截断，浏览器把后半段当正文显示。凡 URL 里含品牌名都会中招。
     """
     if not names:
         return html_chunk
-    # 渲染时 markdown 转义还没还原（Gemini 写「rival-h2\.example」），点号前允许一个反斜杠，否则带点品牌不高亮
+    # 渲染时 markdown 转义还没还原（Gemini 写「99\.co」），点号前允许一个反斜杠，否则带点品牌不高亮
     heads = [re.escape(name.split()[0]).replace(r"\.", r"\\?\.") for name in names if name]
     if not heads:
         return html_chunk
@@ -1977,7 +1977,7 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
     """把从占位行开始的一段商品卡渲染成卡片 HTML，返回 (html, 下一行下标)。
 
     卡内结构（ChatGPT）：占位图、可选徽标 `Best overall`、**1. 标题**、## $349.99、
-    `RivalB2 · 4.9/5 (23 reviews)`、卖点列表、一句推荐语、[Shop RivalB2](url)。
+    `VIOFO · 4.9/5 (23 reviews)`、卖点列表、一句推荐语、[Shop VIOFO](url)。
     遇到下一个占位图、分隔线（---）或空两行后跟标题即认为这张卡结束。
     """
     import html as _html
@@ -2004,12 +2004,12 @@ def _render_inline_card(lines: list[str], start: int, inline) -> tuple[str, int]
         m_badge = re.fullmatch(r"`([^`]+)`", text)
         m_rating = re.match(r"^([^·|]{1,40})\s*·\s*([\d.]+)\s*/\s*5", text)
         m_bullet = re.match(r"^[-*+]\s+(.+)$", text)
-        # 链接写成 [Shop RivalB2](<url>)，尖括号 escape 后是 &lt;/&gt;，URL 里的 & 是 &amp;；两种都要认。
+        # 链接写成 [Shop VIOFO](<url>)，尖括号 escape 后是 &lt;/&gt;，URL 里的 & 是 &amp;；两种都要认。
         m_link = re.match(r"^\[([^\]]+)\]\(<?([^)\s]+?)>?\)$", text)
         if m_heading:
             # 紧跟在标题后的 `## …` 是卡片的主读数位（## $349.99、## 4K + 2K、## Premium pricing、## 8 hours），
             # 收进卡里；卖点或描述已经开始后再出现的标题（## Let me find the right one…）是下一段，卡片到此结束。
-            # 2026-11-11 先改成只认价格，Bbrand 0006-r2、0013-r2 的卡因此散掉，改回按位置判断。
+            # 2026-11-11 先改成只认价格，Botslab 0006-r2、0013-r2 的卡因此散掉，改回按位置判断。
             heading_body = m_heading.group(1).strip()
             if heading_text and not price and not bullets and not blurbs and not subtitle:
                 price = heading_body
@@ -2416,7 +2416,7 @@ def main(argv=None) -> int:
         index, sample_issues, order_issues = build_answers_index(
             args.collect, config, bank, run_root, regions)
 
-        # 门禁：引用来源域名没判读就统计，会全落进「其他」（2026-11-11 某制氧机客户、11-13 某车载品牌两次）。
+        # 门禁：引用来源域名没判读就统计，会全落进「其他」（2026-11-11 思特森、11-13 路拓两次）。
         from geo_presales_core.sources import enforce_judged, unjudged_coverage, UNJUDGED_EXIT_CODE
         coverage = unjudged_coverage(
             {"host": c.get("host"), "title": c.get("title"), "url": c.get("canonical_url"),
