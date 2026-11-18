@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | `geo-prompt-selection-builder` | 选词：业务范围、调研、约束条件、提示词矩阵、主题、写题、校验与导出，试跑后回写 | 采集、报告（`geo-monitoring`、`geo-presales-pipeline`）；正式题由品牌方在对客确认表上挑 |
 | `geo-presales-pipeline` | 本地出售前 HTML 报告的总入口：排阶段顺序（生词 → 采集 → 采集检查 → 组装渲染 → 情感），到暂停点请对应 Skill 出场，零口径 | 每个阶段的规则（交给该阶段的 Skill） |
-| `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、提及率、声量、引用份额、官网引用率、商品卡、品牌情感（拆 Claim、聚属性和主题、算正向情感占比），以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring） |
+| `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、引用来源分类与判读数据、提及率、声量、引用份额、官网引用率、商品卡、品牌情感（拆 Claim、聚属性和主题、算正向情感占比），试跑品牌计数，以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring）；可改变性判断（`geo-monitoring`） |
 | `geo-presales-report-builder` | 售前报告数据层组装、HTML 渲染 | 采集（`geo-monitoring`）；指标公式（`geo-metrics`） |
 | `geo-presales-report-audit` | 修改线上售前诊断报告的品牌提及识别结果 JSON（品牌名单和首现排序），出 Bad Case | 客户结论（report-editor） |
 | `geo-presales-report-editor` | 修改线上售前诊断报告的结论 CSV | 指标计算（`geo-metrics`） |
@@ -185,21 +185,36 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 在仓库根目录运行，全部通过才算干净：
 
 ```bash
-python3 -m unittest discover -s skills/geo-presales-report-audit/tests -p 'test_*.py'
-python3 -m unittest discover -s skills/geo-presales-report-builder/tests -p 'test_*.py'
-python3 -m unittest discover -s skills/geo-presales-report-editor/scripts/tests -p 'test_*.py'
-python3 -m unittest discover -s skills/geo-metrics/tests -p 'test_*.py'
+python3 -m pytest -q skills/geo-metrics/tests
+python3 -m pytest -q skills/geo-presales-report-builder/tests
+python3 -m pytest -q skills/geo-presales-report-editor/scripts/tests
+python3 -m pytest -q skills/geo-presales-report-audit/tests
 python3 -m unittest discover -s skills/geo-prompt-selection-builder/scripts -p 'test_*.py'
 python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
 python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 ```
 
-`geo-metrics` 的单元测试在 `skills/geo-metrics/tests`（情感）、`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）和 `geo-presales-report-audit/tests`（去引用）。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
+`geo-metrics` 的测试在 `skills/geo-metrics/tests`：情感、引用来源分类（子域继承与覆盖、缓存键归一、机构后缀、多租户聚合）、域名判读自检、开放品牌官网推断。core 的其余单测在 `geo-presales-report-editor/scripts/tests`，去引用在 `geo-presales-report-audit/tests`。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
+
+### 引用来源分类与判读数据
+
+引用域名判成自有网站、竞品网站、媒体网站、社交平台、新闻稿平台、机构网站、其他，判定顺序和判据写在 `skills/geo-metrics/references/metric-scope-and-copy-contract.md`，补判流程在 `references/domain-judging-workflow.md`。
+
+判定要点：
+
+- 先看 Case 与词表里的官网域名（自有 / 竞品），再看内置域名表与共享缓存，最后看机构后缀。
+- 子域默认跟父域，单独判过的子域可以覆盖；缓存是覆盖表，改缓存就能推翻内置表。
+- 单域名引用不足 `min(100, 总引用 1%)`（下限 5）次的不强制判读，归「其他」并单独统计。
+- 域名榜按可注册域名聚合；同一根域名下多种类型时标「混合（媒体 62%、其他 38%）」。
+
+随仓库分发的数据（`skills/geo-metrics/assets/`）：`category-taxonomy.json`（通用品类表）、`domain-categories.json`（站点类型缓存）、`domain-categories-meta.json`（每条判读的依据与置信度）。不发布 `domain-brand-sites.json` 与 `brand_lexicon.*.json`，它们记着域名属于哪个客户项目、是本品牌还是竞品。
 
 ### 发布
 
 `skills/` 的真源在本地，仓库是发布副本。发布走本地 `shared/scripts/redact_publish_tree.py`：建发布树 → `apply` → `scan` 必须 0 命中 → 在脱敏树里跑全部测试 → 复制进仓库提交。
 
+`scan` 查的是会点名客户的写法：代码与文档里的客户/竞品名、Case 原句、密钥与内部链接。站点类型数据文件（`assets/domain-categories*.json`）里的域名键不算客户信息、不参与替换与扫描，判读依据文本照常检查——所以依据里不写客户名。
+
 ### 不随仓库分发
 
-按客户生成的品牌词表、引用域名缓存、`build/` 运行产物、客户 Case 与采集数据都不入库，`.gitignore` 已排除。仓库里的 Case 示例（`skills/geo-prompt-selection-builder/references/input-examples/` 下的 b2b、b2c 两份）是通用模板，不是真实客户。
+按客户生成的品牌词表（`brand_lexicon.*.json`）、品牌站索引（`domain-brand-sites.json`）、`build/` 运行产物、客户 Case 与采集数据都不入库，`.gitignore` 已排除。站点类型缓存 `domain-categories.json` 与其判读依据随仓库发布（只含域名、类别与依据，不含客户名）。仓库里的 Case 示例（`skills/geo-prompt-selection-builder/references/input-examples/` 下的 b2b、b2c 两份）是通用模板，不是真实客户。
