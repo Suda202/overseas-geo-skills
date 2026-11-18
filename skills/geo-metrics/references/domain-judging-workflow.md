@@ -14,7 +14,17 @@
 
 2026-11-18 从 geo-presales-report-builder 迁来；报告 skill 的旧路径留了软链，老命令照常能跑。
 
-发布到公开仓库时 `domain-categories.json`、`domain-categories-meta.json`、`domain-brand-sites.json` 和 `brand_lexicon.*.json` 不随仓库分发（里面是各客户判过的域名与品牌），新环境第一次运行时缓存是空的：按下面的流程从自己的采集数据开始积累，`check_domain_judgments.py` 在缓存为空时会列出全部待判域名。`category-taxonomy.json` 是通用品类表，随仓库分发。
+随仓库分发的数据：
+
+| 文件 | 是否随仓库发布 | 说明 |
+|---|---|---|
+| `category-taxonomy.json` | 是 | 通用品类表 |
+| `domain-categories.json` | 是（过滤后） | 只保留不含任何客户/竞品名的域名与类别；原始缓存里带品牌名的域名会被剔除 |
+| `domain-categories-meta.json` | 是（同上过滤） | 与被保留域名对应的判读依据 |
+| `domain-brand-sites.json` | 否 | 记着域名属于哪个项目、是本品牌还是竞品 |
+| `brand_lexicon.*.json` | 否 | 具体客户的品牌清单 |
+
+过滤用 `shared/scripts/export_public_domain_cache.py`（内部工具，不随仓库发布），与 `redact_publish_tree.py` 共用同一份词表，导出后 `scan` 必须 0 命中。新环境拿到的是过滤后的子集，缺的域名按下面的流程从自己的采集数据补判。
 
 ## 开放品牌的官网域名
 

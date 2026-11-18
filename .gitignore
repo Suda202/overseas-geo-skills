@@ -6,11 +6,12 @@ __pycache__/
 skills/geo-presales-eval-case-builder/references/lark-base-target.local.md
 /runs/
 
-# 客户资料与运行产物：品牌词表、引用域名缓存、候选清单都不入公开仓库。
+# 客户资料与运行产物：品牌词表、候选清单不入公开仓库。
 # 词表按各 Skill 的 SKILL.md 在自己的 assets/ 下生成。
+# geo-metrics/assets/domain-categories.json 例外：它是站点类型数据，随仓库发布，但只发布
+# 过滤掉客户/竞品名之后的版本（shared/scripts/export_public_domain_cache.py 导出，scan 0 命中）。
 skills/*/assets/brand_lexicon.*.json
 skills/*/assets/brand-lexicon.*.json
-skills/*/assets/domain-categories.json
 skills/*/build/
 skills/*/tests/fixture_report_data.json
 skills/*/tests/_preview.html
