@@ -1,16 +1,16 @@
 ---
 name: geo-presales-report-builder
-description: This skill should be used when generating a customer-facing overseas GEO presales diagnosis report (single-file HTML, the Botslab G980H template) directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select region / platform / intent type / topic filtering; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
+description: This skill should be used when generating a customer-facing overseas GEO HTML report — the presales diagnosis report or the after-sales trial / formal baseline report, which since 2026-11-20 are one template (single-file HTML, the Botslab G980H template; baseline inputs are prepared by scripts/prepare_baseline.py from multi-round collection directories) — directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select language / region / platform / intent type / topic / tag filtering; Query Fan-outs show a Chinese translation when `meta.fanout_zh` is present; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.9.0"
+  version: "2.12.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
 
 ## 负责什么
 
-把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 售前诊断报告。
+把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 报告。售前诊断报告和售后基线报告（试跑、正式基线）2026-11-20 起是同一套渲染，只差 Case 里的「报告类型」「报告标题」和每题次数；基线报告的输入准备与流程见 [baseline-report.md](references/baseline-report.md)。给了 `--difficulty`（geo-gap-diagnosis `difficulty.py` 的输出）时多出「竞争与优化难度」模块，`scripts/attach_difficulty.py` 只把档位写成品牌方看得懂的话，不重新判（render-spec「竞争与优化难度」）。
 
 **所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Botslab G980H 预览（`10-售前诊断报告/评测数据/botslab/售后/选词-20261106/report-g980h/购物面板预览/Botslab-G980H-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
 
@@ -67,7 +67,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    python3 ../geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
    ```
 
-   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。
+   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。词表已有时也要加 `--lexicon <词表> --check` 查漏：A 档候选（推荐位或商品卡上出现过、词表没收）逐个过完再进第 4 步，规则见 `geo-metrics` SKILL「品牌词表」。驾驶脚本在查漏不通过（有 A 档没收，或词表里有疑似同一品牌拆成两条）时停在这一步；确实不处理加 `--allow-lexicon-gaps "<理由>"`。
 
    **开放品牌官网域名推断**与**引用域名补判**都归 geo-metrics，流程见 [geo-metrics/references/domain-judging-workflow.md](../geo-metrics/references/domain-judging-workflow.md)：先推开放品牌官网域名（`infer_brand_domains.py`），再收待判域名（`collect_domain_candidates.py`，带 `--lexicon`）、补证据、判读写回 `geo-metrics/assets/domain-categories.json`，最后跑 `check_domain_judgments.py` 自检，退出码非 0 不许进第 4 步。
 
@@ -137,6 +137,20 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
    缺条目会直接报错，确需部分交付加 `--allow-partial`。回填时会做**截断门禁**：长回答的译文/原文长度比显著低于全批中位时列出疑似截断条目（Bewinch 案例：8 条 5-7.5K 字符回答被翻译代理截到约六成、键齐全静默入库），默认警告并写入 `meta.translation_length_suspects`，加 `--strict-length` 升级为阻断；疑似条目重翻后重跑本命令覆盖。**译文体积大致翻倍**，加入后单文件 HTML 会明显变大。
 
+   抽屉里的 Query Fan-outs 检索词是 AI 自己生成的搜索词，多为英文，另导出一轮中文（Suda 2026-11-23）：
+
+   ```bash
+   python3 scripts/export_fanout_translations.py --report <输出>/report-data.json --batch-size 60 --out-dir <输出>/fanout-translations
+   ```
+
+   按批翻译成 `fanout-batch-NN-zh.json`，格式 `{"<编号>": "<中文>"}`（编号即导出文件里的键，不要改成原检索词）。回填：
+
+   ```bash
+   python3 scripts/attach_fanout_translations.py --report <输出>/report-data.json --batches <输出>/fanout-translations --out <输出>/report-data.json
+   ```
+
+   译文写进 `meta.fanout_zh`，抽屉在检索词下面显示一行中文；缺译文的检索词照常显示原文，不阻断交付，`--strict` 可要求全覆盖。
+
 7. **校验**：
 
    ```bash
@@ -181,22 +195,22 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 | 指标 | 口径 |
 |---|---|
-| 提及率 | 目标品牌出现的回答数 ÷ 提及类样本的有效回答数。售前 HTML 的提及类样本是发现＋替代（问题解决不统计提及率，筛选下只剩这类题或点名品牌的类型时写「—」）；core 缺省（上传 CSV）仍只看 Discovery |
+| 提及率 | 目标品牌出现的回答数 ÷ 提及类样本的有效回答数。售前 HTML 的提及类样本是**全部意图类型**（Suda 2026-11-23，推翻只算发现＋替代）；题面点名品牌的题提及率接近 100%，由看报告的人按主题、意图类型筛选排除；core 缺省（上传 CSV）仍只看 Discovery |
 | 提及率排名 | 按提及率在全部纳入品牌中的位置 |
 | 声量份额 | 目标品牌提及量 ÷ **全部纳入品牌**提及量之和 |
 | 平均提及位置 | 被提及时在全部纳入品牌中的首次出现次序均值 |
 | 引用次数 | **只计正文 pill（`([来源名][N])`）的出现次数**，同一编号出现 N 次计 N 次，不做回答内去重；正文没有 pill 即 0 次，不拿供应商字段的来源清单充数 |
 | 引用份额 | 指向官网的引用次数 ÷ 全部引用次数。**四个层级都保留**：单条回答（抽屉）、单题（明细表）、单平台（平台切片）、多回答多平台（全量切片）。官网、来源类别、域名、页面四处份额同一口径：分子、分母都是**未去重引用次数**；去重（到回答 / 到 URL）只用于 `citation_units.unique_sources` 这类「有多少个不同来源」的计数，不进任何份额的分子分母，也不参与榜单挑选和排序 |
-| 引用率（官网引用率） | 正文至少引用一次目标品牌官网的回答数 ÷ 有效回答数；按回答计票，一条回答引用多次也只算一次。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算。**样本随模块走（2026-11-07 Suda）**：核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代，与提及率同一批回答（点名品牌的题会把本品官网拉进引用，混进来就没法和提及率比）；03 引用模块、问题明细统计全部意图类型，按筛选收窄 |
+| 引用率（官网引用率） | 正文至少引用一次目标品牌官网的回答数 ÷ 有效回答数；按回答计票，一条回答引用多次也只算一次。与引用份额（按次数计票）、带官网的提及率（分母是被提及的回答）是三个数，不互相换算。**样本随模块走（2026-11-07 Suda）**：核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额与提及率同一批回答（2026-11-23 起为全部意图类型，不只发现＋替代）；03 引用模块、问题明细统计全部意图类型，按筛选收窄 |
 | 带官网的提及率 | 目标品牌被提及的 Discovery 回答中，正文至少引用一次其官网的回答数 ÷ 目标品牌被提及的 Discovery 回答数；分子分母随值给出（`linked_mention_counts`）。偏低 = 被提到了但 AI 没拿官网作依据。与引用份额分母不同，不互相换算；跨平台看平台切片。**只进 report-data.json 供统计与下游读取，不在售前 HTML 展示**（render 时剥掉） |
-| 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；只统计发现、替代两类题。口径与实现都在 core（`shopping.py`，契约见 `geo-metrics` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
+| 购物层（Shopping GEO） | 商品卡触发率、商品卡提及率、商品卡平均位置三项，按平台分开算，全部平台切片也不合池；全部意图类型的题都统计（Suda 2026-11-23，推翻只算发现、替代）。口径与实现都在 core（`shopping.py`，契约见 `geo-metrics` 统计范围契约「购物层指标」），本 skill 在 `load_samples` 用 `extract_product_cards` 挂卡、记 `product_field_returned`，把 `metrics["shopping"]` 放进切片。HTML 有独立的「购物商品卡」模块，规则见 render-spec.md |
 | 正向情感占比 | 正向 Claim 信号 ÷（正向 + 负向 Claim 信号），**排除中性**（句级降级路径按句数计） |
 
 **回答正文里的商品卡**在原文位置渲染（2026-11-09）：ChatGPT 每张卡以带 title 的商品图开头，清洗时转占位符留在原位，`markdown_to_html` 还原成卡片（图、徽标、标题、价格、评分、卖点、Shop 链接）；带 title 但缺价格/评分/编号标题的图按文章配图处理，不渲染成卡。AI Mode、Gemini 正文没有卡片位置，AIO 全是 base64 内嵌图，这三个平台的卡片仍按平台顺序排在正文上方（`details[].product_cards`）。
 
 **引用伪拆分折叠只针对旧格式采集**：gemini/overview 平台按 `_citation_keep_mask` 折叠伪拆分（每个 canonical 保留出现次数最多的编号，同编号真重复保留）。供应商 2026-09-18 起的新格式批次来源列表已去重并带 `cited_count`（代数判别见 `geo-monitoring` 的数据分层契约与缺陷目录 D8），对新格式数据折叠应为无操作——若折叠改变数字,先查是否判错了代数。
 
-**可见度只用发现＋替代**（问题解决不统计提及率），对比、评估、验证、交易、售后题面点名品牌，不进可见度分母。
+**可见度统计全部意图类型**（Suda 2026-11-23）：题面点名品牌的题提及率接近 100%，不进模块层排除，由看报告的人按主题、意图类型筛选。
 
 ### 品牌集合与展示规则
 
@@ -216,7 +230,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - `slices`：预算切片，键 `<region>|<platform>|<topic>`（topic 位写主题名，或「类型:发现」这类意图类型切片），只覆盖单选组合。供 `verify_report_data.py` 独立复算、上传 CSV 与下游读取。
 - `facts`：逐条有效回答的原始事实（提到哪些品牌、第几位、每条引用的官网归属 / 域名 / 来源类型 / 页面、商品卡）＋ `attach_sentiment.py` 补进的 Claim。页面用 `assets/report-engine.js` 按多选筛选把回答挑出来，用与 Python 同一套公式现算出与切片同结构的数据，各模块的渲染代码不分两套。
 
-有 `facts` 时 HTML 不嵌预算切片（Botslab 12.9MB → 3.9MB）。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎，KPI、可见度榜与矩阵、引用模块、情感、商品卡、问题明细逐项比对，必须全部一致；改任何一侧的口径都要两侧一起改。监测基线报告（`geo-monitoring/build_baseline_html.py`）改写了切片口径，渲染前去掉 `facts`，仍是单选读预算切片。
+有 `facts` 时 HTML 不嵌预算切片（Botslab 12.9MB → 3.9MB）。`scripts/check_engine_parity.js` 用每个预算切片对应的单选组合跑引擎，KPI、可见度榜与矩阵、引用模块、情感、商品卡、问题明细逐项比对，必须全部一致；改任何一侧的口径都要两侧一起改。售后基线报告 2026-11-20 起也走这条链路，带 `facts`、多选现算，不再有单选读预算切片的旧路径。
 
 ## 交付门槛
 

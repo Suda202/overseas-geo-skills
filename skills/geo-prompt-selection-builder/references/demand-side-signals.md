@@ -53,7 +53,7 @@
 | 客服高频问题 | 是，客服 | 买前咨询和影响购买决策的问题各一行；买后排障、退货跳过 | 约束条件候选、题面具体条件；AI 说错的品牌事实进品牌事实核查 | 不填 | 判断发现题的需求大小 |
 | Bing Search Performance | 是，Bing | 同 GSC | 同 GSC | 不填 | 同 GSC |
 | Bing AI Performance 的 Grounding Queries | 是，Bing AI 检索词 | AI 检索时用的短语 | 需求存在的证据（背后是真实用户的提问）；约束条件、使用场景候选；里面的具体条件写进题面前另找依据；引用次数作主题优先级依据的补充 | 不填 | 照抄成题面；按引用次数定档 |
-| Bing AI Performance 的 Cited Pages、Citations | 否 | 官网哪些页被 Bing AI 引用、引用量变化 | 监测的平台自报参照（geo-monitoring → baseline-report.md） | — | 选题 |
+| Bing AI Performance 的 Cited Pages、Citations | 否 | 官网哪些页被 Bing AI 引用、引用量变化 | 基线报告的平台自报参照（geo-presales-report-builder → baseline-report.md） | — | 选题 |
 | Bing Topics Portfolio | 机会查询进表（Bing AI 检索词），主题不进 | 机会查询、主题名 | 查漏主题和使用场景 | 不填 | 定主题优先级 |
 | GSC Generative AI Performance | 否 | 官网在 Google AI 功能里的展示量、页面、国家 | 监测的平台自报参照（同上） | — | 选题；它没有查询词 |
 | Google Ads 搜索词报告 | 是，Google Ads | 同 GSC 三类分法；广泛匹配带进的无关词剔除 | 补 GSC 看不到、官网没自然排名的需求；措辞种子；有转化的查询对应的任务写进业务优先级依据 | 不填（展示量受出价和预算影响） | 按查询次数判断品类需求大小 |

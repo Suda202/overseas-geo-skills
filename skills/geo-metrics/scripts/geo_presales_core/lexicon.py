@@ -54,7 +54,7 @@ def load_lexicon(path) -> tuple[list[dict], set[str], str]:
             source = brands_field
         ignored = sorted(key for key in raw
                          if key not in {"brands", "uncertain", "stopwords", "case_sensitive_aliases",
-                                        "competitor_site_domains"} and not key.startswith("_"))
+                                        "competitor_site_domains", "distinct_brands"} and not key.startswith("_"))
         if ignored:
             print(f"词表 {path}: 顶层 {ignored} 未识别为品牌，已忽略（只读 brands 分支）", file=sys.stderr)
     elif isinstance(raw, list):
@@ -64,7 +64,7 @@ def load_lexicon(path) -> tuple[list[dict], set[str], str]:
         # 以 `_` 开头的键（_comment/_canonical 等）是元数据，不是品牌。
         source = []
         for key, value in raw.items():
-            if key in {"uncertain", "stopwords"} or key.startswith("_"):
+            if key in {"uncertain", "stopwords", "distinct_brands"} or key.startswith("_"):
                 continue
             if isinstance(value, dict):
                 source.append(dict(value, name=key))

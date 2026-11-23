@@ -21,7 +21,7 @@
 4. 每道题跨所有平台、所有试跑次数汇总，子域名归到注册域名（``blog.x.com`` 算 ``x.com``；
    ``hdb.gov.sg`` 这类国家二级后缀下的站保留到机构一级）。
 5. 定档（Suda 2026-11-13 审核版，默认只优化官网，全自动）：规则在 ``summarize`` 的说明和
-   geo-monitoring/references/baseline-report.md「可改变性」。要点：品类错位 → 低；主约束相对竞品明显劣势 → 低；
+   geo-monitoring/references/changeability-and-order.md「可改变性」。要点：品类错位 → 低；主约束相对竞品明显劣势 → 低；
    有引用的回答不到 4 条 → 不判；同类竞品官网被引的回答比例领先本品 ≥40 个百分点且多 ≥3 条 → 高；
    引了厂商官网的有引用回答 <40% → 低（第三方主导）；其余 → 中。只用于发现、替代、问题解决；点名本品的类型不适用。
    同类品牌和竞品官网读 ``--lexicon`` 的 ``same_category``。不到 7 条有效回答只算预判。
@@ -129,7 +129,7 @@ def collect(args, questions, official, competitor, community, vendors=None, bran
                         issues.append({"code": "BAD_JSON", "file": str(path)})
                         continue
                     task = payload.get("task_result") or {}
-                    # 去重按回答内容，不按文件字节：build_baseline_html 的 html-report/collect 是补了题面的
+                    # 去重按回答内容，不按文件字节：基线报告的 out_dir/collect（prepare_baseline.py 合成）是补了题面的
                     # 镜像副本，字节不同、回答相同。空正文（AIO 未触发）不参与去重，它本来就不计引用。
                     body = str(task.get(ANSWER_FIELD[platform]) or "")
                     digest = None

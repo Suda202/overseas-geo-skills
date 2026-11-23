@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import html
 import json
 from pathlib import Path
@@ -24,6 +26,8 @@ SECTION_ORDER = [
     ("shopping", "购物商品卡", "商品卡"),
     ("sources", "引用", "引用"),
     ("distribution", "情感", "情感"),
+    # 竞争难度与优化难度（2026-11-20）：数据由 attach_difficulty.py 接入，没有就不出
+    ("difficulty", "竞争与优化难度", "难度"),
     ("records", "问题明细", "明细"),
 ]
 
@@ -43,6 +47,8 @@ def sections_for(meta: dict) -> list[tuple[str, str, str, str]]:
         if section_id == "shopping" and not (meta.get("shopping") or {}).get("enabled"):
             continue
         if section_id == "distribution" and not sentiment_enabled(meta):
+            continue
+        if section_id == "difficulty" and not meta.get("difficulty_enabled"):
             continue
         shown.append((section_id, title, nav))
     out, n = [], 0
@@ -113,13 +119,23 @@ def insight_note(label: str, body_id: str, accent: str = "") -> str:
     )
 
 
+# 报告类型 → 英文眉标（2026-11-20 售前报告与售后基线报告合并为一套渲染，类型和标题写在 Case 里）
+KIND_EYEBROW = {"售前诊断": "GEO Presales Diagnosis", "正式基线": "GEO Baseline", "试跑": "GEO Trial Run"}
+
+
+def report_kind(meta: dict) -> str:
+    return str(meta.get("report_kind") or "售前诊断")
+
+
 def build_body(meta: dict) -> str:
     brand = esc(meta.get("brand", ""))
+    kind = report_kind(meta)
+    subtitle = meta.get("report_title") or ("海外 AI 搜索可见度售前诊断" if kind == "售前诊断" else f"AI 搜索可见度 · {kind}")
 
     masthead = (
         '<div class="masthead"><div class="shell masthead-inner">'
-        f'<p class="eyebrow" id="reportEyebrow">GEO Presales Diagnosis · {esc(meta.get("generated_at", ""))}</p>'
-        f'<div class="title-row"><div><h1 id="reportTitle">{brand}<span>海外 AI 搜索可见度售前诊断</span></h1></div></div>'
+        f'<p class="eyebrow" id="reportEyebrow">{esc(KIND_EYEBROW.get(kind, "GEO Report"))} · {esc(meta.get("generated_at", ""))}</p>'
+        f'<div class="title-row"><div><h1 id="reportTitle">{brand}<span>{esc(subtitle)}</span></h1></div></div>'
         "</div></div>"
     )
 
@@ -134,6 +150,7 @@ def build_body(meta: dict) -> str:
         '<select id="platformSelect" aria-label="平台筛选"></select>'
         '<select id="intentSelect" aria-label="意图类型筛选"></select>'
         '<select id="topicSelect" aria-label="主题筛选"></select>'
+        '<select id="tagSelect" aria-label="标签筛选"></select>'
         "</div>"
         "</div></div>"
     )
@@ -265,6 +282,14 @@ def build_body(meta: dict) -> str:
                 "</div></div></article>"
             )
             body.append("</div>")
+        elif section_id == "difficulty":
+            body.append('<div class="section-body">')
+            body.append(
+                '<p class="diff-intro" id="difficultyIntro"></p>'
+                '<div class="table-wrap"><table class="records-table diff-table" id="difficultyTable"></table></div>'
+                '<p class="diff-note" id="difficultyNote"></p>'
+            )
+            body.append("</div>")
         elif section_id == "records":
             body.append('<div class="section-body">')
             body.append(
@@ -286,7 +311,7 @@ def build_body(meta: dict) -> str:
         '<a class="skip" href="#main">跳到主要内容</a>'
         '<header class="topbar"><div class="shell topbar-inner">'
         '<div class="logo"><span class="logo-cn">海外 GEO</span>'
-        '<span class="logo-tag">售前诊断</span></div>'
+        f'<span class="logo-tag">{esc(report_kind(meta))}</span></div>'
         f'<nav class="nav" aria-label="报告目录">{nav}</nav>'
         "</div></header>"
         + masthead
@@ -361,6 +386,7 @@ def slim_for_html(data: dict) -> dict:
     meta = slim.setdefault("meta", {})
     meta["shopping"] = shopping_switch(slim)
     meta["sentiment_enabled"] = sentiment_switch(slim)
+    meta["difficulty_enabled"] = bool((slim.get("difficulty") or {}).get("topics"))
     # 模块不出时，对应的数据也不进 HTML（Suda 2026-11-08：没有商品卡、情感数据就隐藏相应模块和数据）
     if not meta["shopping"]["enabled"]:
         for entry in (slim.get("details") or {}).values():
@@ -473,13 +499,25 @@ def shopping_switch(data: dict) -> dict:
 def build_html(data: dict) -> str:
     data = slim_for_html(data)
     meta = data.get("meta", {})
-    title = f'{meta.get("brand", "")} · 海外 GEO 售前诊断报告'
+    title = f'{meta.get("brand", "")} · 海外 GEO {report_kind(meta)}报告'
     css = (ASSETS / "report.css").read_text(encoding="utf-8")
     css_extra = (ASSETS / "report-extra.css").read_text(encoding="utf-8")
     # 计算引擎与主脚本放同一个 <script>（监测基线报告按「数据段 → 主脚本」切 HTML，不能多一段 script）
     js = (ASSETS / "report-engine.js").read_text(encoding="utf-8") + "\n" + (ASSETS / "report.js").read_text(encoding="utf-8")
     check_javascript(js, ASSETS / "report.js")
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    # 数据 gzip 后内嵌，浏览器解压完再启动主脚本（2026-11-20 从基线报告并进来，售前与基线共用）。
+    # 7 次运行的回答原文都放进来时明文 JSON 十几 MB，应用侧边栏打不开（Suda 2026-10-21）。
+    blob = base64.b64encode(gzip.compress(payload.encode("utf-8"), 9)).decode("ascii")
+    loader = ('(function () {\n'
+              '  var s = window.__REPORT_DATA_GZ, b = atob(s), u = new Uint8Array(b.length);\n'
+              '  for (var i = 0; i < b.length; i += 1) u[i] = b.charCodeAt(i);\n'
+              '  new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).text()\n'
+              '    .then(function (t) { window.REPORT_DATA = JSON.parse(t); delete window.__REPORT_DATA_GZ; start(); })\n'
+              '    .catch(function (e) { document.body.insertAdjacentHTML("afterbegin", '
+              '"<p style=\\"color:#b00;padding:20px\\">数据解压失败：" + e + "。请用新版 Chrome / Edge / Safari 打开。</p>"); });\n'
+              '  function start() {\n' + js + '\n  }\n})();')
+    check_javascript(loader, ASSETS / "report.js")
 
     return (
         "<!DOCTYPE html>\n"
@@ -490,8 +528,8 @@ def build_html(data: dict) -> str:
         "<style>\n" + css_extra + "\n</style>\n"
         "</head>\n"
         + build_body(meta)
-        + "\n<script>window.REPORT_DATA=" + payload + ";</script>\n"
-        + "<script>\n" + js + "\n</script>\n</body>\n</html>\n"
+        + '\n<script>window.__REPORT_DATA_GZ="' + blob + '";</script>\n'
+        + "<script>\n" + loader + "\n</script>\n</body>\n</html>\n"
     )
 
 

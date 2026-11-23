@@ -15,7 +15,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 识别前的正文清洗：去引用标记、图片、链接网址、HTML，删 AI 反问用户的追问块，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`（传 `follow_up_form`）、`strip_follow_up_form`、`strip_choice_lists`、`blank_merchant_columns` |
 | 答案是否有效、商品卡抽取 | `scripts/geo_presales_core/crawler.py`、`shopping.py` |
 | 引用网址规范化：跟踪参数、平台站内域名、域名后缀表 | `util.py` 的 `normalize_url`、`strip_tracking_params`、`is_platform_internal`、`COMMON_MULTI_LABEL_SUFFIXES` |
-| 词表域名自检：同一域名挂两个品牌、域名标签是别家品牌名、域名写法不规范 | `scripts/audit_lexicon_domains.py`；报告生成前对 Case 产出的词表跑一遍 |
+| 词表自检：同一域名挂两个品牌、域名标签是别家品牌名、域名写法不规范、疑似同一品牌拆成两条 | `scripts/audit_lexicon_domains.py`；报告生成前对 Case 产出的词表跑一遍；拆分检查 `split_suspects` 也随 `mine_brand_lexicon.py --check` 跑 |
 | 引用来源分类与未判读门禁：自有 > 竞品 > 内置表与共享缓存 > 未判读；未判读引用超过 5% 停下补判 | `scripts/geo_presales_core/sources.py` 的 `classify_source`、`unjudged_coverage`、`enforce_judged`；规则见 [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md)「引用来源分类」；政府/百科判断 `is_government`、`is_wiki`，注册域名 `util.registrable_domain`（含国家二级后缀与多租户平台），监测与诊断都调这几个，不另写。改动后跑 `tests/test_source_classification.py` |
 | 引用域名补判流程与数据：开放品牌官网推断、待判域名收集、补证据、判读自检、品牌站索引与品类归一 | `scripts/infer_brand_domains.py`、`collect_domain_candidates.py`、`enrich_domain_candidates.py`、`check_domain_judgments.py`、`build_brand_site_index.py`；数据在 `assets/`（`domain-categories.json` 共享缓存、`domain-categories-meta.json` 判读依据、`domain-brand-sites.json`、`category-taxonomy.json`）；流程见 [domain-judging-workflow.md](references/domain-judging-workflow.md)。2026-11-18 从 geo-presales-report-builder 迁来，旧路径留软链 |
 | 品类级开放品牌词表 | `assets/brand_lexicon.<品类>.json`（2026-11-18 从 geo-presales-report-builder 迁来） |
@@ -24,7 +24,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 | 临时引用统计：采集目录 → 来源类别、域名榜、品牌官网、按主题和逐题的官网引用份额与引用率，带同一道门禁 | `scripts/citation_sources.py`；试跑读数、单次分析用它，不要自己另写统计脚本 |
 | 指标计算：提及率、声量份额、平均位置、引用份额、官网引用率、商品卡三项 | `scripts/geo_presales_core/metrics.py`、`deterministic.py`、`shopping.py` |
 | 每个指标用哪批样本、对客户能叫什么名字 | [metric-scope-and-copy-contract.md](references/metric-scope-and-copy-contract.md) |
-| 开放品牌候选挖掘（人工收成词表） | `scripts/mine_brand_lexicon.py` |
+| 开放品牌候选挖掘与词表查漏（人工收成词表） | `scripts/mine_brand_lexicon.py`；`--check` 有 A 档候选没收时退出码 1 |
 | 识别对账：按报告同一套识别列出词表内品牌的漏判候选（近似拼写、空格变体）和误判候选（标准名带大写、命中全是小写），出 summary.json / candidates.csv / report.md 给人复核 | `scripts/reconcile_brand_recognition.py` |
 | 品牌情感：抽句子、拆原子 Claim、两趟聚类（Claim → Attribute → Theme）、回装、算正向情感占比（按品牌、平台、属性、主题） | 正向占比计算只在 `scripts/geo_presales_core/sentiment.py`（Claim 信号去重、正向 ÷（正向 + 负向）、跨平台等权），`sentiment_sentences.py claims-metrics` 和报告接入 `attach_sentiment.py` 都调它；流程脚本 `scripts/sentiment_sentences.py`；做法见 [sentiment.md](references/sentiment.md)，结构和统计口径见 [claim-layer-contract.md](references/claim-layer-contract.md)，正负怎么判见 [judgment-rules.md](references/judgment-rules.md) |
 
@@ -43,6 +43,8 @@ description: Owns every overseas GEO statistic rule and its single implementatio
   - 不收：带品牌名的产品名（Botslab G980H，品牌名已能认出）；只差大小写、空格、连字符的写法；型号清单；通用品类词（Calipers、CMM，会把整个品类算给一个品牌）。
   - 易混淆、不能算作本品牌的名称（同集团其他品牌、同名公司、被收购后单独经营的品牌）不进别名，由品牌方逐案确认。
   - 出报告前跑 `scripts/reconcile_brand_recognition.py` 查拼写漏判和常用词误判。词表里没有的、不含品牌名的产品名它查不到，要看 `mine_brand_lexicon.py` 列出的未知大写词。
+- **开放品牌不漏收**（2026-11-20）：每次用词表算指标前（售前报告、试跑计数、基线、可改变性、缺口诊断），对这批采集跑 `mine_brand_lexicon.py --collect-dir <一个或多个采集目录> --lexicon <词表> --check`。A 档是词表没收、但在答案推荐位（加粗列表项、编号项、标题、表格第一列的开头）或商品卡上出现过的名字，出现一次也列，必须逐个过：同类厂商收进 `brands` 并写 `same_category`，别的品类品牌也收（写 `same_category: false`），自有 App 或子品牌名（Futubull 之于富途）收成母品牌别名，不是品牌的写进 `stopwords`。退出码 1 表示还有出现在 ≥2 条回答里的 A 档没过。只按出现次数看前几十个会漏长尾厂商：路拓 7 次 231 条回答漏了 12 家同类厂商（平均每答品牌数 2.81→3.03），老虎香港试跑漏了 Futubull（56 条回答）、BiyaPay、华泰等。中文（繁简）品牌按机构后缀（證券、銀行、金融、集團等）从推荐位和加粗片段里挖，繁简写法不同算没收，要把答案里的写法补成别名（老虎香港繁中漏了耀才、華盛、華泰，以及「恆生銀行」「匯豐」「盛寶」这类异写）。泰文、日文、韩文品牌仍挖不出来，要另外人工看。
+- **同一品牌不拆成两条**（2026-11-20）：`--check` 同时查词表里疑似同一品牌的两条——别名重复、一条的别名整词出现在另一条里（Webull ⊂ Webull Hong Kong、Futu ⊂ Futu Securities）、中文别名互相包含（致富 ⊂ 致富證券）、官网域名主标签相同（webull.com / webull.hk）。拆开会把一家的提及分给两条，两条都偏低：老虎港英 Webull 因此从 65.3% 少算成 52.3%。是同一家就合并成一条（各市场站、子公司、App 名都做别名，域名并到一起）；确是两家（中銀香港与中銀國際）写进词表顶层 `distinct_brands: [["A", "B"]]`。
 
 ## 识别规则（core `find_alias_spans`，只作用于拉丁字母别名）
 
@@ -54,7 +56,8 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 ## 谁在调用
 
 - `geo-presales-report-builder`：`build_report_data.py`（默认读本 skill 的 `assets/domain-categories.json`）、`verify_report_data.py`、`run_pipeline.py`（词表挖掘、域名门禁、情感阶段）、`attach_sentiment.py`（正向占比调 `geo_presales_core/sentiment.py`）；引用域名补判走本 skill 的脚本
-- `geo-monitoring`：`build_baseline_html.py`（读共享域名缓存 `sources.load_cache`）、`changeability_domains.py`（题库与试跑目录读法来自 `runs.py`，引用抽取来自 `citations.py`，不再经由售前报告的 `build_report_data`）；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`，品牌计数用本 skill 的 `trial_brand_count.py`
+- `geo-presales-report-builder` 的 `prepare_baseline.py`（售后基线报告的输入准备，核对共享域名缓存 `sources._known_type`）
+- `geo-monitoring`：`changeability_domains.py`（题库与试跑目录读法来自 `runs.py`，引用抽取来自 `citations.py`，不再经由售前报告的 `build_report_data`）；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`，品牌计数用本 skill 的 `trial_brand_count.py`
 - `geo-gap-diagnosis`：`layer_readings.py`、`page_gap.py`、`label_batches.py`（品牌计数、引用抽取、正文字段）、`diagnose.py`（来源类型调 `classify_source`）
 - `geo-monitoring`（采集 `collect_answers.py`、采集完整性检查 `audit_crawl_integrity.py`）：`answer_validity`、`extract_product_cards`
 - `geo-presales-report-editor`：`geo_presales_editor/`（影子审计 CLI）
@@ -65,6 +68,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 ## 改动后的回归
 
 - 单元测试：`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）、`geo-presales-report-audit/tests/test_scripts.py`（去引用）、`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。
+- 端到端：改 `mine_brand_lexicon.py` 或 `audit_lexicon_domains.py` 的挖掘、分档、拆分规则后跑 `python3 evals/e2e_lexicon_recall.py`（12 条用例，造数据、不联网），报告写到 `reports/lexicon-recall-e2e.md`；用例开头列了它防的十种失败方式。
 - 端到端：用三份现有客户数据（一份售前报告、两份监测基线）跑售前报告数据层、校验、情感抽取、基线报告、试跑计数，输出与改前逐项比对。脚本见项目根 `.snapshots/geo-metrics-20261110/run_ref.sh` 与 `compare.py`，读数有变化必须逐条说明原因。
 
 ## 还没收进来的

@@ -20,7 +20,7 @@
 | 主题 | 一个主题 × 一个市场 | 主题优先级在这里，见下 |
 | 提示词库 | 一道提示词 | 品牌方一定会读，见下 |
 
-基线结果不写进 Base，另出一份 HTML 报告（见 `geo-monitoring` → baseline-report.md）。
+基线结果不写进 Base，另出一份 HTML 报告（见 `geo-presales-report-builder` → baseline-report.md）。
 
 ## 通用规则
 

@@ -23,7 +23,7 @@
 | `objects` | 全部纳入品牌（目标、配置竞品、开放品牌），顺序同 `all_objects(config)`；下文的对象下标指这里 |
 | `domains` / `urls` / `source_types` | 引用的域名、页面、来源类型字典；`source_types[i].bucket` 是 7 类展示类别 |
 | `answers[]` | 每条有效回答：`r` 市场、`p` 平台显示名、`q` 题号、`n` 第几次、`m` 提到的品牌 `[对象下标, 位置]`、`c` 每条引用 `[官网归属对象下标或 -1, 域名下标, 来源类型下标, 页面下标或 -1, 是否表格行]`、`s` 商品卡（平台不支持为 null）`{f 本条是否带商品字段, t 卡数, k [[对象下标或 -1, 卡位, 是否官网链接, SKU 下标或 -1]]}` |
-| `visibility_groups` / `shopping_scope` | 提及类样本的意图组（只有发现＋替代）、商品卡统计的意图类型 |
+| `visibility_groups` / `shopping_scope` | 提及类样本的意图组（2026-11-23 起为全部意图类型）、商品卡统计的意图类型（同为全部意图类型） |
 | `sku_names` / `source_limit` / `bucket_order` / `bucket_fill` / `competition_fills` | 与 Python 侧同值的常量 |
 | `claims[]` | 每条 Claim：`r` `p`（平台内部名）`k`（回答键）`q` `b` 品牌 `t` 归一后的 claim 文本 `d` 方向 `a` Attribute `h` Theme，目标品牌带 `e` 证据句 |
 | `sentiment` | 展示品牌、目标品牌、明细情感列适用的题号、平台显示名 → 内部名 |
@@ -206,7 +206,7 @@
 - 比率字段都是 core 的 `{numerator, denominator, raw, display}` 结构，分子分母随值携带；分母为 0 时 `raw=null`、`display="—"`。
 - `products` / `competitor_products_where_target_absent` / `merchants` 各截前 20 行；`target_products` 全量。
 - 每个平台另有 `product_field_returned`(本切片里有没有回答带商品字段)。2026-11-07 起不再算商品、商家、商品卡份额和首位率（`products`、`target_products`、`merchants`、`target_offer_channel` 等字段已删）。
-- `scope_answers` 是发现、替代、对比、交易四类题的有效回答，商品卡触发率和商品卡提及率都在这四类里算；`shopping_mode_rate_by_intent` 另给全部意图类型各自的触发率，`all_intent_shopping_answers` 是全部意图里出卡的回答数，两者只作诊断。
+- `scope_answers` 是全部意图类型的有效回答（2026-11-23 起），商品卡触发率和商品卡提及率都在这批回答里算；`shopping_mode_rate_by_intent` 另给逐意图触发率，`all_intent_shopping_answers` 是全部意图里出卡的回答数，两者只作诊断。
 - 进 HTML 时 `render_report.slim_for_html` 只保留购物商品卡模块要用的：每平台的触发数与触发率、目标品牌和配置竞品的商品卡提及率与平均位置；逐题下钻剥掉。另写 `meta.shopping = {enabled, basis, no_field_platforms}`（见 render-spec.md「购物商品卡模块」）。`sources` 另有 `official_citation_rate` 和 `rates`（类别、域名、页面的引用率），见 render-spec.md「引用模块」。
 
 **意图类型切片**

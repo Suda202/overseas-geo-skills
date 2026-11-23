@@ -9436,5 +9436,327 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "matchadb.com": {
+  "category": "media_review",
+  "evidence": "抹茶采购目录与供应商对比站，只做榜单和目录",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matcha-times.jp": {
+  "category": "media_review",
+  "evidence": "日本抹茶行业资讯站，发布选购与供应分析",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "bonappetit.com": {
+  "category": "media_review",
+  "evidence": "美食媒体，抹茶粉榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "foodandbeveragetimesasia.com": {
+  "category": "media_review",
+  "evidence": "食品饮料行业媒体，中国抹茶企业榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "justonecookbook.com": {
+  "category": "media_review",
+  "evidence": "日料食谱博客，抹茶粉评测榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "seriouseats.com": {
+  "category": "media_review",
+  "evidence": "美食媒体，24 款抹茶粉横评",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matcha-japan.org": {
+  "category": "media_review",
+  "evidence": "抹茶行业资讯与选购指南站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "kiwa.com": {
+  "category": "institutional",
+  "evidence": "认证机构 Kiwa 官网，证书查询页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "preview.sist.si": {
+  "category": "institutional",
+  "evidence": "斯洛文尼亚标准院 ISO/TR 21380 标准预览页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "xadditive.cn": {
+  "category": "other",
+  "evidence": "中国食品配料供应商官网，卖抹茶粉，未进本项目词表",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "botanicals.essencefield.com": {
+  "category": "other",
+  "evidence": "植物配料供应商的产品页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "made-in-china.com": {
+  "category": "other",
+  "evidence": "B2B 采购平台，汇集多家供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "mm.made-in-china.com": {
+  "category": "other",
+  "evidence": "B2B 采购平台的供应商子站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matcha.mitbranda.com": {
+  "category": "other",
+  "evidence": "抹茶供应商子站，未见独立品牌名",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "mnginternationalinc.com": {
+  "category": "other",
+  "evidence": "食品配料贸易商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "pub-mediabox-storage.rxweb-prd.com": {
+  "category": "other",
+  "evidence": "文件存储域名，直链 PPTX，不是内容站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "tnkcogroup.com": {
+  "category": "other",
+  "evidence": "抹茶原料供应商的内容页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "12taste.com": {
+  "category": "other",
+  "evidence": "香精香料技术资料站，提供 TDS",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "21food.com": {
+  "category": "other",
+  "evidence": "食品 B2B 平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "aapyafoods.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "amulyn.com": {
+  "category": "other",
+  "evidence": "植物提取物供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "anvol.dev": {
+  "category": "other",
+  "evidence": "硬件工程与制造服务商，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "ayolabs.com": {
+  "category": "other",
+  "evidence": "补充剂/护肤代工厂，与抹茶原料无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "biovertexorganics.com": {
+  "category": "other",
+  "evidence": "印度有机认证原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "chamberlaincoffee.com": {
+  "category": "other",
+  "evidence": "消费端咖啡品牌官网，不是 B2B 原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "exbiol.com": {
+  "category": "other",
+  "evidence": "有机配料制造商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "faire.com": {
+  "category": "other",
+  "evidence": "批发采购平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "fdcm.eu": {
+  "category": "other",
+  "evidence": "食品配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "foodsweeteners.com": {
+  "category": "other",
+  "evidence": "食品配料目录站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "fsvpservices.com": {
+  "category": "other",
+  "evidence": "FSVP 合规服务商，提供进口合规服务",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "first-agri.jp": {
+  "category": "other",
+  "evidence": "日本抹茶供应商的内容页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "go4worldbusiness.com": {
+  "category": "other",
+  "evidence": "B2B 贸易平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "gpsplastics.com": {
+  "category": "other",
+  "evidence": "塑料小批量注塑服务，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "harney.com": {
+  "category": "other",
+  "evidence": "消费端茶叶品牌官网的选购指南",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "herbco.com": {
+  "category": "other",
+  "evidence": "散装草本原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "ingredientsonline.com": {
+  "category": "other",
+  "evidence": "食品配料电商平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "ingredientsorganic.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "rngagroexports.com": {
+  "category": "other",
+  "evidence": "印度有机农产品出口商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "smallrunatlas.com": {
+  "category": "other",
+  "evidence": "美国服装小单工厂目录，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "sourcingx.ai": {
+  "category": "other",
+  "evidence": "采购比价平台，汇总供应商与价格",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "suplipac.com": {
+  "category": "other",
+  "evidence": "补充剂与护肤代工厂",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "switealife.com": {
+  "category": "other",
+  "evidence": "茶原料 B2B 供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "tradinorganic.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "weilan-mfg.com": {
+  "category": "other",
+  "evidence": "代工制造服务商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "wingengroup.com": {
+  "category": "other",
+  "evidence": "配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "wobugou2.en.ec21.com": {
+  "category": "other",
+  "evidence": "EC21 平台的商品页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  }
 }

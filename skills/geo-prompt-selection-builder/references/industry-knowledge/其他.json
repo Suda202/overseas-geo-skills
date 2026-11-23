@@ -510,18 +510,22 @@
    "价格总成本": {
     "label": "价格与总成本",
     "by": {
-     "3e00d6dd91d2|US": "价格与总成本"
+     "3e00d6dd91d2|US": "价格与总成本",
+     "4dc2cc699acc|UNITED STATES": "价格与总成本"
     },
     "clients": [
-     "3e00d6dd91d2"
+     "3e00d6dd91d2",
+     "4dc2cc699acc"
     ],
     "names": {
-     "价格与总成本": 1
+     "价格与总成本": 2
     },
     "markets": [
+     "UNITED STATES",
      "US"
     ],
     "categories": [
+     "matcha powder",
      "portable nas"
     ]
    },
@@ -830,6 +834,222 @@
     "categories": [
      "portable nas"
     ]
+   },
+   "moq小批量试单": {
+    "label": "MOQ 与小批量试单",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "MOQ 与小批量试单"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "MOQ 与小批量试单": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "产能持续供货": {
+    "label": "产能与持续供货",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "产能与持续供货"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "产能与持续供货": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "供应商审核批次追溯": {
+    "label": "供应商审核与批次追溯",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "供应商审核与批次追溯"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "供应商审核与批次追溯": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "冷溶分散性": {
+    "label": "冷溶与分散性",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "冷溶与分散性"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "冷溶与分散性": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "出口文件物流": {
+    "label": "出口文件与物流",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "出口文件与物流"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "出口文件与物流": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "包装定制贴标": {
+    "label": "包装定制与贴标",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "包装定制与贴标"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "包装定制与贴标": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "应用支持": {
+    "label": "应用支持",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "应用支持"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "应用支持": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "批次稳定性": {
+    "label": "批次稳定性",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "批次稳定性"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "批次稳定性": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "抹茶等级应用匹配": {
+    "label": "抹茶等级与应用匹配",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "抹茶等级与应用匹配"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "抹茶等级与应用匹配": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "有机认证": {
+    "label": "有机认证",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "有机认证"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "有机认证": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "检测coa": {
+    "label": "检测与 COA",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "检测与 COA"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "检测与 COA": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "颜色风味": {
+    "label": "颜色与风味",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "颜色与风味"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "颜色与风味": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
    }
   },
   "audiences": {
@@ -1029,6 +1249,132 @@
     ],
     "categories": [
      "portable nas"
+    ]
+   },
+   "中大型食品企业采购质量团队": {
+    "label": "中大型食品企业采购与质量团队",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "中大型食品企业采购与质量团队"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "中大型食品企业采购与质量团队": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "保健品营养品牌产品开发": {
+    "label": "保健品与营养品牌（产品开发）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "保健品与营养品牌（产品开发）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "保健品与营养品牌（产品开发）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "咖啡茶饮连锁菜单采购": {
+    "label": "咖啡与茶饮连锁（菜单与采购）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "咖啡与茶饮连锁（菜单与采购）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "咖啡与茶饮连锁（菜单与采购）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "烘焙甜品门店店主烘焙师": {
+    "label": "烘焙与甜品门店（店主与烘焙师）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "烘焙与甜品门店（店主与烘焙师）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "烘焙与甜品门店（店主与烘焙师）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "自有品牌电商品牌品牌方": {
+    "label": "自有品牌与电商品牌（品牌方）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "自有品牌与电商品牌（品牌方）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "自有品牌与电商品牌（品牌方）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "进口商分销商采购": {
+    "label": "进口商与分销商（采购）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "进口商与分销商（采购）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "进口商与分销商（采购）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "食品饮料制造商产品开发采购": {
+    "label": "食品饮料制造商（产品开发与采购）",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "食品饮料制造商（产品开发与采购）"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "食品饮料制造商（产品开发与采购）": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
     ]
    }
   },
@@ -1662,6 +2008,204 @@
     "categories": [
      "portable nas"
     ]
+   },
+   "为美国客户找长期稳定的中国抹茶工厂货源": {
+    "label": "为美国客户找长期稳定的中国抹茶工厂货源",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "为美国客户找长期稳定的中国抹茶工厂货源"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "为美国客户找长期稳定的中国抹茶工厂货源": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "从零开发自有品牌抹茶产品并上市": {
+    "label": "从零开发自有品牌抹茶产品并上市",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "从零开发自有品牌抹茶产品并上市"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "从零开发自有品牌抹茶产品并上市": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "已有抹茶sku换供应商或扩等级": {
+    "label": "已有抹茶 SKU 换供应商或扩等级",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "已有抹茶 SKU 换供应商或扩等级"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "已有抹茶 SKU 换供应商或扩等级": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "开发即饮或门店抹茶饮品要求冷溶颜色风味稳定": {
+    "label": "开发即饮或门店抹茶饮品，要求冷溶、颜色和风味稳定",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "开发即饮或门店抹茶饮品，要求冷溶、颜色和风味稳定"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "开发即饮或门店抹茶饮品，要求冷溶、颜色和风味稳定": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "把抹茶用于冰淇淋巧克力甜品等食品生产": {
+    "label": "把抹茶用于冰淇淋、巧克力、甜品等食品生产",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "把抹茶用于冰淇淋、巧克力、甜品等食品生产"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "把抹茶用于冰淇淋、巧克力、甜品等食品生产": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "把抹茶粉用于膳食补充剂营养粉功能食品": {
+    "label": "把抹茶粉用于膳食补充剂、营养粉和功能食品",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "把抹茶粉用于膳食补充剂、营养粉和功能食品"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "把抹茶粉用于膳食补充剂、营养粉和功能食品": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "新供应商准入审核需要产能追溯检测文件": {
+    "label": "新供应商准入审核，需要产能、追溯和检测文件",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "新供应商准入审核，需要产能、追溯和检测文件"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "新供应商准入审核，需要产能、追溯和检测文件": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "烘焙店做抹茶面包蛋糕要求耐烤颜色成本": {
+    "label": "烘焙店做抹茶面包蛋糕，要求耐烤颜色和成本",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "烘焙店做抹茶面包蛋糕，要求耐烤颜色和成本"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "烘焙店做抹茶面包蛋糕，要求耐烤颜色和成本": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "给分销客户补有机抹茶产品线": {
+    "label": "给分销客户补有机抹茶产品线",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "给分销客户补有机抹茶产品线"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "给分销客户补有机抹茶产品线": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "量产阶段按月稳定采购大宗抹茶": {
+    "label": "量产阶段按月稳定采购大宗抹茶",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "量产阶段按月稳定采购大宗抹茶"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "量产阶段按月稳定采购大宗抹茶": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "门店上抹茶菜单按杯算成本出品稳定": {
+    "label": "门店上抹茶菜单，按杯算成本、出品稳定",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "门店上抹茶菜单，按杯算成本、出品稳定"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "门店上抹茶菜单，按杯算成本、出品稳定": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
    }
   },
   "topics": {
@@ -1861,6 +2405,96 @@
     ],
     "categories": [
      "portable nas"
+    ]
+   },
+   "保健品功能食品用抹茶": {
+    "label": "保健品与功能食品用抹茶",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "保健品与功能食品用抹茶"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "保健品与功能食品用抹茶": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "抹茶批发进口采购": {
+    "label": "抹茶批发与进口采购",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "抹茶批发与进口采购"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "抹茶批发与进口采购": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "烘焙餐饮门店用抹茶": {
+    "label": "烘焙与餐饮门店用抹茶",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "烘焙与餐饮门店用抹茶"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "烘焙与餐饮门店用抹茶": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "自有品牌抹茶开发": {
+    "label": "自有品牌抹茶开发",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "自有品牌抹茶开发"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "自有品牌抹茶开发": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "食品饮料制造用抹茶原料": {
+    "label": "食品饮料制造用抹茶原料",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "食品饮料制造用抹茶原料"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "食品饮料制造用抹茶原料": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
     ]
    }
   },
@@ -2062,6 +2696,114 @@
     "categories": [
      "portable nas"
     ]
+   },
+   "ceremonialmatcha": {
+    "label": "ceremonial matcha",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "ceremonial matcha"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "ceremonial matcha": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "culinarymatcha": {
+    "label": "culinary matcha",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "culinary matcha"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "culinary matcha": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "greenteapowder": {
+    "label": "green tea powder",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "green tea powder"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "green tea powder": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "matcha": {
+    "label": "matcha",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "matcha"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "matcha": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "matchagreenteapowder": {
+    "label": "matcha green tea powder",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "matcha green tea powder"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "matcha green tea powder": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
+   },
+   "matchapowder": {
+    "label": "matcha powder",
+    "by": {
+     "4dc2cc699acc|UNITED STATES": "matcha powder"
+    },
+    "clients": [
+     "4dc2cc699acc"
+    ],
+    "names": {
+     "matcha powder": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "matcha powder"
+    ]
    }
   }
  },
@@ -2078,7 +2820,13 @@
    "market": "US",
    "category": "portable nas",
    "updated": "2026-11-11"
+  },
+  "4dc2cc699acc|UNITED STATES": {
+   "who": "4dc2cc699acc",
+   "market": "UNITED STATES",
+   "category": "matcha powder",
+   "updated": "2026-11-18"
   }
  },
- "updated": "2026-11-11"
+ "updated": "2026-11-18"
 }

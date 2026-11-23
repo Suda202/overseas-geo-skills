@@ -384,6 +384,9 @@ def load_case(path: Path) -> dict:
         "topic_labels": topic_labels,
         "region_labels": region_labels,
         "language_groups": language_groups,
+        # 报告类型与标题（2026-11-20 售前报告与售后基线报告合并为一套渲染）：缺省为售前诊断
+        "report_kind": pick("报告类型", "report_kind") or "售前诊断",
+        "report_title": pick("报告标题", "report_title") or "",
     }
 
 
@@ -857,8 +860,9 @@ def is_discovery(answer: dict) -> bool:
     return answer.get("diagnostic_intent") == "discovery"
 
 
-# 提及类指标的样本：按顺序取第一组有回答的意图（core metrics.visibility_answers 读 config 里这张表）
-VISIBILITY_INTENT_GROUPS = [["discovery", "alternatives", "market_perception"]]
+# 提及类指标的样本：全部意图类型（Suda 2026-11-23，推翻 2026-11-11 只算发现、替代）。
+# 题面点名品牌的题提及率接近 100%，由看报告的人按主题、意图类型筛选自行排除，模块层不再整列置空。
+VISIBILITY_INTENT_GROUPS = [list(INTENT_LABEL.keys())]
 # 意图类型切片：放在 topic 位上，键写成「类型:发现」，前端选了意图类型、没选主题时用它
 TYPE_TOPIC_PREFIX = "类型:"
 
@@ -1455,6 +1459,8 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
 
     return {
         "language_groups": case.get("language_groups") or {},
+        "report_kind": case.get("report_kind") or "售前诊断",
+        "report_title": case.get("report_title") or "",
         "brand": case["brand"],
         "brand_display": f"{case['brand']} ★",
         # 展示名要剥掉的品类/产品线后缀词表（渲染层 displayBrand 用）。
@@ -1957,6 +1963,89 @@ def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:
     return "".join(out)
 
 
+# ---------- 回答正文清洗（2026-11-20 从基线报告脚本并进来，售前与基线共用） ----------
+# 采集到的回答里有：空目标图片 ![alt]()、空链接 [文字]()、ChatGPT 组件残留（:::writing、{#each}、<Entity value=…>）、
+# LaTeX 公式、HTML 实体被二次转义（&amp;amp;）、markdown 转义残留。在 markdown_to_html 的输出上清，
+# 原文与译文（attach_translations 也调 markdown_to_html）都走这一处。
+_CLEAN_MD_ESCAPE = re.compile(r"\\([$:.\-~()#*_!+|\[\]：（） ])")
+_CLEAN_DOUBLE_ESC = re.compile(r"&amp;(amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);")
+_CLEAN_LATEX_HINT = re.compile(r"\\(text|frac|times|approx|cdot|le|ge|left|right)\b")
+_CLEAN_INLINE_MATH = re.compile(r"\$([^$<\n]{1,80}?)\$")
+
+
+def latex_to_text(text: str) -> str:
+    """把 LaTeX 公式写成可读文本：\\text{A} → A，\\frac{a}{b} → a ÷ b，\\times → × 等。"""
+    text = text.replace("&#92;", "\\")
+    for _ in range(6):
+        new = re.sub(r"\\text\{([^{}]*)\}", r"\1", text)
+        new = re.sub(r"\\frac\{([^{}]*)\}\{([^{}]*)\}",
+                     lambda m: " ÷ ".join(f"({x})" if re.search(r"\s[+\-]\s", x) else x for x in m.groups()), new)
+        if new == text:
+            break
+        text = new
+    for key, value in {r"^\circ": "°", r"\circ": "°", r"\times": "×", r"\approx": "≈", r"\cdot": "·", r"\le": "≤", r"\ge": "≥", r"\%": "%",
+                       r"\left": "", r"\right": "", r"\,": " ", r"\;": " ", r"\$": "$"}.items():
+        text = text.replace(key, value)
+    text = re.sub(r"\$\$|\\\[|\\\]", "", text).replace("{", "").replace("}", "")
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
+def _clean_math(body: str) -> str:
+    def inline(m):
+        inner = m.group(1)
+        # 价格（$549.99 - $579.99）不是公式：只认带反斜杠命令的，或首尾不留空格、带等号的算式（$30 + 60 = 90$）
+        if "\\" in inner or (inner == inner.strip() and "=" in inner and re.fullmatch(r"[\d\s+\-×*/=().%]+", inner)):
+            return latex_to_text(inner)
+        return m.group(0)
+    # 先处理行内 $…$，再整段处理残留命令，免得命令换掉后剩下孤立的 $
+    body = _CLEAN_INLINE_MATH.sub(inline, body)
+    if _CLEAN_LATEX_HINT.search(body) or "$$" in body:
+        body = re.sub(r"\$\$(.+?)\$\$", lambda m: latex_to_text(m.group(1)), body)
+        body = latex_to_text(body) if _CLEAN_LATEX_HINT.search(body) else body
+    return _CLEAN_INLINE_MATH.sub(inline, body)
+
+
+def clean_answer_html(h: str) -> str:
+    for _ in range(3):
+        new = _CLEAN_DOUBLE_ESC.sub(r"&\1;", h)
+        if new == h:
+            break
+        h = new
+    h = re.sub(r"&lt;Entity\s+value=(?:&quot;|\")([^&\"]*)(?:&quot;|\")[^<]*?(?:/?&gt;|(?=<))", r"\1", h)
+    h = re.sub(r"&lt;/?(?:ListOption|Entity)[^<]*", "", h)
+    # 残留的 markdown 图片（多为空目标；带网址的被自动链接成 <a>，一并删到右括号或段落结束）
+    h = re.sub(r"!\[(?:[^\[\]\n<]|\[[^\]\n<]*\])*\]\(.*?(?:\)|(?=</p>|</li>|</td>))", "", h)
+    # [文字](<网址>)：尖括号网址被自动链接拆开了，只留文字
+    h = re.sub(r"\[([^\[\]\n<]+)\]\(&lt;.*?(?:&gt;\)|(?=</p>|</li>|</td>))", r"\1", h)
+    h = re.sub(r"\\(?=</?em>)", "", h)
+    h = re.sub(r"<p>\s*!\[[^<\]]*</p>", "", h)                     # 换行截断的图片说明
+    h = re.sub(r"\[([^\[\]<]+)\]\(\)", r"\1", h)                    # 空链接只留文字
+    h = re.sub(r"\[([^\]\n<]*?)\]\(\)", r"\1", h)
+    h = h.replace("]()", "")
+    h = re.sub(r"<p>\s*-{3,}\s*</p>", '<hr class="answer-rule">', h)
+    h = re.sub(r"<p>\s*:::[^<]*</p>", "", h)                         # :::writing{…} / :::
+    h = re.sub(r"<(p|li)>\s*\{[#/@:][^<]*</\1>", "", h)             # {#each …} / {@body …} 组件模板
+    h = re.sub(r"\{@body[^<]*", "", h)
+    h = re.sub(r"<p>\s*\\?[\[\]]\s*</p>", "", h)                    # 公式块的 [ ] 行
+    h = re.sub(r"<(p|li|td|th|h\d)>(.*?)</\1>", lambda m: f"<{m.group(1)}>{_clean_math(m.group(2))}</{m.group(1)}>",
+               h, flags=re.S)
+    h = re.sub(r"<p>\s*</p>", "", h)
+    for _ in range(3):
+        new = _CLEAN_MD_ESCAPE.sub(r"\1", h)
+        if new == h:
+            break
+        h = new
+    return h
+
+
+_markdown_to_html_raw = markdown_to_html
+
+
+def markdown_to_html(text: str, highlight: list[str] | None = None) -> str:  # noqa: F811
+    """markdown 转 HTML，再清掉采集残留（见 clean_answer_html）。"""
+    return clean_answer_html(_markdown_to_html_raw(text, highlight))
+
+
 _CARD_PRICE_RE = re.compile(
     r"(?:US\$|S\$|A\$|C\$|KSh|Ksh|KES|NGN|₦|RM|\$|€|£|₹|¥)\s?\d|\d[\d,.]*\s?(?:KSh|KES|NGN|USD|EUR|GBP)\b",
     re.IGNORECASE)
@@ -2278,7 +2367,8 @@ def build_details(collect_dir: Path, config: dict, regions: list[str], bank: dic
                     "platform_citations": platform_citations,
                     "search_results": search_results,
                     "citation_occurrences": effective,
-                    "citation_share": (f"{own_occurrences * 100 / effective:.1f}%"
+                    # 0 写「0%」不写「0.0%」（Suda 2026-10-22，原基线报告规则）；没有引用写「—」
+                    "citation_share": ((fmt_pct(own_occurrences / effective) if own_occurrences else "0%")
                                        if effective else "—"),
                 }
     return details

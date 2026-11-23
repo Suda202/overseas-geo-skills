@@ -589,6 +589,7 @@ hr.answer-rule {
 .drawer-table th{color:var(--quiet);font-weight:600;font-size:12px}
 .drawer-table tr.self td{font-weight:700;color:var(--gold-deep)}
 .drawer-table .hit{color:var(--gold-deep);font-weight:700}
+.fanout-zh{display:block;margin-top:4px;color:var(--muted);font-size:12px;font-weight:400}
 .drawer-table .miss{color:var(--quiet)}
 .run-nav{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:12px;color:var(--quiet)}
 
@@ -687,3 +688,25 @@ hr.answer-rule {
   color: var(--quiet);
   letter-spacing: 0;
 }
+
+/* ---------- 竞争与优化难度（2026-11-20） ---------- */
+.diff-intro{margin:0 0 14px;color:var(--ink-2);font-size:14.5px;line-height:1.75}
+.diff-intro b{color:var(--ink)}
+.diff-note{margin:10px 0 0;color:var(--muted);font-size:12.5px}
+.diff-table td{vertical-align:top}
+.diff-table .diff-text{color:var(--ink-2);font-size:13.5px;line-height:1.65;min-width:220px}
+.diff-table .diff-first{font-size:13px;color:var(--ink-2);white-space:nowrap}
+.diff-tag{display:inline-block;min-width:26px;padding:1px 9px;border-radius:999px;font:700 12.5px/1.7 var(--sans);text-align:center}
+.diff-tag.diff-hi{background:#f3dcd5;color:var(--red)}
+.diff-tag.diff-mid{background:#f2e6cf;color:var(--amber)}
+.diff-tag.diff-lo{background:#dde8df;color:var(--green)}
+.drawer-diff{margin:0 0 6px;padding:0;list-style:none}
+.drawer-diff li{margin:6px 0;color:var(--ink-2);font-size:13.5px;line-height:1.65}
+.drawer-diff li b{margin-right:6px;color:var(--ink)}
+.diff-none{color:var(--quiet);font-size:12.5px;white-space:nowrap}
+.diff-table .diff-topic{white-space:nowrap}
+.diff-q{margin:0 6px 4px 0;padding:1px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--gold-deep);font:600 12.5px/1.6 var(--sans);cursor:pointer}
+.diff-q:hover{border-color:var(--gold)}
+.drawer-diff .diff-reason{display:inline-block;margin-right:6px;font-weight:700;color:var(--ink)}
+.drawer-diff .diff-reason::after{content:"："}
+.diff-cell-reason{display:block;margin-top:3px;color:var(--muted);font-size:11.5px;line-height:1.35;white-space:normal;max-width:120px;margin-left:auto;margin-right:auto}

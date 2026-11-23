@@ -34,3 +34,4 @@
 | readings/ | answers.jsonl、readings.json、readings.csv、cited_pages.csv、issues.json | 逐回答七层记录；逐题 × 平台读数；归题问题清单 |
 | labels/ | batches/、labels/（模型交回）、auto-zgap.json、labels.json、labels-rejected.jsonl、sample-review.csv、sample-score.json | 标注全过程与抽检 |
 | pagegap/ | pages/（正文缓存）、page_gap.json、page_gap.csv | 被引第三方页面的抓取与缺口判定 |
+| difficulty/ | prompts.csv、topics.csv、difficulty.md、difficulty.json | 每道提示词、每个主题的竞争难度与优化难度（diagnosis-rules.md 第 8 节），可单独在试跑后跑 |

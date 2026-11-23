@@ -194,7 +194,7 @@ def base_row(q, pooled, share, codes):
 
 
 def pattern_rank(t, lead):
-    """沿用 geo-monitoring baseline-report 的优化顺序：部分出现仍落后 → 竞品领先 → 无品牌点名 → 已打平。"""
+    """沿用 geo-monitoring references/changeability-and-order.md 的优化顺序：部分出现仍落后 → 竞品领先 → 无品牌点名 → 已打平。"""
     if t is None or lead is None:
         return 5
     if t > 0.2 and lead - t >= 0.3:

@@ -70,9 +70,16 @@
     var BUCKET = (F.source_types || []).map(function (t) { return t.bucket; });
 
     function inSel(list, value) { return !list || !list.length || list.indexOf(value) >= 0; }
+    // 题目标签可能是一条（多标签用「、」连），按标签筛选时命中任意一个即可（Suda 2026-11-23）
+    function qTags(q) {
+      var raw = q.tag && q.tag !== "—" ? String(q.tag) : "";
+      return raw ? raw.split("、").filter(Boolean) : [];
+    }
     function qOk(sel, qid) {
       var q = Q[qid] || {};
-      return inSel(sel.intents, q.intent) && inSel(sel.topics, q.topic);
+      var tags = sel.tags || [];
+      var tagOk = !tags.length || qTags(q).some(function (t) { return tags.indexOf(t) >= 0; });
+      return inSel(sel.intents, q.intent) && inSel(sel.topics, q.topic) && tagOk;
     }
     function pick(sel) {
       return (F.answers || []).filter(function (a) {
@@ -550,7 +557,7 @@
     var cache = {};
     return {
       slice: function (sel) {
-        var key = JSON.stringify([sel.regions || [], sel.platforms || [], sel.intents || [], sel.topics || []]);
+        var key = JSON.stringify([sel.regions || [], sel.platforms || [], sel.intents || [], sel.topics || [], sel.tags || []]);
         if (!cache[key]) cache[key] = slice(sel);
         return cache[key];
       },

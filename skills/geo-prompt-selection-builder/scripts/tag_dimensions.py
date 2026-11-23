@@ -15,7 +15,8 @@ MIN_TOPICS = 2
 MIN_PROMPTS = 5
 SKIP_STATUS = {"停测", "需修改"}
 TYPE_ZH = {"Discovery": "发现", "Competitor": "对比", "Alternatives": "替代", "Evaluation": "评估",
-           "Information": "问题解决", "Trust": "信任", "Transactional": "交易", "Support": "售后"}  # 八类意图类型
+           "Information": "问题解决", "Trust": "信任", "Transactional": "交易", "Support": "售后",
+           "Verification": "验证", "Accuracy": "准确性"}  # 八类意图类型 + 两类诊断型（2026-11-19）
 
 
 def _text(value):

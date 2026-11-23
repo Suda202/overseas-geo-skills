@@ -17,7 +17,8 @@ from itertools import combinations
 from pathlib import Path
 
 
-INTENTS = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
+INTENTS = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support",
+           "Verification", "Accuracy"}
 # Eight selection types since 2026-11-06 (Suda): Discovery (incl. shortlist), Information (问题解决), Evaluation (评估,
 # incl. capability questions), Competitor, Alternatives, Trust (信任: reliability / complaints), Transactional (交易),
 # Support (售后: names the brand / model). No journey stage on new banks.
@@ -438,7 +439,7 @@ def normalized_intent(row: dict, errors: list[str]) -> str:
 # ---------- per-Prompt metadata ----------
 
 # Supported row types: the eight selection types (2026-11-06).
-REGISTERED_TYPES = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support"}
+REGISTERED_TYPES = {"Discovery", "Information", "Evaluation", "Competitor", "Alternatives", "Trust", "Transactional", "Support", "Verification", "Accuracy"}
 # The mention-rate KPI reads these types (Suda 2026-11-02).
 KPI_INTENTS = {"Discovery"}
 # Sales unit (Suda 2026-11-09): one Discovery Topic is sold as 10 Prompts, each a distinct purchase decision.
@@ -545,9 +546,9 @@ def goal_checks(config: dict, questions: list[dict], intents: dict[int, str], wa
     """W52 (Suda 2026-11-02 审核清单 B2): the brand party's goals decide which Prompt types are written.
 
     config.business_goals = {selected: [goals], information_named: bool}; missing means DEFAULT_BUSINESS_GOALS
-    (3.0.0). Alternatives belong to 竞争定位. Verification and Accuracy are outside selection banks and rejected by
-    the main type check. Transactional and Support belong to no goal yet (selection-rules.md → 1) and always warn
-    when written. The dormant gates 50 / 51 (a selected goal with no Prompt of its type) were removed in 3.0.0.
+    (3.0.0). Alternatives belong to 竞争定位. Verification and Accuracy are diagnostic types (2026-11-19) and belong
+    to no goal, so they warn when written. Transactional and Support belong to no goal yet (selection-rules.md → 1)
+    and always warn when written. The dormant gates 50 / 51 (a selected goal with no Prompt of its type) were removed in 3.0.0.
     """
     goals = config.get("business_goals")
     selected = goals.get("selected") if isinstance(goals, dict) else None
@@ -755,7 +756,8 @@ class BankValidator:
         rtype = str(row.get("prompt_type") or "").strip()
         if rtype not in REGISTERED_TYPES:
             fail(f"slice {sid}: prompt_type {rtype!r} must be one of {sorted(REGISTERED_TYPES)} "
-                 "(Verification is retired: capability questions are Evaluation; Accuracy probes sit outside the bank)",
+                 "(Verification and Accuracy are diagnostic-only: capability checks after a low-mention reading, "
+                 "and fact checks that need the brand knowledge base)",
                  self.errors)
 
     def check_prompt_on_row(self, qid: str, q: dict, ref: str, row: dict) -> None:
@@ -793,8 +795,8 @@ class BankValidator:
             if not intent:
                 fail(f"{question_id}: missing prompt_type", errors)
             elif intent not in INTENTS:
-                fail(f"{question_id}: unsupported prompt_type {intent!r}; one of {sorted(INTENTS)} (Verification is "
-                     "Evaluation; Accuracy probes and the Category Awareness pre-run stay outside the bank)", errors)
+                fail(f"{question_id}: unsupported prompt_type {intent!r}; one of {sorted(INTENTS)} "
+                     "(the Category Awareness pre-run stays outside the bank)", errors)
             if not str(row.get("region") or "").strip():
                 fail(f"{question_id}: missing region", errors)
             user_question = str(row.get("user_question") or "").strip()

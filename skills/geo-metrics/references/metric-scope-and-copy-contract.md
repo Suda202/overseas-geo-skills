@@ -17,10 +17,10 @@
 
 - 统计层默认原则（2026-11-10 Suda）：引用默认统计全部意图类型，各类型切片都算出来；展示哪一批由报告按需求决定。
 
-- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）只统计发现＋替代（11-06 前的旧类型「品类认知」题面不点名品牌，并入这一组）；问题解决不统计提及率（11-11 Suda 定），筛到只剩问题解决题时显示「当前筛选下不统计」；对比、评估、验证、交易、售后题面点名了品牌，提及率接近 100%，不统计（显示「—」）。
-- 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额只看发现＋替代**，与提及率同一批回答（2026-11-07 Suda：点名题会把被点名品牌的官网拉进引用，Botslab G980H 全部类型引用份额 13.1%、发现＋替代 0%，混在一起没法和提及率比）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
-- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [["discovery", "alternatives"]]`、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
-- 监测的基线 HTML（`geo-monitoring/scripts/build_baseline_html.py`）2026-11-10 起与售前同一套口径，不再打补丁：题库写真实意图类型，取代 10-22 的「所有题都计入提及率、全部类型引用只合并发现和品类认知」。
+- 提及类指标（提及率、提及率排名、声量份额、平均提及位置）统计**全部意图类型**（Suda 2026-11-23，推翻 11-11 只算发现＋替代）。题面点名品牌的题提及率接近 100%，模块层不再整列置「—」，由看报告的人按主题、意图类型筛选排除。
+- 引用分两处：**核心洞察的引用份额、引用率和可见度矩阵的品牌引用份额与提及率同一批回答**（2026-11-23 起为全部意图类型；`citation_scope = "visibility"` 仍成立）；**引用模块（来源类别、域名、页面、官网页面）和问题明细统计全部意图类型**，按数据筛选收窄。
+- 实现：`build_report_data.build_config` 写 `visibility_intent_groups = [全部意图代码]`（2026-11-23 起；此前为 `[["discovery", "alternatives"]]`）、`citation_scope = "visibility"`（核心洞察的引用与提及类同一批回答），core `compute_metrics` 读这两个键；不写 `citation_scope` 时 core 统计全部有效回答；`build_sources` 从全部有效回答算引用模块。编辑侧影子审计显式写 `citation_scope = "visibility"`，提及类不写分组时只看 Discovery，对齐上传 CSV。`verify_report_data.py` 按同口径独立复算，页面多选由 `report-engine.js` 现算、`check_engine_parity.js` 对账。
+- 售后基线 HTML 2026-11-20 起和售前报告是同一套渲染（`geo-presales-report-builder/scripts/prepare_baseline.py` 准备输入后走售前流水线），口径完全相同；取代 10-22 的「所有题都计入提及率、全部类型引用只合并发现和品类认知」。
 
 执行两条独立判定，不使用互斥的“先按意图选一类”逻辑：
 
@@ -53,7 +53,7 @@
 ### 哪些产品线、哪些题统计
 
 - **产品线开不开由我们推理决定，不让品牌方填**：消费类实体商品（3C、家电、个护、宠物用品、服饰等）开；软件、SaaS、服务、房地产关；工业、工程类实体商品先记「试跑后定」，试跑里这条产品线的回答出卡比例到 5% 就开，不到就关。售前没有试跑，工业类记关。判断和理由记在题库 `config.shopping_cards`（选词 output-contract.md）。关掉的产品线照常采集商品字段，但不汇总、不报，也不写 0%。
-- **题的范围**：只统计发现、替代两类（2026-11-07 Suda 定，原为发现、替代、对比、交易四类）。这两类题面不点名本品，卡里是 AI 自己挑的候选，才能看出本品进没进、和竞品比；对比、交易题题面点名本品，出卡和进卡都是题面带出来的。其余类型照常采集商品卡字段，不进汇总。
+- **题的范围**：全部意图类型的题都进汇总（Suda 2026-11-23，推翻 2026-11-07 只算发现、替代）。收窄的原意是「点名品牌的题，出卡和进卡由题面带出」，现在改由看报告的人按主题、意图类型筛选排除；`shopping_mode_rate_by_intent` 仍给逐意图触发率作诊断。
 - **原始数据都在采集目录里**：商品卡、商品名、品牌、位置、商家、购买链接都在各平台原始响应里，以后要加 SKU、商家、渠道分析不用重新采集。
 
 ### 来源字段
@@ -94,7 +94,7 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 
 - **按平台分开计算，不跨平台合并。** Gemini 每条回答 12–19 张卡，ChatGPT 1–6 张，卡位和排名合池没有意义；全部平台切片只给 `by_platform`。例外：核心洞察的商品卡提及率在「全部平台」时把返回了商品字段的平台合计（分子、分母各自相加），因为它按回答计。
 - **接口未返回**：平台本身不返回商品字段（Perplexity），或本次采集里该平台一条回答都没带商品字段（`product_field_returned = false`；2026-10 中起 Scrapeless 的 Gemini 1,700 多条回答都没有 `products`，2026-11-07 用 3 道 ChatGPT 出卡的发现题复测仍没有），整列写「接口未返回」，不写 0%，也不进核心洞察的合计。AI Mode 只在出卡时才带 `products` 键，缺键按未触发处理。
-- 实现：`shopping.py` 的 `SHOPPING_SCOPE_INTENTS` 定发现、替代两类；按意图类型筛选靠报告的意图类型 / 主题切片。产品线开关：`build_report_data.py --shopping-cards 开|关` 写进 `meta.shopping_cards`，没传时按数据判（任一平台触发率到 5%），见 render-spec.md。
+- 实现：`shopping.py` 的 `SHOPPING_SCOPE_INTENTS` 为全部意图类型（2026-11-23 起）；按意图类型筛选靠报告的意图类型 / 主题切片。产品线开关：`build_report_data.py --shopping-cards 开|关` 写进 `meta.shopping_cards`，没传时按数据判（任一平台触发率到 5%），见 render-spec.md。
 - 卡片品牌归属顺序：平台 `brand` 字段 → 卡标题最早出现的别名 → offer 的 `product_name` → 商家名（全部可识别商家指向同一品牌时）。都不中的卡记为未归属，单独计数。
 - 卡位按平台字段顺序编号。ChatGPT 实测与正文商品表顺序约 5% 不一致，平均位置是近似值。
 

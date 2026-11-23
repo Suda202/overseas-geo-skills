@@ -640,7 +640,7 @@ def goal_bank(selected: list[str] | None, information_named: bool = False) -> di
 
 
 def add_typed(data: dict[str, object], prompt_type: str) -> None:
-    """One Prompt of this type on its own row and Topic; Accuracy has no row (it sits outside the bank)."""
+    """One Prompt of this type on its own row and Topic; Verification and Accuracy are diagnostic types (2026-11-19)."""
     text = {
         "Competitor": "BrandX vs RivalA for a small apartment with two cats?",
         "Evaluation": "Is BrandX worth it for a small apartment with two cats?",
@@ -648,6 +648,7 @@ def add_typed(data: dict[str, object], prompt_type: str) -> None:
         "Trust": "Are there common complaints about BrandX litter boxes?",
         "Transactional": "Where can I buy the BrandX litter box in Singapore?",
         "Support": "How do I reset the BrandX litter box after a sensor error?",
+        "Verification": "Does the BrandX litter box support automatic cleaning?",
         "Accuracy": "What warranty does BrandX offer on its litter box in Singapore?",
     }[prompt_type]
     topic = f"topic_{prompt_type.casefold()}"
@@ -655,10 +656,9 @@ def add_typed(data: dict[str, object], prompt_type: str) -> None:
            "monitoring_prompt": text, "audience": "通用", "attribute_ref": "", "constraints": ["小户型"]}
     row.pop("tags")
     data["config"]["topics"].append({"topic_id": topic, "topic": prompt_type, "priority": "高", "priority_basis": "高：测试造数"})
-    if prompt_type != "Accuracy":
-        data["config"]["slices"].append({"slice_id": f"M-{prompt_type}", "topic_id": topic, "prompt_type": prompt_type,
-                                         "priority": "中", "priority_basis": "测试造数"})
-        row["slice_ref"] = f"M-{prompt_type}"
+    data["config"]["slices"].append({"slice_id": f"M-{prompt_type}", "topic_id": topic, "prompt_type": prompt_type,
+                                     "priority": "中", "priority_basis": "测试造数"})
+    row["slice_ref"] = f"M-{prompt_type}"
     data["questions"].append(row)
 
 
@@ -714,7 +714,7 @@ class BusinessGoalGateTests(unittest.TestCase):
 
 
 class EightTypeTests(unittest.TestCase):
-    """2.42.0 (Suda 2026-11-06): eight prompt types; capability checks are Evaluation, Accuracy sits outside the bank."""
+    """2.42.0 (Suda 2026-11-06): eight prompt types; 2026-11-19 Verification and Accuracy are diagnostic types."""
 
     def test_trust_belongs_to_reputation_goal(self) -> None:
         data = goal_bank(["发现型可见度"])
@@ -734,12 +734,17 @@ class EightTypeTests(unittest.TestCase):
                 self.assertIn(f"{prompt_type} Prompts written without the goal {label}", result.stdout)
                 self.assertNotIn("unsupported prompt_type", result.stdout)
 
-    def test_accuracy_rejected_from_selection_bank(self) -> None:
+    def test_accuracy_accepted_as_diagnostic_type(self) -> None:
         data = goal_bank(["发现型可见度"])
         add_typed(data, "Accuracy")
-        result = validate(data)  # 3.18.0：并进类型校验
-        self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertIn("unsupported prompt_type 'Accuracy'", result.stdout)
+        result = validate(data)  # 2026-11-19：Accuracy 恢复为诊断型类型
+        self.assertNotIn("unsupported prompt_type", result.stdout)
+
+    def test_verification_accepted_as_diagnostic_type(self) -> None:
+        data = goal_bank(["发现型可见度"])
+        add_typed(data, "Verification")
+        result = validate(data)  # 2026-11-19：Verification 恢复为诊断型类型
+        self.assertNotIn("unsupported prompt_type", result.stdout)
 
 
 class WarningCodeTests(unittest.TestCase):

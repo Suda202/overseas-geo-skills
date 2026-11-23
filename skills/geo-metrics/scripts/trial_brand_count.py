@@ -18,7 +18,8 @@
 
 没有词表时只认题库 config 里的几家，计数会偏低、误标变多：先跑
 ``geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <试跑目录>`` 挖候选，
-人工收成词表再给 ``--lexicon``。
+人工收成词表再给 ``--lexicon``。有词表也先加 ``--lexicon <词表> --check`` 查漏，A 档过完再计数
+（长尾同类厂商不在表里时，每答品牌数会少算）。
 
 输出（``--out`` 目录）：``brand_count.csv``（每题 × 平台一行）、``brand_count.json``（含每次回答的品牌名单）。
 

@@ -1,3 +1,29 @@
+## 3.22.0（2026-11-23）B2B 软件的评估行按功能匹配、集成兼容、合规与安全三类能力查漏
+
+- 触发依据：Suda 2026-11-23「可以记录到 skill 里面的，因为我看了很多研究确实 B2B 软件客户是会问评估能力题的」。能力题归评估（买家为判断能否满足自己需求而问），验证仍只做诊断；开行仍跟「声誉与信任」目标走（Suda 同日选定）。
+- 外部证据（`30-选Topic与生词/方案/研究与评审/B2B软件能力问法调研-20261123.md`，10 条来源）：Growth Unhinged × Profound 2026-11-18，12,511 条软件类商业 query 中「Can X do Y?」占 11.5%，是占比最高的单一问法，中漏斗 13.1%、下漏斗 10.3%，功能匹配 4.4%、兼容 3.5%（读图核实）；Semrush 622 名美国 B2B 从业者调查，45% 在 prompt 里写预算、必需功能或兼容性约束（回读原文核实）。反向读数：G2 1,076 名软件买家，首个 prompt 超过 2/3 是品类或竞品查询、只有 1/5 问需求或流程（回读 PDF 核实），所以能力题只补评估行，不动发现题优先。
+- 改动：type-branches.md 评估开行条件加指引；新增「B2B 软件的评估行」节（三类能力查漏、有证据才开、和验证的区别、每项能力 1 道、否认或说错确有能力记品牌事实核查记录）；题面写法补三个带买家处境的例句。脚本和门禁不变。
+- 回归：check_skill_terms 无命中；test_validate 56 passed；verify_workflow 53/53；e2e_bundle、e2e_input_contract、e2e_repair_loop 全过。
+- 改前快照：`.snapshots/b2b-eval-capability-20261123-112815/`。
+
+## 3.21.0（2026-11-23）产品服务于某类活动的，用活动词查 Trends 相关查询找新兴场景
+
+- 触发依据：Suda 2026-11-23「改吧」「3.21.0 不用撤回」，起因是出海案例「运动品牌不抢跑鞋大词，打 Hyrox 赛事装备场景」。按冻结协议，外部方法只进「扩词来源」格子，本次只加一个场景来源，不改矩阵、主题和出题规则。
+- 试跑证据（`30-选Topic与生词/方案/Trends飙升试跑-20261123/试跑记录.md`）：品类词做种子 0 个场景候选（路拓、INSIZE、running shoes 对照都只有修饰词和无关热点）；上位活动词做种子能找到——fitness competition / fitness race 的热门查询里有 Hyrox，飙升里有 DEKA；obstacle race 下有 Spartan、Savage、Tough Mudder。路拓用 motorcycle trip、adventure riding 查没有新赛事，只出装备类词，说明并非每个品类都有收获。
+- 改动：signal-sources.md 两张表的 Google Trends 行：产品服务于某类活动的，取 1–3 个上位活动词跑 `collect_keyword_data.py trends --queries`，热门和飙升都看，具体赛事、玩法记成使用场景候选进第 4 步，有买家原话登记原话，没有的标「假设」开行；撞词噪声丢掉；不服务于活动的不查、查空了都在调研记录写一句；法规、标准、新技术带来的新场景不覆盖。相关查询本身不进需求信号表。`shared/scripts/collect_keyword_data.py` 说明文字同步，代码不变。
+- 成本：每个活动词 1 次 DataForSEO 付费调用，约 0.01 美元。
+- 改前快照：`.snapshots/trends-rising-scenes-20261123-103143/`。
+
+## 3.20.0（2026-11-19）验证与准确性恢复为诊断型意图类型
+
+- 触发依据：Suda 2026-11-19「verification 主要是看提及率很低的时候验证品牌是否有某项能力」。
+- 评估（Evaluation）只保留「适不适合自己的用途、能不能满足某个需求」；「有没有某项能力」从评估拆出，由验证（Verification）承接。
+- 两类都默认不出，只在专项诊断时出：验证在某主题提及率很低时出，归 `geo-gap-diagnosis`（`gap-cause-action-table.md` 补了用法）；准确性在怀疑 AI 说错品牌事实时出，有知识库判准确率、没有时对照官网公开信息记冲突。
+- 改动：selection-rules.md 第 5 步加「诊断型类型」节、评估行去掉能力核查、第 7 步改口；type-branches.md 加两类开行条件、读数、题面；canonical-intent-mapping.md 更新映射（验证内部值仍为历史的 `validation`，准确性后端无枚举，两类暂不导出上传 CSV）；output-contract.md 门禁 60 放开两类；validate_after_sales_set.py `REGISTERED_TYPES` 加两类；check_skill_terms 允许「验证题」等说法；prompt-generation-principles 第 15 条改口。
+- 待办：后端确认 verification 枚举、新增 accuracy 指标；对客表暂不放诊断型，check_client_base 的 `ALL_TYPES` 不变。
+- 回归：test_validate_after_sales_set 56 passed（新增验证、准确性接受用例）；verify_workflow 53/53；e2e_bundle 全过；check_skill_terms 无命中。
+- 改前快照：`.snapshots/{selection-rules,type-branches,canonical-intent-mapping,output-contract}.md.20261119-151953.bak`。
+
 ## 3.19.2（2026-11-17）官方域名去重
 
 - 触发依据：Suda 2026-11-17「把官方域名去重加上」。PETKIT 的 `petkit.com` 与 `www.petkit.com` 这类同一个站的重复写法此前按不同项收，会重复进 `official_domains`。

@@ -17,11 +17,19 @@
   var state = { region: "", platform: "", intent: "", topic: "", matrixMetric: "mention", shopLevel: "brand",
     expanded: {}, page: 1, drawerRun: {}, drawerPlat: {},
     // 多选筛选（引擎模式）：空数组 = 全部
-    sel: { languages: [], regions: [], platforms: [], intents: [], topics: [] }, openMsel: null,
+    sel: { languages: [], regions: [], platforms: [], intents: [], topics: [], tags: [] }, openMsel: null,
     sourcePage: { domains: 1, pages: 1, official: 1 } };
   var TYPE_PREFIX = META.type_topic_prefix || "类型:";
   // 情感、商品卡没有数据时整块不出，问题明细列、抽屉里的对应内容也不出（render_report.py 按数据写好开关）
   var HAS_SENTIMENT = META.sentiment_enabled !== undefined ? !!META.sentiment_enabled : META.sentiment_claims_status === "complete";
+  // 竞争与优化难度（2026-11-20，attach_difficulty.py 接入；说法已在数据层写好，这里只展示）
+  var DIFF = META.difficulty_enabled ? (DATA.difficulty || null) : null;
+  function diffTag(level, fallback) {
+    var cls = { "高": "diff-hi", "中": "diff-mid", "低": "diff-lo" }[level];
+    if (cls) return '<span class="diff-tag ' + cls + '">' + esc(level) + "</span>";
+    return fallback ? '<span class="diff-none">' + esc(fallback) + "</span>" : "—";
+  }
+  function diffOf(qid) { return DIFF ? (DIFF.prompts || {})[String(qid)] || null : null; }
   var HAS_SHOPPING = !!(META.shopping || {}).enabled;
   // 切片 topic 位：选了主题用主题（一个主题只有一种意图类型）；只选了意图类型用「类型:X」切片
   function topicKey() {
@@ -143,12 +151,16 @@
   /* ---------- 基础信息 ---------- */
 
   function renderMasthead() {
+    // 报告类型与标题来自 Case（2026-11-20 售前报告与售后基线报告合并为一套渲染）
+    var kind = META.report_kind || "售前诊断";
+    var eyebrows = { "售前诊断": "GEO Presales Diagnosis", "正式基线": "GEO Baseline", "试跑": "GEO Trial Run" };
+    var subtitle = META.report_title || (kind === "售前诊断" ? "海外 AI 搜索可见度售前诊断" : "AI 搜索可见度 · " + kind);
     var el = document.getElementById("reportTitle");
-    if (el) el.innerHTML = esc(META.brand || "") + "<span>海外 AI 搜索可见度售前诊断</span>";
+    if (el) el.innerHTML = esc(META.brand || "") + "<span>" + esc(subtitle) + "</span>";
     var eyebrow = document.getElementById("reportEyebrow");
-    if (eyebrow) eyebrow.textContent = "GEO Presales Diagnosis · " + esc(META.generated_at || "");
+    if (eyebrow) eyebrow.textContent = (eyebrows[kind] || "GEO Report") + " · " + (META.generated_at || "");
     var foot = document.getElementById("footerBrand");
-    if (foot) foot.textContent = "海外 GEO 售前诊断报告 · " + esc(META.brand || "");
+    if (foot) foot.textContent = "海外 GEO " + kind + "报告 · " + (META.brand || "");
   }
 
   /* ---------- tab ---------- */
@@ -207,12 +219,8 @@
 
   /* ---------- 核心洞察 KPI ---------- */
 
-  // 提及类指标只算发现、替代（问题解决不统计提及率，2026-11-11）。对比、评估、信任、交易、售后题面点名了品牌，
-  // 提及率接近 100%，不算；这类切片的提及类指标是「—」，不代表品牌没出现。
-  function isTypeOnlySlice(slice) {
-    var c = slice._counts || {};
-    return (slice.records || []).length > 0 && c.visibility_answers === 0;
-  }
+  // 提及类指标全部意图类型都算（Suda 2026-11-23，推翻 2026-11-11 只算发现、替代）：
+  // 题面点名品牌的题提及率接近 100%，由用户按主题、意图类型筛选自行排除，模块层不再整列写「—」。
 
   // 商品卡提及率 KPI：选了平台看这个平台；全部平台时把返回了商品字段的平台合计（分子分母各自相加）。
   // 提及率、触发率按回答计，可以跨平台合计；商品卡份额、平均位置按卡计，各平台卡数差很多，不合计。
@@ -244,21 +252,22 @@
   }
 
   // 01 指标下面一行写清每个数统计哪几类意图（随筛选变：只列当前切片里有的类型）
-  // 核心洞察所有指标同一批题：发现、替代（Suda 2026-11-07；问题解决不算，2026-11-11）
+  // 全部意图类型都算（Suda 2026-11-23），不再按类型分样本
   function kpiScopeLine(slice) {
     var present = [];
     (slice.records || []).forEach(function (r) { if (r.intent && present.indexOf(r.intent) < 0) present.push(r.intent); });
-    function pick(types) { return types.filter(function (t) { return present.indexOf(t) >= 0; }); }
-    var vis = pick(["发现", "替代"]);
-    return vis.length ? vis.join("、") : "当前筛选下不统计（点名品牌的问题）";
+    if (!present.length) return "当前筛选下没有回答";
+    var allTypes = Object.keys(META.intent_topics || {});
+    return (allTypes.length > 1 && present.length === allTypes.length) ? "全部意图类型" : present.join(" · ");
   }
 
   // 各模块标题右侧：本模块统计哪几类意图（只列当前筛选下有的类型）
+  // 全部意图类型都进所有模块（Suda 2026-11-23，推翻按模块限定类型）
   var SECTION_SCOPE = {
-    competition: [["发现", "替代"]],
-    shopping: [["发现", "替代"]],
+    competition: "all",
+    shopping: "all",
     sources: "all",
-    distribution: [["发现", "替代", "对比", "评估", "信任"]]
+    distribution: "all"
   };
   function renderScopes() {
     var present = [];
@@ -271,7 +280,7 @@
       var types = [];
       if (rule === "all") {
         types = allTypes.filter(function (t) { return present.indexOf(t) >= 0; });
-        el.textContent = types.length && types.length === allTypes.length ? "全部意图类型" : types.join(" · ");
+        el.textContent = (allTypes.length > 1 && types.length === allTypes.length) ? "全部意图类型" : types.join(" · ");
         return;
       }
       for (var i = 0; i < rule.length && !types.length; i += 1) {
@@ -286,12 +295,11 @@
     var k = slice.kpis || {};
     var el = document.getElementById("overviewKpis");
     if (!el) return;
-    var na = isTypeOnlySlice(slice);
     var items = [
-      ["提及率", na ? "—" : k.mention_rate, "提到监测对象的回答 ÷ 有效回答。对比、评估、信任、交易、售后题面点名了品牌，提及率接近 100%，不统计。"],
-      ["提及率排名", na ? "—" : k.mention_rank, "按提及率由高到低在当前品牌集合中的位置。"],
-      ["声量份额", na ? "—" : k.share_of_voice, "监测对象被提及的次数 ÷ 全部纳入品牌被提及的次数之和。"],
-      ["平均提及位置", na ? "—" : k.average_rank, "监测对象被提及时在回答里的平均位置，数值越小越靠前。"],
+      ["提及率", k.mention_rate, "提到监测对象的回答 ÷ 有效回答。全部意图类型都算，要看某类题用上方筛选。"],
+      ["提及率排名", k.mention_rank, "按提及率由高到低在当前品牌集合中的位置。"],
+      ["声量份额", k.share_of_voice, "监测对象被提及的次数 ÷ 全部纳入品牌被提及的次数之和。"],
+      ["平均提及位置", k.average_rank, "监测对象被提及时在回答里的平均位置，数值越小越靠前。"],
       ["引用份额", k.official_share, "指向监测对象官网的引用次数 ÷ 全部引用次数。"],
       ["引用率", k.official_citation_rate, "正文至少引用一次监测对象官网的回答 ÷ 有效回答。一条回答引用多次只算一次。"]
     ];
@@ -789,6 +797,7 @@
       '<th class="num">提及率排名</th><th class="num">声量份额</th><th class="num">平均提及位置</th>' +
       '<th class="num">引用份额</th><th class="num">引用率</th>' +
       (HAS_SENTIMENT ? '<th class="num">正向情感占比</th>' : "") +
+      (DIFF ? '<th class="center">优化难度</th>' : "") +
       '<th class="center">详情</th></tr></thead>';
   }
 
@@ -801,7 +810,7 @@
       if (!groups[topic]) { groups[topic] = []; order.push(topic); }
       groups[topic].push(record);
     });
-    var cols = HAS_SENTIMENT ? 10 : 9;
+    var cols = (HAS_SENTIMENT ? 10 : 9) + (DIFF ? 1 : 0);
 
     var table = document.getElementById("recordTable");
     if (!table) return;
@@ -826,27 +835,31 @@
       // 主题行取该主题切片的指标（按回答合计），不对逐题读数取平均
       var ts = ENGINE ? ENGINE.slice(withSel({ topics: [topic] })) : (SLICES[sliceKey(state.region, state.platform, topic)] || {});
       var k = ts.kpis || {};
-      var na = isTypeOnlySlice(ts);
       var head = '<tr class="group-head" role="button" tabindex="0" aria-expanded="' + isOpen + '">' +
         '<td class="num group-toggle-cell"><span class="group-chevron">▸</span></td>' +
         "<td><strong>" + esc(topic) + '</strong><span class="group-count">' + rows.length + "</span></td>" +
-        cell(na ? "—" : k.mention_rate, true) + cell(na ? "—" : k.mention_rank, true) +
-        cell(na ? "—" : k.share_of_voice, true) + cell(na ? "—" : k.average_rank, true) +
+        cell(k.mention_rate, true) + cell(k.mention_rank, true) +
+        cell(k.share_of_voice, true) + cell(k.average_rank, true) +
           // 引用不受「点名类型」限制：主题行用该主题全部回答的引用（同问题行），不用核心洞察口径
         cell((ts.sources || {}).official_share, true) + cell((ts.sources || {}).official_citation_rate, true) +
         (HAS_SENTIMENT ? cell(((ts.sentiment || {}).summary || {}).pos_rate, true) : "") +
+        (DIFF ? '<td class="center">' + (function () {
+          var t = (DIFF.topics || []).filter(function (x) { return x.topic === topic; })[0];
+          return t ? diffTag(t.opt, "暂不评估") : "—";
+        })() + "</td>" : "") +
         '<td class="center"></td></tr>';
       var items = rows.map(function (record) {
-        // 题面点名品牌的类型、问题解决不算提及类读数
-        var named = ["发现", "替代"].indexOf(record.intent) < 0;
         return '<tr class="q-row">' +
           '<td class="num">' + esc(record.qid) + "</td>" +
           '<td class="q"><b>' + esc(record.en) + "</b><small>" + esc(record.zh) + "</small>" +
           (qRegionsText(record.qid) ? '<small class="q-regions">' + esc(qRegionsText(record.qid)) + "</small>" : "") + "</td>" +
-          cell(named ? "—" : record.mention_rate) + cell(named ? "—" : record.mention_rank) +
-          cell(named ? "—" : record.share) + cell(named ? "—" : record.position) +
+          cell(record.mention_rate) + cell(record.mention_rank) +
+          cell(record.share) + cell(record.position) +
           cell(record.citation_share) + cell(record.citation_rate) +
           (HAS_SENTIMENT ? cell(record.sentiment) : "") +
+          (DIFF ? '<td class="center"' + (diffOf(record.qid) && diffOf(record.qid).opt_reason ? ' title="' + esc(diffOf(record.qid).opt_reason) + '"' : "") + ">" +
+            (diffOf(record.qid) ? diffTag(diffOf(record.qid).opt, "暂不评估") +
+              (diffOf(record.qid).opt_reason ? '<small class="diff-cell-reason">' + esc(diffOf(record.qid).opt_reason) + "</small>" : "") : "—") + "</td>" : "") +
           '<td class="center"><button class="detail-btn" type="button" data-detail="' + esc(record.qid) + '">查看</button></td></tr>';
       }).join("");
       return '<tbody class="topic-group' + (isOpen ? " open" : "") + '" data-group-topic="' + esc(topic) + '">' + head + items + "</tbody>";
@@ -927,6 +940,46 @@
       }).join("") + "</div></section>";
   }
 
+  function drawerDifficulty(record) {
+    var d = record ? diffOf(record.qid) : null;
+    if (!d) return "";
+    var items = [];
+    items.push("<li><b>竞争难度 " + diffTag(d.comp, "暂不评估") + "</b>" + esc(d.comp_text) + "</li>");
+    // 优化难度先给原因（为什么是这个档），再给这道题的具体情况（Suda 2026-11-23）
+    if (d.opt) items.push("<li><b>优化难度 " + diffTag(d.opt) + "</b>" +
+      (d.opt_reason ? '<span class="diff-reason">' + esc(d.opt_reason) + "</span>" : "") + esc(d.opt_text) + "</li>");
+    return '<h4 class="drawer-sec">难度判断</h4><ul class="drawer-diff">' + items.join("") + "</ul>";
+  }
+
+  function renderDifficulty() {
+    var table = document.getElementById("difficultyTable");
+    if (!table || !DIFF) return;
+    var brand = META.brand || "本品";
+    var intro = document.getElementById("difficultyIntro");
+    if (intro) intro.innerHTML = "<b>竞争难度</b>：AI 推荐名单被其他品牌占得有多牢。<b>优化难度</b>：只改官网，把 " + esc(brand) +
+      " 做进 AI 回答有多难，右边一列写的是难或容易的原因。两项都不代表能提升多少。";
+    var note = document.getElementById("difficultyNote");
+    if (note) note.textContent = (DIFF.basis || "") + (DIFF.preliminary ? "每道问题的回答次数还不多，结果为初步判断。" : "");
+    var picked = ENGINE ? (state.sel.topics || []) : (state.topic ? [state.topic] : []);
+    var rows = (DIFF.topics || []).filter(function (t) { return !picked.length || picked.indexOf(t.topic) >= 0; });
+    var head = "<thead><tr><th>主题</th><th class=\"center\">竞争难度</th><th>竞争情况</th>" +
+      "<th class=\"center\">优化难度</th><th>难在哪 / 容易在哪</th><th>建议先做的问题</th></tr></thead>";
+    if (!rows.length) {
+      table.innerHTML = head + '<tbody><tr><td class="empty" colspan="6">当前筛选下没有可评估的主题</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML = head + "<tbody>" + rows.map(function (t) {
+      // 点编号直接打开这道题的详情（和问题明细的「查看」同一个抽屉）
+      var first = (t.first || []).map(function (q) {
+        return '<button class="diff-q" type="button" data-detail="' + esc(q) + '">#' + esc(q) + "</button>";
+      }).join("");
+      return '<tr><td class="diff-topic"><strong>' + esc(t.topic) + "</strong></td>" +
+        '<td class="center">' + diffTag(t.comp, "暂不评估") + '</td><td class="diff-text">' + esc(t.comp_text || "") + "</td>" +
+        '<td class="center">' + diffTag(t.opt, "暂不评估") + '</td><td class="diff-text">' + esc(t.opt_text || "这个主题的问题 AI 都很少推荐具体品牌。") + "</td>" +
+        '<td class="diff-first">' + (first || '<span class="diff-none">暂无</span>') + "</td></tr>";
+    }).join("") + "</tbody>";
+  }
+
   function drawerOverview(key, record, dplat, runs) {
     function recFor(plat) {
       var sl = ENGINE ? ENGINE.slice({ regions: state.sel.regions, platforms: plat ? [plat] : state.sel.platforms, intents: [], topics: [] })
@@ -934,10 +987,12 @@
       return (sl.records || []).filter(function (r) { return String(r.qid).padStart(4, "0") === key; })[0] || null;
     }
     var rec = recFor(dplat) || record || {};
-    var filter = '<div class="drawer-plat">' + [""].concat(selPlatforms()).map(function (p) {
+    // 平台按钮只在当前筛选里有多个平台时才出：只有一个平台时「全部平台」和该平台是同一批回答，
+    // 跟顶部数据筛选重复（Suda 2026-11-23）。
+    var filter = selPlatforms().length > 1 ? '<div class="drawer-plat">' + [""].concat(selPlatforms()).map(function (p) {
       return '<button class="tab-btn' + (p === dplat ? " active" : "") + '" type="button" data-dplat="' + esc(p) +
         '" data-dplat-qid="' + key + '">' + esc(p || "全部平台") + "</button>";
-    }).join("") + "</div>";
+    }).join("") + "</div>" : "";
     // 品牌对比：目标品牌、配置竞品，再加本题被提到最多的开放品牌，最多 8 个
     var brands = (rec.brands || []).slice();
     var core = brands.filter(function (b) { return b.role === "target" || b.role === "competitor"; });
@@ -947,17 +1002,16 @@
       return (b.mention_count - a.mention_count) || ((a.role === "target") ? 1 : -1);
     });
     function pct(v) { return v === null || v === undefined ? "—" : (v === 0 ? "0%" : (v * 100).toFixed(1) + "%"); }
-    // 列同问题明细（排名不放：表本身按提及率排序）；点名类型的题不出提及类三列
-    var named = record && ["发现", "替代"].indexOf(record.intent) < 0;
+    // 列同问题明细（排名不放：表本身按提及率排序）；全部意图类型都出提及类三列（Suda 2026-11-23）
     var bs = rec.brand_sentiment || {};
-    var head = "<th>品牌</th>" + (named ? "" : "<th>提及率</th><th>声量份额</th><th>平均提及位置</th>") +
+    var head = "<th>品牌</th><th>提及率</th><th>声量份额</th><th>平均提及位置</th>" +
       "<th>引用份额</th><th>引用率</th>" + (HAS_SENTIMENT ? "<th>正向情感占比</th>" : "");
     var comp = shown.length ? '<h4 class="drawer-sec">品牌对比</h4><table class="drawer-table"><thead><tr>' + head + "</tr></thead><tbody>" +
       shown.map(function (b) {
         var miss = !b.mention_count;
         return "<tr" + (b.role === "target" ? ' class="self"' : "") + "><td>" + esc(displayBrand(b.name)) + (b.role === "target" ? " ★" : "") + "</td>" +
-          (named ? "" : "<td>" + (miss ? '<span class="miss">未提及</span>' : pct(b.mention_rate)) + "</td><td>" + (miss ? "—" : pct(b.share_of_voice)) +
-            "</td><td>" + (b.average_rank ? b.average_rank.toFixed(1) : "—") + "</td>") +
+          "<td>" + (miss ? '<span class="miss">未提及</span>' : pct(b.mention_rate)) + "</td><td>" + (miss ? "—" : pct(b.share_of_voice)) +
+            "</td><td>" + (b.average_rank ? b.average_rank.toFixed(1) : "—") + "</td>" +
           "<td>" + pct(b.citation_share) + "</td><td>" + pct(b.citation_rate) + "</td>" +
           (HAS_SENTIMENT ? "<td>" + esc(bs[b.name] || "—") + "</td>" : "") + "</tr>";
       }).join("") + "</tbody></table>" : "";
@@ -982,10 +1036,14 @@
       var head = '<h4 class="drawer-sec">' + esc(title) + "</h4>";
       if (!order.length) return "";
       order.sort(function (a, b) { return cnt[b] - cnt[a]; });
+      var fanoutZh = META.fanout_zh || {};
       return head + '<table class="drawer-table"><thead><tr><th>' + (field === "fanout" ? "检索词" : "延伸问题") +
         "</th><th>平台</th><th>出现次数</th></tr></thead><tbody>" + order.map(function (k) {
           var i = k.indexOf("|");
-          return "<tr><td>" + esc(k.slice(i + 1)) + "</td><td>" + esc(k.slice(0, i)) + "</td><td>" + cnt[k] + "</td></tr>";
+          var q = k.slice(i + 1);
+          var zh = field === "fanout" ? fanoutZh[q] : "";
+          return "<tr><td>" + esc(q) + (zh ? '<small class="fanout-zh">' + esc(zh) + "</small>" : "") +
+            "</td><td>" + esc(k.slice(0, i)) + "</td><td>" + cnt[k] + "</td></tr>";
         }).join("") + "</tbody></table>";
     }
     var rows = runs.map(function (x) {
@@ -1003,7 +1061,7 @@
       '<p class="drawer-zh">' + esc(record ? record.zh : "") + "</p>" +
       '<p class="drawer-tags"><span>' + esc(record ? record.topic : "—") + "</span><span>" + esc(record ? record.intent : "—") + "</span>" +
       (record && qRegionsText(record.qid) ? "<span>" + esc(qRegionsText(record.qid)) + "</span>" : "") + "</p></div>" +
-      "</div>" + filter + comp + plat +
+      "</div>" + filter + comp + plat + drawerDifficulty(record) +
       fan("fanout", "Query Fan-outs", "", "") +
       '<h4 class="drawer-sec">回答记录</h4>' +
       (rows ? '<table class="drawer-table runs"><colgroup>' + (MULTI_REGION ? '<col style="width:10%">' : "") +
@@ -1021,6 +1079,8 @@
     var body = document.getElementById("drawerBody");
     if (!body) return;
     var dplat = state.drawerPlat[key] !== undefined ? state.drawerPlat[key] : (state.platform || "");
+    // 当前只有一平台时抽屉不出平台按钮，也不留此前记下的单平台选择，按当前筛选汇总
+    if (selPlatforms().length <= 1) dplat = "";
     var runs = runsFor(qid, dplat);
     var picked = runs.filter(function (x) { return x.key === state.drawerRun[key]; })[0];
     function open() {
@@ -1168,9 +1228,7 @@
     var scope = (state.region || "全部地区") + (state.platform ? " · " + state.platform : "") +
       (state.topic ? " · " + state.topic : "");
 
-    if (isTypeOnlySlice(slice)) {
-      setInsight("overviewInsight", "这一类问题题面点名了品牌，不统计提及率，逐题结果看「问题明细」。", []);
-    } else if (leader && target) {
+    if (leader && target) {
       var gap = (parseFloat(leader[2]) - parseFloat(target[2])).toFixed(1);
       var mentionRate = parseFloat(k.mention_rate) || 0;
       var mentionRank = parseInt(k.mention_rank) || 0;
@@ -1225,9 +1283,7 @@
       }).filter(Boolean);
       var headline = "";
       var points = [];
-      if (isTypeOnlySlice(slice)) {
-        headline = "这个主题只有对比或评价题，不算提及率。";
-      } else if (!vals.length) {
+      if (!vals.length) {
         headline = "当前切片下监测对象未进入任何平台回答。";
       } else if (vals.length === 1) {
         // 只有一个平台时不存在「跨平台」比较，强行套共识/差距文案会写出相差 0.0 的假结论
@@ -1300,6 +1356,7 @@
     renderSources();
     renderSentiment();
     renderShopping();
+    renderDifficulty();
     renderRecords();
     renderInsights();
     if (ENGINE) renderMultiFilters(); else renderTabs();
@@ -1312,7 +1369,8 @@
     { id: "regionSelect", key: "regions", all: "全部地区", unit: "个地区" },
     { id: "platformSelect", key: "platforms", all: "全部平台", unit: "个平台" },
     { id: "intentSelect", key: "intents", all: "全部意图类型", unit: "种意图类型" },
-    { id: "topicSelect", key: "topics", all: "全部主题", unit: "个主题" }
+    { id: "topicSelect", key: "topics", all: "全部主题", unit: "个主题" },
+    { id: "tagSelect", key: "tags", all: "全部标签", unit: "个标签" }
   ];
   function mselValues(key) {
     var intentTopics = META.intent_topics || {};
@@ -1320,6 +1378,7 @@
     if (key === "regions") return META.regions || [];
     if (key === "platforms") return META.platforms || [];
     if (key === "intents") return Object.keys(intentTopics);
+    if (key === "tags") return META.tags || [];
     // 主题按选中的意图类型收窄
     if (!state.sel.intents.length) return META.topics || [];
     return (META.topics || []).filter(function (t) {

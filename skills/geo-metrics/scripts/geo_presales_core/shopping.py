@@ -17,9 +17,9 @@ report-builder 都引用它，不各自解析平台字段——平台字段分�
 口径（Suda 2026-10-14 裁定）：
 - 四个平台（ChatGPT / AIO / AI Mode / Gemini）分开算，不跨平台合并——各平台每条回答的
   卡数量级不同（Gemini 12–19 张，ChatGPT 1–6 张），合池后排名没有意义。
-- 发现、替代两类题（SHOPPING_SCOPE_INTENTS，2026-11-07 Suda 收窄）进汇总：商品卡触发率、商品卡提及率、
-  卡位都只用这两类；按意图类型筛选靠报告切片，这里另给全部意图的触发率拆分
-  （shopping_mode_rate_by_intent）作诊断。Suda 2026-11-06 定，口径见 metric-scope-and-copy-contract.md。
+- 全部意图类型的题都进汇总（Suda 2026-11-23，推翻 2026-11-07 只算发现、替代）：商品卡触发率、商品卡提及率、
+  卡位都用全部有效回答；要看某类题靠报告的意图类型 / 主题筛选，shopping_mode_rate_by_intent 另给逐意图触发率。
+  口径见 metric-scope-and-copy-contract.md。
 - 没有商品字段的平台（Perplexity）返回 None，显示「—」，不按 0% 计。
 """
 
@@ -52,8 +52,10 @@ PLATFORM_PRODUCT_FIELDS = {
 }
 
 
-# 进商品卡汇总的意图类型（后端 diagnostic_intent 内部值）。评估、验证、问题解决、售后照常抽卡，不进汇总。
-SHOPPING_SCOPE_INTENTS = ("discovery", "alternatives")
+# 进商品卡汇总的意图类型（后端 diagnostic_intent 内部值）。全部意图都进（Suda 2026-11-23，
+# 推翻 2026-11-07 只算发现、替代）；用户按主题、意图类型筛选自己看细分。
+SHOPPING_SCOPE_INTENTS = ("discovery", "information", "sentiment", "competitor", "alternatives",
+                          "trust", "transactional", "support", "validation", "accuracy", "market_perception")
 
 
 def product_field_returned(platform: str | None, task_result: dict | None) -> bool | None:
@@ -421,10 +423,10 @@ def compute_shopping_metrics(config: dict, valid_answers: list[dict], percent, a
         "methodology": {
             "platform_scope": "按平台分开计算，不跨平台合并；无商品字段的平台不计（显示 —）",
             "card_source": {k: v for k, v in PLATFORM_PRODUCT_FIELDS.items()},
-            "intent_scope": "发现、替代两类题进汇总；shopping_mode_rate_by_intent 另给全部意图的触发率",
-            "shopping_mode_rate_denominator": "该平台发现、替代题的有效回答；分子为其中至少有一张商品卡的回答",
-            "shopping_visibility_denominator": "该平台发现、替代题里出现商品卡的有效回答；分子为至少有一张该品牌商品卡的回答（回答级去重）",
-            "shopping_exposure_rate_denominator": "该平台发现、替代题的有效回答（推导指标 = 商品卡提及率 × 商品卡触发率）",
+            "intent_scope": "全部意图类型的题都进汇总；shopping_mode_rate_by_intent 另给逐意图的触发率",
+            "shopping_mode_rate_denominator": "该平台全部意图的有效回答；分子为其中至少有一张商品卡的回答",
+            "shopping_visibility_denominator": "该平台全部意图里出现商品卡的有效回答；分子为至少有一张该品牌商品卡的回答（回答级去重）",
+            "shopping_exposure_rate_denominator": "该平台全部意图的有效回答（推导指标 = 商品卡提及率 × 商品卡触发率）",
 
             "average_card_position": "品牌/商品在回答内首张卡的位置（平台字段顺序，1 起）取平均",
             "product_field_returned": "本次采集里该平台有没有任何一条回答带商品字段；没有时报告写「接口未返回」",

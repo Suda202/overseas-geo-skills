@@ -402,9 +402,7 @@ def run_checks() -> list[dict]:
     selection_case("selection_topic_below_size_floor_warns", selection_thin_topic, True)
 
 
-    def selection_verification(b: dict) -> None:
-        b["questions"][4].update(prompt_type="Verification")
-    selection_case("verification_rejected_from_selection_bank", selection_verification, False)
+    # 2026-11-19：Verification 恢复为诊断型类型，不再从选词题库拒收（见 typed_row_verification_type_accepted）
     # 3.0.0: changeability is judged on the monitoring side; selection no longer reads the field
     selection_case("changeability_field_not_read_by_selection",
                    lambda b: b["questions"][0].update(changeability="待试跑"), True)
@@ -430,7 +428,7 @@ def run_checks() -> list[dict]:
         b["config"]["topics"] = [t for t in b["config"]["topics"] if t["topic_id"] != "travel_cmp"]
     typed_case("typed_mixed_type_topic_fails", typed_mixed_topic, False)
     typed_case("typed_row_invalid_type",
-               lambda b: typed_slice(b, "M-009").update(prompt_type="Verification"), False)
+               lambda b: typed_slice(b, "M-009").update(prompt_type="CategoryAwareness"), False)
     typed_case("typed_row_with_prompt_types_list_is_old_structure",
                lambda b: typed_slice(b, "M-001").update(prompt_types=[{"type": "Discovery"}, {"type": "Competitor"}]),
                False)
@@ -459,8 +457,10 @@ def run_checks() -> list[dict]:
                  "prompt_type": ptype, "attributes": ["账单合并"], "priority": "中",
                  "priority_basis": "中：跟同任务的发现行。开行依据：假设：销售常被问到"})
     typed_case("typed_eight_types_without_journey_stage", typed_eight_types_no_stage, True)
-    typed_case("typed_row_accuracy_type_rejected",
-               lambda b: typed_slice(b, "M-009").update(prompt_type="Accuracy"), False)
+    typed_case("typed_row_verification_type_accepted",
+               lambda b: typed_slice(b, "M-009").update(prompt_type="Verification"), True)
+    typed_case("typed_row_accuracy_type_accepted",
+               lambda b: typed_slice(b, "M-009").update(prompt_type="Accuracy"), True)
 
     expected_errors = {
         "selection_opened_type_row_without_priority_fails": "slice M-003: priority must be",
@@ -469,7 +469,6 @@ def run_checks() -> list[dict]:
         "constraint_table_ref_not_listed": "attribute_ref is not in config.attribute_plan",
         "constraint_table_missing_on_this_line_fails": "预算控制:没有",
         "spanish_query_in_english_bank": "q3: query reads as 'es', not the collection language 'en'",
-        "verification_rejected_from_selection_bank": "unsupported prompt_type 'Verification'",
 
         "competitor_named_in_discovery": "names a brand or competitor ['SAP Concur']",
         "target_brand_named_in_discovery": "names a brand or competitor ['Example']",
@@ -485,7 +484,7 @@ def run_checks() -> list[dict]:
         "selection_row_without_priority": "ERROR: slice M-001: priority must be 高 / 中 / 低",
         "typed_prompt_on_wrong_type_row": "q4: prompt_type Competitor does not match row M-001 (Discovery)",
         "typed_mixed_type_topic_fails": "Gate 66: Topics mixing Prompt types (travel: Competitor + Discovery)",
-        "typed_row_invalid_type": "slice M-009: prompt_type 'Verification' must be one of",
+        "typed_row_invalid_type": "slice M-009: prompt_type 'CategoryAwareness' must be one of",
         "typed_row_with_prompt_types_list_is_old_structure":
             "unsupported old structure in current.json: matrix rows with the prompt_types list (1: M-001)",
     }

@@ -10,7 +10,9 @@
   trends    比较同一品类 2–5 种叫法在目标市场的 Google Trends 相对热度，并按日历月看季节性；
             一次请求最多 5 个词，按请求计费。只有同一次请求里的词能互相比较（Trends 按请求内最高值
             归一到 100），所以一组叫法必须一次给齐。--queries 另给每个词各取一次相关查询（热门与飙升），
-            每个词多 1 次付费调用；飙升查询只是候选新叫法，要在评价或社区里确认买家也这么说才进题面。
+            每个词多 1 次付费调用；飙升查询只是候选新叫法，要在评价或社区里确认买家也这么说才进题面；
+            用上位活动词（如 fitness competition）查时，相关查询里的具体赛事、玩法另作使用场景候选
+            （geo-prompt-selection-builder/references/signal-sources.md → Google Trends）。
 
     python3 -I collect_keyword_data.py balance
     python3 -I collect_keyword_data.py volume "automatic litter box" "self cleaning litter box" --country us --lang en --out <目录>
@@ -39,7 +41,7 @@
                             （>10,000 / >1000 / >100 / <100；确切数在 volumes.csv），译文、目标客户、约束条件留空待人工判
   volumes.csv               内部用：关键词、月均搜索量、近 12 个月逐月量、竞争度、CPC、搜索意图
   summary.json              调用次数、累计花费、失败项
-  trends 子命令的产物不进 signals.csv（Trends 只定用哪个品类词和避开哪几个月，不是需求信号）：
+  trends 子命令的产物不进 signals.csv（Trends 定用哪个品类词、避开哪几个月、找新兴场景线索，不是需求信号）：
   trends.csv                每个叫法的平均热度、排名、热度最高的三个日历月、逐周序列
   trends_queries.csv        --queries 时：每个叫法的热门与飙升相关查询
   summary.json 的 note      可直接贴进主题优先级依据与任务记录的一句话（叫法对比 + 旺季月份）

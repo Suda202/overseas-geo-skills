@@ -55,7 +55,7 @@
 | `zh_translation` | 中文含义 | 中文含义 |
 | `topic_id` | 所属主题 | 主题 |
 | `region` | 市场 | 市场 |
-| `prompt_type` | 同所在行的 `prompt_type`；Verification、Accuracy 报错 | 意图类型 |
+| `prompt_type` | 同所在行的 `prompt_type`；验证、准确性只在诊断场景写 | 意图类型 |
 | `slice_ref` | 所在矩阵行；目标客户、场景、意图类型、产品线从这一行读 | 所属切片 |
 | `attribute_ref` | 主约束条件，取 `attribute_plan` 的选项名（门禁 67）；宽泛品类题留空字符串 | 约束条件（第一个） |
 | `constraints` | 题面条件关键词列表（买家说法，不是约束条件选项名），没有写 `[]`；W36、W37 用它核对依据 | — |
@@ -71,7 +71,7 @@
 
 - 一个市场 × 一条产品线一个文件，每个文件最多 60 条；`diagnosis_intent` 填后端枚举（`discovery`、`alternatives`、`competitor`、`evaluation`），统计口径以 shared/canonical-intent-mapping.md 为准。
 - `tags` 写按 `tag_dimensions` 派生的标签，不合格的值不出并打印原因。替代题直接传 `alternatives`，`tags` 不写类型名。
-- 问题解决、信任、交易、售后没有后端枚举，不导出并打印题号；停测、需修改的不导出；旧结构题库退出码 2。
+- 问题解决、信任、交易、售后、验证、准确性没有后端枚举，不导出并打印题号；停测、需修改的不导出；旧结构题库退出码 2。
 
 交付说明要告诉品牌方：替代题和问题解决题的读数现在只在基线 HTML 报告里看得到。
 
@@ -97,7 +97,7 @@ python3 -I scripts/validate_after_sales_set.py BANK.json
 | — | `config.slices` 是对象列表；每行有 `slice_id` 且不重复；题的 `slice_ref` 指向存在的行 |
 | 43 | 发现行和已开放目标对应类型的行，业务优先级取值是高 / 中 / 低；题的主题和所在行一致 |
 | 47 | 每条产品线 × 每个市场候选题超过 60 道（成本上限） |
-| 60 | 题和行的 `prompt_type` 是八类之一（验证、准确性、品类认知都不收） |
+| 60 | 题和行的 `prompt_type` 是八类或诊断型两类（验证、准确性）之一；品类认知不收 |
 | 61 | 题的类型和所在行一致 |
 | 66 | 一个主题只放一种意图类型 |
 | 67 | 矩阵行或题挂了约束条件时必须有约束条件表；每条 `brand_status` 取 有 / 没有 / 待确认；`vs_competitors` 取 明显优势 / 明显劣势 / 持平 / 未知；行的 `attributes` 和题的 `attribute_ref` 都在表里 |

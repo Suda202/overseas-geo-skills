@@ -31,6 +31,7 @@ LAYER = SKILL / "scripts/layer_readings.py"
 LABELS = SKILL / "scripts/label_batches.py"
 PAGE = SKILL / "scripts/page_gap.py"
 DIAG = SKILL / "scripts/diagnose.py"
+DIFF = SKILL / "scripts/difficulty.py"
 REPORT = SKILL / "reports/gap-diagnosis-e2e.md"
 
 TARGET = "Veyra"
@@ -353,6 +354,40 @@ def case_outputs(root: Path, rd: Path):
     check("D4 退出码 0", proc.returncode == 0, f"rc={proc.returncode}")
 
 
+def case_difficulty(root: Path, rd: Path):
+    """竞争难度与优化难度：轮换位、已达标、已进候选、可改变性、点名题、主题固定品牌。"""
+    ch = root / "changeability.csv"
+    with ch.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, ["question_id", "suggested", "step", "reason"])
+        w.writeheader()
+        w.writerow({"question_id": "G-04", "suggested": "低", "step": "第三方主导",
+                    "reason": "只有 0% 的有引用回答引了厂商官网"})
+    out = root / "difficulty"
+    proc = run([DIFF, "--readings", rd, "--changeability", ch, "--out", out])
+    check("K1 四份产物都在、退出码 0", proc.returncode == 0 and all(
+        (out / f).exists() for f in ("prompts.csv", "topics.csv", "difficulty.md", "difficulty.json")),
+          proc.stdout + proc.stderr)
+    data = json.loads((out / "difficulty.json").read_text(encoding="utf-8"))
+    by_q = {r["question_id"]: r for r in data["prompts"]}
+    g1, g2, g3, g4, g5, g6 = (by_q[f"G-0{i}"] for i in range(1, 7))
+    check("K2 两家竞品每次都在、每答只列 2 家 → 轮换位 0，竞争难度高",
+          g1["竞争难度"] == "高" and "轮换位 0" in g1["竞争依据"], g1["竞争依据"])
+    check("K3 本品零提及且竞争难度高 → 优化难度高", g1["优化难度"] == "高", g1["优化依据"])
+    check("K4 本品提及率 ≥30% → 已达标", g2["优化难度"] == "已达标", g2["优化依据"])
+    check("K5 点名题 → 不适用", g3["竞争难度"] == "不适用" and g3["优化难度"] == "不适用", str(g3))
+    check("K6 可改变性低 → 优化难度高并写出原因", g4["优化难度"] == "高" and "第三方主导" in g4["优化依据"],
+          g4["优化依据"])
+    check("K7 有效回答不到 7 条 → 标预判", g5["预判"] == "预判", str(g5.get("n")))
+    check("K8 本品在 29% 的回答里出现 → 已进候选，优化难度低（先于竞争难度高）",
+          g6["优化难度"] == "低" and g6["竞争难度"] == "高", f"{g6['竞争难度']} / {g6['优化依据']}")
+    t1 = next(t for t in data["topics"] if t["topic"] == "portable solar chargers")
+    check("K9 主题：Lumo 每道题都在、份额领先 → 单一主导", t1["竞争格局"] == "单一主导" and "Lumo" in t1["竞争依据"],
+          f"{t1['竞争格局']} / {t1['竞争依据']}")
+    check("K10 主题档取题的多数档并给出分布", t1["竞争难度"] in ("高", "中", "低") and bool(t1["竞争难度分布"]),
+          t1["竞争难度分布"])
+    check("K11 可先做的题列出优化难度低的题", "G-06" in t1["可先做的题"], t1["可先做的题"])
+
+
 def main() -> int:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix="gap-e2e-"))
@@ -366,6 +401,7 @@ def main() -> int:
         case_labels(tmp, rd)
         case_pages(tmp, rd)
         case_outputs(tmp, rd)
+        case_difficulty(tmp, rd)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

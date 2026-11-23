@@ -14,6 +14,10 @@
    `platform-b` 是牌子 B 的别名 → 归属可能挂错，必须确认。只报这种有证据的，不按
    「域名和品牌名对不上」泛泛提示（母公司、产品名、缩写都会误报）。
 3. 域名写法不规范：带协议、路径、大写或 www.，会绕开精确匹配。
+4. 疑似同一品牌拆成两条（2026-11-20）：两条品牌的别名有交集、一条的别名整词出现在另一条的名字或别名里
+   （Webull ⊂ Webull Hong Kong、Futu ⊂ Futu Securities）、中文别名互相包含（致富 ⊂ 致富證券），
+   或官网域名主标签相同（webull.com 与 webull.hk）。同一品牌拆开会把它的提及分给两家、两家都偏低。
+   确实是两家公司（中銀香港与中銀國際）就写进词表顶层 ``distinct_brands: [["A", "B"], …]``，不再报。
 
 退出码：0 没有问题；1 有必须确认的问题；2 输入读不了。
 """
@@ -52,6 +56,64 @@ def same_company(a: dict, b: dict) -> bool:
     aliases_a = {norm_name(x) for x in a.get("aliases") or [] if norm_name(x)}
     aliases_b = {norm_name(x) for x in b.get("aliases") or [] if norm_name(x)}
     return bool(aliases_a & aliases_b)
+
+
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\u0e00-\u0e7f]")
+
+
+def _names(brand: dict) -> set[str]:
+    return {str(x).strip() for x in [brand.get("name"), *(brand.get("aliases") or [])] if str(x or "").strip()}
+
+
+def _labels(brand: dict) -> set[str]:
+    out = set()
+    for key in ("official_domains", "domains"):
+        for dom in brand.get(key) or []:
+            label = (registrable_domain(normalize_host(dom)) or "").split(".")[0]
+            if len(label) >= 3:
+                out.add(label)
+    return out
+
+
+def _word_in(short: str, long: str) -> bool:
+    if len(norm_name(short)) < 3 or short.casefold() == long.casefold():
+        return False
+    return re.search(r"(?<![0-9a-z])" + re.escape(short.casefold()) + r"(?![0-9a-z])", long.casefold()) is not None
+
+
+def split_suspects(raw: dict) -> list[str]:
+    """疑似同一品牌被拆成两条的品牌对（见文件开头第 4 类）。``raw`` 是整份词表 JSON。"""
+    brands = raw.get("brands") if isinstance(raw, dict) else raw
+    if not isinstance(brands, list):
+        return []
+    allowed = {frozenset(map(str, pair)) for pair in (raw.get("distinct_brands") or [])
+               if isinstance(raw, dict) and isinstance(pair, (list, tuple)) and len(pair) == 2}
+    out = []
+    for i, a in enumerate(brands):
+        for b in brands[i + 1:]:
+            na, nb = str(a.get("name")), str(b.get("name"))
+            if na == nb or frozenset((na, nb)) in allowed:
+                continue
+            A, B = _names(a), _names(b)
+            why = None
+            shared = {x.casefold() for x in A} & {x.casefold() for x in B}
+            if shared:
+                why = f"别名重复：{sorted(shared)[0]}"
+            if not why:
+                for s, l, ls in ((A, B, nb), (B, A, na)):
+                    hit = next(((x, y) for x in s for y in l
+                                if (_CJK.search(x) and len(x) >= 2 and x in y and x != y)
+                                or (not _CJK.search(x) and _word_in(x, y))), None)
+                    if hit:
+                        why = f"「{hit[0]}」包含在「{hit[1]}」里"
+                        break
+            if not why:
+                common = _labels(a) & _labels(b)
+                if common:
+                    why = f"官网域名主标签相同：{sorted(common)[0]}"
+            if why:
+                out.append(f"{na} ↔ {nb}（{why}）")
+    return out
 
 
 def main() -> int:
@@ -106,6 +168,9 @@ def main() -> int:
                             continue
                         if label in keys and label not in own:
                             hard.append(f"{path.name}：{brand.get('name')} 的域名 {dom} 标签是「{other.get('name')}」的名字，归属可能挂错")
+
+        for item in split_suspects(json.loads(path.read_text(encoding="utf-8"))):
+            hard.append(f"{path.parent.name}/{path.name}：疑似同一品牌拆成两条 {item}；是同一家就合并成一条，确是两家写进 distinct_brands")
 
     print(f"检查 {len(args.lexicon)} 份词表；必须确认 {len(hard)} 条，提示 {len(soft)} 条")
     for item in hard:

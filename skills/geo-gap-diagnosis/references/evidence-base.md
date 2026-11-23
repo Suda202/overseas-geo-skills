@@ -27,6 +27,19 @@
 | GEO 打分高就会被推荐 | 不用 | Discovery Gap：无相关 |
 | 优化一次长期稳住 | 不用 | 引用集合同日重跑 Jaccard 0.32–0.43（C 文件 Schulte et al.） |
 
+## 难度（第 8 节，2026-11-20 核验）
+
+原文与核验记录在 `30-选Topic与生词/方案/优化难度-外部方法核验-20261120.md`。
+
+| 规则 | 依据 | 出处 |
+|---|---|---|
+| 竞争难度看竞品强度和可得位置 | Semrush Topic Difficulty：Competitor strength（常被提及的品牌是否知名权威）+ Opportunity size（可得位置相对全站均值），只到主题层，公式不公开 | semrush.com/kb/1607-semrush-ai-visibility-data |
+| 固定品牌与单一主导的门槛 | Kevin Indig（1,094 个主题、5 万多品牌的 ChatGPT 数据）：主导 = 5 道题里至少 4 道出现且份额领先第二名 ≥5 个点；主导者次月 90.4% 仍第一；换位时原领先中位数 1.3 点、保住时 2.9 点 | growth-memo.com/p/does-topical-authority-matter-in |
+| 引用来源结构只解释怎么改，不定竞争难度 | Indig：最常被引的域名只有 20.8% 是最常被提及的品牌；Profound 按来源类型选站内或站外路径 | 同上；tryprofound.com/articles/ai-marketing-agents-outreach |
+| 不合成一个难度分、不承诺涨幅 | Profound、Ahrefs、Writesonic、AirOps、Similarweb 都没有提示词或主题难度分；arXiv 2604.07585 把「稳定性指标能否反映优化效果」列为未来工作 | 核验文件 B 部分 |
+
+第 8 节阈值（80%、50%、5 个点、轮换位 1 / 3、已进候选 20%、已达标 30%）里，80% 和 5 个点取自 Indig，30% 沿用诊断的 `mention_ok`，其余是 2026-11-20 用路拓（ChatGPT 7 次）、老虎 HK / SG（3 次试跑）三份数据定的起点。
+
 ## 第一版阈值的来历
 
 `diagnose.py` 的 PARAMS 没有外部标准。`min_valid` 7 沿用正式基线每格 7 次；`hold_margin` 10 个点、`retr_low` 20%、`mention_ok` 30%、推荐占比 50% 是 2026-11-16 用路拓（ChatGPT 美国 7 次）和 Housebell（三平台新加坡 5 次）两份数据定的起点，积累客户后按诊断结果和人工复核的一致情况校准。

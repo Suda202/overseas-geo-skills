@@ -112,10 +112,23 @@ def stage_crawl_integrity(args, out: Path) -> None:
 
 
 def stage_lexicon(args) -> None:
+    candidates = args.out_dir / "brand-candidates.csv"
     if args.lexicon.exists():
         print(f"✓ [1 品牌词表] {args.lexicon}")
+        # 词表已有也要查漏：品类词表跨客户复用时，新采集里的长尾同类厂商常不在表里（2026-11-20）。
+        cmd = [sys.executable, SKILLS / "geo-metrics" / "scripts" / "mine_brand_lexicon.py",
+               "--collect-dir", args.collect, "--lexicon", args.lexicon, "--case", args.case,
+               "--out", candidates, "--check", "--show-unknown", "0"]
+        print(f"→ [1 词表查漏] {' '.join(str(c) for c in cmd)}")
+        if not args.dry_run and subprocess.run([str(c) for c in cmd]).returncode == 1:
+            message = (f"[1 词表查漏] 有 A 档候选没进词表，或有疑似同一品牌拆成两条(见上方清单与 {candidates} 的 tier 列):"
+                       f"同类厂商收进 brands 并写 same_category,不是品牌的写进 stopwords;同一家合并成一条,"
+                       f"确是两家写进 distinct_brands,再重跑。不处理会让声量份额分母偏小、竞品漏判或被拆低。")
+            if args.allow_lexicon_gaps:
+                print(f"⚠ {message} 已按 --allow-lexicon-gaps 放行:{args.allow_lexicon_gaps}")
+            else:
+                raise Pause(message + "确实不处理时加 --allow-lexicon-gaps \"<理由>\"。")
         return
-    candidates = args.out_dir / "brand-candidates.csv"
     run([sys.executable, SKILLS / "geo-metrics" / "scripts" / "mine_brand_lexicon.py",
          "--collect-dir", args.collect, "--out", candidates], args.dry_run, "1 词表挖掘")
     raise Pause(
@@ -261,7 +274,16 @@ def stage_verify_render(args, out: Path) -> None:
         args.dry_run, "5 独立校验")
     # 页面多选筛选由 report-engine.js 从 facts 现算；每个预算切片对应的单选组合必须与引擎逐项一致
     run(["node", HERE / "check_engine_parity.js", out / "report-data.json"], args.dry_run, "5b 引擎对账")
-    html = out / f"{args.brand_name or 'report'}-售前诊断报告.html"
+    if args.difficulty:
+        # 竞争难度与优化难度：geo-gap-diagnosis 的 difficulty.py 判，这里只接入并写成对客说法
+        run([sys.executable, HERE / "attach_difficulty.py", "--report", out / "report-data.json",
+             "--difficulty", args.difficulty, "--out", out / "report-data.json"], args.dry_run, "5c 难度接入")
+    # 售后基线也走这条流水线（prepare_baseline.py 在 Case 里写「报告类型」），文件名跟着类型走
+    try:
+        kind = json.loads(args.case.read_text(encoding="utf-8")).get("报告类型") or "售前诊断"
+    except (OSError, ValueError, AttributeError):
+        kind = "售前诊断"
+    html = out / f"{args.brand_name or 'report'}-{kind}报告.html"
     run([sys.executable, HERE / "render_report.py",
          "--data", out / "report-data.json", "--out", html], args.dry_run, "6 渲染")
     print(f"完成:{html}\n最后一步是人工/代理浏览器验证:逐个切国家/平台/主题,确认各模块有数、无空白、无变形。")
@@ -284,6 +306,10 @@ def main() -> int:
     parser.add_argument("--brand-suffixes",
                         help="逗号分隔的品类/产品线后缀,展示时从品牌名剥掉(如 LED,Display);"
                              "留空用内置净水器词表兜底")
+    parser.add_argument("--allow-lexicon-gaps", default="", metavar="理由",
+                        help="词表查漏不通过时仍继续(写明理由);缺省暂停")
+    parser.add_argument("--difficulty", type=Path,
+                        help="geo-gap-diagnosis difficulty.py 的输出目录或 difficulty.json;给了才出「竞争与优化难度」模块")
     parser.add_argument("--allow-unjudged-domains", default="", metavar="理由",
                         help="引用来源未判读超过 5%% 时流水线默认暂停等补判；写明理由才放行")
     parser.add_argument("--source-limit", type=int,

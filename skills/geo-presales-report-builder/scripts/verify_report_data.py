@@ -104,8 +104,9 @@ BODY_REF_DEF = re.compile(r"^\s*\[(\d+)\]:\s*(\S+?)(?:\s+\"([^\"]*)\")?\s*$", re
 BODY_REF_MARKER = re.compile(r"\(\[([^\]\n]{1,80})\]\[(\d+)\]\)")
 BODY_REF_MARKER_BARE = re.compile(r"(?<!\[)\[([^\]\n]{1,80})\]\[(\d+)\]")
 DISCOVERY_LABEL = "发现"
-# 提及类指标样本：按顺序取第一组有有效回答的意图（与 core metrics.visibility_answers 同口径，按中文标签独立写一份）
-VISIBILITY_LABEL_GROUPS = [{"发现", "替代", "品类认知"}]
+# 提及类指标样本：全部意图类型（与 core metrics.visibility_answers / build_report_data 同口径，
+# 按中文标签独立写一份；Suda 2026-11-23 推翻只算发现、替代）
+VISIBILITY_LABEL_GROUPS = [{"发现", "问题解决", "评估", "对比", "替代", "信任", "交易", "售后", "能力核查", "准确性", "品类认知"}]
 TYPE_TOPIC_PREFIX = "类型:"
 
 TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
@@ -113,7 +114,7 @@ TOLERANCE = 0.051  # 百分比 1 位小数的舍入余量
 # 有商品卡字段的平台目录（与 core shopping.PLATFORM_PRODUCT_FIELDS 同集合，刻意不 import）
 SHOPPING_PLATFORMS = {"chatgpt", "overview", "aimode", "gemini"}
 # 进商品卡汇总的意图类型（与 core shopping.SHOPPING_SCOPE_INTENTS 同集合，按中文标签独立写一份）
-SHOPPING_SCOPE_LABELS = {"发现", "替代"}
+SHOPPING_SCOPE_LABELS = {"发现", "问题解决", "评估", "对比", "替代", "信任", "交易", "售后", "能力核查", "准确性", "品类认知"}
 
 
 # ------------------------------------------------------------------ 复算
