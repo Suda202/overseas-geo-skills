@@ -36,6 +36,16 @@ python3 scripts/infer_brand_domains.py --collect <采集目录> \
 
 高置信规则是「引用注册域的标签 == 品牌名/别名归一形式」（`viu.com`↔Viu）；推不出的（缩写类，如 `mgtv.com`↔Mango TV）进候选清单，**联网搜索或人工确认后**写回词表的 `official_domains`，不要用模糊相似度硬猜。目标与配置竞品的域名以 Case 为准，词表里的同名条目只做别名合并。
 
+反向也要查：**引用里出现、正文没点名的同品类厂商站**，按其官网域名补进对应品牌条目（词表没有就新建），否则判「其他」会把竞品网站压低。「其他」占比偏高时先做这一步，再逐域名判缓存；哪些域名是哪个品类的品牌站可看 `assets/domain-brand-sites.json` 的 `known_brand` / `known_categories`。**只有 `known_categories` 与本品类一致（经 `category-taxonomy.json` 归一后同一个键）的条目可以拿来判竞品并补词表**；不同品类的备注只说明它是企业站，不作竞品判断依据。共享缓存不能写 competitor，竞品关系只写在客户词表和 Case 里；同一个域名换了客户要重新补。
+
+先列出本品类已经被别的项目判过的域名，能直接参考（品类键取 `category-taxonomy.json` 的 `categories`，示例是 `dash cam`）：
+
+```bash
+python3 -c 'import json,sys; cat=sys.argv[1]; idx=json.load(open("assets/domain-brand-sites.json")); [print(d, r.get("brands"), r.get("roles")) for d,r in idx.items() if cat in (r.get("categories") or [])]' "dash cam"
+```
+
+索引由 `build_brand_site_index.py` 从各项目重建；新品类要先进 `category-taxonomy.json` 才归得进索引，刚开的品类一开始没有可参考条目，属正常。
+
 ## 补判未登记的引用域名（不是封闭集合）
 
 ```bash

@@ -14,7 +14,12 @@
   "precision measuring instrument": {"industry": "工业品与零部件", "label": "精密量具", "aliases": ["calipers", "callipers", "borescope", "卡尺", "量具"]},
   "video streaming": {"industry": "内容与流媒体", "label": "视频流媒体", "aliases": ["video-streaming", "video streaming", "视频流媒体", "流媒体"]},
   "water purifier": {"industry": "消费电子与智能家居", "label": "净水器", "aliases": ["water-purifier", "water purifier", "净水器"]},
-  "corporate travel management": {"industry": "B2B 软件与 SaaS", "label": "企业差旅管理", "aliases": ["corporate-travel", "corporate travel", "企业差旅", "差旅"]}
+  "corporate travel management": {"industry": "B2B 软件与 SaaS", "label": "企业差旅管理", "aliases": ["corporate-travel", "corporate travel", "企业差旅", "差旅"]},
+  "vr-amusement-equipment": {
+   "industry": "工业品与零部件",
+   "label": "VR 游艺设备",
+   "aliases": ["vr-amusement-equipment", "vr amusement equipment", "vr游乐设备", "vr 游乐设备", "vr arcade", "vr体验馆", "虚拟现实游乐"]
+  }
  },
  "markets": {
   "SG": ["singapore", "新加坡"],

@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO HTML report — the presales diagnosis report or the after-sales trial / formal baseline report, which since 2026-11-20 are one template (single-file HTML, the Botslab G980H template; baseline inputs are prepared by scripts/prepare_baseline.py from multi-round collection directories) — directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select language / region / platform / intent type / topic / tag filtering; Query Fan-outs show a Chinese translation when `meta.fanout_zh` is present; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to define metric calibers or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.17.0"
+  version: "2.17.2"
 ---
 
 # 海外 GEO 售前诊断报告生成
@@ -67,7 +67,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    python3 ../geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
    ```
 
-   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容「标准名 → 别名 list」的 dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。词表已有时也要加 `--lexicon <词表> --check` 查漏：A 档候选（推荐位或商品卡上出现过、词表没收）逐个过完再进第 4 步，规则见 `geo-metrics` SKILL「品牌词表」。驾驶脚本在查漏不通过（有 A 档没收，或词表里有疑似同一品牌拆成两条）时停在这一步；确实不处理加 `--allow-lexicon-gaps "<理由>"`。
+   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容「标准名 → 别名 list」的 dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。词表已有时也要加 `--lexicon <词表> --check` 查漏：A 档候选（推荐位或商品卡上出现过、词表没收）逐个过完再进第 4 步，规则见 `geo-metrics` SKILL「品牌词表」。**同时清点引用域名**：报告数据里判成「其他」的企业站，如果是同品类厂商官网，把域名补进对应品牌条目（词表没有就新建），否则这些引用进不了「竞品网站」；`domain-brand-sites.json` 只参考 `known_categories` 与本品类一致的条目，不同品类的不判竞品。驾驶脚本在查漏不通过（有 A 档没收，或词表里有疑似同一品牌拆成两条）时停在这一步；确实不处理加 `--allow-lexicon-gaps "<理由>"`。
 
    **开放品牌官网域名推断**与**引用域名补判**都归 geo-metrics，流程见 [geo-metrics/references/domain-judging-workflow.md](../geo-metrics/references/domain-judging-workflow.md)：先推开放品牌官网域名（`infer_brand_domains.py`），再收待判域名（`collect_domain_candidates.py`，带 `--lexicon`）、补证据、判读写回 `geo-metrics/assets/domain-categories.json`，最后跑 `check_domain_judgments.py` 自检，退出码非 0 不许进第 4 步。
 
