@@ -611,11 +611,17 @@ class Recomputer:
         return out
 
     def _official_owner(self, host: str) -> str | None:
-        """与后端 _classify_official 一致：按纳入对象顺序，第一个域名命中的胜出。"""
+        """与后端 _classify_official 一致：按纳入对象顺序，第一个域名命中的胜出。
+
+        非同类开放品牌（same_category 为 false）的官网不算「竞品网站」，跳过它；旧产物没有
+        same_category 字段时按同类处理，保证历史报告仍可复算。
+        """
         for obj in self.objects:
             for domain in obj["domains"]:
                 if domain_matches(host, domain):
-                    return obj["object_id"]
+                    if obj.get("role") == "target" or obj.get("same_category", True):
+                        return obj["object_id"]
+                    break
         return None
 
     def _rank_of(self, region: str, platform_dir: str, qid: int, object_id: str,
@@ -678,8 +684,20 @@ def run_checks(report: dict, collect: Path) -> list[str]:
     if status not in {"pending", "complete"}:
         failures.append(f"meta.sentiment_claims_status 取值异常：{status!r}")
     elif status == "complete":
+        def _slice_has_sentiment(slice_value: dict) -> bool:
+            sentiment = slice_value.get("sentiment") or {}
+            if (sentiment.get("summary") or {}).get("total"):
+                return True
+            # summary 是目标品牌口径：目标无信号、竞品有信号时 total=0，
+            # 但情感模块按 by_brand 判开（与 render_report.sentiment_switch 同口径）。
+            return any(
+                (row or {}).get("signal_total")
+                or (row or {}).get("positive")
+                or (row or {}).get("negative")
+                for row in (sentiment.get("by_brand") or {}).values()
+            )
         has_sentiment = any(
-            (slice_value.get("sentiment") or {}).get("summary", {}).get("total")
+            _slice_has_sentiment(slice_value)
             for slice_value in report.get("slices", {}).values()
         )
         if not has_sentiment:

@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (online runs Discovery only; locally the types of the goals the brand party picked), validate and export — as a Feishu client-confirmation Base, as 5-column upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for trial runs, baselines, collection or reports (geo-monitoring) — the brand party picks the formal set in the client Base — defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.22.0"
+  version: "3.22.1"
 ---
 
 # GEO Prompt Selection Builder（选词）

@@ -160,7 +160,9 @@
       var open = rows.filter(function (r) { return r.role === "open"; }).sort(function (a, b) {
         return ((b.mention_rate || 0) - (a.mention_rate || 0)) || cmp(a.name, b.name);
       });
-      var display = configured.concat(open.slice(0, 1));
+      // 展示品牌：本品与配置竞品必留，剩余名额按提及率补开放品牌，总数不超过 5
+      //（表单限 3 个竞品，所以正常是本品 + 3 竞品 + 1 个开放品牌；Suda 2026-11-27）。
+      var display = configured.concat(open).slice(0, 5);
       var byMention = display.slice().sort(function (a, b) {
         return ((b.mention_rate || 0) - (a.mention_rate || 0)) || ((a.role !== "target") - (b.role !== "target"));
       });
@@ -214,6 +216,8 @@
           official_citation_rate: vis.length ? fmtPct(visCited / vis.length) : "—"
         },
         competition: { mention: mentionRows, share: shareValues, rank: rankRows },
+        // 可见度与情感共用的展示品牌（与 competition.mention 同集，按提及率降序）。
+        brand_display: byMention.map(function (r) { return r.name; }),
         matrix: matrix,
         sources: sources(answers),
         sentiment: sentiment(sel),

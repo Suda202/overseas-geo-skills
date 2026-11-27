@@ -93,6 +93,66 @@ class TestOfficialRule:
         assert classify_source("rival-brand.com", config)["source_type"] == "competitor_official"
 
 
+class TestOfficialSameCategory:
+    """2026-11-24 起只有同类品牌的官网才算「竞品网站」；2026-11-27 起开放品牌没写
+    same_category 默认按同类算（词表开放品牌本来就摘自同品类回答），显式 false 的
+    别的品类厂商（NVIDIA / CVAT / Microsoft 这类）才交给域名缓存判类。"""
+
+    def _config(self, *objects, cache=None):
+        return {"objects": list(objects), "domain_category_cache": cache or {}}
+
+    def test_same_category_open_brand_is_competitor_official(self):
+        config = self._config(
+            {"object_id": "target", "role": "target", "official_domains": ["brand.com"]},
+            {"object_id": "open-01", "role": "open", "same_category": True,
+             "official_domains": ["shaip.com"]})
+        assert classify_source("shaip.com", config)["source_type"] == "competitor_official"
+        assert classify_source("shaip.com", config)["object_id"] == "open-01"
+
+    def test_non_same_category_open_brand_falls_through_to_cache(self):
+        config = self._config(
+            {"object_id": "target", "role": "target", "official_domains": ["brand.com"]},
+            {"object_id": "open-01", "role": "open", "same_category": False,
+             "official_domains": ["nvidia.com"]},
+            cache={"nvidia.com": "other"})
+        result = classify_source("nvidia.com", config)
+        assert result["source_type"] == "other"
+        assert result["basis"] == "domain_rule"
+
+    def test_non_same_category_open_brand_without_cache_is_unjudged(self):
+        config = self._config(
+            {"object_id": "target", "role": "target", "official_domains": ["brand.com"]},
+            {"object_id": "open-01", "role": "open", "same_category": False,
+             "official_domains": ["cvat.ai"]})
+        result = classify_source("cvat.ai", config)
+        assert result["source_type"] != "competitor_official"
+        assert result["basis"] == "unjudged"
+
+    def test_open_brand_without_same_category_is_competitor_official(self):
+        # 2026-11-27：词表开放品牌默认按同类竞品算，只有显式 false 才排除
+        config = self._config(
+            {"object_id": "target", "role": "target", "official_domains": ["brand.com"]},
+            {"object_id": "open-01", "role": "open", "official_domains": ["voices.com"]})
+        result = classify_source("voices.com", config)
+        assert result["source_type"] == "competitor_official"
+        assert result["object_id"] == "open-01"
+
+    def test_configured_competitor_unaffected(self):
+        # 配置竞品没写 same_category 也仍是竞品网站
+        config = self._config(
+            {"object_id": "target", "role": "target", "official_domains": ["brand.com"]},
+            {"object_id": "competitor-01", "role": "competitor",
+             "official_domains": ["appen.com"]},
+            cache={"appen.com": "other"})
+        assert classify_source("appen.com", config)["source_type"] == "competitor_official"
+
+    def test_target_still_brand_official(self):
+        config = self._config(
+            {"object_id": "target", "role": "target", "same_category": False,
+             "official_domains": ["brand.com"]})
+        assert classify_source("brand.com", config)["source_type"] == "brand_official"
+
+
 class TestLowVolume:
     def test_threshold_scales_with_volume(self):
         assert low_volume_threshold(216) == 5

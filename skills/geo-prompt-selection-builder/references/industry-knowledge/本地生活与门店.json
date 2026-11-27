@@ -1,0 +1,1013 @@
+{
+ "schema": 6,
+ "industry": "本地生活与门店",
+ "items": {
+  "constraints": {
+   "公司背景数据安全": {
+    "label": "公司背景与数据安全",
+    "by": {
+     "d97c7f6728b3|SA": "公司背景与数据安全",
+     "d97c7f6728b3|BR": "公司背景与数据安全"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "公司背景与数据安全": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "客服退款": {
+    "label": "客服与退款",
+    "by": {
+     "d97c7f6728b3|SA": "客服与退款",
+     "d97c7f6728b3|BR": "客服与退款"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "客服与退款": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "总价透明服务费加价": {
+    "label": "总价透明（服务费与加价）",
+    "by": {
+     "d97c7f6728b3|SA": "总价透明（服务费与加价）",
+     "d97c7f6728b3|BR": "总价透明（服务费与加价）"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "总价透明（服务费与加价）": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "支付方式含货到付款": {
+    "label": "支付方式（含货到付款）",
+    "by": {
+     "d97c7f6728b3|SA": "支付方式（含货到付款）"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "支付方式（含货到付款）": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "新客优惠优惠码": {
+    "label": "新客优惠与优惠码",
+    "by": {
+     "d97c7f6728b3|SA": "新客优惠与优惠码"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "新客优惠与优惠码": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "现在营业的餐厅": {
+    "label": "现在营业的餐厅",
+    "by": {
+     "d97c7f6728b3|SA": "现在营业的餐厅",
+     "d97c7f6728b3|BR": "现在营业的餐厅"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "现在营业的餐厅": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "药店配送": {
+    "label": "药店配送",
+    "by": {
+     "d97c7f6728b3|SA": "药店配送"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "药店配送": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "超市杂货即时配送": {
+    "label": "超市杂货即时配送",
+    "by": {
+     "d97c7f6728b3|SA": "超市杂货即时配送"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "超市杂货即时配送": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "送达质量温度缺件": {
+    "label": "送达质量（温度与缺件）",
+    "by": {
+     "d97c7f6728b3|SA": "送达质量（温度与缺件）",
+     "d97c7f6728b3|BR": "送达质量（温度与缺件）"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "送达质量（温度与缺件）": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "配送范围覆盖": {
+    "label": "配送范围覆盖",
+    "by": {
+     "d97c7f6728b3|SA": "配送范围覆盖"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "配送范围覆盖": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "配送费免配送": {
+    "label": "配送费与免配送",
+    "by": {
+     "d97c7f6728b3|SA": "配送费与免配送"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "配送费与免配送": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "配送速度准时": {
+    "label": "配送速度与准时",
+    "by": {
+     "d97c7f6728b3|SA": "配送速度与准时"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "配送速度与准时": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "餐厅品类选择": {
+    "label": "餐厅与品类选择",
+    "by": {
+     "d97c7f6728b3|SA": "餐厅与品类选择"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "餐厅与品类选择": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "麦加麦地那覆盖": {
+    "label": "麦加麦地那覆盖",
+    "by": {
+     "d97c7f6728b3|SA": "麦加麦地那覆盖"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "麦加麦地那覆盖": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "优惠券首单折扣": {
+    "label": "优惠券与首单折扣",
+    "by": {
+     "d97c7f6728b3|BR": "优惠券与首单折扣"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "优惠券与首单折扣": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "城市覆盖": {
+    "label": "城市覆盖",
+    "by": {
+     "d97c7f6728b3|BR": "城市覆盖"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "城市覆盖": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "实时追踪": {
+    "label": "实时追踪",
+    "by": {
+     "d97c7f6728b3|BR": "实时追踪"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "实时追踪": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "支付方式": {
+    "label": "支付方式",
+    "by": {
+     "d97c7f6728b3|BR": "支付方式"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "支付方式": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "超市药店酒水配送": {
+    "label": "超市药店酒水配送",
+    "by": {
+     "d97c7f6728b3|BR": "超市药店酒水配送"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "超市药店酒水配送": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "配送费免运费": {
+    "label": "配送费与免运费",
+    "by": {
+     "d97c7f6728b3|BR": "配送费与免运费"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "配送费与免运费": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "配送速度超时补偿": {
+    "label": "配送速度与超时补偿",
+    "by": {
+     "d97c7f6728b3|BR": "配送速度与超时补偿"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "配送速度与超时补偿": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "餐厅菜品选择": {
+    "label": "餐厅与菜品选择",
+    "by": {
+     "d97c7f6728b3|BR": "餐厅与菜品选择"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "餐厅与菜品选择": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   }
+  },
+  "audiences": {
+   "城市上班族": {
+    "label": "城市上班族",
+    "by": {
+     "d97c7f6728b3|SA": "城市上班族"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "城市上班族": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "城市居民": {
+    "label": "城市居民",
+    "by": {
+     "d97c7f6728b3|SA": "城市居民"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "城市居民": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "家庭": {
+    "label": "家庭",
+    "by": {
+     "d97c7f6728b3|SA": "家庭",
+     "d97c7f6728b3|BR": "家庭"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "家庭": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "朝觐副朝访客": {
+    "label": "朝觐和副朝访客",
+    "by": {
+     "d97c7f6728b3|SA": "朝觐和副朝访客"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "朝觐和副朝访客": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "餐厅老板": {
+    "label": "餐厅老板",
+    "by": {
+     "d97c7f6728b3|SA": "餐厅老板",
+     "d97c7f6728b3|BR": "餐厅老板"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "餐厅老板": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "中小城市居民": {
+    "label": "中小城市居民",
+    "by": {
+     "d97c7f6728b3|BR": "中小城市居民"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "中小城市居民": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "大城市上班族": {
+    "label": "大城市上班族",
+    "by": {
+     "d97c7f6728b3|BR": "大城市上班族"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "大城市上班族": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "大城市居民": {
+    "label": "大城市居民",
+    "by": {
+     "d97c7f6728b3|BR": "大城市居民"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "大城市居民": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   }
+  },
+  "scenes": {
+   "不出门补超市杂货": {
+    "label": "不出门补超市杂货",
+    "by": {
+     "d97c7f6728b3|SA": "不出门补超市杂货"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "不出门补超市杂货": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "住在麦加麦地那酒店时点餐": {
+    "label": "住在麦加麦地那酒店时点餐",
+    "by": {
+     "d97c7f6728b3|SA": "住在麦加麦地那酒店时点餐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "住在麦加麦地那酒店时点餐": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "想换一个更便宜或更快的平台": {
+    "label": "想换一个更便宜或更快的平台",
+    "by": {
+     "d97c7f6728b3|SA": "想换一个更便宜或更快的平台",
+     "d97c7f6728b3|BR": "想换一个更便宜或更快的平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "想换一个更便宜或更快的平台": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "找能送药的平台": {
+    "label": "找能送药的平台",
+    "by": {
+     "d97c7f6728b3|SA": "找能送药的平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "找能送药的平台": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "斋月开斋饭封斋饭点餐": {
+    "label": "斋月开斋饭和封斋饭点餐",
+    "by": {
+     "d97c7f6728b3|SA": "斋月开斋饭和封斋饭点餐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "斋月开斋饭和封斋饭点餐": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "日常点外卖时选平台": {
+    "label": "日常点外卖时选平台",
+    "by": {
+     "d97c7f6728b3|SA": "日常点外卖时选平台",
+     "d97c7f6728b3|BR": "日常点外卖时选平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "日常点外卖时选平台": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "深夜或临时找附近现在营业的店": {
+    "label": "深夜或临时找附近现在营业的店",
+    "by": {
+     "d97c7f6728b3|SA": "深夜或临时找附近现在营业的店"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "深夜或临时找附近现在营业的店": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "点咖啡甜品": {
+    "label": "点咖啡和甜品",
+    "by": {
+     "d97c7f6728b3|SA": "点咖啡和甜品"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "点咖啡和甜品": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "给全家点大单": {
+    "label": "给全家点大单",
+    "by": {
+     "d97c7f6728b3|SA": "给全家点大单"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "给全家点大单": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "订单出问题找客服退款": {
+    "label": "订单出问题找客服和退款",
+    "by": {
+     "d97c7f6728b3|SA": "订单出问题找客服和退款",
+     "d97c7f6728b3|BR": "订单出问题找客服和退款"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "订单出问题找客服和退款": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "选外卖平台入驻": {
+    "label": "选外卖平台入驻",
+    "by": {
+     "d97c7f6728b3|SA": "选外卖平台入驻",
+     "d97c7f6728b3|BR": "选外卖平台入驻"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "选外卖平台入驻": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "周末给全家点餐": {
+    "label": "周末给全家点餐",
+    "by": {
+     "d97c7f6728b3|BR": "周末给全家点餐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "周末给全家点餐": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "在本城找能用的外卖平台": {
+    "label": "在本城找能用的外卖平台",
+    "by": {
+     "d97c7f6728b3|BR": "在本城找能用的外卖平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "在本城找能用的外卖平台": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "想吃某类菜品时找平台": {
+    "label": "想吃某类菜品时找平台",
+    "by": {
+     "d97c7f6728b3|BR": "想吃某类菜品时找平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "想吃某类菜品时找平台": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "找能送超市药店或酒水的平台": {
+    "label": "找能送超市、药店或酒水的平台",
+    "by": {
+     "d97c7f6728b3|BR": "找能送超市、药店或酒水的平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "找能送超市、药店或酒水的平台": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "深夜找附近现在营业的店": {
+    "label": "深夜找附近现在营业的店",
+    "by": {
+     "d97c7f6728b3|BR": "深夜找附近现在营业的店"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "深夜找附近现在营业的店": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   }
+  },
+  "topics": {
+   "外卖平台对比": {
+    "label": "外卖平台对比",
+    "by": {
+     "d97c7f6728b3|SA": "外卖平台对比",
+     "d97c7f6728b3|BR": "外卖平台对比"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "外卖平台对比": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "外卖平台推荐": {
+    "label": "外卖平台推荐",
+    "by": {
+     "d97c7f6728b3|SA": "外卖平台推荐",
+     "d97c7f6728b3|BR": "外卖平台推荐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "外卖平台推荐": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "外卖平台替代": {
+    "label": "外卖平台替代",
+    "by": {
+     "d97c7f6728b3|SA": "外卖平台替代",
+     "d97c7f6728b3|BR": "外卖平台替代"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "外卖平台替代": 1
+    },
+    "markets": [
+     "BR",
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "超市杂货即时配送平台推荐": {
+    "label": "超市杂货即时配送平台推荐",
+    "by": {
+     "d97c7f6728b3|SA": "超市杂货即时配送平台推荐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "超市杂货即时配送平台推荐": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "麦加麦地那外卖平台推荐": {
+    "label": "麦加麦地那外卖平台推荐",
+    "by": {
+     "d97c7f6728b3|SA": "麦加麦地那外卖平台推荐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "麦加麦地那外卖平台推荐": 1
+    },
+    "markets": [
+     "SA"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "中小城市外卖平台推荐": {
+    "label": "中小城市外卖平台推荐",
+    "by": {
+     "d97c7f6728b3|BR": "中小城市外卖平台推荐"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "中小城市外卖平台推荐": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   },
+   "按菜品选外卖平台": {
+    "label": "按菜品选外卖平台",
+    "by": {
+     "d97c7f6728b3|BR": "按菜品选外卖平台"
+    },
+    "clients": [
+     "d97c7f6728b3"
+    ],
+    "names": {
+     "按菜品选外卖平台": 1
+    },
+    "markets": [
+     "BR"
+    ],
+    "categories": [
+     "food delivery app"
+    ]
+   }
+  },
+  "category_terms": {}
+ },
+ "channels": {},
+ "clients": {
+  "d97c7f6728b3|SA": {
+   "who": "d97c7f6728b3",
+   "market": "SA",
+   "category": "food delivery app",
+   "updated": "2026-11-25"
+  },
+  "d97c7f6728b3|BR": {
+   "who": "d97c7f6728b3",
+   "market": "BR",
+   "category": "food delivery app",
+   "updated": "2026-11-25"
+  }
+ },
+ "updated": "2026-11-25"
+}

@@ -6,6 +6,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "12taste.com": {
+  "category": "other",
+  "evidence": "香精香料技术资料站，提供 TDS",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "163.com": {
   "category": "media_review",
   "evidence": "首页标题：网易",
@@ -27,6 +34,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "21food.com": {
+  "category": "other",
+  "evidence": "食品 B2B 平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "25y-retirement.com": {
   "category": "media_review",
   "evidence": "首页标题：retire25 理財知識普及平台",
@@ -37,6 +51,13 @@
  "8world.com": {
   "category": "media_review",
   "evidence": "首页标题：8视界 - 新加坡最值得信赖的新闻平台，为您提供最全面的中文新闻 - 8world",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "aapyafoods.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -84,6 +105,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "accio.com": {
+  "category": "other",
+  "evidence": "电商 AI 工具",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "acer.com": {
   "category": "other",
@@ -314,6 +342,20 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "akaashgarg.com": {
+  "category": "media_review",
+  "evidence": "个人博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "al-dawaa.com": {
+  "category": "other",
+  "evidence": "Al-Dawaa 连锁药房官网（线下零售品牌）",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "algolabhk.com": {
   "category": "media_review",
   "evidence": "域名声誉与引用页面标题判断（首页抓取失败）",
@@ -405,6 +447,27 @@
   "source": "inherited",
   "verified_at": "2026-11-18"
  },
+ "amulyn.com": {
+  "category": "other",
+  "evidence": "植物提取物供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "amusementproducts.com": {
+  "category": "other",
+  "evidence": "FEC 设备供应商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "amusementtoday.com": {
+  "category": "media_review",
+  "evidence": "游乐行业新闻站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "amway.my": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -480,6 +543,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "anotherreality.studio": {
+  "category": "other",
+  "evidence": "AR/VR 开发公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "anvol.dev": {
+  "category": "other",
+  "evidence": "硬件工程与制造服务商，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "aoocci.com.in": {
   "category": "media_review",
@@ -579,6 +656,13 @@
   "verified_at": null,
   "first_seen": "2026-11-18"
  },
+ "apps.apple.com": {
+  "category": "other",
+  "evidence": "Apple App Store 应用商店页面（应用下载/评分页），属分发平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "aquakentro.com.my": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -619,12 +703,40 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "arborxr.com": {
+  "category": "other",
+  "evidence": "VR 设备管理 SaaS",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "arcfec.com": {
+  "category": "other",
+  "evidence": "游乐行业资源目录",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "areyouready.sg": {
   "category": "other",
   "evidence": "信用卡计算器；首页标题：Spend calculator — areyouready.sg",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "argaam.com": {
+  "category": "media_review",
+  "evidence": "沙特财经新闻媒体 Argaam",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
+ "arvilab.com": {
+  "category": "other",
+  "evidence": "ARVI VR 游戏厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "arvov.com": {
   "category": "other",
@@ -678,6 +790,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "assets.super.so": {
+  "category": "other",
+  "evidence": "Super 建站托管资源",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "atome.sg": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -693,12 +812,33 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "attractionsmanagement.com": {
+  "category": "media_review",
+  "evidence": "景点行业新闻与杂志",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "attraktion.com": {
+  "category": "other",
+  "evidence": "景点设备厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "audranx.com": {
   "category": "media_review",
   "evidence": "首页标题：Audranx - Community-Powered Earbud Rankings",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "avantiseducation.com": {
+  "category": "other",
+  "evidence": "教育 VR 产品商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "avechi.co.ke": {
   "category": "other",
@@ -723,6 +863,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "ayolabs.com": {
+  "category": "other",
+  "evidence": "补充剂/护肤代工厂，与抹茶原料无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "baby-kingdom.com": {
   "category": "ugc",
@@ -762,6 +909,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "bareserestaurantes.com.br": {
+  "category": "media_review",
+  "evidence": "巴西餐饮业 B&R 行业杂志",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "barrons.com": {
   "category": "media_review",
   "evidence": "域名声誉与引用页面标题判断（首页抓取失败）",
@@ -775,6 +929,20 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "battleonix.com": {
+  "category": "media_review",
+  "evidence": "娱乐场馆比较与评价站（价格、评价对比）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "battlestart.com": {
+  "category": "other",
+  "evidence": "VR 游戏开发商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "bbb.org": {
   "category": "institutional",
@@ -939,6 +1107,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "bhmvending.com": {
+  "category": "other",
+  "evidence": "街机经销商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "bhphotovideo.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -990,6 +1165,13 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "biovertexorganics.com": {
+  "category": "other",
+  "evidence": "印度有机认证原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "bitdoze.com": {
   "category": "media_review",
   "evidence": "首页标题：DevOps, Self-Hosting & Programming Guides - Bitdoze",
@@ -1026,6 +1208,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "blooloop.com": {
+  "category": "media_review",
+  "evidence": "景点行业在线媒体",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "bloomberg.com": {
   "category": "media_review",
   "evidence": "域名声誉与引用页面标题判断（首页抓取失败）",
@@ -1055,6 +1244,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "bmileisure.com": {
+  "category": "other",
+  "evidence": "娱乐中心软件",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "bmw-motorrad.ch": {
   "category": "other",
@@ -1101,6 +1297,13 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "bonappetit.com": {
+  "category": "media_review",
+  "evidence": "美食媒体，抹茶粉榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "bondblox.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -1112,6 +1315,13 @@
  "bos-water.com": {
   "category": "media_review",
   "evidence": "首页标题：BOS Water - Real Tests. Real Results.",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "botanicals.essencefield.com": {
+  "category": "other",
+  "evidence": "植物配料供应商的产品页",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -1212,12 +1422,26 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "brotherheart.com": {
+  "category": "other",
+  "evidence": "企业站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "buffettonlineschool.com.tw": {
   "category": "other",
   "evidence": "投资课程学院；首页标题：11 年實體授課、9,900 位學員的價值投資教室 - BOS 巴菲特線上學院",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "build-pc-guide.com": {
+  "category": "media_review",
+  "evidence": "PC 装机指南与硬件评测",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "bullvpn.com": {
   "category": "other",
@@ -1277,6 +1501,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "caapa.org": {
+  "category": "other",
+  "evidence": "中国游艺机游乐园协会（行业协会按其他）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "cabinory.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -1313,6 +1544,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "canaltech.com.br": {
+  "category": "media_review",
+  "evidence": "巴西科技媒体 Canaltech",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "cannewsmo.com": {
   "category": "media_review",
@@ -1463,6 +1701,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "chamberlaincoffee.com": {
+  "category": "other",
+  "evidence": "消费端咖啡品牌官网，不是 B2B 原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "channelnewsasia.com": {
   "category": "media_review",
   "evidence": "首页标题：Breaking News and Analysis on Asia and the World | Real-Time Coverage out of Asi",
@@ -1529,6 +1774,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "childrensmuseums.org": {
+  "category": "institutional",
+  "evidence": "儿童博物馆协会，非营利",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "china-electronics.com": {
+  "category": "media_review",
+  "evidence": "中国电子产品采购指南类内容站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "chinafy.com": {
   "category": "other",
@@ -1836,6 +2095,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "cosm.com": {
+  "category": "other",
+  "evidence": "Cosm 沉浸式场馆公司（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "cosmopolitan.com.hk": {
   "category": "media_review",
@@ -2237,6 +2503,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "deeparrival.com": {
+  "category": "media_review",
+  "evidence": "独立旅行出版物（主题公园、邮轮新闻与指南）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "degruyterbrill.com": {
   "category": "institutional",
   "evidence": "历史判读，无记录依据",
@@ -2267,6 +2540,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "deliverywolf.net": {
+  "category": "other",
+  "evidence": "沙特外卖骑手注册代办服务站，榜单为获客内容",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "desertcart.com.my": {
   "category": "other",
@@ -2351,6 +2631,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "dioramavr.com": {
+  "category": "other",
+  "evidence": "VR 内容公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "discuss.com.hk": {
   "category": "ugc",
   "evidence": "历史判读，无记录依据",
@@ -2358,6 +2645,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-17"
+ },
+ "disguise.one": {
+  "category": "other",
+  "evidence": "视觉体验软硬件厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "diskbarn.com": {
   "category": "media_review",
@@ -2488,6 +2782,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "dollywood.com": {
+  "category": "other",
+  "evidence": "主题公园官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "dongknows.com": {
   "category": "media_review",
   "evidence": "首页标题：Dong Knows Tech - And THAT is Good for YOU!",
@@ -2517,6 +2818,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "dpvr.com": {
+  "category": "other",
+  "evidence": "DPVR 头显厂商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "dream-cycle.com": {
   "category": "media_review",
@@ -2609,6 +2917,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "eclipso-entertainment.com": {
+  "category": "other",
+  "evidence": "VR 场馆连锁",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "edigest.hk": {
   "category": "media_review",
   "evidence": "首页标题：首頁 | 經濟一週",
@@ -2630,6 +2945,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "ehsvr.com": {
+  "category": "other",
+  "evidence": "VR 安全培训厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "einpresswire.com": {
   "category": "press_release",
@@ -2653,6 +2975,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "electricplayhouse.com": {
+  "category": "other",
+  "evidence": "沉浸式娱乐场馆",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "electrosonic.com": {
+  "category": "other",
+  "evidence": "AV 系统集成商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "elkay.com": {
   "category": "other",
@@ -2803,6 +3139,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "exbiol.com": {
+  "category": "other",
+  "evidence": "有机配料制造商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "exelicgadgets.co.ke": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -2840,6 +3183,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "exploreasheville.com": {
+  "category": "other",
+  "evidence": "目的地营销站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "exponation.net": {
   "category": "media_review",
   "evidence": "引用标题为行车记录仪/NAS 榜单",
@@ -2864,6 +3214,13 @@
  "factually.co": {
   "category": "media_review",
   "evidence": "首页标题：Factually",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "faire.com": {
+  "category": "other",
+  "evidence": "批发采购平台",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -2911,6 +3268,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "fdcm.eu": {
+  "category": "other",
+  "evidence": "食品配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "felloai.com": {
   "category": "other",
@@ -3065,6 +3429,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "first-agri.jp": {
+  "category": "other",
+  "evidence": "日本抹茶供应商的内容页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "firstory.me": {
   "category": "ugc",
   "evidence": "播客托管平台；首页标题：Firstory（证据来自子域 open.firstory.me）",
@@ -3086,6 +3457,27 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "flightofaloha.com": {
+  "category": "other",
+  "evidence": "夏威夷飞行影院景点运营商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "flightsimulator.com": {
+  "category": "other",
+  "evidence": "微软飞行模拟游戏官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "flyawaysimulation.com": {
+  "category": "media_review",
+  "evidence": "飞行模拟新闻与评测站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "flyformiles.hk": {
   "category": "media_review",
@@ -3118,10 +3510,38 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "folha.uol.com.br": {
+  "category": "media_review",
+  "evidence": "巴西 Folha de S.Paulo 新闻媒体（子域 www1 同站）",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "foliumbiosciences.com": {
   "category": "other",
   "evidence": "域名声誉与引用页面标题判断（首页抓取失败）",
   "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "foodandbeveragetimesasia.com": {
+  "category": "media_review",
+  "evidence": "食品饮料行业媒体，中国抹茶企业榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "foodspark.io": {
+  "category": "other",
+  "evidence": "餐饮/零售数据抓取 API 服务商博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
+ "foodsweeteners.com": {
+  "category": "other",
+  "evidence": "食品配料目录站",
+  "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
  },
@@ -3146,6 +3566,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "formula-d.com": {
+  "category": "other",
+  "evidence": "博物馆体验设计公司（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "fortunetimes.sg": {
   "category": "media_review",
   "evidence": "首页标题：时代财智 | 洞悉商业 解读财经",
@@ -3167,6 +3594,13 @@
   "confidence": "high",
   "source": "human",
   "verified_at": "2026-11-18"
+ },
+ "freedomfunusa.com": {
+  "category": "other",
+  "evidence": "娱乐租赁公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "freeroamadv.com": {
   "category": "other",
@@ -3203,6 +3637,13 @@
  "fstoppers.com": {
   "category": "media_review",
   "evidence": "首页标题：Fstoppers - Photography News, Gear Reviews, Tutorials & Community",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "fsvpservices.com": {
+  "category": "other",
+  "evidence": "FSVP 合规服务商，提供进口合规服务",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -3404,6 +3845,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "github.com": {
+  "category": "ugc",
+  "evidence": "用户自由发布代码与数据集的开放平台，内容由账号主人发布，按社交平台算（Suda 2026-11-24）",
+  "confidence": "high",
+  "source": "human",
+  "verified_at": "2026-11-24"
+ },
  "gl-inet.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -3434,6 +3882,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "globalsources.com": {
+  "category": "other",
+  "evidence": "B2B 批发平台",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "globalxetfs.com.hk": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -3457,6 +3912,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-18"
+ },
+ "go4worldbusiness.com": {
+  "category": "other",
+  "evidence": "B2B 贸易平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "goatfundedtrader.com": {
   "category": "other",
@@ -3515,6 +3977,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "gpsplastics.com": {
+  "category": "other",
+  "evidence": "塑料小批量注塑服务，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "grandhub.co.ke": {
   "category": "other",
@@ -3598,6 +4067,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "hamiltonbuhl.com": {
+  "category": "other",
+  "evidence": "教育科技设备厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "handlebarhq.com": {
   "category": "media_review",
   "evidence": "首页标题：Handlebar HQ | Motorcycle CarPlay, GPS, Mounts & Rider Tech Reviews",
@@ -3650,6 +4126,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "harney.com": {
+  "category": "other",
+  "evidence": "消费端茶叶品牌官网的选购指南",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "harveynorman.com.my": {
   "category": "other",
@@ -3733,6 +4216,20 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "herbco.com": {
+  "category": "other",
+  "evidence": "散装草本原料供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "heroesvradventures.com": {
+  "category": "other",
+  "evidence": "VR 场馆",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "herzindagi.com": {
   "category": "media_review",
   "evidence": "首页标题：महिलाओं के लिए वेलनेस, फैशन, ट्रैवल, ज्योतिष, फूड और लाइफस्टाइल गाइड",
@@ -3762,6 +4259,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "history.siggraph.org": {
+  "category": "institutional",
+  "evidence": "ACM SIGGRAPH 历史档案（专业学会）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "historyview.org": {
+  "category": "other",
+  "evidence": "虚拟游览平台",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "hive.blog": {
   "category": "ugc",
@@ -4114,6 +4625,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "huggingface.co": {
+  "category": "ugc",
+  "evidence": "用户自由发布代码与数据集的开放平台，内容由账号主人发布，按社交平台算（Suda 2026-11-24）",
+  "confidence": "high",
+  "source": "human",
+  "verified_at": "2026-11-24"
+ },
  "humanrank.ai": {
   "category": "media_review",
   "evidence": "首页标题：AI tools and models compared | HumanRank",
@@ -4167,6 +4685,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "iaapa.org": {
+  "category": "other",
+  "evidence": "IAAPA 景点行业协会（行业协会按其他）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "ibkrguides.com": {
   "category": "other",
   "evidence": "券商官方文档站（首页标题含券商名，略）",
@@ -4204,6 +4729,13 @@
   "source": "inherited",
   "verified_at": "2026-11-18"
  },
+ "igivu.com": {
+  "category": "other",
+  "evidence": "XR 活动租赁服务商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "ihire.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -4218,6 +4750,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "immersaeducation.org": {
+  "category": "other",
+  "evidence": "沉浸式教育机构站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "immersivetranslate.com": {
   "category": "other",
@@ -4234,6 +4773,13 @@
   "source": "inherited",
   "verified_at": "2026-11-18"
  },
+ "inavateonthenet.net": {
+  "category": "media_review",
+  "evidence": "专业 AV 行业杂志",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "incomebuddies.com": {
   "category": "media_review",
   "evidence": "首页标题：Income Buddies | Online Business, Investing & Wealth Building Made Easy",
@@ -4248,6 +4794,20 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "ingredientsonline.com": {
+  "category": "other",
+  "evidence": "食品配料电商平台",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "ingredientsorganic.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "ingstart.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -4255,6 +4815,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-17"
+ },
+ "inparkmagazine.com": {
+  "category": "media_review",
+  "evidence": "主题娱乐行业杂志",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "instantloan.sg": {
   "category": "other",
@@ -4550,6 +5117,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "journey.world": {
+  "category": "other",
+  "evidence": "设计咨询公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "journeymanhq.com": {
   "category": "media_review",
   "evidence": "首页标题：JourneymanHQ: Learn all about the trades + industry",
@@ -4580,6 +5154,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "justonecookbook.com": {
+  "category": "media_review",
+  "evidence": "日料食谱博客，抹茶粉评测榜单",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "jwview.com": {
   "category": "media_review",
   "evidence": "引用标题为某券商相关财经报道",
@@ -4609,6 +5190,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "kcms.com.br": {
+  "category": "other",
+  "evidence": "餐饮 ERP/POS SaaS 博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "keepittechie.com": {
   "category": "media_review",
@@ -4688,12 +5276,33 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "kiwa.com": {
+  "category": "institutional",
+  "evidence": "认证机构 Kiwa 官网，证书查询页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "klaroinvest.com": {
   "category": "other",
   "evidence": "AI 投资研究平台；首页标题：Klaro｜AI 投資研究平台：市場動向、主題趨勢與強勢股研究",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "knoxlabs.com": {
+  "category": "other",
+  "evidence": "VR 头显电商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "knucklehead-studios.com": {
+  "category": "other",
+  "evidence": "LBE VR 游戏工作室",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "konga.com": {
   "category": "other",
@@ -4961,6 +5570,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "logiolegion.com": {
+  "category": "other",
+  "evidence": "沙特软件开发公司博客，外卖榜单为内容营销",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "longtunman.com": {
   "category": "media_review",
   "evidence": "首页标题：ลงทุนแมน - ลงทุนแมน ลงทุนในความรู้",
@@ -4997,6 +5613,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-18"
+ },
+ "lumenandforge.com": {
+  "category": "other",
+  "evidence": "穹顶投影服务商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "lura.sg": {
   "category": "other",
@@ -5043,6 +5666,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "made-in-china.com": {
+  "category": "other",
+  "evidence": "B2B 采购平台，汇集多家供应商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "madisonmnspeedway.com": {
   "category": "other",
   "evidence": "赛道场馆；首页标题：Madison MN Speedway - Gear Up. Race Hard. Win More.",
@@ -5070,6 +5700,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "managexr.com": {
+  "category": "other",
+  "evidence": "VR 设备管理 SaaS",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "manbolo.com": {
   "category": "media_review",
@@ -5117,6 +5754,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "marinabaysands.com": {
+  "category": "other",
+  "evidence": "度假村官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "marketeeronline.co": {
   "category": "media_review",
@@ -5169,6 +5813,34 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "matcha-japan.org": {
+  "category": "media_review",
+  "evidence": "抹茶行业资讯与选购指南站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matcha-times.jp": {
+  "category": "media_review",
+  "evidence": "日本抹茶行业资讯站，发布选购与供应分析",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matcha.mitbranda.com": {
+  "category": "other",
+  "evidence": "抹茶供应商子站，未见独立品牌名",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "matchadb.com": {
+  "category": "media_review",
+  "evidence": "抹茶采购目录与供应商对比站，只做榜单和目录",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "mayer.sg": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -5208,6 +5880,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "mechdyne.com": {
+  "category": "other",
+  "evidence": "可视化系统厂商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "media-amazon.com": {
   "category": "other",
@@ -5261,6 +5940,20 @@
   "confidence": "medium",
   "source": "inherited",
   "verified_at": "2026-11-18"
+ },
+ "merhein.com": {
+  "category": "other",
+  "evidence": "企业站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "meta.com": {
+  "category": "other",
+  "evidence": "Meta 官网（头显厂商，非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "mg21.com": {
   "category": "media_review",
@@ -5341,6 +6034,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "mixr3d.com": {
+  "category": "other",
+  "evidence": "MiXR 元宇宙游乐园公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "mizzu.com.sg": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -5348,6 +6048,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "mm.made-in-china.com": {
+  "category": "other",
+  "evidence": "B2B 采购平台的供应商子站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "mnginternationalinc.com": {
+  "category": "other",
+  "evidence": "食品配料贸易商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "mobilecpu.com": {
   "category": "media_review",
@@ -5369,6 +6083,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "momentfactory.com": {
+  "category": "other",
+  "evidence": "多媒体工作室（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "monetamarkets.com": {
   "category": "media_review",
@@ -5616,6 +6337,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "mujabai.com": {
+  "category": "other",
+  "evidence": "Mujab AI 是沙特 AI 服务与自动化代理公司，外卖榜单为其获客博客，非独立媒体",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "mustachianpost.com": {
   "category": "media_review",
   "evidence": "自有域名的独立博客，编辑型内容",
@@ -5644,6 +6372,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "mylarcademachine.com": {
+  "category": "other",
+  "evidence": "MY JOY 街机设备厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "mywealthwise.ca": {
   "category": "media_review",
   "evidence": "引用标题为美股股息税指南",
@@ -5658,6 +6393,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "nahdionline.com": {
+  "category": "other",
+  "evidence": "Nahdi 连锁药房线上官网（线下零售品牌）",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "nas.kuibu.net": {
   "category": "other",
@@ -5836,6 +6578,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "nomada.tools": {
+  "category": "other",
+  "evidence": "数字游民工具目录站，外卖为目录条目",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "nomoneylah.com": {
   "category": "media_review",
   "evidence": "自有域名的独立博客，编辑型内容",
@@ -5894,12 +6643,33 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "nturanking.csti.tw": {
+  "category": "institutional",
+  "evidence": "引用页标题：China Agriculture By 2026 Ranking；台湾大学科学论文排名（NTU Ranking）",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "numbers.sg": {
   "category": "media_review",
   "evidence": "首页标题：Singapore rates today: T-bills, SSB, COE, CPF, FX | Numbers.sg",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "nybg.org": {
+  "category": "institutional",
+  "evidence": "纽约植物园，非营利教育与文化机构",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "nysmuseums.org": {
+  "category": "institutional",
+  "evidence": "纽约州博物馆协会，非营利",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "nytimes.com": {
   "category": "media_review",
@@ -5946,6 +6716,20 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "olaclick.com": {
+  "category": "other",
+  "evidence": "餐饮 POS/点单 SaaS 博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
+ "omnicastvr.com": {
+  "category": "other",
+  "evidence": "VR 公司站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "omnihomex.com": {
   "category": "media_review",
@@ -6118,6 +6902,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "pcdn.co": {
+  "category": "other",
+  "evidence": "CDN 托管资源",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "pcguide.com": {
   "category": "media_review",
   "evidence": "首页标题：Home - PC Guide",
@@ -6243,6 +7034,27 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "picoauto.com": {
+  "category": "other",
+  "evidence": "汽车示波器厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "picoxr.com": {
+  "category": "other",
+  "evidence": "PICO 头显官网（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "pimax.com": {
+  "category": "other",
+  "evidence": "Pimax 头显厂商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "ping.fm": {
   "category": "media_review",
   "evidence": "首页标题：Ping Blog（证据来自子域 blog.ping.fm）",
@@ -6367,6 +7179,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "preview.sist.si": {
+  "category": "institutional",
+  "evidence": "斯洛文尼亚标准院 ISO/TR 21380 标准预览页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "pricepect.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -6459,6 +7278,13 @@
  "propertyreviewsg.com": {
   "category": "media_review",
   "evidence": "首页标题：Property Review SG | Your Go-To Resource for SG Real Estate",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "pub-mediabox-storage.rxweb-prd.com": {
+  "category": "other",
+  "evidence": "文件存储域名，直链 PPTX，不是内容站",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -6677,6 +7503,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "reality-atlas.com": {
+  "category": "other",
+  "evidence": "XR 行业目录站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "realmer.co.ke": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -6684,6 +7517,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "reclameaqui.com.br": {
+  "category": "ugc",
+  "evidence": "巴西消费者投诉与评价平台（UGC）",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "recordingnow.com": {
   "category": "media_review",
@@ -6706,6 +7546,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "reframexr.com": {
+  "category": "other",
+  "evidence": "教育 MR 产品",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "reliancedigital.in": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -6713,6 +7560,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "remessaonline.com.br": {
+  "category": "other",
+  "evidence": "跨境汇款金融科技公司博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "remitbee.com": {
   "category": "other",
@@ -6744,6 +7598,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "resolvebim.com": {
+  "category": "other",
+  "evidence": "BIM 软件帮助中心",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "resources.network-inventory-advisor.com": {
   "category": "other",
@@ -6864,6 +7725,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "rngagroexports.com": {
+  "category": "other",
+  "evidence": "印度有机农产品出口商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "road.cc": {
   "category": "media_review",
   "evidence": "首页标题：Cycling News | Bike Reviews | road.cc",
@@ -6907,6 +7775,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "rooftopimmersive.com": {
+  "category": "other",
+  "evidence": "沉浸式场馆",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "roonlabs.com": {
   "category": "other",
@@ -6973,6 +7848,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "saipos.com": {
+  "category": "other",
+  "evidence": "餐饮 POS/管理 SaaS 博客",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
  "salehere.co.th": {
   "category": "media_review",
   "evidence": "首页：แหล่งรวมทุกแบรนด์ดัง ดีลดี โปรโมชั่นเด็ด ครบจบที่เดียว ! - Sale Here｜Sale Here เว็บไซต์รวมแบรนด์ดัง โปรโมชั่นเด็ด คูปอง และส่วนลด",
@@ -6988,12 +7870,26 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "sas.cas.moe": {
+  "category": "institutional",
+  "evidence": "引用页标题：Chinese Government Scholarship (CSC): programmes…；按 CSC 招生专业目录整理的奖学金查询站，非院校自有",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "sassymamasg.com": {
   "category": "media_review",
   "evidence": "首页标题：Sassy Mama Singapore: Lifestyle & Parenting in Singapore",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "saudiexpats.com": {
+  "category": "media_review",
+  "evidence": "沙特外籍人士生活指南站，被引页面为编辑撰写的应用评测/指南",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "savorareview.com": {
   "category": "media_review",
@@ -7054,6 +7950,20 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "sectorpulsedata.com": {
+  "category": "other",
+  "evidence": "B2B 商业显示行业情报站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "sectorxusa.com": {
+  "category": "other",
+  "evidence": "VR 场馆",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "securities.io": {
   "category": "media_review",
   "evidence": "首页标题：Securities.io - Investable Science News: Blockchain, AI and Disruptive Technolog",
@@ -7092,6 +8002,13 @@
  "selfhostbase.com": {
   "category": "media_review",
   "evidence": "首页标题：Selfhostbase — Discover self-hosted software you can run yourself",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "seriouseats.com": {
+  "category": "media_review",
+  "evidence": "美食媒体，24 款抹茶粉横评",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -7214,6 +8131,20 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "shanghairanking.com": {
+  "category": "institutional",
+  "evidence": "引用页标题：ShanghaiRanking's Global Ranking of Academic Subjects；软科排名机构",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "shinecon.com": {
+  "category": "other",
+  "evidence": "Shinecon VR 眼镜厂商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "shopee.com.my": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -7236,6 +8167,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "shorefire.com": {
+  "category": "other",
+  "evidence": "公关公司（非新闻稿分发平台）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "shortdramatop.com": {
   "category": "media_review",
@@ -7402,6 +8340,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "smallrunatlas.com": {
+  "category": "other",
+  "evidence": "美国服装小单工厂目录，与抹茶无关",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "smartgearoutlet.co.uk": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -7451,6 +8396,20 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "smithsonianstarstruck.com": {
+  "category": "other",
+  "evidence": "商业沉浸式展览",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "smxprojector.com": {
+  "category": "other",
+  "evidence": "投影设备厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "snaptec.com.my": {
   "category": "other",
@@ -7504,6 +8463,20 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "sourcingx.ai": {
+  "category": "other",
+  "evidence": "采购比价平台，汇总供应商与价格",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "spaceatlasvr.com": {
+  "category": "other",
+  "evidence": "VR 教育应用官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "sparksparkfinance.com": {
   "category": "media_review",
   "evidence": "首页标题：Spark Spark Finance | 大馬領先中文財經與金融科技資訊平台",
@@ -7534,6 +8507,13 @@
   "verified_at": null,
   "first_seen": "2026-11-17"
  },
+ "springboardvr.com": {
+  "category": "other",
+  "evidence": "VR 场馆管理 SaaS",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "spyderlovers.com": {
   "category": "ugc",
   "evidence": "历史判读，无记录依据",
@@ -7548,6 +8528,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "squintopera.com": {
+  "category": "other",
+  "evidence": "设计工作室",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "ssga.com": {
   "category": "other",
@@ -7577,6 +8564,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "starlab.com": {
+  "category": "other",
+  "evidence": "STARLAB 便携天象仪厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "starryhope.com": {
   "category": "media_review",
@@ -7707,6 +8701,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "suplipac.com": {
+  "category": "other",
+  "evidence": "补充剂与护肤代工厂",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "swappa.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -7722,6 +8723,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "switealife.com": {
+  "category": "other",
+  "evidence": "茶原料 B2B 供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "synapsetrading.com": {
   "category": "other",
@@ -7883,6 +8891,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "techlearning.com": {
+  "category": "media_review",
+  "evidence": "教育科技媒体 Tech & Learning",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "techlicious.com": {
   "category": "media_review",
   "evidence": "首页标题：Home - We Make Tech Simple",
@@ -7947,6 +8962,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "telefonesdasempresas.com.br": {
+  "category": "other",
+  "evidence": "企业电话黄页目录站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-25"
  },
  "telegram.org": {
   "category": "ugc",
@@ -8033,6 +9055,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "theatair.net": {
+  "category": "other",
+  "evidence": "飞行影院影片制作公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "thecorporatetreasurer.com": {
   "category": "media_review",
@@ -8153,6 +9182,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "themeparx.com": {
+  "category": "other",
+  "evidence": "主题公园建造服务",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "themomentum.co": {
   "category": "media_review",
   "evidence": "首页标题：The Momentum",
@@ -8267,6 +9303,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "thevrcollective.com": {
+  "category": "other",
+  "evidence": "VR/AR 景点供应商目录（lead-gen）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "thewaterhub.org": {
   "category": "media_review",
   "evidence": "首页标题：Water Softener Service and System Prices | The Water Hub",
@@ -8280,6 +9323,13 @@
   "confidence": "medium",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "thexrschool.com": {
+  "category": "media_review",
+  "evidence": "独立 VR/AR 教育应用评测",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "thinkersautomationlabs.com": {
   "category": "other",
@@ -8396,6 +9446,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "tnkcogroup.com": {
+  "category": "other",
+  "evidence": "抹茶原料供应商的内容页",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
  },
  "todayonline.com": {
   "category": "media_review",
@@ -8562,6 +9619,20 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "tradinorganic.com": {
+  "category": "other",
+  "evidence": "有机配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "treeview.studio": {
+  "category": "other",
+  "evidence": "XR 开发外包公司",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "trolink-tek.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -8658,6 +9729,13 @@
   "verified_at": null,
   "first_seen": "2026-11-18"
  },
+ "ubisoft.com": {
+  "category": "other",
+  "evidence": "Ubisoft 游戏公司官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "ubnas.com": {
   "category": "other",
   "evidence": "NAS 计算器；首页标题：ubnas: Free NAS Calculators & Self-Hosting Guides",
@@ -8686,6 +9764,13 @@
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
+ },
+ "universitiesinchina.org": {
+  "category": "media_review",
+  "evidence": "引用页标题：Agriculture: universities by Double First-Class discipline；第三方院校目录与介绍站",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "universityworldnews.com": {
   "category": "media_review",
@@ -8729,6 +9814,13 @@
   "source": "human",
   "verified_at": "2026-11-18"
  },
+ "uploadvr.com": {
+  "category": "media_review",
+  "evidence": "VR/AR 新闻与评测媒体",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "upr.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -8765,6 +9857,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "utsubo.com": {
+  "category": "other",
+  "evidence": "创意科技工作室",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "utvsource.com": {
   "category": "other",
   "evidence": "UTV 配件电商；首页标题：UTV Parts & SXS Accessories | 80,000+ Products | UTVSource",
@@ -8800,6 +9899,13 @@
   "confidence": "high",
   "source": "inherited",
   "verified_at": "2026-11-18"
+ },
+ "varjo.com": {
+  "category": "other",
+  "evidence": "Varjo 头显厂商（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "vattimalaysia.com": {
   "category": "other",
@@ -8877,6 +9983,13 @@
   "verified_at": null,
   "first_seen": "2026-11-16"
  },
+ "vive.com": {
+  "category": "other",
+  "evidence": "HTC VIVE 头显官网（非同类品牌）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "vocal.media": {
   "category": "ugc",
   "evidence": "创作者平台；首页标题：Vocal",
@@ -8930,6 +10043,20 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-16"
+ },
+ "vrkade.com": {
+  "category": "other",
+  "evidence": "已失效/转作他用的域名",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "vrvisiongroup.com": {
+  "category": "other",
+  "evidence": "VR 培训厂商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "w.mgtv.com": {
   "category": "other",
@@ -9130,6 +10257,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "weilan-mfg.com": {
+  "category": "other",
+  "evidence": "代工制造服务商",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "wellbots.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -9210,6 +10344,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "wingengroup.com": {
+  "category": "other",
+  "evidence": "配料供应商官网",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "wired.com": {
   "category": "media_review",
   "evidence": "首页标题：WIRED - The Latest in Technology, Science, Culture and Business | WIRED",
@@ -9227,6 +10368,13 @@
  "witsengineer.com": {
   "category": "media_review",
   "evidence": "首页标题：Wits Engineer- Engineering-Based Home Appliance Buying Guides",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
+ "wobugou2.en.ec21.com": {
+  "category": "other",
+  "evidence": "EC21 平台的商品页",
   "confidence": "high",
   "source": "ai",
   "verified_at": "2026-11-18"
@@ -9281,6 +10429,20 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "www1.folha.uol.com.br": {
+  "category": "media_review",
+  "evidence": "巴西 Folha de S.Paulo 新闻媒体",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-25"
+ },
+ "xadditive.cn": {
+  "category": "other",
+  "evidence": "中国食品配料供应商官网，卖抹茶粉，未进本项目词表",
+  "confidence": "high",
+  "source": "ai",
+  "verified_at": "2026-11-18"
+ },
  "xiaohongshu.com": {
   "category": "ugc",
   "evidence": "历史判读，无记录依据",
@@ -9327,6 +10489,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "xrlabops.com": {
+  "category": "other",
+  "evidence": "XR 内容库",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "xueqiu.com": {
   "category": "ugc",
   "evidence": "历史判读，无记录依据",
@@ -9363,6 +10532,13 @@
   "source": "legacy",
   "verified_at": null,
   "first_seen": "2026-11-18"
+ },
+ "yunentropy.com": {
+  "category": "other",
+  "evidence": "工业采购产品知识站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
  },
  "yuzufintalks.com": {
   "category": "media_review",
@@ -9407,6 +10583,13 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
+ "zenithxr.eu": {
+  "category": "other",
+  "evidence": "XR 设备电商",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
  "zerowater.com": {
   "category": "other",
   "evidence": "历史判读，无记录依据",
@@ -9437,326 +10620,214 @@
   "source": "ai",
   "verified_at": "2026-11-18"
  },
- "matchadb.com": {
-  "category": "media_review",
-  "evidence": "抹茶采购目录与供应商对比站，只做榜单和目录",
-  "confidence": "high",
+ "vrstarspace.com": {
+  "category": "other",
+  "evidence": "中国 VR 游乐设备厂商的内容站，做榜单横评给自家导流",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "matcha-times.jp": {
-  "category": "media_review",
-  "evidence": "日本抹茶行业资讯站，发布选购与供应分析",
-  "confidence": "high",
+ "founderignite.com": {
+  "category": "other",
+  "evidence": "创业攻略类内容站，VR 街机设备清单",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "bonappetit.com": {
-  "category": "media_review",
-  "evidence": "美食媒体，抹茶粉榜单",
-  "confidence": "high",
+ "blog.eparkgames.com": {
+  "category": "other",
+  "evidence": "EPARK 厂商博客",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "foodandbeveragetimesasia.com": {
+ "bobcooney.com": {
   "category": "media_review",
-  "evidence": "食品饮料行业媒体，中国抹茶企业榜单",
-  "confidence": "high",
+  "evidence": "行业顾问 Bob Cooney 的 IAAPA VR 采购指南与产品评测",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "justonecookbook.com": {
+ "metaforce.games": {
+  "category": "other",
+  "evidence": "VR 竞技场厂商官网（Metaforce）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "sandboxvr.com": {
+  "category": "other",
+  "evidence": "Sandbox VR 连锁门店官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "skyfungame.com": {
+  "category": "other",
+  "evidence": "SKYFUN 厂商官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "sourcingai.com": {
+  "category": "other",
+  "evidence": "批发导购内容站，VR 赛车模拟器批发页",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "synthesisvr.com": {
+  "category": "other",
+  "evidence": "VR 场馆运营软件平台官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "vartvrarcade.com": {
+  "category": "other",
+  "evidence": "VART VR 厂商街机站",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "vrcoaster.com": {
+  "category": "other",
+  "evidence": "VR Coaster 游乐设备公司官网",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "amusementsandattractions.com": {
   "category": "media_review",
-  "evidence": "日料食谱博客，抹茶粉评测榜单",
-  "confidence": "high",
+  "evidence": "游乐园行业媒体",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "seriouseats.com": {
-  "category": "media_review",
-  "evidence": "美食媒体，24 款抹茶粉横评",
-  "confidence": "high",
+ "colorfulparkgame.com": {
+  "category": "other",
+  "evidence": "Colorful Park 厂商官网博客",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "matcha-japan.org": {
-  "category": "media_review",
-  "evidence": "抹茶行业资讯与选购指南站",
-  "confidence": "high",
+ "joyplayfactory.com": {
+  "category": "other",
+  "evidence": "JoyPlay 厂商官网博客",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "kiwa.com": {
+ "lekevrmetaverse.com": {
+  "category": "other",
+  "evidence": "LEKE 厂商站点",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "mossdistributing.com": {
+  "category": "other",
+  "evidence": "美国游乐设备分销商官网（Triotech 代理）",
+  "confidence": "medium",
+  "source": "ai",
+  "verified_at": "2026-11-26"
+ },
+ "store.astm.org": {
   "category": "institutional",
-  "evidence": "认证机构 Kiwa 官网，证书查询页",
-  "confidence": "high",
+  "evidence": "ASTM 国际标准商店（机构）",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "preview.sist.si": {
-  "category": "institutional",
-  "evidence": "斯洛文尼亚标准院 ISO/TR 21380 标准预览页",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "xadditive.cn": {
+ "vrmoviepower.com": {
   "category": "other",
-  "evidence": "中国食品配料供应商官网，卖抹茶粉，未进本项目词表",
-  "confidence": "high",
+  "evidence": "MoviePower 厂商站点",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "botanicals.essencefield.com": {
+ "yhysimulator.com": {
   "category": "other",
-  "evidence": "植物配料供应商的产品页",
-  "confidence": "high",
+  "evidence": "YHY VR 厂商官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "made-in-china.com": {
+ "costleyentertainment.net": {
   "category": "other",
-  "evidence": "B2B 采购平台，汇集多家供应商",
-  "confidence": "high",
+  "evidence": "美国街机服务与设备销售商",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "mm.made-in-china.com": {
+ "dynamic-grp.com": {
   "category": "other",
-  "evidence": "B2B 采购平台的供应商子站",
-  "confidence": "high",
+  "evidence": "影院设备公司官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "matcha.mitbranda.com": {
+ "gieffevideogames.com": {
   "category": "other",
-  "evidence": "抹茶供应商子站，未见独立品牌名",
-  "confidence": "high",
+  "evidence": "古着街机零售商",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "mnginternationalinc.com": {
+ "greatwolf.com": {
   "category": "other",
-  "evidence": "食品配料贸易商官网",
-  "confidence": "high",
+  "evidence": "Great Wolf 度假村集团官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "pub-mediabox-storage.rxweb-prd.com": {
-  "category": "other",
-  "evidence": "文件存储域名，直链 PPTX，不是内容站",
-  "confidence": "high",
+ "isostopy.com": {
+  "category": "media_review",
+  "evidence": "VR 内容与旅行科技媒体",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "tnkcogroup.com": {
+ "jointhespree.com": {
   "category": "other",
-  "evidence": "抹茶原料供应商的内容页",
-  "confidence": "high",
+  "evidence": "SPREE 厂商官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "12taste.com": {
-  "category": "other",
-  "evidence": "香精香料技术资料站，提供 TDS",
-  "confidence": "high",
+ "lbxcollective.com": {
+  "category": "media_review",
+  "evidence": "街机与娱乐中心行业媒体 The LBX Collective",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "21food.com": {
+ "omahasportsandgames.com": {
   "category": "other",
-  "evidence": "食品 B2B 平台",
-  "confidence": "high",
+  "evidence": "美国街机设备分销商",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "aapyafoods.com": {
+ "p1-ag.com": {
   "category": "other",
-  "evidence": "有机配料供应商官网",
-  "confidence": "high",
+  "evidence": "玩家一娱乐集团（美国分销商）官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "amulyn.com": {
+ "s3.amazonaws.com": {
   "category": "other",
-  "evidence": "植物提取物供应商官网",
-  "confidence": "high",
+  "evidence": "AWS 静态资源，InstaVR Arena 资料",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  },
- "anvol.dev": {
+ "talonsimulations.com": {
   "category": "other",
-  "evidence": "硬件工程与制造服务商，与抹茶无关",
-  "confidence": "high",
+  "evidence": "Talon Simulations 厂商官网",
+  "confidence": "medium",
   "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "ayolabs.com": {
-  "category": "other",
-  "evidence": "补充剂/护肤代工厂，与抹茶原料无关",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "biovertexorganics.com": {
-  "category": "other",
-  "evidence": "印度有机认证原料供应商",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "chamberlaincoffee.com": {
-  "category": "other",
-  "evidence": "消费端咖啡品牌官网，不是 B2B 原料供应商",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "exbiol.com": {
-  "category": "other",
-  "evidence": "有机配料制造商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "faire.com": {
-  "category": "other",
-  "evidence": "批发采购平台",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "fdcm.eu": {
-  "category": "other",
-  "evidence": "食品配料供应商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "foodsweeteners.com": {
-  "category": "other",
-  "evidence": "食品配料目录站",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "fsvpservices.com": {
-  "category": "other",
-  "evidence": "FSVP 合规服务商，提供进口合规服务",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "first-agri.jp": {
-  "category": "other",
-  "evidence": "日本抹茶供应商的内容页",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "go4worldbusiness.com": {
-  "category": "other",
-  "evidence": "B2B 贸易平台",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "gpsplastics.com": {
-  "category": "other",
-  "evidence": "塑料小批量注塑服务，与抹茶无关",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "harney.com": {
-  "category": "other",
-  "evidence": "消费端茶叶品牌官网的选购指南",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "herbco.com": {
-  "category": "other",
-  "evidence": "散装草本原料供应商",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "ingredientsonline.com": {
-  "category": "other",
-  "evidence": "食品配料电商平台",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "ingredientsorganic.com": {
-  "category": "other",
-  "evidence": "有机配料供应商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "rngagroexports.com": {
-  "category": "other",
-  "evidence": "印度有机农产品出口商",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "smallrunatlas.com": {
-  "category": "other",
-  "evidence": "美国服装小单工厂目录，与抹茶无关",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "sourcingx.ai": {
-  "category": "other",
-  "evidence": "采购比价平台，汇总供应商与价格",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "suplipac.com": {
-  "category": "other",
-  "evidence": "补充剂与护肤代工厂",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "switealife.com": {
-  "category": "other",
-  "evidence": "茶原料 B2B 供应商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "tradinorganic.com": {
-  "category": "other",
-  "evidence": "有机配料供应商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "weilan-mfg.com": {
-  "category": "other",
-  "evidence": "代工制造服务商",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "wingengroup.com": {
-  "category": "other",
-  "evidence": "配料供应商官网",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
- },
- "wobugou2.en.ec21.com": {
-  "category": "other",
-  "evidence": "EC21 平台的商品页",
-  "confidence": "high",
-  "source": "ai",
-  "verified_at": "2026-11-18"
+  "verified_at": "2026-11-26"
  }
 }

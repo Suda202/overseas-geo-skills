@@ -61,6 +61,7 @@ ANSWER_FIELD = {
     "copilot": "result_text",
     "grok": "full_response",
     "alexa": "md_text",
+    "bingaimode": "content_md",
 }
 DEFAULT_ANSWER_FIELD = "result_text"
 

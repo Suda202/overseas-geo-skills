@@ -3,7 +3,7 @@ name: geo-monitoring
 description: Use when collecting GEO answers on a Prompt set — the 3-run quality trial per Prompt on each monitored platform, the formal Before baseline (7 runs per query × platform × country × language), daily or periodic collection and re-running failed cells — when checking whether a raw collection directory is trustworthy before any metric (field-layer mixing, lost reference definitions, empty citation fields, failed answers, unregistered platforms). Owns the single collector (scripts/collect_answers.py, also used by the presales pipeline and the selection research pre-run), the per-platform field contract and the crawl integrity check. Do not use for researching, writing, adding, merging, picking or locking Prompts (geo-prompt-selection-builder and the client Base), for the presales diagnosis report or the after-sales baseline HTML report (geo-presales-report-builder), for defining metric calibers or brand recognition (geo-metrics), or for diagnosing why the brand underperforms and deciding optimisation actions (geo-gap-diagnosis).
 metadata:
   author: Overseas GEO Project
-  version: "2.1.1"
+  version: "2.2.0"
 ---
 
 # GEO Monitoring（监测）
@@ -22,7 +22,7 @@ metadata:
 
 ## 工具
 
-- 采集：`scripts/collect_answers.py`，项目唯一采集实现，8 个平台；售前 pipeline 和选词研究预跑也调它。跑之前设 `no_proxy=api.scrapeless.com`（本机代理会掐断 Python 的 HTTPS 握手）；失败格加 `--retry-unrecoverable` 才会重采。各平台字段合同在 `references/platform-contract.json`，新增平台在这里登记。
+- 采集：`scripts/collect_answers.py`，项目唯一采集实现，9 个平台（ChatGPT、Perplexity、Copilot、Gemini、Google AI Mode、Google AI Overview、Grok、Alexa、Bing AI Mode；`--platforms all`）；售前 pipeline 和选词研究预跑也调它。跑之前设 `no_proxy=api.scrapeless.com`（本机代理会掐断 Python 的 HTTPS 握手）；失败格加 `--retry-unrecoverable` 才会重采。各平台字段合同在 `references/platform-contract.json`，新增平台在这里登记。
 - 采集完整性：`scripts/audit_crawl_integrity.py`，算任何指标前先过；退出码、缺陷怎么处理见 [crawl-integrity.md](references/crawl-integrity.md)。
 - 试跑读数：每道题答案点了几个品牌用 geo-metrics 的 `scripts/trial_brand_count.py`（2026-11-18 迁走，统计归 geo-metrics）；`scripts/changeability_domains.py`（可改变性：默认只优化官网时改官网能不能改变这道题，规则见 [changeability-and-order.md](references/changeability-and-order.md)），用法见脚本开头说明。引用来源类别、域名榜、逐题官网引用份额和引用率用 geo-metrics 的 `scripts/citation_sources.py`，不要自己另写统计脚本：它带未判读门禁，未判读引用超过 5% 会停下列出待判域名。
 - 基线报告：2026-11-20 起和售前报告是同一套 HTML，归 `geo-presales-report-builder`（`scripts/prepare_baseline.py`，见它的 references/baseline-report.md）。本 skill 只交出各轮采集目录和完整性检查结果。

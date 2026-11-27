@@ -1,8 +1,8 @@
 {
   "name": "geo-presales-pipeline",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "owner": "海外 GEO 项目",
-  "updated_at": "2026-10-10",
+  "updated_at": "2026-11-24",
   "status": "active",
   "maturity_tier": "production",
   "lifecycle_stage": "production",

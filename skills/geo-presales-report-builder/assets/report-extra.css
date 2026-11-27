@@ -710,3 +710,17 @@ hr.answer-rule {
 .drawer-diff .diff-reason{display:inline-block;margin-right:6px;font-weight:700;color:var(--ink)}
 .drawer-diff .diff-reason::after{content:"："}
 .diff-cell-reason{display:block;margin-top:3px;color:var(--muted);font-size:11.5px;line-height:1.35;white-space:normal;max-width:120px;margin-left:auto;margin-right:auto}
+
+/* 诊断与行动（2026-11-24）：分析师写好的全量口径内容，不跟筛选变 */
+.diag-intro{margin:0 0 14px;color:var(--ink-2);font-size:14.5px;line-height:1.75}
+.diag-table td{vertical-align:top;font-size:13.5px;line-height:1.65;color:var(--ink-2)}
+.diag-table td:first-child{font-weight:600;color:var(--ink);min-width:120px}
+
+.diag-table .diag-link{color:var(--gold-deep);word-break:break-all;text-decoration:underline;text-underline-offset:2px}
+.diag-table th.diag-pri,.diag-table td.diag-pri{width:52px;min-width:0!important;padding-left:8px;padding-right:8px;text-align:center;white-space:nowrap;font-weight:700;color:var(--ink)}
+.diag-table td.diag-type{white-space:nowrap;font-size:12.5px;color:var(--muted)}
+.diag-table .diag-kind{display:inline-block;margin:0 6px 4px 0;padding:0 7px;border-radius:5px;background:var(--line-2);color:var(--muted);font-size:11.5px;font-weight:600;line-height:1.7}
+.diag-table .diag-ref{margin-top:4px;font-size:12px;color:var(--muted)}
+.has-tip{cursor:help;outline-offset:2px}
+.diff-tag.has-tip{box-shadow:inset 0 -1px 0 currentColor}
+.float-tip{white-space:pre-line}

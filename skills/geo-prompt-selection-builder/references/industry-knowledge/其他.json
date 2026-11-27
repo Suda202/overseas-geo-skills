@@ -1050,6 +1050,186 @@
     "categories": [
      "matcha powder"
     ]
+   },
+   "oem外观内容定制": {
+    "label": "OEM/外观与内容定制",
+    "by": {
+     "fc91effc09a1|美国": "OEM/外观与内容定制"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "OEM/外观与内容定制": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "回本盈利支持": {
+    "label": "回本与盈利支持",
+    "by": {
+     "fc91effc09a1|美国": "回本与盈利支持"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "回本与盈利支持": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "场地尺寸坪效": {
+    "label": "场地尺寸与坪效",
+    "by": {
+     "fc91effc09a1|美国": "场地尺寸与坪效"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "场地尺寸与坪效": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "多人同场体验": {
+    "label": "多人同场体验",
+    "by": {
+     "fc91effc09a1|美国": "多人同场体验"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "多人同场体验": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "整馆交钥匙方案": {
+    "label": "整馆交钥匙方案",
+    "by": {
+     "fc91effc09a1|美国": "整馆交钥匙方案"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "整馆交钥匙方案": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "自有原创ip影视内容": {
+    "label": "自有原创 IP 影视内容",
+    "by": {
+     "fc91effc09a1|美国": "自有原创 IP 影视内容"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "自有原创 IP 影视内容": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "认证合规": {
+    "label": "认证与合规",
+    "by": {
+     "fc91effc09a1|美国": "认证与合规"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "认证与合规": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "设备价格项目预算档": {
+    "label": "设备价格与项目预算档",
+    "by": {
+     "fc91effc09a1|美国": "设备价格与项目预算档"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "设备价格与项目预算档": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "设备品类覆盖": {
+    "label": "设备品类覆盖",
+    "by": {
+     "fc91effc09a1|美国": "设备品类覆盖"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "设备品类覆盖": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "软件内容更新政策": {
+    "label": "软件与内容更新政策",
+    "by": {
+     "fc91effc09a1|美国": "软件与内容更新政策"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "软件与内容更新政策": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
    }
   },
   "audiences": {
@@ -1375,6 +1555,78 @@
     ],
     "categories": [
      "matcha powder"
+    ]
+   },
+   "小体量游乐场馆投资人首次创业者": {
+    "label": "小体量游乐场馆投资人/首次创业者",
+    "by": {
+     "fc91effc09a1|美国": "小体量游乐场馆投资人/首次创业者"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "小体量游乐场馆投资人/首次创业者": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "文旅集成商景区度假村项目方": {
+    "label": "文旅集成商/景区与度假村项目方",
+    "by": {
+     "fc91effc09a1|美国": "文旅集成商/景区与度假村项目方"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "文旅集成商/景区与度假村项目方": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "游乐场馆投资人fec": {
+    "label": "游乐场馆投资人（FEC）",
+    "by": {
+     "fc91effc09a1|美国": "游乐场馆投资人（FEC）"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "游乐场馆投资人（FEC）": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "游乐设备进口代理商分销商": {
+    "label": "游乐设备进口代理商/分销商",
+    "by": {
+     "fc91effc09a1|美国": "游乐设备进口代理商/分销商"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "游乐设备进口代理商/分销商": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
     ]
    }
   },
@@ -2206,6 +2458,96 @@
     "categories": [
      "matcha powder"
     ]
+   },
+   "代理商补充产品线": {
+    "label": "代理商补充产品线",
+    "by": {
+     "fc91effc09a1|美国": "代理商补充产品线"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "代理商补充产品线": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "已有场馆升级引流": {
+    "label": "已有场馆升级引流",
+    "by": {
+     "fc91effc09a1|美国": "已有场馆升级引流"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "已有场馆升级引流": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "文旅景区打卡项目": {
+    "label": "文旅景区打卡项目",
+    "by": {
+     "fc91effc09a1|美国": "文旅景区打卡项目"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "文旅景区打卡项目": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "新建场馆": {
+    "label": "新建场馆",
+    "by": {
+     "fc91effc09a1|美国": "新建场馆"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "新建场馆": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "新建场馆小场地低预算": {
+    "label": "新建场馆（小场地、低预算）",
+    "by": {
+     "fc91effc09a1|美国": "新建场馆（小场地、低预算）"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "新建场馆（小场地、低预算）": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
    }
   },
   "topics": {
@@ -2495,6 +2837,96 @@
     ],
     "categories": [
      "matcha powder"
+    ]
+   },
+   "vr游乐设备进口代理分销选品": {
+    "label": "VR游乐设备进口代理与分销选品",
+    "by": {
+     "fc91effc09a1|美国": "VR游乐设备进口代理与分销选品"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR游乐设备进口代理与分销选品": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "小场地首次创业的vr项目选型": {
+    "label": "小场地与首次创业的VR项目选型",
+    "by": {
+     "fc91effc09a1|美国": "小场地与首次创业的VR项目选型"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "小场地与首次创业的VR项目选型": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "新建娱乐场馆的vr项目选型整馆方案": {
+    "label": "新建娱乐场馆的VR项目选型与整馆方案",
+    "by": {
+     "fc91effc09a1|美国": "新建娱乐场馆的VR项目选型与整馆方案"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "新建娱乐场馆的VR项目选型与整馆方案": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "景区度假村的vr打卡体验项目": {
+    "label": "景区与度假村的VR打卡体验项目",
+    "by": {
+     "fc91effc09a1|美国": "景区与度假村的VR打卡体验项目"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "景区与度假村的VR打卡体验项目": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "老场馆升级补充vr引流设备": {
+    "label": "老场馆升级与补充VR引流设备",
+    "by": {
+     "fc91effc09a1|美国": "老场馆升级与补充VR引流设备"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "老场馆升级与补充VR引流设备": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
     ]
    }
   },
@@ -2804,6 +3236,222 @@
     "categories": [
      "matcha powder"
     ]
+   },
+   "9dvrcinema": {
+    "label": "9D VR cinema",
+    "by": {
+     "fc91effc09a1|美国": "9D VR cinema"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "9D VR cinema": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "fecattractions": {
+    "label": "FEC attractions",
+    "by": {
+     "fc91effc09a1|美国": "FEC attractions"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "FEC attractions": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vramusementequipment": {
+    "label": "VR amusement equipment",
+    "by": {
+     "fc91effc09a1|美国": "VR amusement equipment"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR amusement equipment": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrarcademachine": {
+    "label": "VR arcade machine",
+    "by": {
+     "fc91effc09a1|美国": "VR arcade machine"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR arcade machine": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrflyingtheater": {
+    "label": "VR flying theater",
+    "by": {
+     "fc91effc09a1|美国": "VR flying theater"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR flying theater": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrmotionride": {
+    "label": "VR motion ride",
+    "by": {
+     "fc91effc09a1|美国": "VR motion ride"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR motion ride": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrracingsimulator": {
+    "label": "VR racing simulator",
+    "by": {
+     "fc91effc09a1|美国": "VR racing simulator"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR racing simulator": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrshootingsimulator": {
+    "label": "VR shooting simulator",
+    "by": {
+     "fc91effc09a1|美国": "VR shooting simulator"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR shooting simulator": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrsimulator": {
+    "label": "VR simulator",
+    "by": {
+     "fc91effc09a1|美国": "VR simulator"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR simulator": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "vrthemepark": {
+    "label": "VR theme park",
+    "by": {
+     "fc91effc09a1|美国": "VR theme park"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "VR theme park": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "commercialvrattraction": {
+    "label": "commercial VR attraction",
+    "by": {
+     "fc91effc09a1|美国": "commercial VR attraction"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "commercial VR attraction": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
+   },
+   "turnkeyvrarcade": {
+    "label": "turnkey VR arcade",
+    "by": {
+     "fc91effc09a1|美国": "turnkey VR arcade"
+    },
+    "clients": [
+     "fc91effc09a1"
+    ],
+    "names": {
+     "turnkey VR arcade": 1
+    },
+    "markets": [
+     "美国"
+    ],
+    "categories": [
+     "vr amusement equipment"
+    ]
    }
   }
  },
@@ -2826,7 +3474,13 @@
    "market": "UNITED STATES",
    "category": "matcha powder",
    "updated": "2026-11-18"
+  },
+  "fc91effc09a1|美国": {
+   "who": "fc91effc09a1",
+   "market": "美国",
+   "category": "vr amusement equipment",
+   "updated": "2026-11-26"
   }
  },
- "updated": "2026-11-18"
+ "updated": "2026-11-26"
 }

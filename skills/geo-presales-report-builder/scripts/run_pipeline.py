@@ -16,9 +16,11 @@
 
 采集目录不存在时停在阶段 -1,打印 collect_answers.py 的采集命令(付费,不代跑)。
 不带 --brands/--target 时跳过情感环节:报告不出情感模块,问题明细与抽屉也不出情感列。
-商品卡同理:--shopping-cards 关、或本次采集一张商品卡都没有时,不出购物商品卡模块、核心洞察的
-商品卡提及率和回答详情里的商品卡(render_report.py 按数据判,见 render-spec「模块显隐」)。
+商品卡默认不出:未传 --shopping-cards 开时,不出购物商品卡模块、核心洞察的商品卡提及率和回答详情里的
+商品卡;本次采集一张带目录的商品卡都没有时,写了开也不出(见 render-spec「模块显隐」)。
 翻译环节按 translation-batches 目录是否就绪自动接入,缺席不阻塞主链。
+售前诊断报告必须带 --diagnosis:缺了停在阶段 5d,按 geo-gap-diagnosis 的写法补 diagnosis.json;
+售后基线要出「诊断与行动」时在 config 的 extra_modules 写 diagnosis。
 """
 
 from __future__ import annotations
@@ -75,11 +77,33 @@ def stage_collect(args) -> None:
         raise SystemExit(f"[-1 采集检查] 失败(退出码 {result.returncode})")
 
 
+def case_from_bank_config(config: dict) -> dict:
+    """本地手写的 v8 题库常常没有 config.case_fields（只有线上 normalize_case 会写）：
+    这时按 config 顶层的品牌、官网、别名、竞品、主题拼一份报告用 Case，
+    免得 load_case 报「缺少品牌或官方域名」（Zhiqinghe 2026-11-26）。"""
+    fields = {"品牌": config["brand_name"], "官方域名": config["official_domain"]}
+    if config.get("brand_aliases"):
+        fields["品牌别名"] = config["brand_aliases"]
+    category = config.get("category_label") or config.get("product_line")
+    if category:
+        fields["品类"] = category
+    topics = [t.get("topic") for t in config.get("topics") or [] if isinstance(t, dict) and t.get("topic")]
+    if topics:
+        fields["主题"] = ",".join(topics)
+    for index, comp in enumerate(config.get("competitors") or [], 1):
+        if isinstance(comp, dict) and comp.get("name") and comp.get("domain"):
+            fields[f"竞品 {index}"] = comp["name"]
+            fields[f"竞品 {index} 官网域名"] = comp["domain"]
+    return fields
+
+
 def resolve_case(args) -> None:
     """--case 可以直接给 v8 题库 JSON：取其中 config.case_fields 作为报告用 Case。"""
     raw = json.loads(args.case.read_text(encoding="utf-8"))
     config = (raw.get("config") or {}) if isinstance(raw, dict) else {}
     fields = config.get("case_fields")
+    if not fields and config.get("brand_name") and config.get("official_domain"):
+        fields = case_from_bank_config(config)
     if not fields:
         return
     # Case 输入合同 v2 不收品类，选词把推出来的品类名写在 config.category_label
@@ -87,7 +111,7 @@ def resolve_case(args) -> None:
         fields = {**fields, "category_label": config["category_label"]}
     derived = args.out_dir / "case.json"
     derived.write_text(json.dumps(fields, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"✓ [Case] 从 v8 题库取 config.case_fields → {derived}")
+    print(f"✓ [Case] 从 v8 题库取 Case 字段（config.case_fields，缺时用 config 顶层字段）→ {derived}")
     args.case = derived
 
 
@@ -268,6 +292,14 @@ def stage_translations(args, out: Path) -> None:
          "--out", out / "report-data.json"], args.dry_run, "4b 译文回填")
 
 
+def case_report_kind(case: Path) -> str:
+    """Case 里的「报告类型」；缺省按售前诊断。"""
+    try:
+        return json.loads(case.read_text(encoding="utf-8")).get("报告类型") or "售前诊断"
+    except (OSError, ValueError, AttributeError):
+        return "售前诊断"
+
+
 def stage_verify_render(args, out: Path) -> None:
     run([sys.executable, HERE / "verify_report_data.py",
          "--report", out / "report-data.json", "--collect", args.collect],
@@ -279,10 +311,19 @@ def stage_verify_render(args, out: Path) -> None:
         run([sys.executable, HERE / "attach_difficulty.py", "--report", out / "report-data.json",
              "--difficulty", args.difficulty, "--out", out / "report-data.json"], args.dry_run, "5c 难度接入")
     # 售后基线也走这条流水线（prepare_baseline.py 在 Case 里写「报告类型」），文件名跟着类型走
-    try:
-        kind = json.loads(args.case.read_text(encoding="utf-8")).get("报告类型") or "售前诊断"
-    except (OSError, ValueError, AttributeError):
-        kind = "售前诊断"
+    kind = case_report_kind(args.case)
+    if args.diagnosis:
+        # 诊断与行动：分析师读报告后写成 diagnosis.json，这里只接入，内容原样渲染
+        run([sys.executable, HERE / "attach_diagnosis.py", "--report", out / "report-data.json",
+             "--diagnosis", args.diagnosis, "--out", out / "report-data.json"], args.dry_run, "5d 诊断接入")
+    elif kind == "售前诊断" and not args.dry_run:
+        if args.allow_missing_diagnosis:
+            print(f"⚠ 售前诊断报告缺诊断，已按 --allow-missing-diagnosis 放行:{args.allow_missing_diagnosis}")
+        else:
+            raise Pause(
+                "售前诊断报告的「诊断与行动」是必选模块，缺 diagnosis.json。"
+                "按 geo-gap-diagnosis/references/diagnosis-writing.md 写好后重跑，加 --diagnosis <diagnosis.json>；"
+                "确实不出时加 --allow-missing-diagnosis \"<理由>\"。")
     html = out / f"{args.brand_name or 'report'}-{kind}报告.html"
     run([sys.executable, HERE / "render_report.py",
          "--data", out / "report-data.json", "--out", html], args.dry_run, "6 渲染")
@@ -302,7 +343,7 @@ def main() -> int:
                         help="主题关键词表 JSON;换品类必传,否则主题矩阵落空")
     parser.add_argument("--sku-map", help="本品 SKU 归并表 JSON（见 build_report_data --sku-map）")
     parser.add_argument("--shopping-cards", choices=["开", "关", ""], default="",
-                        help="这条产品线统计不统计商品卡（选词 config.shopping_cards）；留空按数据判")
+                        help="商品卡开关;留空默认关,传开才出(且本次采集至少有一张带目录的商品卡)")
     parser.add_argument("--brand-suffixes",
                         help="逗号分隔的品类/产品线后缀,展示时从品牌名剥掉(如 LED,Display);"
                              "留空用内置净水器词表兜底")
@@ -310,6 +351,10 @@ def main() -> int:
                         help="词表查漏不通过时仍继续(写明理由);缺省暂停")
     parser.add_argument("--difficulty", type=Path,
                         help="geo-gap-diagnosis difficulty.py 的输出目录或 difficulty.json;给了才出「竞争与优化难度」模块")
+    parser.add_argument("--diagnosis", type=Path,
+                        help="分析师写的 diagnosis.json;售前诊断报告必带,给了才出「诊断与行动」模块")
+    parser.add_argument("--allow-missing-diagnosis", default="", metavar="理由",
+                        help="售前诊断报告确实不出「诊断与行动」时写理由放行")
     parser.add_argument("--allow-unjudged-domains", default="", metavar="理由",
                         help="引用来源未判读超过 5%% 时流水线默认暂停等补判；写明理由才放行")
     parser.add_argument("--source-limit", type=int,

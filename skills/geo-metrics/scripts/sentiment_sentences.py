@@ -50,6 +50,11 @@ from geo_presales_core.util import (  # noqa: E402
 
 # ---------- de-cite / UI strip (markdown crawler exports) ----------
 
+
+# 题库没写 question_types 时按诊断意图给默认值：发现、对比、评估进情感样本（references/sentiment.md「样本口径」）
+DEFAULT_QUESTION_TYPES = {"discovery": "visibility,sentiment", "competitor": "visibility,sentiment",
+                          "evaluation": "sentiment", "sentiment": "sentiment"}
+
 def strip_answer_text(text: str) -> str:
     """去引用标记、平台组件与商品卡渠道列，和提及率读同一份正文；再去掉残留的 ``[N]`` 角标。"""
     t = de_cite.blank_merchant_columns(de_cite.strip_citations(text))
@@ -125,7 +130,10 @@ def load_bank(path: str) -> list[dict]:
             questions.append({
                 "question_id": (row.get("question_id") or f"{i:04d}").strip(),
                 "user_question": (row.get("query") or row.get("user_question") or "").strip(),
-                "analysis_type": row.get("question_types") or row.get("analysis_type") or "",
+                # 选词导出的五列上传 CSV 没有 question_types：按诊断意图补默认映射（样本口径见 sentiment.md），
+                # 否则情感样本恒为 0（Zhiqinghe 2026-11-26）
+                "analysis_type": (row.get("question_types") or row.get("analysis_type")
+                                  or DEFAULT_QUESTION_TYPES.get(str(row.get("diagnosis_intent") or "").strip().casefold(), "")),
                 "tags": tags,
             })
     else:

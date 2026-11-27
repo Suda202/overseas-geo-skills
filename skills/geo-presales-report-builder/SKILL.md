@@ -1,22 +1,22 @@
 ---
 name: geo-presales-report-builder
-description: This skill should be used when generating a customer-facing overseas GEO HTML report — the presales diagnosis report or the after-sales trial / formal baseline report, which since 2026-11-20 are one template (single-file HTML, the Botslab G980H template; baseline inputs are prepared by scripts/prepare_baseline.py from multi-round collection directories) — directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select language / region / platform / intent type / topic / tag filtering; Query Fan-outs show a Chinese translation when `meta.fanout_zh` is present; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to compute the upload CSV (that is geo-presales-report-editor), to audit brand mention recognition, or to write report conclusions by hand.
+description: This skill should be used when generating a customer-facing overseas GEO HTML report — the presales diagnosis report or the after-sales trial / formal baseline report, which since 2026-11-20 are one template (single-file HTML, the Botslab G980H template; baseline inputs are prepared by scripts/prepare_baseline.py from multi-round collection directories) — directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select language / region / platform / intent type / topic / tag filtering; Query Fan-outs show a Chinese translation when `meta.fanout_zh` is present; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to define metric calibers or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.12.0"
+  version: "2.17.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
 
 ## 负责什么
 
-把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 报告。售前诊断报告和售后基线报告（试跑、正式基线）2026-11-20 起是同一套渲染，只差 Case 里的「报告类型」「报告标题」和每题次数；基线报告的输入准备与流程见 [baseline-report.md](references/baseline-report.md)。给了 `--difficulty`（geo-gap-diagnosis `difficulty.py` 的输出）时多出「竞争与优化难度」模块，`scripts/attach_difficulty.py` 只把档位写成品牌方看得懂的话，不重新判（render-spec「竞争与优化难度」）。
+把「采集目录 + Case 记录」变成一份可直接给客户看的单文件 HTML 报告。售前诊断报告和售后基线报告（试跑、正式基线）2026-11-20 起是同一套渲染，只差 Case 里的「报告类型」「报告标题」和每题次数；基线报告的输入准备与流程见 [baseline-report.md](references/baseline-report.md)；基线报告默认不出购物商品卡、情感、竞争与优化难度、诊断与行动四块，要出在 config 的 `extra_modules` 里写明（Suda 2026-11-27）。售前诊断报告默认不出购物商品卡，要出传 `--shopping-cards 开`，且本次采集至少有一张带目录的商品卡（Suda 2026-11-27）。给了 `--difficulty`（geo-gap-diagnosis `difficulty.py` 的输出）时多出「竞争与优化难度」模块，`scripts/attach_difficulty.py` 只把档位写成品牌方看得懂的话，不重新判（render-spec「竞争与优化难度」）。售前诊断报告必带诊断：`--diagnosis`（分析师按 geo-gap-diagnosis 的 diagnosis-writing.md 写的 `diagnosis.json`）缺了流水线在阶段 5d 暂停，确实不出加 `--allow-missing-diagnosis "<理由>"`；有诊断时出「诊断与行动」模块，四个模块末尾各加一张「诊断」卡，作为该模块唯一的结论（模板结论卡 2026-11-27 已删）。售后基线要出诊断在 config 的 `extra_modules` 写 `diagnosis`。
 
-**所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Botslab G980H 预览（`10-售前诊断报告/评测数据/botslab/售后/选词-20261106/report-g980h/购物面板预览/Botslab-G980H-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
+**所有售前诊断报告用同一个模板**：`assets/report.js`、`assets/report-engine.js`、`assets/report-extra.css` 与 `scripts/render_report.py` 渲染出来的页面，样板是 Botslab G980H 预览（`10-售前诊断报告/评测数据/botslab/售后/选词-20261106/report-g980h/购物面板预览/Botslab-G980H-售前报告-预览.html`，2026-11-08 Suda 定）。模块：数据筛选 → 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。**商品卡默认不出（要出传 `--shopping-cards 开`）；没有商品卡或情感数据时，对应模块和散在各处的数据一起不出**，后面的模块顺延编号（规则见 render-spec「模块显隐」）；不为某个客户另做一版模板。
 
 负责：读取 Scrapeless 采集 JSON、按国家/平台/主题切分、复用后端指标管线算全部指标、渲染 HTML。
 
-不负责：采集和采集数据的可信度校验（走 `geo-monitoring`，本 skill 的前置步骤）、上传用 CSV 的生成与结论撰写（走 `geo-presales-report-editor`）、品牌提及识别的纠错（走 `geo-presales-report-audit`）、情感判读的规则（走 `geo-metrics`）。
+不负责：采集和采集数据的可信度校验（走 `geo-monitoring`，本 skill 的前置步骤）、情感判读的规则（走 `geo-metrics`）。
 
 ## 开始前读取
 
@@ -67,7 +67,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
    python3 ../geo-metrics/scripts/mine_brand_lexicon.py --collect-dir <采集目录> --out build/brand-candidates.csv
    ```
 
-   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容 `geo-presales-report-audit` 的「标准名 → 别名 list」dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。词表已有时也要加 `--lexicon <词表> --check` 查漏：A 档候选（推荐位或商品卡上出现过、词表没收）逐个过完再进第 4 步，规则见 `geo-metrics` SKILL「品牌词表」。驾驶脚本在查漏不通过（有 A 档没收，或词表里有疑似同一品牌拆成两条）时停在这一步；确实不处理加 `--allow-lexicon-gaps "<理由>"`。
+   词表落 `../geo-metrics/assets/brand_lexicon.<品类>.json`，正式结构为 `brands[].name/aliases/type`；也兼容「标准名 → 别名 list」的 dict 词表（别名会保留，`_` 开头的键按元数据跳过）。跨 skill 复用同一份词表时优先 `brands[]` 结构。新品类首次运行时，挖掘出的候选需要人工过一遍再冻结——机器无法可靠区分品牌名与品类词/技术缩写。词表已有时也要加 `--lexicon <词表> --check` 查漏：A 档候选（推荐位或商品卡上出现过、词表没收）逐个过完再进第 4 步，规则见 `geo-metrics` SKILL「品牌词表」。驾驶脚本在查漏不通过（有 A 档没收，或词表里有疑似同一品牌拆成两条）时停在这一步；确实不处理加 `--allow-lexicon-gaps "<理由>"`。
 
    **开放品牌官网域名推断**与**引用域名补判**都归 geo-metrics，流程见 [geo-metrics/references/domain-judging-workflow.md](../geo-metrics/references/domain-judging-workflow.md)：先推开放品牌官网域名（`infer_brand_domains.py`），再收待判域名（`collect_domain_candidates.py`，带 `--lexicon`）、补证据、判读写回 `geo-metrics/assets/domain-categories.json`，最后跑 `check_domain_judgments.py` 自检，退出码非 0 不许进第 4 步。
 
@@ -216,7 +216,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 参与计算的品牌 = 目标品牌 + 全部配置竞品 + 开放品牌词表命中的品牌（单品类通常在几十到上百个）。声量份额与平均提及位置的分母都是这一整集，**不是只有展示的几个**。
 
-前端每个榜单**只展示本主题所属产品线的品牌**：目标品牌 + 该产品线的配置竞品 + 1 个按提及率降序取到的开放竞品（已在前面出现则顺延）。**配置竞品数量不设上限**（2026-11-11 Suda：每条产品线各挂 3 个），用 Case 的「竞品 N 主题」限定它只在哪些主题的切片里出现；未限定则所有主题都展示。全部主题切片与「类型:X」意图切片展示全部配置竞品。其余品牌在环形图里合并为「其他品牌」段。情感矩阵与可见度用同一品牌集。
+前端每个榜单**只展示本主题所属产品线的品牌**：本品和配置竞品必留，剩余名额按提及率从高到低补开放品牌，合计不超过 5 个（表单限 3 个竞品，正常是本品 + 3 竞品 + 1 个开放品牌；Suda 2026-11-27）。用 Case 的「竞品 N 主题」限定配置竞品只在哪些主题的切片里出现；未限定则所有主题都展示。全部主题切片与「类型:X」意图切片展示全部配置竞品。其余品牌仍进声量分母。**情感模块（正负向占比、竞品情感矩阵）与可见度共用同一品牌集**（`slice.brand_display`），没判读的品牌显示「—」。
 
 ### 空答案
 
@@ -242,7 +242,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
 - 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
 - `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Bewinch 实例)。
-- 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。商品卡同理（`--shopping-cards 关`，或本次采集一张商品卡都没有）。
+- 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。商品卡默认不出（未传 `--shopping-cards 开`），或本次采集一张带目录的商品卡都没有时同样不出。
 - 产物归档到 `10-售前诊断报告/评测数据/<品牌名>/` 对应任务目录，与可见度统计并列。
 
 ## 已知边界
@@ -253,5 +253,5 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - 前端每个榜单只展示本主题所属产品线的品牌（目标 + 该线配置竞品 + 1 个开放竞品），是为了可读性；其余品牌仍进声量分母。需要完整分布时看 `report-data.json` 的 `competition` 与 `matrix`。
 - **采集目录的文件名必须是题库全局题号**（`0001.json`、`0001-r2.json`）。`details` 的键由文件名决定（`<地区>|<平台>|<题号>`），抽屉按题号回查；用原始批次名（如 `KECHG005_1.json`）会让抽屉显示「没有这道题的原始回答」（2026-11-11 实测）。
 - **题库可按市场写同一句提示词**（同一决策在 KE/NG 各挂一次）。此时 CSV 必须有 `region` 列（`KE`/`NG`），`build_report_data` 会按它限定题面匹配范围；缺列时后一道覆盖前一道，被覆盖的题在报告里显示无答案。
-- **只有一个平台时不出「跨平台」比较**：引擎在 `vals.length === 1` 时给单平台结论，不套共识/差距文案（否则写出「相差 0.0 个百分点」）。
+- **只有一个平台时平台 × 品牌矩阵整块不出**：判据是 `meta.platforms`，见 render-spec「模块显隐」。
 - 域名判读的 `geo-metrics/assets/domain-categories.json` 只接受 `media_review` / `ugc` / `institutional` / `press_release` / `other`；品牌官网由 Case + 词表的 `official_domains` 判定，不要往缓存里写 `competitor`。

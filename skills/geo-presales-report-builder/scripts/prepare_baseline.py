@@ -19,7 +19,10 @@ config 沿用原 baseline-html.json 的写法（相对路径相对 config 所在
     target / competitors / open_brands / compare_brands / runs / region / bank_json / questions_csv / out_dir /
     out_name / title / category / topic_labels / case_sensitive_aliases / competitor_site_domains /
     domain_categories / multi_label_suffixes / allow_unjudged_domains / allow_lexicon_gaps / report_kind /
-    changeability（changeability.csv，可选）/ difficulty（写 false 不出难度模块）
+    changeability（changeability.csv，可选）/ extra_modules
+基线报告默认只出核心洞察、可见度、引用和问题明细（Suda 2026-11-27）；
+购物商品卡、情感、竞争与优化难度、诊断与行动四块要在 ``extra_modules`` 里写
+"shopping" / "sentiment" / "difficulty" / "diagnosis" 才出。
 不再使用的旧字段（platform_labels、hide_sections、sentiment、translations）会打印提示后忽略：情感与译文走
 run_pipeline 的暂停点，旧批次的键是按「意图|平台」写的，和现在的「市场|平台」对不上，要重新导出。
 
@@ -45,6 +48,7 @@ for p in (str(HERE), str(CORE)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+EXTRA_MODULES = {"shopping", "sentiment", "difficulty", "diagnosis"}
 IGNORED = {"platform_labels": "平台显示名统一用数据层内置的", "hide_sections": "没数据的模块自动隐藏",
            "sentiment": "情感走 run_pipeline 第 3 步", "translations": "译文走 run_pipeline 第 4 步"}
 
@@ -59,6 +63,8 @@ def load_config(path: Path) -> dict:
         cfg[key] = (base / cfg[key]).resolve()
     if cfg.get("changeability"):
         cfg["changeability"] = (base / cfg["changeability"]).resolve()
+    if cfg.get("diagnosis"):
+        cfg["diagnosis"] = (base / cfg["diagnosis"]).resolve()
     cfg["runs"] = [(base / r).resolve() for r in cfg.get("runs") or []]
     if not cfg["runs"]:
         raise SystemExit("config.runs 为空：列出每一轮采集目录")
@@ -66,6 +72,12 @@ def load_config(path: Path) -> dict:
         raise SystemExit("config 缺 region（采集目录里的市场代码，如 SG）")
     if not cfg.get("competitors"):
         raise SystemExit("config.competitors 为空")
+    extra = set(cfg.get("extra_modules") or [])
+    if extra - EXTRA_MODULES:
+        raise SystemExit(f"config.extra_modules 只认 {sorted(EXTRA_MODULES)}，多了 {sorted(extra - EXTRA_MODULES)}")
+    if cfg.get("difficulty") is False:
+        extra.discard("difficulty")
+    cfg["extra_modules"] = extra
     for key, why in IGNORED.items():
         if cfg.get(key):
             print(f"○ config.{key} 不再使用：{why}")
@@ -175,27 +187,33 @@ def prepare(cfg: dict) -> dict:
 
 def pipeline_cmd(cfg: dict, platforms: list) -> list:
     out = cfg["out_dir"]
+    extra = cfg["extra_modules"]
     show = [cfg["target"]["name"]] + list(cfg.get("compare_brands") or [c["name"] for c in cfg["competitors"]])
     name = Path(cfg.get("out_name") or cfg["target"]["name"]).stem
     cmd = [sys.executable, HERE / "run_pipeline.py", "--collect", out / "collect",
            "--questions", out / "questions.csv", "--case", out / "case.json", "--lexicon", out / "lexicon.json",
            "--out-dir", out, "--regions", cfg["region"], "--platforms", ",".join(platforms),
-           "--source-limit", "0", "--brands", ",".join(show), "--target", cfg["target"]["name"],
-           "--brand-name", name]
+           "--source-limit", "0", "--target", cfg["target"]["name"], "--brand-name", name]
+    if "shopping" not in extra:  # 商品卡判定写「关」，购物商品卡模块和散在各处的商品卡数据都不出
+        cmd += ["--shopping-cards", "关"]
+    if "sentiment" in extra:  # 不传 --brands，run_pipeline 就跳过情感环节，报告不出情感模块
+        cmd += ["--brands", ",".join(show)]
     if cfg.get("allow_unjudged_domains"):
         cmd += ["--allow-unjudged-domains", str(cfg["allow_unjudged_domains"])]
     if cfg.get("allow_lexicon_gaps"):
         cmd += ["--allow-lexicon-gaps", str(cfg["allow_lexicon_gaps"])]
-    if (out / "difficulty" / "difficulty.json").exists():
+    if "difficulty" in extra and (out / "difficulty" / "difficulty.json").exists():
         cmd += ["--difficulty", out / "difficulty"]
+    if "diagnosis" in extra and cfg.get("diagnosis") and Path(cfg["diagnosis"]).exists():
+        cmd += ["--diagnosis", cfg["diagnosis"]]
     return [str(c) for c in cmd]
 
 
 def run_difficulty(cfg: dict) -> None:
     """竞争难度与优化难度：调 geo-gap-diagnosis 的 layer_readings.py → difficulty.py（判法归它），
-    结果在 out_dir/difficulty/，run_pipeline 用 --difficulty 接进报告。config.difficulty = false 时不出。"""
-    if cfg.get("difficulty") is False:
-        print("○ config.difficulty = false，不出「竞争与优化难度」模块")
+    结果在 out_dir/difficulty/，run_pipeline 用 --difficulty 接进报告。extra_modules 里没有 difficulty 时不出。"""
+    if "difficulty" not in cfg["extra_modules"]:
+        print("○ 基线报告默认不出购物商品卡、情感、竞争与优化难度、诊断与行动；要出写进 config.extra_modules")
         return
     gap = SKILLS / "geo-gap-diagnosis" / "scripts"
     out = cfg["out_dir"] / "difficulty"

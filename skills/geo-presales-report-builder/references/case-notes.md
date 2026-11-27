@@ -15,4 +15,4 @@
 
 ## 2026-09-16 口径静默漂移事故(变更纪律出处)
 
-见 `../../geo-presales-report-editor/SKILL.md`「底层的归属与变更纪律」一节;该事故同时推动了 prompt-builder v4.8.0 对 CSV `question_types` 契约的修正(Verification / Accuracy / Category Awareness 不再带 `sentiment`)。
+见归档的 `90-历史归档/旧版与过程稿/退役skill/geo-presales-report-editor/SKILL.md`「底层的归属与变更纪律」一节;该事故同时推动了 prompt-builder v4.8.0 对 CSV `question_types` 契约的修正(Verification / Accuracy / Category Awareness 不再带 `sentiment`)。

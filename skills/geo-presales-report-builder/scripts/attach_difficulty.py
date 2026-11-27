@@ -61,6 +61,8 @@ def seats(x: float) -> str:
 
 def comp_text(level: str, d: dict) -> str:
     slots, fixed = d.get("slots") or 0, d.get("fixed") or []
+    if level == "不判" and d.get("opt_code") == "too_few":
+        return "这道问题的回答次数还太少，暂不评估。"
     if level == "不判":
         return f"AI 回答这道题时很少推荐具体品牌（只有 {pct(d.get('named_any'))} 的回答提到了同类品牌），暂不评估。"
     if not slots:
@@ -123,6 +125,8 @@ def topic_comp_text(t: dict, comp: str, judged: int = 0) -> str:
     """主题的竞争说明：先说多数问题的情况（和档位一致），再说跨问题有没有固定被推荐的品牌。"""
     d = t.get("detail") or {}
     pat, fixed, leader = d.get("pattern"), d.get("fixed") or [], d.get("leader")
+    if t.get("竞争难度") == "不判" and d.get("too_few"):
+        return "这个主题的问题回答次数还太少，暂不评估。"
     if t.get("竞争难度") == "不判" or pat == "多数回答不点品牌":
         if judged:
             return f"这个主题的大多数问题 AI 很少推荐具体品牌，只有 {judged} 道会点名品牌，难度按这几道看（见问题明细）。"

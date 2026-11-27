@@ -28,6 +28,8 @@ SECTION_ORDER = [
     ("distribution", "情感", "情感"),
     # 竞争难度与优化难度（2026-11-20）：数据由 attach_difficulty.py 接入，没有就不出
     ("difficulty", "竞争与优化难度", "难度"),
+    # 诊断与行动：分析师写 diagnosis.json，由 attach_diagnosis.py 接入，没有就不出
+    ("diagnosis", "诊断与行动", "诊断"),
     ("records", "问题明细", "明细"),
 ]
 
@@ -49,6 +51,8 @@ def sections_for(meta: dict) -> list[tuple[str, str, str, str]]:
         if section_id == "distribution" and not sentiment_enabled(meta):
             continue
         if section_id == "difficulty" and not meta.get("difficulty_enabled"):
+            continue
+        if section_id == "diagnosis" and not meta.get("diagnosis_enabled"):
             continue
         shown.append((section_id, title, nav))
     out, n = [], 0
@@ -110,12 +114,24 @@ def panel(title: str, body_id: str, extra_class: str = "", head_extra: str = "")
     )
 
 
-def insight_note(label: str, body_id: str, accent: str = "") -> str:
+def insight_note(label: str, body_id: str, accent: str = "", data_diag: bool = False) -> str:
     style = f' style="border-left-color:var(--{accent})"' if accent else ""
+    diag_attr = ' data-diag="1"' if data_diag else ""
     return (
-        f'<div class="insight-note"{style}>'
+        f'<div class="insight-note"{style}{diag_attr}>'
         f'<span class="insight-label">{esc(label)}</span>'
         f'<div class="insight-copy" id="{body_id}"></div></div>'
+    )
+
+
+def diag_panel(title: str, table_id: str, first: bool = False) -> str:
+    margin = "" if first else ' style="margin-top:20px"'
+    return (
+        f'<article class="panel"{margin}>'
+        f'<div class="panel-head"><h3>{esc(title)}</h3></div>'
+        '<div class="panel-body"><div class="table-wrap">'
+        f'<table class="records-table diag-table" id="{table_id}"></table>'
+        "</div></div></article>"
     )
 
 
@@ -176,9 +192,8 @@ def build_body(meta: dict) -> str:
         if section_id == "overview":
             body.append('<div class="section-body">')
             body.append(kpi_row())
-            body.append(
-                insight_note("结论", "overviewInsight")
-            )
+            if meta.get("diagnosis_enabled"):
+                body.append(insight_note("诊断", "overviewDiagnosis", "red", data_diag=True))
             body.append("</div>")
         elif section_id == "competition":
             body.append('<div class="section-body">')
@@ -200,7 +215,8 @@ def build_body(meta: dict) -> str:
                 '<table class="matrix" id="platformMatrix" aria-label="各平台下品牌与竞品的指标矩阵"></table>'
                 "</div></div></article>"
             )
-            body.append(insight_note("结论", "competitionInsight"))
+            if meta.get("diagnosis_enabled"):
+                body.append(insight_note("诊断", "competitionDiagnosis", "red", data_diag=True))
             body.append("</div>")
         elif section_id == "shopping":
             # 三个指标是主体，品牌 / SKU 是切换（2026-11-07 Suda）
@@ -258,7 +274,8 @@ def build_body(meta: dict) -> str:
                 + "</div></article>"
                 + "</div>"
             )
-            body.append(insight_note("结论", "sourcesInsight"))
+            if meta.get("diagnosis_enabled"):
+                body.append(insight_note("诊断", "sourcesDiagnosis", "red", data_diag=True))
             body.append("</div>")
         elif section_id == "distribution":
             body.append('<div class="section-body">')
@@ -281,6 +298,8 @@ def build_body(meta: dict) -> str:
                 '<table class="attribute-matrix theme-matrix" id="sentimentMatrix"></table>'
                 "</div></div></article>"
             )
+            if meta.get("diagnosis_enabled"):
+                body.append(insight_note("诊断", "distributionDiagnosis", "red", data_diag=True))
             body.append("</div>")
         elif section_id == "difficulty":
             body.append('<div class="section-body">')
@@ -289,6 +308,12 @@ def build_body(meta: dict) -> str:
                 '<div class="table-wrap"><table class="records-table diff-table" id="difficultyTable"></table></div>'
                 '<p class="diff-note" id="difficultyNote"></p>'
             )
+            body.append("</div>")
+        elif section_id == "diagnosis":
+            body.append('<div class="section-body">')
+            body.append(diag_panel("主题诊断", "diagTopics", first=True))
+            body.append(diag_panel("AI 说错或说不清的品牌事实", "diagConflicts"))
+            body.append(diag_panel("行动清单", "diagPages"))
             body.append("</div>")
         elif section_id == "records":
             body.append('<div class="section-body">')
@@ -387,6 +412,7 @@ def slim_for_html(data: dict) -> dict:
     meta["shopping"] = shopping_switch(slim)
     meta["sentiment_enabled"] = sentiment_switch(slim)
     meta["difficulty_enabled"] = bool((slim.get("difficulty") or {}).get("topics"))
+    meta["diagnosis_enabled"] = bool(slim.get("diagnosis"))
     # 模块不出时，对应的数据也不进 HTML（Suda 2026-11-08：没有商品卡、情感数据就隐藏相应模块和数据）
     if not meta["shopping"]["enabled"]:
         for entry in (slim.get("details") or {}).values():
@@ -411,9 +437,6 @@ def slim_for_html(data: dict) -> dict:
     if slim.get("facts"):
         slim["slices"] = {}
     return slim
-
-
-SHOPPING_MIN_TRIGGER = 0.05  # 工业类产品线的开关门槛，和选词 selection-rules.md 第 1 步同一个数
 
 
 def _rate(value) -> dict:
@@ -466,8 +489,8 @@ def sentiment_switch(data: dict) -> bool:
 
 
 def shopping_switch(data: dict) -> dict:
-    """商品卡面板开不开。meta.shopping_cards 写了开 / 关就照办（选词 config.shopping_cards 的结论）；
-    没写时按数据判：最宽切片里任一平台商品卡触发率到 5% 才开，软件、服务、多数工业品类达不到。"""
+    """商品卡面板开不开。默认关，要出必须显式 `--shopping-cards 开`（写进 meta.shopping_cards；
+    售前诊断报告与售后基线同一口径，Suda 2026-11-27）。传了开但本次采集一张带目录的商品卡都没有，也不出。"""
     meta = data.get("meta") or {}
     declared = str(meta.get("shopping_cards") or "").strip()
     slices = data.get("slices") or {}
@@ -475,25 +498,18 @@ def shopping_switch(data: dict) -> dict:
     # 本次采集里一条商品字段都没返回的平台（按全量切片判，单个主题切片里没有不算）
     no_field = sorted(p for p, row in ((widest.get("shopping") or {}).get("by_platform") or {}).items()
                       if row.get("product_field_returned") is False)
-    best = 0.0
-    for row in ((widest.get("shopping") or {}).get("by_platform") or {}).values():
-        rate = row.get("shopping_mode_rate") or {}
-        if rate.get("denominator"):
-            best = max(best, (rate.get("numerator") or 0) / rate["denominator"])
     # 本次采集里一张商品卡都没有（品类不出卡、平台都不返回商品字段、或筛不出发现 / 替代题）：模块不出，
     # 写了「开」也一样——只剩一排 0% 和「接口未返回」的模块没有信息量
     total_cards = sum(int(row.get("shopping_answers") or 0)
                       for row in ((widest.get("shopping") or {}).get("by_platform") or {}).values())
     if total_cards == 0:
-        return {"enabled": False, "basis": f"本次采集没有商品卡（选词判定：{declared or '未写'}）",
+        return {"enabled": False, "basis": f"本次采集没有商品卡（开关：{declared or '未传，默认关'}）",
                 "no_field_platforms": no_field}
     if declared in ("开", "on"):
-        return {"enabled": True, "basis": "选词判定：开", "no_field_platforms": no_field}
+        return {"enabled": True, "basis": "显式开关：开", "no_field_platforms": no_field}
     if declared in ("关", "off"):
-        return {"enabled": False, "basis": "选词判定：关", "no_field_platforms": no_field}
-    enabled = best >= SHOPPING_MIN_TRIGGER
-    return {"enabled": enabled, "basis": f"按数据判：最高平台商品卡触发率 {best:.0%}，门槛 5%",
-            "no_field_platforms": no_field}
+        return {"enabled": False, "basis": "显式开关：关", "no_field_platforms": no_field}
+    return {"enabled": False, "basis": "默认关（未传 --shopping-cards 开）", "no_field_platforms": no_field}
 
 
 def build_html(data: dict) -> str:

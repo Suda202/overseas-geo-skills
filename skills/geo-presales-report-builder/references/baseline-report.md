@@ -20,8 +20,11 @@
    ```
 
    把 N 轮合成 `out_dir/collect`（地区层是真实市场，文件 `NNNN-rKK.json`，补上题面），写 `questions.csv`（题库的真实意图类型）、`case.json`、`lexicon.json`，然后调 `run_pipeline.py` 跑到下一个暂停点。不带 `--run` 只生成输入并打印命令。
-   同一步会调 geo-gap-diagnosis 的 `layer_readings.py` + `difficulty.py` 算竞争难度与优化难度（题面取采集时的 CSV，意图取题库），结果在 `out_dir/difficulty/`，流水线用 `--difficulty` 接进报告的「竞争与优化难度」模块（说法规则见 render-spec.md 同名一节）。config 写了 `changeability`（geo-monitoring `changeability_domains.py` 的 changeability.csv）才判「只改官网能不能改变」；写 `"difficulty": false` 不出这个模块。
-3. **后面全按售前流水线**：采集校验 → 词表查漏 → 数据生成（`--source-limit 0`，引用榜单全量）→ 情感 Claim 与两趟聚类 → 译文 → 独立校验 → 引擎对账 → 渲染。每个暂停点的要求见 SKILL.md 执行流程；补齐后重跑同一条 `prepare_baseline.py --run`。输出文件名是 `<out_name>-正式基线报告.html`。
+   **基线报告默认只出核心洞察、可见度、引用和问题明细**（Suda 2026-11-27）。购物商品卡、情感、竞争与优化难度、诊断与行动四块默认不出：商品卡默认按 `--shopping-cards 关` 处理；情感要人工抽 Claim、聚类，难度和诊断是「先优化什么」的判断，归缺口诊断服务。要出时在 config 的 `extra_modules` 里写 `"shopping"`、`"sentiment"`、`"difficulty"`、`"diagnosis"`：
+   - `difficulty`：同一步调 geo-gap-diagnosis 的 `layer_readings.py` + `difficulty.py`，结果在 `out_dir/difficulty/`，用 `--difficulty` 接进报告（说法规则见 render-spec.md 同名一节）；config 写了 `changeability` 才判「只改官网能不能改变」。
+   - `sentiment`：把展示品牌传给 `--brands`，流水线进情感暂停点。
+   - `diagnosis`：还要 config 写 `diagnosis`（diagnosis.json 路径）。
+3. **后面全按售前流水线**：采集校验 → 词表查漏 → 数据生成（`--source-limit 0`，引用榜单全量）→（开了情感才有：情感 Claim 与两趟聚类）→ 译文 → 独立校验 → 引擎对账 → 渲染。每个暂停点的要求见 SKILL.md 执行流程；补齐后重跑同一条 `prepare_baseline.py --run`。输出文件名是 `<out_name>-正式基线报告.html`。
 
 ## config（baseline-html.json）
 
@@ -31,7 +34,7 @@
 |---|---|
 | `target`、`competitors` | `name / aliases / official_domains`；竞品个数不限，写进 Case 的「竞品 N」 |
 | `open_brands` | 回答里出现的其他同类品牌（写进词表时默认 `same_category: true`，难度和缺口诊断按它认同类；不是同类的写 `false`）。中介、代理公司和品牌争同一个买家动作，写上公司域名；社群（Facebook、Telegram 群）和媒体站不是品牌，不写（Suda 2026-10-21） |
-| `compare_brands` | 情感统计的展示品牌（连同目标品牌传给 `--brands`）；缺省用全部竞品 |
+| `compare_brands` | 情感统计的展示品牌（`extra_modules` 含 `sentiment` 时连同目标品牌传给 `--brands`）；缺省用全部竞品 |
 | `runs`、`region` | 各轮采集目录、目录里的市场代码 |
 | `questions_csv`、`bank_json` | 采集用的题库 CSV（`query / question_zh / topic / question_id`）和题库 JSON（取每题 `prompt_type`；停测题在 `config.retired` 里也认） |
 | `topic_labels` | 主题展示名 |
@@ -41,7 +44,7 @@
 | `domain_categories` | 只做核对：和 geo-metrics 共享域名缓存（含内置表）不一致的会列出来。数据层只读共享缓存，要采用就写进 `geo-metrics/assets/domain-categories.json` |
 | `allow_unjudged_domains` | 未判读引用超过 5% 时仍要出报告的理由 |
 | `changeability` | 可改变性结果 changeability.csv（可选），给了优化难度才判只改官网能否改变 |
-| `difficulty` | 写 `false` 不出「竞争与优化难度」模块；缺省出 |
+| `extra_modules` | 默认不出的模块要出时列在这里：`shopping` / `sentiment` / `difficulty` / `diagnosis`；缺省为空。旧字段 `"difficulty": false` 仍认（等于不列 difficulty） |
 | `allow_lexicon_gaps` | 词表查漏不通过时仍要出报告的理由 |
 | `report_kind`、`title`、`out_dir`、`out_name` | 报告类型（缺省「正式基线」）、标题、输出目录、文件名 |
 

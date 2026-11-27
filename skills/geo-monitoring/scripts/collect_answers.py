@@ -56,7 +56,7 @@ GATEWAY = bool(os.environ.get("SCRAPELESS_BASE_URL", "").strip())
 CREATE_PATH = "/api/v2/scraper/request"
 RESULT_PATH = "/api/v2/scraper/result/"
 DEFAULT_PLATFORMS = "chatgpt,gemini,aimode,overview"
-ALL_PLATFORMS = "chatgpt,perplexity,copilot,gemini,aimode,overview,grok,alexa"
+ALL_PLATFORMS = "chatgpt,perplexity,copilot,gemini,aimode,overview,grok,alexa,bingaimode"
 # 回答里回显题面的字段：Grok 叫 user_query，Alexa 叫 user_text，其余叫 prompt
 PROMPT_ECHO_KEYS = ("prompt", "user_query", "user_text")
 TRANSIENT_HTTP = {408, 429, 500, 502, 503, 504}
@@ -216,11 +216,15 @@ def platform_input(platform: str, region: str, query: str, args) -> dict:
         payload["mode"] = args.copilot_mode
     elif platform == "grok":
         payload["mode"] = args.grok_mode
+    elif platform == "bingaimode":
+        # Bing AI Mode 文档只有 prompt / country / should_fetch_html，不发 web_search / shopping
+        #（2026-11-27 按 docs.scrapeless.com 的 bing-ai-mode 页核对）。
+        pass
     elif platform != "alexa":
         payload.update(web_search=args.web_search, shopping=args.shopping)
-    # 原平台回答页的 HTML（Scrapeless 文档只给 ChatGPT、Perplexity、Copilot 列了这个参数；
+    # 原平台回答页的 HTML（Scrapeless 文档给 ChatGPT、Perplexity、Copilot、Bing AI Mode 列了这个参数；
     # AI Mode 默认就有 result_html）。默认不开：体积大，且是否另计费未确认。
-    if getattr(args, "fetch_html", False) and platform in ("chatgpt", "perplexity", "copilot"):
+    if getattr(args, "fetch_html", False) and platform in ("chatgpt", "perplexity", "copilot", "bingaimode"):
         payload["should_fetch_html"] = True
     return payload
 
@@ -360,7 +364,7 @@ def main() -> int:
     parser.add_argument("--no-web-search", dest="web_search", action="store_false")
     parser.add_argument("--no-shopping", dest="shopping", action="store_false")
     parser.add_argument("--fetch-html", action="store_true",
-                        help="ChatGPT / Perplexity / Copilot 请求带 should_fetch_html=true，取原平台回答页 HTML（默认不开）")
+                        help="ChatGPT / Perplexity / Copilot / Bing AI Mode 请求带 should_fetch_html=true，取原平台回答页 HTML（默认不开）")
     parser.add_argument("--retry-unrecoverable", action="store_true", help="对 manifest 里已移出的格重新采集")
     parser.add_argument("--dry-run", action="store_true", help="只打印待采格与调用量，不调用")
     parser.add_argument("--check-only", action="store_true", help="只验收现有目录；有待采格时退出码 3")

@@ -130,6 +130,11 @@ def _normalize_object(raw: dict | str, role: str, index: int) -> dict:
     if not domains:
         raise ContractError(f"{role} object {name!r} is missing a valid official domain")
     aliases = _clean_aliases(name, raw.get("aliases") or raw.get("confirmed_aliases"))
+    # 是否和本品卖同一类东西。目标品牌和配置竞品默认是；开放 / 发现品牌要显式写 true 才算，
+    # 没写或写 false 都按非同类处理（与 runs.load_vendor_brands 同口径），sources.py 据此判竞品官网。
+    same_category = raw.get("same_category")
+    if not isinstance(same_category, bool):
+        same_category = role in ("target", "competitor")
     return {
         "object_id": "target" if role == "target" else f"{role}-{index:02d}",
         "role": role,
@@ -138,6 +143,7 @@ def _normalize_object(raw: dict | str, role: str, index: int) -> dict:
         "official_domains": domains,
         "aliases": aliases,
         "object_scope": str(raw.get("object_scope") or "brand"),
+        "same_category": same_category,
     }
 
 

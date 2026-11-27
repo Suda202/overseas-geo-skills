@@ -7,6 +7,7 @@
     --pagegap     page_gap.py 的输出目录（可选；没有时第 5、6 断点记未知）
     --constraints 可选 JSON：{"<question_id>": {"relative": "明显优势|优势|持平|劣势|明显劣势|未知", "basis": "…"}}
     --site-audit  可选 JSON：{"crawlability": "高|中|低", "source": "报告路径或日期"}
+    --trace       trace_errors.py 的输出目录（可选）：事实行按错误出处写原因、载体、出处页面
     --out         输出目录：diagnosis.csv、diagnosis.json、diagnosis.md
 
 阈值在 PARAMS，可用 --param key=value 覆盖。
@@ -84,6 +85,7 @@ def main(argv=None) -> int:
     ap.add_argument("--pagegap", type=Path)
     ap.add_argument("--constraints", type=Path)
     ap.add_argument("--site-audit", type=Path)
+    ap.add_argument("--trace", type=Path)
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--param", action="append", default=[])
     args = ap.parse_args(argv)
@@ -122,7 +124,9 @@ def main(argv=None) -> int:
             continue
         rows.extend(diagnose_question(q, pooled, by_q[q["question_id"]], labels, fact_errors, pg_by_q[q["question_id"]],
                                       pg_pages, constraints.get(q["question_id"]) or {}, crawl, official_seen, target, P))
-    rows.extend(accuracy_rows(fact_errors, data, P))
+    trace = json.loads((args.trace / "trace.json").read_text(encoding="utf-8")) \
+        if args.trace and (args.trace / "trace.json").exists() else None
+    rows.extend(accuracy_rows(fact_errors, data, P, trace))
     rows.extend(sku_rows(data, by_q, pg_rows, pg_pages, P))
 
     # 对照题组：同主题里本期没有「测试」的题
@@ -571,7 +575,29 @@ def sku_rows(data, by_q, pg_rows, pg_pages, P):
     return rows
 
 
-def accuracy_rows(fact_errors, data, P):
+def trace_fields(items, trace):
+    """事实行的原因、载体、出处：按 trace_errors.py 的结果合并；没跑溯源时沿用原来的假设写法。"""
+    if trace is None:
+        return {"主原因（假设）": "官网、官方店或第三方页面的事实写法冲突或过时", "载体": "错误来源所在载体",
+                "信息怎么变好（候选）": BP_TEXT[8][2], "最接近的现有页面（候选，需人确认）": ""}
+    by_key = {(t["answer_id"], t["quote"]): t for t in trace}
+    hits = [by_key[(fe["answer_id"], fe["quote"])] for fe in items if (fe["answer_id"], fe["quote"]) in by_key]
+    if not hits:
+        return {"主原因（假设）": "未溯源（trace 里没有这几条）", "载体": "错误来源所在载体",
+                "信息怎么变好（候选）": BP_TEXT[8][2], "最接近的现有页面（候选，需人确认）": ""}
+    causes = Counter(h["cause"] for h in hits)
+    top = causes.most_common(1)[0][0]
+    top_hit = next(h for h in hits if h["cause"] == top)
+    official = list(dict.fromkeys(u for h in hits for u in h["official_sources"]))
+    third = list(dict.fromkeys(u for h in hits for u in h["third_sources"]))
+    src = "；".join(filter(None, [f"官网 {' '.join(official[:3])}" if official else "",
+                                  f"第三方 {' '.join(third[:3])}" if third else ""]))
+    return {"主原因（假设）": f"出处：{'、'.join(f'{c} {n}' for c, n in causes.most_common())}（溯源结果，片段在 trace.json，人核语境）",
+            "载体": top_hit["carrier"], "信息怎么变好（候选）": top_hit["action"],
+            "最接近的现有页面（候选，需人确认）": " ".join(official[:3]), "_出处": src}
+
+
+def accuracy_rows(fact_errors, data, P, trace=None):
     by_basis = defaultdict(list)
     for fe in fact_errors:
         by_basis[fe.get("basis") or "未注明"].append(fe)
@@ -582,15 +608,18 @@ def accuracy_rows(fact_errors, data, P):
         qs = sorted({fe["question_id"] for fe in items})
         prio = min((qinfo[x]["priority"] for x in qs if x in qinfo), key=lambda p: PRIO_RANK.get(p, 2), default="未定")
         ok = len(answers) >= P["min_fact_errors"]
+        tf = trace_fields(items, trace)
         rows.append({
             "对象": f"事实：{basis}", "题号": "、".join(qs), "题面": "", "主题": "", "类型": "准确性", "业务优先级": prio,
             "有效回答": len(answers), "本品提及率": "", "领先竞品": "", "领先竞品提及率": "", "官网进检索率": "", "官网被引率": "",
             "推荐分布": "", "过门情况": "通过" if ok else "门 3 未过", "断点": "8 被推荐但说错" if ok else "",
-            "主原因（假设）": "官网、官方店或第三方页面的事实写法冲突或过时",
-            "证据": "；".join(dict.fromkeys(f"「{fe['quote'][:90]}」→ {fe['correct']}" for fe in items))[:600],
-            "证据强度": "模型标注，需人工逐条核", "次要发现": "", "决定": "测试" if ok else "观察", "载体": "错误来源所在载体",
-            "缺口": f"{len(answers)} 条回答在 {len(qs)} 道题里写错 {basis}", "信息怎么变好（候选）": BP_TEXT[8][2],
-            "最接近的现有页面（候选，需人确认）": "", "主指标": BP_TEXT[8][3], "对照题组": "", "最早复测": BP_TEXT[8][4],
+            "主原因（假设）": tf["主原因（假设）"],
+            "证据": ("；".join(dict.fromkeys(f"「{fe['quote'][:90]}」→ {fe['correct']}" for fe in items))[:500]
+                   + (f"｜{tf['_出处']}" if tf.get("_出处") else "")),
+            "证据强度": "模型标注，需人工逐条核", "次要发现": "", "决定": "测试" if ok else "观察", "载体": tf["载体"],
+            "缺口": f"{len(answers)} 条回答在 {len(qs)} 道题里写错 {basis}", "信息怎么变好（候选）": tf["信息怎么变好（候选）"],
+            "最接近的现有页面（候选，需人确认）": tf["最接近的现有页面（候选，需人确认）"], "主指标": BP_TEXT[8][3],
+            "对照题组": "", "最早复测": BP_TEXT[8][4],
             "负责方": "内容团队 + 品牌方", "_pattern": -1,
         })
     return rows
@@ -606,6 +635,7 @@ def render_md(rows, meta, P, crawl, labels, pg_pages, args):
              f"- 强制联网的平台：{'、'.join(meta['forced_search']) or '无'}（这些平台联网层不可观察）。",
              f"- 官网可达性：{crawl}；推荐标注：{'有' if labels else '无（断点 7、8 未判）'}；"
              f"页面缺口：{'抓取 %d 个页面，成功 %d 个' % (len(pg_pages), sum(p['status'] == 'ok' for p in pg_pages.values())) if pg_pages else '未跑（断点 5、6 未判）'}。",
+             f"- 事实错误出处：{'已溯源（trace_errors.py）' if args.trace else '未溯源，事实行原因为假设'}。",
              f"- 阈值：{json.dumps(P, ensure_ascii=False)}", "",
              "## 结论分布", "", "| 决定 | 行数 |", "|---|---|"] + [f"| {k} | {v} |" for k, v in c.most_common()] + [""]
     by_topic = defaultdict(Counter)

@@ -192,6 +192,20 @@ def urls_in(value):
     return found
 
 
+def cited_urls_in(value):
+    """Citation-field URLs the answer actually cited.
+
+    Bing AI Mode / Perplexity / ChatGPT 的引用字段会带未被正文引用的来源
+    （`cited_count == 0`），直接比对会把它们误报成「仅字段有」。字段里只要有
+    整数 `cited_count`，就只统计 >0 的条目；没有该字段时按原样比。
+    """
+    if isinstance(value, list) and any(
+            isinstance(item, dict) and isinstance(item.get("cited_count"), int) for item in value):
+        value = [item for item in value
+                 if isinstance(item, dict) and isinstance(item.get("cited_count"), int) and item["cited_count"] > 0]
+    return urls_in(value)
+
+
 def parse_body(text):
     definitions = {}
     for number, url, _title in REF_DEF.findall(text):
@@ -418,7 +432,7 @@ def audit_sample(platform, path, target, contract):
                           f"{len(definitions)} 条定义",
             })
         else:
-            field_urls = urls_in(field)
+            field_urls = cited_urls_in(field)
             body_urls = {u for u in definitions.values() if u}
             only_body = sorted(body_urls - field_urls)
             only_field = sorted(field_urls - body_urls)

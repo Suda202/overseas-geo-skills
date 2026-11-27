@@ -1,9 +1,9 @@
 ---
 name: geo-presales-pipeline
-description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-metrics for metrics and sentiment, geo-presales-report-builder) whose contract governs that stage. Do not use it to define or re-derive any metric caliber, to audit brand mention recognition (geo-presales-report-audit), to produce the upload CSV or written conclusions (geo-presales-report-editor).
+description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-metrics for metrics and sentiment, geo-presales-report-builder) whose contract governs that stage. Do not use it to define or re-derive any metric caliber or collection rule.
 metadata:
   author: 海外 GEO 项目
-  version: "2.1.0"
+  version: "2.3.0"
 ---
 
 # 售前全链路编排：Case → 生词 → 采集 → HTML 报告
@@ -13,8 +13,8 @@ metadata:
 把一条评测 Case 一路带到可交客户的单文件 HTML 报告。**本 skill 只编排、零新逻辑**：口径、校验、计算、渲染都在被调 skill 及其脚本里。这里只回答两个问题：下一步跑什么；停下来时请哪个 skill 出场。
 
 - 负责：阶段顺序、断点续跑、每个暂停点的分派。
-- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集与采集缺陷的判定规则（`geo-monitoring`）、Claim 判读规则（`geo-metrics` 的 sentiment.md）、品牌纠错与 Bad Case（report-audit）、上传 CSV 与结论（report-editor）、写题规则（geo-prompt-selection-builder）。
-- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过采集完整性检查，见 `geo-monitoring`）；只判情感用 `geo-metrics` 的 `sentiment_sentences.py`（做法见 references/sentiment.md）；改已有报告走 `geo-presales-report-audit` → `geo-presales-report-editor`。
+- 不负责：任何指标口径与品牌识别（`geo-metrics`）、采集与采集缺陷的判定规则（`geo-monitoring`）、Claim 判读规则（`geo-metrics` 的 sentiment.md）、写题规则（geo-prompt-selection-builder）。
+- 只要指标数字、不出报告时，直接用 `geo-presales-report-builder` 的 `build_report_data.py`（同样要先过采集完整性检查，见 `geo-monitoring`）；只判情感用 `geo-metrics` 的 `sentiment_sentences.py`（做法见 references/sentiment.md）。
 
 ## 从哪一段进
 
@@ -65,7 +65,7 @@ python3 scripts/run_pipeline.py \
 - `--case` 可以直接传 v8 题库 JSON，脚本会取其中的 `config.case_fields` 写成 `<输出目录>/case.json`。
 - 阶段 -1 会验收采集目录：没采齐时以退出码 3 暂停，并打印 `collect_answers.py` 的采集命令。驾驶脚本只检查、不代跑付费采集。
 - **退出码 3 = 暂停点**，会打印缺什么文件。按下表补齐后**重跑同一命令**续跑。暂停点产物（词表、claims、聚类映射、译文）重跑时不会被覆盖；要重做，先删掉对应文件。
-- 不带 `--brands`/`--target` 会跳过情感环节，报告不出情感模块（问题明细与抽屉也不出情感）。情感没卖给客户时就这样交付；卖了的必须跑完情感再交。商品卡同理：`--shopping-cards 关` 或采集里一张商品卡都没有时不出购物商品卡模块。所有报告是同一个模板（Botslab G980H 预览），缺哪块数据就隐藏哪块，规则见 report-builder render-spec「模块显隐」。
+- 不带 `--brands`/`--target` 会跳过情感环节，报告不出情感模块（问题明细与抽屉也不出情感）。情感没卖给客户时就这样交付；卖了的必须跑完情感再交。商品卡默认不出，要出传 `--shopping-cards 开`，且采集里至少有一张带目录的商品卡；没有卡时写了开也不出。所有报告是同一个模板（Botslab G980H 预览），缺哪块数据就隐藏哪块，规则见 report-builder render-spec「模块显隐」。
 - `--lexicon` 必填：声量份额与提及率排名的分母必须是全部纳入品牌（目标品牌 + 3 个配置竞品 + 开放词表命中），否则算出来的数不成立。换品类时还要传 `--theme-keywords` 与 `--brand-suffixes`，否则主题矩阵落空，品牌名会带品类后缀。
 
 ## 暂停点指挥表
@@ -83,6 +83,7 @@ python3 scripts/run_pipeline.py \
 | 阶段 3b Claim 抽取 | `geo-metrics`（references/sentiment.md） | 按 Claim 层契约逐单元拆原子 Claim；拿不准的进 review-queue 交 Suda 裁决 |
 | 阶段 3d / 3f 两趟聚类 | `geo-metrics`（references/sentiment.md） | claim→attribute、attribute→theme；维度优先于极性，theme 必须中性；输入是去重清单，同一 claim 只判一次 |
 | 阶段 4 译文未齐 | 翻译（语义工作，派 haiku 子代理即可） | 按批次翻成 `<批次>-zh.json`：保留 markdown 结构、品牌名与型号留英文、URL 与数值原样、不增删内容、每翻完一条立即落盘。译文必做，报告是给中文读者看的 |
+| 阶段 5d 缺诊断（售前诊断报告必做） | `geo-gap-diagnosis`（references/diagnosis-writing.md） | 抓官网（`facts_draft.py crawl`）、页面缺口（`page_gap.py`）、可改变性（geo-monitoring `changeability_domains.py`）；有客户官网 SEO 诊断报告的先读一遍；`diagnosis_materials.py` 汇总素材后按写法规范写 `diagnosis.json`，重跑时加 `--diagnosis`。缺了流水线暂停，不出报告；确实不出加 `--allow-missing-diagnosis "<理由>"` |
 | 阶段 6 渲染完成 | 浏览器验证 | 逐个切换国家、平台、主题，确认各模块有数、无空白、无变形；判据见 report-builder 的渲染规范 |
 
 阶段 3 的机器工序（3a 抽取、3c/3e 去重清单、3g 回装、3h 统计、3i 接入）由脚本自动跑，不需要分派。3h 和 3i 的正向占比都调 `geo-metrics` 的 `geo_presales_core/sentiment.py`，只有这一份计算。
@@ -90,6 +91,5 @@ python3 scripts/run_pipeline.py \
 ## 完成与出口
 
 - 完成标准：HTML 渲染成功，`verify_report_data.py` 与 `check_engine_parity.js`（阶段 5b，页面多选计算引擎与预算切片对账）都通过，浏览器检查筛选（含多选组合）无空白、无变形。命令跑完不算完成。
-- 报告数字有疑点（品牌识别错、排名不对）→ `geo-presales-report-audit`，改完从阶段 2 重跑。
-- 要交上传 CSV 和客户结论 → `geo-presales-report-editor`，输入是本链产出的已确认数据。
+- 售前诊断报告必须有「诊断与行动」模块：缺 `diagnosis.json` 时流水线停在阶段 5d，不算完成；确实不出要显式 `--allow-missing-diagnosis "<理由>"`。
 - 替换已交付报告，或修复抽取器后重跑 → 先读 report-builder 的《重跑与产物卫生》，隔离重跑，不许原地覆盖。

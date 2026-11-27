@@ -32,6 +32,7 @@ from pathlib import Path
 
 PARAMS = {
     "min_valid": 7,          # 有效回答少于此数只算预判（正式基线每格 7 次）
+    "min_judge": 3,          # 有效回答少于此数不判：1 次回答里出现的每家都算「每次都在」，轮换位恒为 0，全判成高（Zhiqinghe 2026-11-26）
     "no_brand": 0.20,        # 点了任一同类品牌的回答占比低于此值：答案不点品牌，不判
     "fixed_leader": 0.80,    # 领先竞品出现在 ≥80% 的回答里（Indig：5 道题里至少 4 道）……
     "sov_lead": 0.05,        # ……且声量份额领先第二名 ≥5 个百分点，算「头部固定」
@@ -116,6 +117,8 @@ def competition_level(c: dict, pattern: str) -> tuple[str, str]:
     固定的几家把名额占满、剩下的位置很少，新品牌最难挤进来（Semrush：竞品强度 × 可得位置）。"""
     P = PARAMS
     slots = c["slots"]
+    if c["n"] < P["min_judge"]:
+        return "不判", f"每道题只有 {c['n']} 次回答，分不出哪些竞品每次都在；至少 {P['min_judge']} 次回答再判"
     if pattern == "答案不点品牌":
         return "不判", f"只有 {pct(c['named_any'])} 的回答点了同类品牌，答案在讲方法或规则，先复核题面"
     if slots == 0:
@@ -136,6 +139,8 @@ def optimization_level(c: dict, comp: str, change: dict | None) -> tuple[str, st
     """只改官网，把本品做进回答有多难。按顺序判，命中即定档。"""
     P = PARAMS
     t, L = c["target_rate"], c["leader_rate"]
+    if comp == "不判" and c["n"] < P["min_judge"]:
+        return "不判", "too_few", f"回答次数不足 {P['min_judge']} 次，暂不判"
     if comp == "不判":
         return "不判", "not_judged", "答案不点品牌，提及率测不出东西；先复核题面是否在问候选"
     if t >= P["mention_ok"]:
@@ -203,7 +208,7 @@ def main(argv=None) -> int:
                          可改变性=(change.get(qid) or {}).get("level", "未给"),
                          预判="预判" if len(ans) < PARAMS["min_valid"] else "", _c=c,
                          # 结构化读数：基线报告用它写给品牌方看的说法（geo-presales-report-builder attach_difficulty.py）
-                         detail={"opt_code": opt_code, "slots": c["slots"], "fixed": c["fixed"],
+                         detail={"opt_code": opt_code, "n": c["n"], "slots": c["slots"], "fixed": c["fixed"],
                                  "free": max(c["slots"] - len(c["fixed"]), 0), "named_any": c["named_any"],
                                  "target_rate": c["target_rate"], "leader": c["leader"],
                                  "change_level": (change.get(qid) or {}).get("level", ""),
@@ -266,19 +271,21 @@ def main(argv=None) -> int:
             return level, " · ".join(f"{k} {d[k]}" for k in ("低", "中", "高", "已达标", "不判") if d[k])
 
         comp, comp_dist = vote("竞争难度")
+        too_few = all(r["detail"].get("opt_code") == "too_few" for r in rs)
         opt, opt_dist = vote("优化难度", "已达标")
         if pat == "多数回答不点品牌":
             comp = "不判"
         topics.append({
             "topic": topic, "prompts": n_q, "竞争格局": pat, "竞争难度": comp, "竞争难度分布": comp_dist,
-            "竞争依据": (f"只有 {pct(c['named_any'])} 的回答点了同类品牌，先复核题面" if comp == "不判" else lead_txt),
+            "竞争依据": (f"每道题的回答不足 {PARAMS['min_judge']} 次，暂不判" if comp == "不判" and too_few
+                       else f"只有 {pct(c['named_any'])} 的回答点了同类品牌，先复核题面" if comp == "不判" else lead_txt),
             "本品提及率": pct(c["target_rate"]), "每答列几家": f"{c['slots']:g}",
             "优化难度": opt, "优化难度分布": opt_dist,
             "可先做的题": "、".join(r["question_id"] for r in rs if r["优化难度"] == "低") or "—",
             "预判": "预判" if any(r["预判"] for r in rs) else "",
             "detail": {"pattern": pat, "fixed": fixed, "leader": leader, "cover": cover, "prompts": n_q,
                        "lead_gap": lead_gap, "named_any": c["named_any"], "slots": c["slots"],
-                       "question_ids": [r["question_id"] for r in rs]},
+                       "too_few": too_few, "question_ids": [r["question_id"] for r in rs]},
         })
 
     args.out.mkdir(parents=True, exist_ok=True)

@@ -47,6 +47,8 @@ Object.keys(DATA.slices).forEach(function (key) {
     eq(key, "kpis." + f, js.kpis[f], py.kpis[f]);
   });
   eq(key, "competition", js.competition, py.competition);
+  // 旧 report-data 没有 brand_display，跳过比对；新数据必须两侧一致
+  if (py.brand_display) eq(key, "brand_display", js.brand_display, py.brand_display);
   eq(key, "_counts.visibility_answers", js._counts.visibility_answers, (py._counts || {}).visibility_answers);
   // 矩阵：引擎只出选中平台的列，按平台名逐列对
   ["mention", "share", "rank", "official"].forEach(function (m) {

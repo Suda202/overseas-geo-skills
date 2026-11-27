@@ -60,7 +60,7 @@ def load_lexicon(path) -> tuple[list[dict], set[str], str]:
     elif isinstance(raw, list):
         source = raw
     elif isinstance(raw, dict):
-        # 兼容「标准名 → 别名 list」的 dict 型词表（report-audit / shared），别名必须保留；
+        # 兼容「标准名 → 别名 list」的 dict 型词表（旧版格式），别名必须保留；
         # 以 `_` 开头的键（_comment/_canonical 等）是元数据，不是品牌。
         source = []
         for key, value in raw.items():
@@ -94,6 +94,9 @@ def load_lexicon(path) -> tuple[list[dict], set[str], str]:
             "type": str(item.get("type") or "competitor_open").strip(),
             # 词表里实际写的类型；没写为 None（情感单元的 brand_type 照实记，不套默认值）
             "declared_type": str(item.get("type")).strip() if item.get("type") else None,
+            # 是否和本品卖同一类东西；只有显式 true / false 才透传，没写为 None。
+            # 报告构建据此决定开放品牌官网是否算「竞品网站」，与 runs.load_vendor_brands 同口径。
+            "same_category": item.get("same_category") if isinstance(item.get("same_category"), bool) else None,
         }
         # 品牌名本身是普通英文词时（Nothing / One / Play），调用方可以要求不要把规范名当别名，
         # 只认词表里带型号的写法。透传这个开关，否则 build_config 拿不到。

@@ -29,5 +29,11 @@
     "body_citations": ["references"],
     "retrieval": [],
     "answer_sources": ["sources"]
+  },
+  "bingaimode": {
+    "answer": ["content_md", "content_raw"],
+    "body_citations": ["sources"],
+    "retrieval": [],
+    "answer_sources": ["sources"]
   }
 }

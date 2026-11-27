@@ -68,7 +68,7 @@ import geo_presales_core.lexicon as core_lexicon  # noqa: E402
 import geo_presales_core.citations as core_citations  # noqa: E402
 from geo_presales_core.crawler import answer_validity
 from geo_presales_core.metrics import compute_metrics, question_object_stats, visibility_answers  # noqa: E402
-from geo_presales_core.shopping import extract_product_cards, product_field_returned  # noqa: E402
+from geo_presales_core.shopping import SHOPPING_SCOPE_INTENTS, extract_product_cards, product_field_returned  # noqa: E402
 from geo_presales_core.util import (  # noqa: E402
     normalize_host,
     normalize_text,
@@ -79,7 +79,7 @@ from geo_presales_core.util import (  # noqa: E402
 
 # 去引用清洗：品牌匹配必须跑在剥离了引用标记与商品卡商家列的正文上，否则被引文章的
 # 标题（如 "...car cameras by Garmin, Nextbase, 70mai and more"）里的品牌会被
-# find_alias_spans 当成提及——这是 geo-presales-report-audit 已记录的错误类型
+# find_alias_spans 当成提及——这是已记录的错误类型
 # 「引用锚文本公司名误计为品牌」。引用统计仍用原文，标记要被解出来。
 import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core 同目录）
 
@@ -183,6 +183,13 @@ _citation_entries = core_citations._citation_entries
 # 键取 shared/canonical-intent-mapping.md 的全集，两种拼写都收：规范表写的是
 # `Prompt Type: Verification`，但题库实际用的是 `verification`，缺了会直接中断构建
 # （Bewinch 题库只有 4 种意图，换到 edgelight 的 6 种才暴露）。
+# 题库没写 question_types 时的默认映射（geo-metrics references/sentiment.md「样本口径」）
+DEFAULT_QUESTION_TYPES = {
+    "discovery": "visibility,sentiment",
+    "competitor": "visibility,sentiment",
+    "sentiment": "sentiment",
+}
+
 CSV_INTENT_MAP = {
     "discovery": "discovery",
     "competitor": "competitor",
@@ -261,6 +268,9 @@ def domain_bucket(counter) -> tuple[str, str]:
                       for k, v in ordered[:3])
     return f"混合（{parts}）", majority
 COMPETITION_FILLS = ["blue", "cyan", "green", "amber", "red"]
+# 可见度与情感共用的展示品牌行数目标：本品和配置竞品先占位，剩余名额按提及率补给开放品牌；
+# 配置竞品超过这个数时全留，不截断本品或配置竞品（Suda 2026-11-27）。
+MAX_DISPLAY_BRANDS = 5
 
 
 # ------------------------------------------------------------------ 小工具
@@ -469,7 +479,7 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
     objects: list[dict] = []
     alias_owner: dict[str, str] = {}
 
-    def add(name, domains, aliases, role, order, exclude_canonical=False):
+    def add(name, domains, aliases, role, order, exclude_canonical=False, same_category=True):
         object_id = ("target" if role == "target"
                      else f"competitor-{order:02d}" if role == "competitor"
                      else f"open-{order:02d}")
@@ -481,6 +491,9 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
             "official_domains": [d for d in (normalize_host(x) for x in domains) if d],
             "aliases": [],
             "object_scope": "brand",
+            # 是否同类品牌：目标品牌和配置竞品是；开放品牌默认同类，只有显式 false 才排除。
+            # sources._classify_official 据此决定其官网算不算「竞品网站」。
+            "same_category": same_category if isinstance(same_category, bool) else True,
             # 配置竞品可挂在指定主题上（Case competitor.topics）；空 = 所有主题都展示。
             # 2026-11-11 Suda：不再限制 3 个配置竞品，每条产品线各挂 3 个。
             "topics": [],
@@ -536,7 +549,8 @@ def build_config(case: dict, topics: list[str], lexicon_entries: list[dict],
     for entry in unresolved:
         add(entry["name"], entry["domains"], entry["aliases"], "open",
             n_configured + len([o for o in objects if o["role"] == "open"]) + 1,
-            bool(entry.get("exclude_canonical_alias")))
+            bool(entry.get("exclude_canonical_alias")),
+            same_category=entry.get("same_category") is not False)
 
     # 词表顶层 case_sensitive_aliases：每个品牌只挂属于自己的写法，识别时由 core 过滤
     for obj in objects:
@@ -615,8 +629,11 @@ def build_question_bank(rows: list[dict], config: dict, topics: list[str]) -> di
             str(csv_intent).strip().casefold().removeprefix("intent:").strip())
         if not backend_intent:
             raise SystemExit(f"题库第 {index} 行诊断意图无法映射：{csv_intent!r}")
-        # analysis_type 取题库 question_types（Discovery 为 visibility,sentiment）
-        analysis_type = str(row.get("question_types") or "").strip() or None
+        # analysis_type 取题库 question_types（Discovery 为 visibility,sentiment）。
+        # 选词导出的五列上传 CSV 没有这一列：按 geo-metrics sentiment.md 的默认映射补（发现、对比、评估进情感样本），
+        # 否则情感样本恒为 0（Zhiqinghe 2026-11-26）。
+        analysis_type = (str(row.get("question_types") or "").strip()
+                         or DEFAULT_QUESTION_TYPES.get(backend_intent))
         tags = [t.strip() for t in str(row.get("tags") or "").split(",") if t.strip()]
         questions.append({
             "question_id": question_id,
@@ -927,7 +944,9 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
     configured = [r for r in rows if _show_configured(r)]
     open_rows = sorted([r for r in rows if r["role"] == "open"],
                        key=lambda r: (-(r["mention_rate"] or 0), r["name"]))
-    display = configured + open_rows[:1]
+    # 展示集合：本品与配置竞品必留，剩余名额按提及率补给开放品牌，总数不超过 MAX_DISPLAY_BRANDS 行。
+    # 表单限 3 个竞品，所以正常是本品 + 3 竞品 + 1 个开放品牌（Suda 2026-11-27）。
+    display = (configured + open_rows)[:MAX_DISPLAY_BRANDS]
     by_mention = sorted(display, key=lambda r: (-(r["mention_rate"] or 0), r["role"] != "target"))
     rank_lookup = rank_lookup_of(rows)
     max_rate = max([r["mention_rate"] or 0 for r in by_mention] or [0])
@@ -1000,7 +1019,10 @@ def build_slice(region: str, platform: str, topic: str, config: dict, bank: dict
                                       f"{target['linked_mention_denominator']}"),
         },
         "competition": {"mention": mention_rows, "share": share_values, "rank": rank_rows},
-        # 完整纳入品牌分布（不受前端 5 行显示截断影响）：声量份额与平均提及
+        # 可见度与情感共用的展示品牌（按提及率降序，与 competition.mention 同集）。
+        # 情感模块只显示这一组品牌；未判读的品牌显示「—」。
+        "brand_display": [row["name"] for row in by_mention],
+        # 完整纳入品牌分布（不受展示品牌集影响）：声量份额与平均提及
         # 位置的分母本来就是这一整集，出报告口径说明或核对时需要看全量。
         "competition_all": [
             {
@@ -1099,7 +1121,8 @@ def build_facts(index: dict, config: dict, regions: list[str]) -> dict:
         "bucket_fill": {name: fill for name, fill in SOURCE_BUCKET.values()},
         "competition_fills": COMPETITION_FILLS,
         "visibility_groups": [[INTENT_LABEL[k] for k in group] for group in VISIBILITY_INTENT_GROUPS],
-        "shopping_scope": [INTENT_LABEL[k] for k in ("discovery", "alternatives")],
+        # 与 core SHOPPING_SCOPE_INTENTS 同一口径（2026-11-23 改为全部意图），页面引擎多选时据此现算
+        "shopping_scope": [INTENT_LABEL[k] for k in SHOPPING_SCOPE_INTENTS if k in INTENT_LABEL],
         "sku_names": sku_names,
         "source_limit": None,   # main 里填
         "answers": out,
@@ -1411,8 +1434,7 @@ def parse_args(argv=None):
                         help="本品 SKU 归并表 JSON：[{\"name\": \"G980H 四路\", \"pattern\": \"G980H.*4[- ]?(camera|channel)\"}]，"
                              "按顺序第一条命中卡标题的胜出；不传就不出 SKU 级")
     parser.add_argument("--shopping-cards", choices=["开", "关", ""], default="",
-                        help="这条产品线统计不统计商品卡（选词 config.shopping_cards 的结论）；"
-                             "留空时 HTML 按数据判（任一平台商品卡触发率到 5%% 才显示）")
+                        help="商品卡开关;留空默认关,传开才出(且本次采集至少有一张带目录的商品卡)")
     parser.add_argument("--topic-labels", default="",
                         help="题库主题 → 报告展示名的映射，逗号分隔的 原主题=展示名，"
                              "如 'แพลตฟอร์ม...=华语视频平台'。多语言市场题库主题是当地语言时必填；"
@@ -1488,6 +1510,8 @@ def build_meta(case, rows, config, topics, regions, lexicon_status, collect_dir,
         "objects": [{"object_id": o["object_id"], "role": o["role"],
                      "name": o["canonical_name"], "domains": o["official_domains"],
                      "aliases": o["aliases"], "topics": o.get("topics") or [],
+                     # 供 verify_report_data 独立复算同一口径：非同类开放品牌官网不算竞品网站
+                     "same_category": o.get("same_category", True),
                      **({"case_sensitive_aliases": o["case_sensitive_aliases"]}
                         if o.get("case_sensitive_aliases") else {})}
                     for o in config["objects"]],

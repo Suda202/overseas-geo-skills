@@ -7,6 +7,8 @@
   L  label_batches：prepare 出的批次与 Z-GAP、merge 的校验与退回、sample 抽检与一致率
   P  page_gap：页面缺口 / 答案缺口 / 抓取失败（用预置缓存，不真联网）
   D  端到端产物：diagnosis.csv / .json / .md 三份都在，结论写进 md
+  F  facts_draft：本地假官网抓取、切段、逐字校验、冲突、确认表门禁、只用确认行（1.4.0）
+  T  trace_errors：错误值在官网 / 第三方 / 别家 / 抓不到 / 哪都没有，接进事实行（1.4.0）
 
 产物：reports/gap-diagnosis-e2e.md；临时目录跑完删除。
 
@@ -32,6 +34,8 @@ LABELS = SKILL / "scripts/label_batches.py"
 PAGE = SKILL / "scripts/page_gap.py"
 DIAG = SKILL / "scripts/diagnose.py"
 DIFF = SKILL / "scripts/difficulty.py"
+FACTS = SKILL / "scripts/facts_draft.py"
+TRACE = SKILL / "scripts/trace_errors.py"
 REPORT = SKILL / "reports/gap-diagnosis-e2e.md"
 
 TARGET = "Veyra"
@@ -386,6 +390,212 @@ def case_difficulty(root: Path, rd: Path):
     check("K10 主题档取题的多数档并给出分布", t1["竞争难度"] in ("高", "中", "低") and bool(t1["竞争难度分布"]),
           t1["竞争难度分布"])
     check("K11 可先做的题列出优化难度低的题", "G-06" in t1["可先做的题"], t1["可先做的题"])
+    # 每题只剩 1 次回答：出现的竞品全算「每次都在」，轮换位恒为 0，必须不判（Zhiqinghe 2026-11-26）
+    one = root / "readings-one"
+    one.mkdir(exist_ok=True)
+    (one / "readings.json").write_text((rd / "readings.json").read_text(encoding="utf-8"), encoding="utf-8")
+    seen, keep = set(), []
+    for line in (rd / "answers.jsonl").read_text(encoding="utf-8").splitlines():
+        qid = json.loads(line)["question_id"]
+        if qid not in seen:
+            seen.add(qid)
+            keep.append(line)
+    (one / "answers.jsonl").write_text("\n".join(keep) + "\n", encoding="utf-8")
+    out1 = root / "difficulty-one"
+    run([DIFF, "--readings", one, "--out", out1])
+    d1 = json.loads((out1 / "difficulty.json").read_text(encoding="utf-8"))
+    g1 = next(r for r in d1["prompts"] if r["question_id"] == "G-01")
+    check("K12 每题只有 1 次回答 → 竞争、优化难度都不判，依据写回答次数不足",
+          g1["竞争难度"] == "不判" and g1["优化难度"] == "不判" and "次回答" in g1["竞争依据"],
+          f"{g1['竞争难度']} / {g1['竞争依据']}")
+
+
+SITE_PAGES = {
+    "/": "<html><body><h1>Veyra solar</h1><p>Veyra SolarPack 20 delivers 20 W of power.</p>"
+         "<p>Contact us at support@veyra.example</p></body></html>",
+    "/pages/about": "<html><body><h1>About Veyra</h1><p>Veyra was founded in 2019 in Austin, Texas.</p>"
+                    "<p>Compared with Lumo Flex 40 W, our panel folds smaller.</p></body></html>",
+    "/policies/terms": "<html><body><h2>Terms</h2><p>Mailing address: 30 Old Road, Sheridan, WY.</p>"
+                       "<p>Veyra SolarPack 20 is priced at $129.99.</p></body></html>",
+    "/pages/locked": None,  # 403：官网没抓全
+    "/products/minipack-10": "<html><body><h1>Veyra MiniPack 10</h1><p>Price: $89.99</p></body></html>",
+    "/products/solarpack-20": "<html><body><h1>Veyra SolarPack 20</h1><p>Price: $149.99</p>"
+                              "<p>Weight 1.2 kg. Warranty 2 years.</p></body></html>",
+}
+
+
+def serve_site():
+    import http.server
+    import threading
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/pages/locked":
+                self.send_response(403)
+                self.end_headers()
+                return
+            body = SITE_PAGES.get(self.path)
+            if body is None:
+                self.send_response(404)
+                self.end_headers()
+                return
+            data = (body + "<p>" + "Filler text for length. " * 12 + "</p>").encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, f"http://127.0.0.1:{srv.server_address[1]}"
+
+
+def case_facts(root: Path):
+    """事实表：抓取 → 切段 → 逐字校验 → 冲突 → 确认表没填完拒绝 → 只用确认行生成。"""
+    srv, base = serve_site()
+    out = root / "facts-draft"
+    try:
+        proc = run([FACTS, "crawl", "--out", out, "--delay", "0", "--no-proxy",
+                    *sum((["--url", base + p] for p in SITE_PAGES), []),
+                    "--url", base + "/missing"])
+    finally:
+        srv.shutdown()
+    idx = json.loads((out / "pages.json").read_text(encoding="utf-8"))
+    check("F1 抓到 5 页、404 和 403 记失败不补", sum(v["status"] == "ok" for v in idx.values()) == 5
+          and idx[base + "/missing"]["status"] == "http_404" and idx[base + "/pages/locked"]["status"] == "http_403",
+          proc.stdout + proc.stderr)
+    terms = (out / "pages" / idx[base + "/policies/terms"]["file"]).read_text(encoding="utf-8")
+    check("F2 正文按块保留换行（页脚和条款段不被吞）", "Sheridan, WY" in terms and "\n" in terms, terms[:200])
+    proc = run([FACTS, "prepare", "--out", out, "--brand", TARGET, "--chunk-chars", "200"])
+    chunks = [json.loads(l) for b in sorted((out / "batches").glob("*.jsonl"))
+              for l in b.read_text(encoding="utf-8").splitlines() if l.strip()]
+    check("F3 长页面切成多段、不截断", len(chunks) > 4 and all(len(c["text"]) <= 200 for c in chunks),
+          f"{len(chunks)} 段 / {proc.stdout}")
+    def chunk_with(url_tail, needle):
+        return next(c for c in chunks if c["url"].endswith(url_tail) and needle in c["text"])
+    c_prod = chunk_with("/products/solarpack-20", "$149.99")
+    c_terms = chunk_with("/policies/terms", "$129.99")
+    c_about = chunk_with("/pages/about", "founded")
+    extracted = [
+        {"chunk_id": c_prod["chunk_id"], "facts": [
+            {"subject": "Veyra SolarPack 20", "attribute": "price", "value": "$149.99", "quote": "Price: $149.99",
+             "volatile": True},
+            {"subject": "Veyra SolarPack 20", "attribute": "weight", "value": "1.2 kg", "quote": "Weight 1.2 kg.",
+             "volatile": False},
+            {"subject": "Veyra SolarPack 20", "attribute": "warranty", "value": "3 years",
+             "quote": "Warranty 3 years."}]},  # 改写原文 → 退回
+        {"chunk_id": c_terms["chunk_id"], "facts": [
+            {"subject": "Veyra SolarPack 20", "attribute": "price", "value": "$129.99",
+             "quote": "Veyra SolarPack 20 is priced at $129.99.", "volatile": True}]},
+        {"chunk_id": c_about["chunk_id"], "facts": [
+            {"subject": "Veyra", "attribute": "founded", "value": "2019",
+             "quote": "Veyra was founded in 2019 in Austin, Texas."},
+            {"subject": "Veyra", "attribute": "founded", "value": "2018",
+             "quote": "Veyra was founded in 2019 in Austin, Texas."}]},  # 值不在原文 → 退回
+    ]
+    (out / "extracted").mkdir(exist_ok=True)
+    (out / "extracted" / "e1.jsonl").write_text("\n".join(json.dumps(x) for x in extracted) + "\n", encoding="utf-8")
+    proc = run([FACTS, "merge", "--out", out])
+    rows = list(csv.DictReader((out / "facts-draft.csv").open(encoding="utf-8-sig")))
+    rejected = [json.loads(l) for l in (out / "facts-rejected.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    reasons = " ".join(r["reason"] for r in rejected)
+    check("F4 原文逐字对不上、值不在原文里都退回", len(rejected) == 2 and "逐字" in reasons and "值不在原文" in reasons,
+          reasons)
+    prices = [r for r in rows if r["属性"] == "price"]
+    check("F5 同一型号两个价格标冲突、可变标是", len(prices) == 2 and all(r["冲突"] for r in prices)
+          and all(r["可变"] == "是" for r in prices), json.dumps(prices, ensure_ascii=False)[:300])
+    facts_md = root / "facts.md"
+    proc = run([FACTS, "finalize", "--out", out, "--facts", facts_md])
+    check("F6 确认列没填完拒绝生成 facts.md", proc.returncode == 2 and not facts_md.exists(), proc.stderr[:200])
+    for r in rows:
+        r["确认"] = "删" if r["值"] == "$129.99" else "通过"
+    rows.append({c: "" for c in rows[0]} | {"对象": "Veyra", "属性": "headquarters address",
+                                            "值": "Austin, Texas", "确认": "新增", "备注": "品牌方邮件 11-23"})
+    with (out / "facts-draft.csv").open("w", encoding="utf-8-sig", newline="") as h:
+        w = csv.DictWriter(h, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    proc = run([FACTS, "finalize", "--out", out, "--facts", facts_md])
+    md = facts_md.read_text(encoding="utf-8") if facts_md.exists() else ""
+    check("F7 只用确认行生成：删掉的不在、新增的在、带 F 编号",
+          proc.returncode == 0 and "$129.99" not in md and "Austin, Texas" in md and "F-01" in md, proc.stdout + md[:300])
+    proc = run([FACTS, "finalize", "--out", out, "--facts", facts_md])
+    check("F8 已有 facts.md 不覆盖", proc.returncode == 2, proc.stderr[:200])
+    return out
+
+
+def case_trace(root: Path, rd: Path, site_out: Path):
+    """错误溯源：官网自相矛盾 / 第三方 / 混淆别家 / 未知 / 未找到，并接进 diagnose 的事实行。"""
+    answers = [json.loads(l) for l in (rd / "answers.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    pick = answers[:5]
+    pg = root / "pagegap-trace"
+    (pg / "pages").mkdir(parents=True, exist_ok=True)
+    third_ok, third_bad = "https://blog.example/review", "https://blocked.example/x"
+
+    def seed(url, text, status="ok"):
+        k = hashlib.sha1(url.encode()).hexdigest()
+        (pg / "pages" / f"{k}.txt").write_text(text, encoding="utf-8")
+        (pg / "pages" / f"{k}.status").write_text(status, encoding="utf-8")
+    seed(third_ok, "Our review: the Veyra SolarPack 20 ships with Android 14 firmware and costs about $99.")
+    seed(third_bad, "", "http_403")
+    for a in pick:
+        a["third_cited_urls"] = [third_ok]
+    pick[3]["third_cited_urls"] = [third_bad]
+    pick[4]["third_cited_urls"] = []
+    rd2 = root / "readings-trace"
+    shutil.copytree(rd, rd2)
+    ids = {a["answer_id"] for a in pick}
+    (rd2 / "answers.jsonl").write_text("\n".join(json.dumps(next((p for p in pick if p["answer_id"] == a["answer_id"]), a))
+                                                 for a in answers) + "\n", encoding="utf-8")
+    fe = lambda a, quote, **kw: dict({"brand": TARGET, "quote": quote, "correct": "$149.99", "basis": "F-01",
+                                      "answer_id": a["answer_id"], "question_id": a["question_id"],
+                                      "platform": a["platform"]}, **kw)
+    errors = [fe(pick[0], "It costs $129.99."),                                   # 官网条款页
+              fe(pick[1], "Price around $99", wrong_value="$99"),                  # 第三方
+              fe(pick[2], "Zyppy kit priced $80", error_type="other_entity"),      # 混淆别家
+              fe(pick[3], "costs $111.11"),                                        # 被引页 403 → 未知
+              fe(pick[4], "costs $222.22")]                                        # 无被引 → 未找到出处
+    errors += [fe(pick[0], "It costs $149.99 with 1.2 kg weight", basis="F-09", correct="$139.99"),  # 混淆：别条事实的值
+               fe(pick[4], "Priced at $129.99, 20 W output and 1080p video"),  # 只追同类值（价格）
+               fe(pick[1], "SolarPack 20 sells for $89.99", basis="F-02")]   # 官网别的产品的价
+    labels = {"_fact_errors": errors}
+    lp = root / "labels-trace.json"
+    lp.write_text(json.dumps(labels), encoding="utf-8")
+    out = root / "trace"
+    proc = run([TRACE, "--readings", rd2, "--labels", lp, "--site-pages", site_out, "--pagegap", pg,
+                "--facts", root / "facts.md", "--out", out, "--no-fetch"])
+    rows = json.loads((out / "trace.json").read_text(encoding="utf-8")) if (out / "trace.json").exists() else []
+    causes = [r["cause"] for r in rows]
+    check("T1 八条错误都有出处结论", len(rows) == 8, proc.stdout + proc.stderr)
+    if len(rows) == 8:
+        check("T2 错误价在官网条款页 → 官网自相矛盾，出处指向条款页",
+              causes[0] == "官网自相矛盾" and any("/policies/terms" in u for u in rows[0]["official_sources"]),
+              json.dumps(rows[0], ensure_ascii=False)[:300])
+        check("T3 只在被引第三方页 → 第三方页面，附片段", causes[1] == "第三方页面" and rows[1]["snippets"].get(third_ok),
+              json.dumps(rows[1], ensure_ascii=False)[:300])
+        check("T4 标了 other_entity → 混淆别家", causes[2] == "混淆别家", causes[2])
+        check("T5 被引页抓不到 → 未知，不当成没写", causes[3] == "未知" and rows[3]["unfetched_cited"] == [third_bad],
+              json.dumps(rows[3], ensure_ascii=False)[:300])
+        check("T6 哪里都没有，但官网有页面没抓到（403；404 不算）→ 未知，不判未找到", causes[4] == "未知"
+              and rows[4]["site_pages_failed"] >= 1, json.dumps(rows[4], ensure_ascii=False)[:300])
+        check("T7 旧标注没有 wrong_value 时从 quote 抽出价格", rows[0]["wrong_values"] == "$129.99", rows[0]["wrong_values"])
+        check("T10 错误值是事实表另一条的值 → 混淆型号，指出是哪条",
+              causes[5] == "混淆型号" and rows[5]["same_value_facts"], json.dumps(rows[5], ensure_ascii=False)[:300])
+        check("T11 正确事实是价格时只追价格，不追原句里顺带的 1080p / 20 W",
+              rows[6]["wrong_values"] == "$129.99", rows[6]["wrong_values"])
+        check("T12 错误值是官网另一个产品页上的值（片段里没有被判错的型号）→ 混淆型号，不判官网自相矛盾",
+              causes[7] == "混淆型号" and rows[7]["value_on_other_product"], json.dumps(rows[7], ensure_ascii=False)[:300])
+    proc = run([DIAG, "--readings", rd2, "--labels", lp, "--trace", out, "--out", root / "diag-trace"])
+    drows = list(csv.DictReader((root / "diag-trace" / "diagnosis.csv").open(encoding="utf-8-sig")))
+    fact = next((r for r in drows if r["对象"] == "事实：F-01"), {})
+    check("T8 诊断事实行写出处分布、载体按出处定、附官网出处页",
+          "官网自相矛盾" in fact.get("主原因（假设）", "") and fact.get("载体") in ("官网", "第三方页面", "待定")
+          and "/policies/terms" in fact.get("证据", ""), json.dumps(fact, ensure_ascii=False)[:400])
+    md = (root / "diag-trace" / "diagnosis.md").read_text(encoding="utf-8")
+    check("T9 md 注明已溯源", "已溯源" in md, md[:300])
 
 
 def main() -> int:
@@ -402,6 +612,8 @@ def main() -> int:
         case_pages(tmp, rd)
         case_outputs(tmp, rd)
         case_difficulty(tmp, rd)
+        site_out = case_facts(tmp)
+        case_trace(tmp, rd, site_out)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

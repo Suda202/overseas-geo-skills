@@ -88,7 +88,9 @@ KNOWN_HOST_TYPES = {
     "gitbook.io": "other",
     "readthedocs.io": "other",
     "myshopify.com": "other",
-    "github.com": "other",
+    # 代码与数据集开放发布平台：账号主人自己发布，按社交平台算（Suda 2026-11-24）
+    "github.com": "ugc",
+    "huggingface.co": "ugc",
     "linkedin.com": "ugc",
 }
 
@@ -238,14 +240,37 @@ def _normalize_cache_keys(payload: dict) -> dict:
     return out
 
 
+def _is_same_category(obj: dict) -> bool:
+    """目标品牌和配置竞品默认同类；开放品牌没写 same_category 也按同类算，只有显式 false 才排除。
+
+    词表里的开放品牌本来就摘自同品类的回答，默认就是同类竞品；别的品类厂商（NVIDIA、CVAT、
+    Microsoft、Voices.com 之类）要在词表里显式写 `same_category: false`，官网才不算「竞品网站」。
+    难度与可改变性诊断另按显式标注取同类品牌，不走这里的默认值。
+    """
+    if obj.get("role") in ("target", "competitor"):
+        return True
+    return obj.get("same_category") is not False
+
+
 def _classify_official(host: str, objects: list[dict], competitor_sites=()) -> tuple[str | None, str | None]:
     """官网规则：纳入对象的官网按顺序第一个命中的胜出；都不中时，config 的 competitor_site_domains
-    （同类平台站点，词表顶层字段，因客户而异，不进共用的域名类别缓存）归「竞品网站」、不挂品牌。"""
+    （同类平台站点，词表顶层字段，因客户而异，不进共用的域名类别缓存）归「竞品网站」、不挂品牌。
+
+    非同类开放品牌的官网不在这里归「竞品网站」，跳过它交给后面的域名缓存判类（_known_type）；
+    缓存里没有就按原逻辑落 other/unjudged。
+
+    2026-11-27 Suda 定：判「竞品网站」不看 role，看 same_category——open / 发现的同类品牌官网也计入
+    竞品网站（FuninVR 报告里 42.5% 的竞品网站引用正是这批开放竞品）；只有别品类的品牌才落「其他」。
+    """
     for obj in objects:
         for domain in obj.get("official_domains") or []:
             if domain_matches(host, domain):
-                return ("brand_official" if obj.get("role") == "target" else "competitor_official",
-                        obj.get("object_id"))
+                if obj.get("role") == "target":
+                    return "brand_official", obj.get("object_id")
+                if _is_same_category(obj):
+                    return "competitor_official", obj.get("object_id")
+                # 非同类开放品牌：不是竞品网站，继续找后面是否还有同类对象命中
+                break
     if any(domain_matches(host, site) for site in competitor_sites):
         return "competitor_official", None
     return None, None

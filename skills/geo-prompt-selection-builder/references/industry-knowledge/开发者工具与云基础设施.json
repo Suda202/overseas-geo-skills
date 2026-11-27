@@ -380,6 +380,384 @@
     "categories": [
      "cloud gpu rental"
     ]
+   },
+   "gdpr合规": {
+    "label": "GDPR 合规",
+    "by": {
+     "005f1874118f|UNITED STATES": "GDPR 合规"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "GDPR 合规": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "iso27001信息安全认证": {
+    "label": "ISO 27001 信息安全认证",
+    "by": {
+     "005f1874118f|UNITED STATES": "ISO 27001 信息安全认证"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "ISO 27001 信息安全认证": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "soc2认证": {
+    "label": "SOC 2 认证",
+    "by": {
+     "005f1874118f|UNITED STATES": "SOC 2 认证"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "SOC 2 认证": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "专业录音棚配音员": {
+    "label": "专业录音棚与配音员",
+    "by": {
+     "005f1874118f|UNITED STATES": "专业录音棚与配音员"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "专业录音棚与配音员": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "交付周期规模化产能": {
+    "label": "交付周期与规模化产能",
+    "by": {
+     "005f1874118f|UNITED STATES": "交付周期与规模化产能"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "交付周期与规模化产能": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "人机协同标注平台": {
+    "label": "人机协同标注平台",
+    "by": {
+     "005f1874118f|UNITED STATES": "人机协同标注平台"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "人机协同标注平台": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "价格预算": {
+    "label": "价格与预算",
+    "by": {
+     "005f1874118f|UNITED STATES": "价格与预算"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "价格与预算": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "口音说话人多样性": {
+    "label": "口音与说话人多样性",
+    "by": {
+     "005f1874118f|UNITED STATES": "口音与说话人多样性"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "口音与说话人多样性": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "商用数据授权": {
+    "label": "商用数据授权",
+    "by": {
+     "005f1874118f|UNITED STATES": "商用数据授权"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "商用数据授权": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "多模态同步采集": {
+    "label": "多模态同步采集",
+    "by": {
+     "005f1874118f|UNITED STATES": "多模态同步采集"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "多模态同步采集": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "录音环境设备多样性": {
+    "label": "录音环境与设备多样性",
+    "by": {
+     "005f1874118f|UNITED STATES": "录音环境与设备多样性"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "录音环境与设备多样性": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "推理代码数据": {
+    "label": "推理与代码数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "推理与代码数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "推理与代码数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "数据来源知情同意": {
+    "label": "数据来源与知情同意",
+    "by": {
+     "005f1874118f|UNITED STATES": "数据来源与知情同意"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "数据来源与知情同意": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "数据驻留采集地点": {
+    "label": "数据驻留与采集地点",
+    "by": {
+     "005f1874118f|UNITED STATES": "数据驻留与采集地点"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "数据驻留与采集地点": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "标注质量准确率": {
+    "label": "标注质量与准确率",
+    "by": {
+     "005f1874118f|UNITED STATES": "标注质量与准确率"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "标注质量与准确率": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "样本试点": {
+    "label": "样本与试点",
+    "by": {
+     "005f1874118f|UNITED STATES": "样本与试点"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "样本与试点": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "点云多传感器融合标注": {
+    "label": "点云与多传感器融合标注",
+    "by": {
+     "005f1874118f|UNITED STATES": "点云与多传感器融合标注"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "点云与多传感器融合标注": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "现成数据集规模": {
+    "label": "现成数据集规模",
+    "by": {
+     "005f1874118f|UNITED STATES": "现成数据集规模"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "现成数据集规模": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "私有化部署": {
+    "label": "私有化部署",
+    "by": {
+     "005f1874118f|UNITED STATES": "私有化部署"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "私有化部署": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "语言方言覆盖": {
+    "label": "语言与方言覆盖",
+    "by": {
+     "005f1874118f|UNITED STATES": "语言与方言覆盖"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "语言与方言覆盖": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "领域专家标注": {
+    "label": "领域专家标注",
+    "by": {
+     "005f1874118f|UNITED STATES": "领域专家标注"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "领域专家标注": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
    }
   },
   "audiences": {
@@ -471,6 +849,96 @@
     ],
     "categories": [
      "cloud gpu rental"
+    ]
+   },
+   "大模型生成式ai公司的模型训练团队": {
+    "label": "大模型与生成式AI公司的模型训练团队",
+    "by": {
+     "005f1874118f|UNITED STATES": "大模型与生成式AI公司的模型训练团队"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "大模型与生成式AI公司的模型训练团队": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "科技企业的ai研发部门": {
+    "label": "科技企业的AI研发部门",
+    "by": {
+     "005f1874118f|UNITED STATES": "科技企业的AI研发部门"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "科技企业的AI研发部门": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "自动驾驶机器人公司的感知团队": {
+    "label": "自动驾驶与机器人公司的感知团队",
+    "by": {
+     "005f1874118f|UNITED STATES": "自动驾驶与机器人公司的感知团队"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "自动驾驶与机器人公司的感知团队": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "语音技术公司企业语音团队": {
+    "label": "语音技术公司与企业语音团队",
+    "by": {
+     "005f1874118f|UNITED STATES": "语音技术公司与企业语音团队"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "语音技术公司与企业语音团队": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "高校科研机构的研究团队": {
+    "label": "高校与科研机构的研究团队",
+    "by": {
+     "005f1874118f|UNITED STATES": "高校与科研机构的研究团队"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "高校与科研机构的研究团队": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
     ]
    }
   },
@@ -654,6 +1122,384 @@
     "categories": [
      "cloud gpu rental"
     ]
+   },
+   "nlp文本标注外包": {
+    "label": "NLP 文本标注外包",
+    "by": {
+     "005f1874118f|UNITED STATES": "NLP 文本标注外包"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "NLP 文本标注外包": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "rlhfdpo偏好数据": {
+    "label": "RLHF 与 DPO 偏好数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "RLHF 与 DPO 偏好数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "RLHF 与 DPO 偏好数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "tts需要录音棚级发音人录音": {
+    "label": "TTS 需要录音棚级发音人录音",
+    "by": {
+     "005f1874118f|UNITED STATES": "TTS 需要录音棚级发音人录音"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "TTS 需要录音棚级发音人录音": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "产品快速启动需要可商用的现成数据集": {
+    "label": "产品快速启动需要可商用的现成数据集",
+    "by": {
+     "005f1874118f|UNITED STATES": "产品快速启动需要可商用的现成数据集"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "产品快速启动需要可商用的现成数据集": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "具身智能机器人需要第一视角交互数据": {
+    "label": "具身智能与机器人需要第一视角交互数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "具身智能与机器人需要第一视角交互数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "具身智能与机器人需要第一视角交互数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "医疗等专业领域数据标注": {
+    "label": "医疗等专业领域数据标注",
+    "by": {
+     "005f1874118f|UNITED STATES": "医疗等专业领域数据标注"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "医疗等专业领域数据标注": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "在线购买现成数据集": {
+    "label": "在线购买现成数据集",
+    "by": {
+     "005f1874118f|UNITED STATES": "在线购买现成数据集"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "在线购买现成数据集": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "外包前做供应商安全审查": {
+    "label": "外包前做供应商安全审查",
+    "by": {
+     "005f1874118f|UNITED STATES": "外包前做供应商安全审查"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "外包前做供应商安全审查": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "多模态数据标注外包": {
+    "label": "多模态数据标注外包",
+    "by": {
+     "005f1874118f|UNITED STATES": "多模态数据标注外包"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "多模态数据标注外包": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "大模型监督微调需要指令对话数据": {
+    "label": "大模型监督微调需要指令与对话数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "大模型监督微调需要指令与对话数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "大模型监督微调需要指令与对话数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "按指定说话人录音场景定制采集语音": {
+    "label": "按指定说话人和录音场景定制采集语音",
+    "by": {
+     "005f1874118f|UNITED STATES": "按指定说话人和录音场景定制采集语音"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "按指定说话人和录音场景定制采集语音": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "推理代码等专家领域数据": {
+    "label": "推理、代码等专家领域数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "推理、代码等专家领域数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "推理、代码等专家领域数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "智能座舱车内多模态数据采集": {
+    "label": "智能座舱车内多模态数据采集",
+    "by": {
+     "005f1874118f|UNITED STATES": "智能座舱车内多模态数据采集"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "智能座舱车内多模态数据采集": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "模型上线前做人工评测基准": {
+    "label": "模型上线前做人工评测与基准",
+    "by": {
+     "005f1874118f|UNITED STATES": "模型上线前做人工评测与基准"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "模型上线前做人工评测与基准": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "科研项目需要可授权的现成语料": {
+    "label": "科研项目需要可授权的现成语料",
+    "by": {
+     "005f1874118f|UNITED STATES": "科研项目需要可授权的现成语料"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "科研项目需要可授权的现成语料": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "自动驾驶感知需要点云多传感器融合标注": {
+    "label": "自动驾驶感知需要点云与多传感器融合标注",
+    "by": {
+     "005f1874118f|UNITED STATES": "自动驾驶感知需要点云与多传感器融合标注"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "自动驾驶感知需要点云与多传感器融合标注": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "计算机视觉图像视频标注外包": {
+    "label": "计算机视觉图像与视频标注外包",
+    "by": {
+     "005f1874118f|UNITED STATES": "计算机视觉图像与视频标注外包"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "计算机视觉图像与视频标注外包": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "训练语音识别需要多语言多口音语音数据": {
+    "label": "训练语音识别需要多语言、多口音语音数据",
+    "by": {
+     "005f1874118f|UNITED STATES": "训练语音识别需要多语言、多口音语音数据"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "训练语音识别需要多语言、多口音语音数据": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "评估外包标注质量的方法": {
+    "label": "评估外包标注质量的方法",
+    "by": {
+     "005f1874118f|UNITED STATES": "评估外包标注质量的方法"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "评估外包标注质量的方法": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "语音系统需要发音词典": {
+    "label": "语音系统需要发音词典",
+    "by": {
+     "005f1874118f|UNITED STATES": "语音系统需要发音词典"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "语音系统需要发音词典": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "选定供应商前核实可靠性": {
+    "label": "选定供应商前核实可靠性",
+    "by": {
+     "005f1874118f|UNITED STATES": "选定供应商前核实可靠性"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "选定供应商前核实可靠性": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
    }
   },
   "topics": {
@@ -727,6 +1573,132 @@
     ],
     "categories": [
      "cloud gpu rental"
+    ]
+   },
+   "ai数据标注外包服务商": {
+    "label": "AI数据标注外包服务商",
+    "by": {
+     "005f1874118f|UNITED STATES": "AI数据标注外包服务商"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "AI数据标注外包服务商": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "信任：dataoceanai是否可靠": {
+    "label": "信任：DataOcean AI 是否可靠",
+    "by": {
+     "005f1874118f|UNITED STATES": "信任：DataOcean AI 是否可靠"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "信任：DataOcean AI 是否可靠": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "大模型训练评测数据服务商": {
+    "label": "大模型训练与评测数据服务商",
+    "by": {
+     "005f1874118f|UNITED STATES": "大模型训练与评测数据服务商"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "大模型训练与评测数据服务商": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "现成ai训练数据集授权采购": {
+    "label": "现成AI训练数据集授权采购",
+    "by": {
+     "005f1874118f|UNITED STATES": "现成AI训练数据集授权采购"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "现成AI训练数据集授权采购": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "自动驾驶具身智能数据标注": {
+    "label": "自动驾驶与具身智能数据标注",
+    "by": {
+     "005f1874118f|UNITED STATES": "自动驾驶与具身智能数据标注"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "自动驾驶与具身智能数据标注": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "评估：dataoceanai能不能满足需求": {
+    "label": "评估：DataOcean AI 能不能满足需求",
+    "by": {
+     "005f1874118f|UNITED STATES": "评估：DataOcean AI 能不能满足需求"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "评估：DataOcean AI 能不能满足需求": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "语音训练数据采购": {
+    "label": "语音训练数据采购",
+    "by": {
+     "005f1874118f|UNITED STATES": "语音训练数据采购"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "语音训练数据采购": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
     ]
    }
   },
@@ -820,6 +1792,78 @@
     "categories": [
      "cloud gpu rental"
     ]
+   },
+   "aitrainingdata": {
+    "label": "AI training data",
+    "by": {
+     "005f1874118f|UNITED STATES": "AI training data"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "AI training data": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "dataannotation": {
+    "label": "data annotation",
+    "by": {
+     "005f1874118f|UNITED STATES": "data annotation"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "data annotation": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "datalabeling": {
+    "label": "data labeling",
+    "by": {
+     "005f1874118f|UNITED STATES": "data labeling"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "data labeling": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
+   },
+   "trainingdata": {
+    "label": "training data",
+    "by": {
+     "005f1874118f|UNITED STATES": "training data"
+    },
+    "clients": [
+     "005f1874118f"
+    ],
+    "names": {
+     "training data": 1
+    },
+    "markets": [
+     "UNITED STATES"
+    ],
+    "categories": [
+     "ai training data"
+    ]
    }
   }
  },
@@ -830,7 +1874,13 @@
    "market": "US",
    "category": "cloud gpu rental",
    "updated": "2026-11-11"
+  },
+  "005f1874118f|UNITED STATES": {
+   "who": "005f1874118f",
+   "market": "UNITED STATES",
+   "category": "ai training data",
+   "updated": "2026-11-23"
   }
  },
- "updated": "2026-11-11"
+ "updated": "2026-11-23"
 }

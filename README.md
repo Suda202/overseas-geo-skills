@@ -1,6 +1,6 @@
 # 海外 GEO Skills
 
-这个仓库有 8 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
+这个仓库有 6 个 Skill 和一个共享目录 `shared/`。每项能力只由一个 Skill 负责，其他 Skill 需要时调用它，不另写一份。日常从下面「按你要做的事找入口」找一个入口就够了，其余的由入口按需调用。
 
 ## 按你要做的事找入口
 
@@ -8,7 +8,6 @@
 | --- | --- | --- |
 | 品牌信息进来，生成售前诊断题 | `geo-prompt-selection-builder`（选词，线上出口） | 售前诊断 |
 | 本地出售前诊断 HTML 报告（从品牌信息一路跑到报告，或从生词、采集任一步续跑） | `geo-presales-pipeline`（总入口） | 售前诊断 |
-| 线上已交付的诊断报告要改 | `geo-presales-report-audit`，再 `geo-presales-report-editor` | 售前诊断 |
 | 签约前后定长期监测哪些题、出对客确认表，试跑后回写 | `geo-prompt-selection-builder`（选词，本地出口） | 选词 |
 | 签约后采集（试跑、正式基线、日常）、检查采集能不能用，出基线报告 | `geo-monitoring` | 监测 |
 | 基线出来后诊断为什么表现差、该优化什么 | `geo-gap-diagnosis` | 诊断 |
@@ -22,8 +21,6 @@
 | `geo-presales-pipeline` | 本地出售前 HTML 报告的总入口：排阶段顺序（生词 → 采集 → 采集检查 → 组装渲染 → 情感），到暂停点请对应 Skill 出场，零口径 | 每个阶段的规则（交给该阶段的 Skill） |
 | `geo-metrics` | 统计口径与唯一实现：品牌识别、识别前的正文清洗、答案有效性、引用抽取与计次、引用来源分类与判读数据、提及率、声量、引用份额、官网引用率、商品卡、品牌情感（拆 Claim、聚属性和主题、算正向情感占比），试跑品牌计数，以及每个指标用哪批样本 | 组装与渲染报告（report-builder、monitoring）；可改变性判断（`geo-monitoring`） |
 | `geo-presales-report-builder` | 售前报告数据层组装、HTML 渲染 | 采集（`geo-monitoring`）；指标公式（`geo-metrics`） |
-| `geo-presales-report-audit` | 修改线上售前诊断报告的品牌提及识别结果 JSON（品牌名单和首现排序），出 Bad Case | 客户结论（report-editor） |
-| `geo-presales-report-editor` | 修改线上售前诊断报告的结论 CSV | 指标计算（`geo-metrics`） |
 | `geo-monitoring` | 采集和采集检查：`collect_answers.py` 是全库唯一的采集程序，售前 pipeline、选词研究预跑也调它；`audit_crawl_integrity.py` 在算指标前查字段层混用、引用定义丢失、空回答、未登记平台。签约后跑试跑、正式基线和日常采集，外加基线 HTML 报告 | 指标口径（`geo-metrics`）；缺口诊断与优化动作（`geo-gap-diagnosis`） |
 | `geo-gap-diagnosis` | 正式基线之后的缺口诊断：七层读数、推荐与事实标注、页面缺口、三道门与第一断点，产出带决定、载体、动作四要素和度量契约的优化机会诊断表 | 采集与完整性检查（`geo-monitoring`）；指标口径（`geo-metrics`）；写内容本身 |
 
@@ -31,10 +28,10 @@
 
 ## 售前诊断
 
-售前诊断报告是促成交用的，拆成四个环节，每个环节各有负责的 Skill。线上给销售用时，只有 ② 生词换成本仓库的 Skill；③ 采集与出报告和人工改词都沿用线上原有流程。下面写的 ③ ④ 是本地跑法。
+售前诊断报告是促成交用的，拆成三个环节，每个环节各有负责的 Skill。线上给销售用时，只有 ② 生词换成本仓库的 Skill；③ 采集与出报告和人工改词都沿用线上原有流程。下面写的 ③ 是本地跑法。
 
 ```text
-① 准备品牌信息（Case） -> ② 生词 -> ③ 采集与出报告 -> ④ 修改已交付报告
+① 准备品牌信息（Case） -> ② 生词 -> ③ 采集与出报告
 ```
 
 | 环节 | 输入 | 输出 | Skill |
@@ -42,7 +39,6 @@
 | ① 准备品牌信息 | 品牌资料 | Case：品牌、官网、品类、业务描述、1–3 个竞品 | 线上由销售填表单；本地按输入合同写 JSON |
 | ② 生词 | Case | 每个市场一批诊断题，5 列 | `geo-prompt-selection-builder` |
 | ③ 采集与出报告 | 诊断题 + Case | 单文件 HTML 诊断报告 | 线上：沿用线上原有流程；本地：`geo-presales-pipeline` |
-| ④ 修改已交付报告 | 已交付报告 | 修正后的品牌识别、客户结论、上传 CSV | `geo-presales-report-audit`、`geo-presales-report-editor` |
 
 ### ② 生词（`geo-prompt-selection-builder`）
 
@@ -99,10 +95,6 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 采集前设 `no_proxy=api.scrapeless.com`，否则本机代理会掐断 HTTPS 握手。声量份额和提及率排名的分母是全部纳入品牌（目标 + 3 个配置竞品 + 开放词表命中），所以必须带 `--lexicon`；词表格式见下文「品牌识别」。
 
 报告是单文件 HTML，所有客户共用同一个模板：数据筛选（地区、平台、意图类型、主题，多选）→ 核心洞察 → 可见度 → 购物商品卡 → 引用 → 情感 → 附录 问题明细。没有商品卡数据、没有情感数据时，对应模块连同散在各处的 KPI、明细列、回答详情一起隐藏，后面的模块顺延编号。页面上的数由内嵌的计算引擎按筛选现算，和离线预算的切片逐项对账，不一致就停下（`check_engine_parity.js`）。
-
-### ④ 修改已交付报告
-
-先用 `geo-presales-report-audit` 把品牌提及识别和首现排序改对，再用 `geo-presales-report-editor` 改客户结论、出上传 CSV。
 
 ## 选词：生成要测的题（`geo-prompt-selection-builder`）
 
@@ -174,7 +166,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 ### 依赖
 
-仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）和 `geo-presales-report-audit`（截图标注、引用清洗）要第三方包，各自的清单在它目录下；其余 Skill 和 `shared/` 的脚本只用标准库。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
+仓库根目录 `requirements.txt` 是整份依赖，`python3 -m pip install -r requirements.txt`，需要 Python ≥ 3.12。只有 `geo-prompt-selection-builder`（语种门禁、`--agent sdk`）要第三方包，清单在它目录下；其余 Skill 和 `shared/` 的脚本只用标准库。所有第三方包都是可选的，缺了只降级对应功能，不挡其余流程。
 
 ### 跨 Skill 路径
 
@@ -187,14 +179,12 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 ```bash
 python3 -m pytest -q skills/geo-metrics/tests
 python3 -m pytest -q skills/geo-presales-report-builder/tests
-python3 -m pytest -q skills/geo-presales-report-editor/scripts/tests
-python3 -m pytest -q skills/geo-presales-report-audit/tests
 python3 -m unittest discover -s skills/geo-prompt-selection-builder/scripts -p 'test_*.py'
 python3 -m unittest discover -s skills/shared/scripts -p 'test_*.py'
 python3 skills/geo-prompt-selection-builder/evals/e2e_repair_loop.py
 ```
 
-`geo-metrics` 的测试在 `skills/geo-metrics/tests`：情感、引用来源分类（子域继承与覆盖、缓存键归一、机构后缀、多租户聚合）、域名判读自检、开放品牌官网推断。core 的其余单测在 `geo-presales-report-editor/scripts/tests`，去引用在 `geo-presales-report-audit/tests`。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
+`geo-metrics` 的测试在 `skills/geo-metrics/tests`：情感、引用来源分类（子域继承与覆盖、缓存键归一、机构后缀、多租户聚合）、域名判读自检、开放品牌官网推断。core 的单测随 report-editor 退役已归档，不在仓库里。几个目录里有同名的 `test_scripts.py`，按上面逐个目录跑，别合成一条命令。测试不调用外部 AI 平台。
 
 ### 引用来源分类与判读数据
 

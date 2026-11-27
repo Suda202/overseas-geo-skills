@@ -21,6 +21,8 @@
 | 决定 | 测试 / 观察 / 先补研究 / 守住 / 转产品 / 暂不做 / 不适用 |
 | 载体、缺口、信息怎么变好（候选）、最接近的现有页面（候选，需人确认） | 动作四要素；页面候选取自检索和引用里出现过的官网页面 |
 | 主指标、对照题组、最早复测 | 度量契约；对照题组是同主题同类型、本期没派动作的题 |
+
+事实行（对象「事实：F-xx」）跑过 `trace_errors.py` 时：主原因写出处分布（如「官网自相矛盾 2、第三方页面 1」），载体和动作按最多的那类出处定，证据末尾附出处 URL，最接近的现有页面填写错的那页官网。没跑时沿用原来的假设写法，diagnosis.md 的「数据与口径」会注明未溯源。
 | 负责方 | 内容团队 / 渠道与 PR / 官网技术 / 品牌方 |
 
 ## diagnosis.md
@@ -34,4 +36,6 @@
 | readings/ | answers.jsonl、readings.json、readings.csv、cited_pages.csv、issues.json | 逐回答七层记录；逐题 × 平台读数；归题问题清单 |
 | labels/ | batches/、labels/（模型交回）、auto-zgap.json、labels.json、labels-rejected.jsonl、sample-review.csv、sample-score.json | 标注全过程与抽检 |
 | pagegap/ | pages/（正文缓存）、page_gap.json、page_gap.csv | 被引第三方页面的抓取与缺口判定 |
+| facts-draft/ | pages.json、pages/、batches/、extracted/（模型交回）、facts-rejected.jsonl、facts-draft.csv | 官网事实抽取与品牌方确认表（`facts_draft.py`，判据 facts-extraction.md） |
+| trace/ | trace.json、trace.csv、cited/（被引页面缓存） | 每条事实错误的出处与片段（`trace_errors.py`） |
 | difficulty/ | prompts.csv、topics.csv、difficulty.md、difficulty.json | 每道提示词、每个主题的竞争难度与优化难度（diagnosis-rules.md 第 8 节），可单独在试跑后跑 |

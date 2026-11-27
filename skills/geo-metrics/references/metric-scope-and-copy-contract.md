@@ -52,7 +52,7 @@
 
 ### 哪些产品线、哪些题统计
 
-- **产品线开不开由我们推理决定，不让品牌方填**：消费类实体商品（3C、家电、个护、宠物用品、服饰等）开；软件、SaaS、服务、房地产关；工业、工程类实体商品先记「试跑后定」，试跑里这条产品线的回答出卡比例到 5% 就开，不到就关。售前没有试跑，工业类记关。判断和理由记在题库 `config.shopping_cards`（选词 output-contract.md）。关掉的产品线照常采集商品字段，但不汇总、不报，也不写 0%。
+- **产品线开不开由我们推理决定，不让品牌方填**：消费类实体商品（3C、家电、个护、宠物用品、服饰等）开；软件、SaaS、服务、房地产关；工业、工程类实体商品先记「试跑后定」，试跑里这条产品线的回答出卡比例到 5% 就开，不到就关。售前没有试跑，工业类记关。判断和理由记在题库 `config.shopping_cards`（选词 output-contract.md）。关掉的产品线照常采集商品字段，但不汇总、不报，也不写 0%。报告层另有独立开关：售前诊断报告默认不出商品卡，传 `--shopping-cards 开` 才出（Suda 2026-11-27，与售后基线一致）。
 - **题的范围**：全部意图类型的题都进汇总（Suda 2026-11-23，推翻 2026-11-07 只算发现、替代）。收窄的原意是「点名品牌的题，出卡和进卡由题面带出」，现在改由看报告的人按主题、意图类型筛选排除；`shopping_mode_rate_by_intent` 仍给逐意图触发率作诊断。
 - **原始数据都在采集目录里**：商品卡、商品名、品牌、位置、商家、购买链接都在各平台原始响应里，以后要加 SKU、商家、渠道分析不用重新采集。
 
@@ -94,7 +94,7 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 
 - **按平台分开计算，不跨平台合并。** Gemini 每条回答 12–19 张卡，ChatGPT 1–6 张，卡位和排名合池没有意义；全部平台切片只给 `by_platform`。例外：核心洞察的商品卡提及率在「全部平台」时把返回了商品字段的平台合计（分子、分母各自相加），因为它按回答计。
 - **接口未返回**：平台本身不返回商品字段（Perplexity），或本次采集里该平台一条回答都没带商品字段（`product_field_returned = false`；2026-10 中起 Scrapeless 的 Gemini 1,700 多条回答都没有 `products`，2026-11-07 用 3 道 ChatGPT 出卡的发现题复测仍没有），整列写「接口未返回」，不写 0%，也不进核心洞察的合计。AI Mode 只在出卡时才带 `products` 键，缺键按未触发处理。
-- 实现：`shopping.py` 的 `SHOPPING_SCOPE_INTENTS` 为全部意图类型（2026-11-23 起）；按意图类型筛选靠报告的意图类型 / 主题切片。产品线开关：`build_report_data.py --shopping-cards 开|关` 写进 `meta.shopping_cards`，没传时按数据判（任一平台触发率到 5%），见 render-spec.md。
+- 实现：`shopping.py` 的 `SHOPPING_SCOPE_INTENTS` 为全部意图类型（2026-11-23 起）；按意图类型筛选靠报告的意图类型 / 主题切片。产品线开关：`build_report_data.py --shopping-cards 开|关` 写进 `meta.shopping_cards`，没传时默认关（2026-11-27 起，不再按 5% 触发率自动开），见 render-spec.md。
 - 卡片品牌归属顺序：平台 `brand` 字段 → 卡标题最早出现的别名 → offer 的 `product_name` → 商家名（全部可识别商家指向同一品牌时）。都不中的卡记为未归属，单独计数。
 - 卡位按平台字段顺序编号。ChatGPT 实测与正文商品表顺序约 5% 不一致，平均位置是近似值。
 
@@ -114,7 +114,7 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 判定顺序固定，先命中先返回：
 
 1. **自有网站**：host 等于或属于目标品牌的官网域名（`example.com` 与 `*.example.com`）。
-2. **竞品网站**：host 属于配置竞品或开放品牌的官网，或命中词表顶层的 `competitor_site_domains`。
+2. **竞品网站**：只算目标品牌以外的配置竞品和开放品牌的官网（开放品牌没写 `same_category` 按同类算，显式写 `false` 的除外），或命中词表顶层的 `competitor_site_domains`；显式非同类品牌的官网不归这一类，按域名类别判。
 3. **域名表**：内置 `KNOWN_HOST_TYPES` 与共享缓存 `geo-metrics/assets/domain-categories.json` 按最长匹配查：先精确匹配 host，再从最长的父域往上找，子域单独判过就用子域的（`support.apple.com` 不跟 `apple.com` 走），没判过才跟父域（`blog.example.com` 命中 `example.com`）；同一个键两边都有时缓存优先：缓存是覆盖表，人工纠错写进缓存就能推翻内置表，不用改代码。都不中再看机构后缀：`.gov` / `.edu` / `.mil`，或国家域名下的 `gov.xx` / `edu.xx` / `ac.xx` / `go.xx` / `gouv.xx`。缓存值只允许 `media_review`（媒体网站）/ `ugc`（社区与论坛）/ `institutional`（机构与官方）/ `press_release`（新闻稿）/ `other`；缓存键读入时去掉 `www.`，后缀规则写在代码里，不写进缓存。
 4. 以上都不命中 → **未判读**，展示时归「其他」。
 
@@ -136,11 +136,11 @@ AIO 的 `task_result.products[]` 不计：Scrapeless 文档把 AI 概览内的�
 | 类别 | 判据（Profound Citation Categories 口径） | 反例与边界 |
 |---|---|---|
 | 自有网站 | 品牌直接拥有、控制或管理的站点：主域、子域、产品微站、帮助中心、文档站 | 按 Case 与词表的官网域名判，不看子域结构 |
-| 竞品网站 | 竞品拥有或控制的站点：首页、博客、新闻室、资源页 | 品牌方配置的竞品才计入，开放品牌按词表 |
+| 竞品网站 | 竞品拥有或控制的站点：首页、博客、新闻室、资源页 | 品牌方配置的竞品，以及词表里的开放品牌（没写 `same_category` 按同类算，显式 `false` 的除外）都计入；显式非同类品牌官网按域名类别判 |
 | 媒体网站（Earned Media） | 内容即产品，靠广告、联盟佣金或订阅变现：新闻媒体、杂志、行业媒体、编辑型测评（Wirecutter、PCMag）、联盟与比较站（NerdWallet、Investopedia）、广播电视、投稿制媒体（Forbes、HuffPost）、个人博客 | 企业博客、企业新闻室、以获客为导向的 lead-gen 站不算媒体，判「其他」。个人原创内容不等于社交平台：单作者自己运营的博客算媒体，即使托管在 WordPress.com |
 | 新闻稿平台（PR Wire） | 把企业公告分发给媒体的新闻稿服务：PR Newswire、Business Wire、GlobeNewswire、Accesswire | 企业自己的新闻室判「其他」 |
 | 机构网站（Institution） | 政府、教育、研究、公共利益非营利：政府站、大学、研究机构、学术出版（Nature、arXiv）、国际组织（UN、WHO）、专业协会（ABA、AMA）、公益组织、Wikipedia。TLD 自动判：`.gov` `.edu` `.mil` `.int`，以及国家域名下的 `.gov.` `.ac.` `.nhs.` `.gouv.` `.gob.` | 企业的帮助中心、开发者文档、新闻室（`support.apple.com`、`docs.docker.com`、`press.bmwgroup.com`）不算机构，判「其他」 |
-| 社交平台（Social） | 用户自由发布、曝光由投票、算法或关注关系决定：社交网络（Facebook、Instagram、X、TikTok、LinkedIn）、视频平台（YouTube）、讨论平台（Reddit、Discord）、问答（Quora、Stack Overflow）、开放发布平台（Medium、Substack）、消费者评价聚合（Yelp、TripAdvisor）、B2B 评价聚合（G2、Capterra、TrustRadius） | 厂商自建的支持论坛（`community.qnap.com`、`forum.synology.com`）与电商商品评价不算社交平台，判「其他」 |
+| 社交平台（Social） | 用户自由发布、曝光由投票、算法或关注关系决定：社交网络（Facebook、Instagram、X、TikTok、LinkedIn）、视频平台（YouTube）、讨论平台（Reddit、Discord）、问答（Quora、Stack Overflow）、开放发布平台（Medium、Substack）、代码与数据集托管（GitHub、Hugging Face）、消费者评价聚合（Yelp、TripAdvisor）、B2B 评价聚合（G2、Capterra、TrustRadius） | 厂商自建的支持论坛（`community.qnap.com`、`forum.synology.com`）与电商商品评价不算社交平台，判「其他」 |
 | 其他（Other） | 为卖产品、服务而存在：企业官网、SaaS、电商、服务业、公司博客与新闻室、厂商论坛、marketplace、课程平台（Coursera、Udemy）、招聘站、目录站、行业协会、lead-gen 站 | 做价格或规格比较、给出推荐的数据库算媒体（导购比较） |
 
 Profound 另有一条产品规则：全局引用量不足 100 次的域名归入 Other。那是它的数据映射口径，我们不采用——我们的「其他」表示站点类型，「未判读」单独用门禁统计，避免把长尾媒体错标成「其他」。Custom 自定义分类暂不支持，客户特殊需求先在 Case 里加 `competitor_site_domains` 或单独记档。

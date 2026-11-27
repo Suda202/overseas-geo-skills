@@ -1,14 +1,14 @@
 {
   "name": "geo-gap-diagnosis",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "owner": "海外 GEO 项目",
-  "updated_at": "2026-11-20",
+  "updated_at": "2026-11-24",
   "status": "active",
   "maturity_tier": "beta",
   "lifecycle_stage": "pilot",
   "review_cadence": "per-client",
   "entrypoint": "SKILL.md",
-  "summary": "售前、试跑或正式基线之后的缺口诊断：七层读数、推荐与事实标注、页面缺口、三道门与第一断点，产出带决定、载体、动作四要素和度量契约的优化机会诊断表；另出每道提示词、每个主题的竞争难度与优化难度。",
+  "summary": "售前、试跑或正式基线之后的缺口诊断：七层读数、推荐与事实标注、页面缺口、三道门与第一断点，产出带决定、载体、动作四要素和度量契约的优化机会诊断表；事实表从官网逐字抽取后交品牌方确认，事实错误逐条追出处（官网哪页、第三方、串型号）；另出每道提示词、每个主题的竞争难度与优化难度。另出报告「诊断与行动」的素材包（diagnosis_materials.py）与写法规范（diagnosis-writing.md）。",
   "depends_on": [
     "geo-monitoring",
     "geo-metrics",

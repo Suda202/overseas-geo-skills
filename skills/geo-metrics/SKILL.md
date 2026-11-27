@@ -1,6 +1,6 @@
 ---
 name: geo-metrics
-description: Owns every overseas GEO statistic rule and its single implementation — brand / competitor mention recognition (alias matching, case-sensitive aliases, cross-brand overlap resolution, the brand lexicon format and open-brand mining), answer-body cleaning before recognition (citation stripping, merchant columns), answer validity, citation URL normalization, the metric calculations and sample scopes for mention rate, share of voice, average position, citation share, official-site rate and shopping product cards, and brand sentiment (extracting atomic Claims from answers, clustering them into Attributes and neutral Themes, computing positive-sentiment share per brand and platform). Use it when changing, checking or explaining how any of these is counted, when another skill needs to recognise brands or compute a metric, or when judging brand sentiment for a presales report or monitoring baseline. Do not use it to assemble or render a report (geo-presales-report-builder, geo-monitoring baseline), to collect answers or rule on crawl trustworthiness (geo-monitoring), or to write customer-facing conclusions (geo-presales-report-editor).
+description: Owns every overseas GEO statistic rule and its single implementation — brand / competitor mention recognition (alias matching, case-sensitive aliases, cross-brand overlap resolution, the brand lexicon format and open-brand mining), answer-body cleaning before recognition (citation stripping, merchant columns), answer validity, citation URL normalization, the metric calculations and sample scopes for mention rate, share of voice, average position, citation share, official-site rate and shopping product cards, and brand sentiment (extracting atomic Claims from answers, clustering them into Attributes and neutral Themes, computing positive-sentiment share per brand and platform). Use it when changing, checking or explaining how any of these is counted, when another skill needs to recognise brands or compute a metric, or when judging brand sentiment for a presales report or monitoring baseline. Do not use it to assemble or render a report (geo-presales-report-builder, geo-monitoring baseline), to collect answers or rule on crawl trustworthiness (geo-monitoring), or to write customer-facing conclusions.
 ---
 
 # GEO 统计口径与实现
@@ -35,7 +35,8 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 结构 `{"brands": [{"name", "aliases", "type", "domains"}], "case_sensitive_aliases": [...]}`。
 
 - 品牌名本身自动算一条别名。
-- `same_category`（可选）：是否和本品卖同一类东西。目标品牌和配置竞品默认是；开放品牌要写 `true` 才算，别的品类厂商写 `false`（车载屏客户的便携导航仪品牌）。`geo-monitoring` 的可改变性用它判品类错位、认竞品官网。
+- 目标品牌的 `domains` 只用品牌方在提报表、品牌资料或 Case 里给的域名，不按页面标题、注册信息等线索自行扩充。答案里出现疑似品牌站（子域名、旧站、地区站、页面标题带品牌名的站）时，先列出来交品牌方确认，确认前按普通域名判类（2026-11-24 DataOceanAI：infinityai.ai 被误加进品牌官网，15 次引用被算成品牌官网引用）。
+- `same_category`（可选）：是否和本品卖同一类东西。目标品牌和配置竞品默认是；开放品牌没写时，**引用来源分类按同类算**（官网计入「竞品网站」，2026-11-27 起），别的品类厂商写 `false`（车载屏客户的便携导航仪品牌）。**每个开放品牌都要判，不能只判有引用链接的**：这个标记决定官网算不算「竞品网站」，也决定难度、可改变性、缺口诊断里谁算同类竞品；诊断这几个消费者按显式标注取同类（没写按非同类，保守处理）。判法是看买家能不能在这家买到本品类的东西，卖工具或平台的、卖下游产品的、招聘兼职站都判 `false`（2026-11-24 DataOceanAI：CVAT、Databricks、Mobileye、AITraining.jobs）。`geo-monitoring` 的可改变性用它判品类错位、认竞品官网。
 - `case_sensitive_aliases`：品牌名或别名本身是普通词或缩写时（ERA / era、AVG / avg），把要认的大小写写法逐个列出；原文写法与名单里某个写法逐字相同才算提及。名单对词表内外所有品牌生效（目标品牌、配置竞品、开放品牌），售前报告、监测基线、试跑计数、情感抽取读的是同一份。
 - 同一别名只归一个品牌：报告数据层按首次登记的品牌归属、丢弃后来的重名；core 配置入口遇到重名直接报错。
 - **别名收什么**（每个客户、每个品牌各自补，目标品牌由品牌方填，竞品由我们或 AI 查官网补、人工确认，不做跨客户共享）：
@@ -60,14 +61,13 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 - `geo-monitoring`：`changeability_domains.py`（题库与试跑目录读法来自 `runs.py`，引用抽取来自 `citations.py`，不再经由售前报告的 `build_report_data`）；基线报告的情感走 `sentiment_sentences.py`；临时引用统计用本 skill 的 `citation_sources.py`，品牌计数用本 skill 的 `trial_brand_count.py`
 - `geo-gap-diagnosis`：`layer_readings.py`、`page_gap.py`、`label_batches.py`（品牌计数、引用抽取、正文字段）、`diagnose.py`（来源类型调 `classify_source`）
 - `geo-monitoring`（采集 `collect_answers.py`、采集完整性检查 `audit_crawl_integrity.py`）：`answer_validity`、`extract_product_cards`
-- `geo-presales-report-editor`：`geo_presales_editor/`（影子审计 CLI）
 - `geo-prompt-selection-builder`：`run_selection_mode.py` 线上运行时拷贝 `geo_presales_core`
 
 调用方用 `sys.path` 指向 `geo-metrics/scripts`（脱离整套 skill 部署时用环境变量 `GEO_PRESALES_SKILLS_ROOT` 指 skills 根目录），包名仍是 `geo_presales_core`。
 
 ## 改动后的回归
 
-- 单元测试：`geo-presales-report-editor/scripts/tests/test_geo_presales.py`（core）、`geo-presales-report-audit/tests/test_scripts.py`（去引用）、`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。
+- 单元测试：`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。core 的 `test_geo_presales.py` 随已退役的 report-editor 归档在 `90-历史归档/旧版与过程稿/退役skill/geo-presales-report-editor/scripts/tests/`，改动 core 指标时需要在那里手动跑。
 - 端到端：改 `mine_brand_lexicon.py` 或 `audit_lexicon_domains.py` 的挖掘、分档、拆分规则后跑 `python3 evals/e2e_lexicon_recall.py`（12 条用例，造数据、不联网），报告写到 `reports/lexicon-recall-e2e.md`；用例开头列了它防的十种失败方式。
 - 端到端：用三份现有客户数据（一份售前报告、两份监测基线）跑售前报告数据层、校验、情感抽取、基线报告、试跑计数，输出与改前逐项比对。脚本见项目根 `.snapshots/geo-metrics-20261110/run_ref.sh` 与 `compare.py`，读数有变化必须逐条说明原因。
 

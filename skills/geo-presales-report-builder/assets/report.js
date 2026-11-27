@@ -12,7 +12,6 @@
   var SLICES = DATA.slices || {};
   var ENGINE = DATA.facts && window.ReportEngine ? window.ReportEngine.create(DATA) : null;
   var FILLS = ["gold", "blue", "cyan", "green", "amber", "red", ""];
-  var MAX_COMPETITION_ROWS = 5;
 
   var state = { region: "", platform: "", intent: "", topic: "", matrixMetric: "mention", shopLevel: "brand",
     expanded: {}, page: 1, drawerRun: {}, drawerPlat: {},
@@ -24,6 +23,8 @@
   var HAS_SENTIMENT = META.sentiment_enabled !== undefined ? !!META.sentiment_enabled : META.sentiment_claims_status === "complete";
   // 竞争与优化难度（2026-11-20，attach_difficulty.py 接入；说法已在数据层写好，这里只展示）
   var DIFF = META.difficulty_enabled ? (DATA.difficulty || null) : null;
+  // 诊断与行动（attach_diagnosis.py 接入；分析师写好的内容，渲染层原样展示，不跟筛选变）
+  var DIAG = META.diagnosis_enabled ? (DATA.diagnosis || null) : null;
   function diffTag(level, fallback) {
     var cls = { "高": "diff-hi", "中": "diff-mid", "低": "diff-lo" }[level];
     if (cls) return '<span class="diff-tag ' + cls + '">' + esc(level) + "</span>";
@@ -270,6 +271,12 @@
     distribution: "all"
   };
   function renderScopes() {
+    // 所有模块都按顶部筛选统计同一批回答，模块标题旁不再写意图类型（Suda 2026-11-24）
+    Object.keys(SECTION_SCOPE).forEach(function (id) {
+      var el = document.getElementById("scope-" + id);
+      if (el) el.textContent = "";
+    });
+    return;
     var present = [];
     (currentSlice().records || []).forEach(function (r) { if (r.intent && present.indexOf(r.intent) < 0) present.push(r.intent); });
     var allTypes = Object.keys(META.intent_topics || {});
@@ -325,7 +332,7 @@
       scopeEl.className = "kpi-scope";
       el.parentNode.insertBefore(scopeEl, el.nextSibling);
     }
-    scopeEl.textContent = kpiScopeLine(slice);
+    scopeEl.textContent = "";  // 不再在指标下写意图类型（Suda 2026-11-24）
   }
 
   /* ---------- 02 可见度 ---------- */
@@ -333,8 +340,9 @@
   function renderCompetition() {
     var slice = currentSlice();
     var comp = slice.competition || {};
-    var mention = (comp.mention || []).slice(0, MAX_COMPETITION_ROWS);
-    var rank = (comp.rank || []).slice(0, MAX_COMPETITION_ROWS);
+    // 展示品牌集由数据层给（slice.brand_display，最多 5 个），前端不再截断
+    var mention = comp.mention || [];
+    var rank = comp.rank || [];
 
     var mentionEl = document.getElementById("competitionMentions");
     if (mentionEl) {
@@ -657,8 +665,11 @@
     var byBrand = ((slice.sentiment || {}).by_brand) || {};
     var el = document.getElementById("sentimentOverviewBars");
     if (!el) return;
-    var brands = (META.sentiment_brands && META.sentiment_brands.length
-      ? META.sentiment_brands : Object.keys(byBrand));
+    // 与可见度共用同一品牌集；没判读的品牌显示「—」
+    var brands = (slice.brand_display && slice.brand_display.length)
+      ? slice.brand_display
+      : (META.sentiment_brands && META.sentiment_brands.length
+        ? META.sentiment_brands : Object.keys(byBrand));
     if (!brands.length) {
       el.innerHTML = '<p class="support-line">情感判读尚未接入</p>';
       return;
@@ -739,10 +750,12 @@
       return;
     }
     var themes = themeMatrix.themes;
-    var brands = themeMatrix.brands;
+    // 列与可见度共用同一品牌集；没判读的品牌整列显示「—」
+    var brands = (slice.brand_display && slice.brand_display.length)
+      ? slice.brand_display : themeMatrix.brands;
     var matrix = themeMatrix.matrix || {};
     var target = META.brand || "";
-    var head = "<thead><tr><th>Theme</th>" +
+    var head = "<thead><tr><th>主题</th>" +
       brands.map(function (b) {
         return '<th class="' + (b === target ? "is-target" : "") + '">' + esc(displayBrand(b)) +
           (b === target ? " ★" : "") + "</th>";
@@ -959,7 +972,7 @@
     if (intro) intro.innerHTML = "<b>竞争难度</b>：AI 推荐名单被其他品牌占得有多牢。<b>优化难度</b>：只改官网，把 " + esc(brand) +
       " 做进 AI 回答有多难，右边一列写的是难或容易的原因。两项都不代表能提升多少。";
     var note = document.getElementById("difficultyNote");
-    if (note) note.textContent = (DIFF.basis || "") + (DIFF.preliminary ? "每道问题的回答次数还不多，结果为初步判断。" : "");
+    if (note) note.textContent = DIFF.basis || "";
     var picked = ENGINE ? (state.sel.topics || []) : (state.topic ? [state.topic] : []);
     var rows = (DIFF.topics || []).filter(function (t) { return !picked.length || picked.indexOf(t.topic) >= 0; });
     var head = "<thead><tr><th>主题</th><th class=\"center\">竞争难度</th><th>竞争情况</th>" +
@@ -978,6 +991,75 @@
         '<td class="center">' + diffTag(t.opt, "暂不评估") + '</td><td class="diff-text">' + esc(t.opt_text || "这个主题的问题 AI 都很少推荐具体品牌。") + "</td>" +
         '<td class="diff-first">' + (first || '<span class="diff-none">暂无</span>') + "</td></tr>";
     }).join("") + "</tbody>";
+  }
+
+  // 诊断表里的网址做成可点链接：先整段转义，再把 http(s) 网址包成 <a>，按行分隔
+  function linkify(text) {
+    return esc(text || "").split("\n").map(function (line) {
+      return line.replace(/https?:\/\/[^\s<]+/g, function (u) {
+        // 只显示域名，完整网址放 title，避免把表格撑长（Suda 2026-11-24）
+        var host = u.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+        return '<a class="diag-link" href="' + u + '" title="' + u + '" target="_blank" rel="noopener">' + host + "</a>";
+      });
+    }).join("<br>");
+  }
+
+  function renderDiagnosis() {
+    if (!DIAG) return;
+    var noteMap = { overview: "overviewDiagnosis", competition: "competitionDiagnosis",
+      sources: "sourcesDiagnosis", distribution: "distributionDiagnosis" };
+    var modules = DIAG.module_insights || {};
+    Object.keys(noteMap).forEach(function (key) {
+      var el = document.getElementById(noteMap[key]);
+      if (!el) return;
+      var block = modules[key];
+      if (!block) {
+        // 这个模块没有诊断内容时，把整张诊断卡藏掉
+        var note = el.closest ? el.closest(".insight-note") : null;
+        if (note) note.style.display = "none";
+        return;
+      }
+      setInsight(noteMap[key], block.headline || "", block.points || []);
+    });
+    function table(id, head, rows, cols) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (!rows.length) {
+        el.innerHTML = head + '<tbody><tr><td class="empty" colspan="' + cols + '">暂无</td></tr></tbody>';
+        return;
+      }
+      el.innerHTML = head + "<tbody>" + rows.join("") + "</tbody>";
+    }
+    // 主题诊断只显示一个「优化优先级」：分析师综合需求、AI 认知差距、可改变性判（Suda 2026-11-24）；
+    // 三项依据留在 diagnosis.json（opt_priority_basis、awareness_gap、changeability）供内部查，不进页面
+    table("diagTopics",
+      '<thead><tr><th>主题</th><th class="center">优化优先级</th><th>差在哪</th><th>先做什么</th></tr></thead>',
+      (DIAG.topics || []).map(function (t) {
+        // 优先级标签悬停显示理由（opt_priority_basis，多行用 \n 分隔），和指标 i 提示同一个浮层；键盘可聚焦
+        var lvl = t.opt_priority || t.priority;
+        var pri = diffTag(lvl);
+        if (t.opt_priority_basis && pri.indexOf("diff-tag") > 0) {
+          pri = pri.replace('<span class="diff-tag', '<span tabindex="0" data-tip="' + esc(t.opt_priority_basis) + '" class="has-tip diff-tag');
+        }
+        return "<tr><td>" + esc(t.topic) + '</td><td class="center">' + pri +
+          "</td><td>" + esc(t.gap) + "</td><td>" + esc(t.next) + "</td></tr>";
+      }), 4);
+    table("diagConflicts",
+      '<thead><tr><th>事项</th><th>AI 怎么说</th><th>官网怎么写</th><th>影响</th><th>怎么改</th></tr></thead>',
+      (DIAG.conflicts || []).map(function (c) {
+        return "<tr><td>" + esc(c.item) + "</td><td>" + esc(c.ai_says) + "</td><td>" + esc(c.site_says) +
+          "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.fix) + "</td></tr>";
+      }), 5);
+    // 行动清单只留四列：优先级 / 要做什么 / 放在哪 / 为什么（Suda 2026-11-24：字段太多）；
+    // 类型写在「要做什么」前面当小标签，参照链接附在「为什么」末尾
+    table("diagPages",
+      '<thead><tr><th class="diag-pri">优先级</th><th>要做什么</th><th>放在哪</th><th>为什么</th></tr></thead>',
+      (DIAG.missing_pages || []).map(function (p) {
+        var ref = p.reference ? '<div class="diag-ref">参照：' + linkify(p.reference).replace(/<br>/g, "、") + "</div>" : "";
+        return '<tr><td class="diag-pri">' + esc(p.priority || "") + "</td><td>" +
+          (p.type ? '<span class="diag-kind">' + esc(p.type) + "</span>" : "") + esc(p.page) + "</td><td>" + esc(p.where || "") +
+          "</td><td>" + esc(p.evidence) + ref + "</td></tr>";
+      }), 4);
   }
 
   function drawerOverview(key, record, dplat, runs) {
@@ -1203,7 +1285,7 @@
     document.body.style.overflow = "";
   }
 
-  /* ---------- 结论卡 ---------- */
+  /* ---------- 诊断卡（报告唯一的结论层） ---------- */
 
   function setInsight(id, headline, points) {
     var el = document.getElementById(id);
@@ -1213,134 +1295,6 @@
           return '<li><span class="point-copy">' + p + "</span></li>";
         }).join("") + "</ul>"
       : "");
-  }
-
-  function targetRow(rows) {
-    return (rows || []).filter(function (r) { return r.target; })[0] || null;
-  }
-
-  function renderInsights() {
-    var slice = currentSlice();
-    var k = slice.kpis || {};
-    var mention = (slice.competition || {}).mention || [];
-    var target = mention.filter(function (r) { return (r[4] || "") === "gold"; })[0];
-    var leader = mention[0];
-    var scope = (state.region || "全部地区") + (state.platform ? " · " + state.platform : "") +
-      (state.topic ? " · " + state.topic : "");
-
-    if (leader && target) {
-      var gap = (parseFloat(leader[2]) - parseFloat(target[2])).toFixed(1);
-      var mentionRate = parseFloat(k.mention_rate) || 0;
-      var mentionRank = parseInt(k.mention_rank) || 0;
-      var shareRate = parseFloat(k.share_of_voice) || 0;
-      var avgRank = parseFloat(k.average_rank) || 0;
-      var citeShare = parseFloat(k.official_share) || 0;
-
-      // 三层叙事：心智基本盘 → 断层 → 根因
-      var narrative = "";
-      if (mentionRate >= 60) {
-        narrative = "AI 对本品牌「知道且主动推荐」——心智基本盘稳固，";
-        if (mentionRank > 3) narrative += "但排名仍有提升空间，";
-        narrative += "需守住现有优势并向薄弱环节渗透。";
-      } else if (mentionRate >= 30) {
-        narrative = "AI 对本品牌「知道但不主动推荐」——心智基本盘存在，";
-        narrative += "但在这类问题中大量未进入首选名单，存在明显的推荐断层。";
-      } else {
-        narrative = "AI 对本品牌「认知薄弱」——在这类问题中极少被主动提及，";
-        narrative += "心智基本盘尚未建立，需要先解决「被知道」的问题。";
-      }
-
-      setInsight("overviewInsight", narrative,
-        [
-          "<strong>心智现状：</strong>提及率 " + esc(k.mention_rate || "—") +
-            "（第 " + esc(k.mention_rank || "—") + " 位），声量份额 " + esc(k.share_of_voice || "—") +
-            "，平均提及位置 " + esc(k.average_rank || "—") + "。",
-          "<strong>与头部差距：</strong>当前领先品牌为 " + esc(leader[0]) + "（" + esc(leader[2]) +
-            "），监测对象与其相差 " + gap + " 个百分点。",
-          citeShare < 5
-            ? "<strong>根因判断：</strong>引用份额仅 " + esc(k.official_share || "—") +
-              "，AI 可引用的官方事实源不足，第三方信源主导了叙事权。"
-            : "<strong>信源优势：</strong>引用份额 " + esc(k.official_share || "—") +
-              "，官方事实源已有基础，可继续扩大覆盖。"
-        ]);
-    } else {
-      setInsight("overviewInsight", "当前切片下监测对象未出现在任何回答中。", []);
-    }
-
-    var matrix = slice.matrix || {};
-    var sentTarget = targetRow(matrix.mention || []);
-    var platforms = matrix.platforms || [];
-    // 这段结论是跨平台比较，和平台 × 品牌矩阵同一规则：数据本身只有一个平台时不出（判据 META.platforms，
-    // 用户筛到一个平台时照常显示，走下面 vals.length === 1 的单平台说法）
-    var compEl = document.getElementById("competitionInsight");
-    var compNote = compEl && compEl.closest ? compEl.closest(".insight-note") : null;
-    if (compNote) compNote.style.display = (META.platforms || []).length < 2 ? "none" : "";
-    if (sentTarget && platforms.length) {
-      // 跨平台横切看共识：所有平台两两差距都 ≤10pt 才叫有共识；否则就是无共识，
-      // 直接点名提及率最高的平台，并把单一平台高低和"优化目标"解耦。
-      var vals = (sentTarget.vals || []).map(function (v, i) {
-        return v === null || v === undefined ? null : { name: platforms[i], value: v };
-      }).filter(Boolean);
-      var headline = "";
-      var points = [];
-      if (!vals.length) {
-        headline = "当前切片下监测对象未进入任何平台回答。";
-      } else if (vals.length === 1) {
-        // 只有一个平台时不存在「跨平台」比较，强行套共识/差距文案会写出相差 0.0 的假结论
-        headline = "当前只有 " + vals[0].name + " 一个平台的数据，提及率 " + vals[0].value.toFixed(1) + "%。";
-        points.push("<strong>提及率：</strong>" + vals[0].name + " " + vals[0].value.toFixed(1) + "%。");
-      } else {
-        var sorted = vals.slice().sort(function (a, b) { return b.value - a.value; });
-        var top = sorted[0];
-        var bottom = sorted[sorted.length - 1];
-        var spread = top.value - bottom.value;
-        if (spread <= 10 && sorted.length >= 2) {
-          var avg = sorted.reduce(function (a, c) { return a + c.value; }, 0) / sorted.length;
-          headline = "跨平台存在共识：各平台提及率接近（均值约 " + avg.toFixed(1) + "%）。";
-          points.push("<strong>各平台：</strong>" + sorted.map(function (c) {
-            return c.name + " " + c.value.toFixed(1) + "%";
-          }).join("、") + "。");
-        } else {
-          headline = "跨平台差距较大（最高与最低相差 " + spread.toFixed(1) + " 个百分点），未形成共识。";
-          points.push("<strong>提及率最高：</strong>" + top.name + " " + top.value.toFixed(1) + "%。");
-          if (sorted.length > 1) {
-            points.push("<strong>其他平台：</strong>" + sorted.slice(1).map(function (c) {
-              return c.name + " " + c.value.toFixed(1) + "%";
-            }).join("、") + "。");
-          }
-        }
-      }
-      setInsight("competitionInsight", headline, points);
-    }
-
-    var sources = slice.sources || {};
-    var topDomain = (sources.domains || [])[0];
-    var officialPages = (sources.official_pages || []).length;
-    // 官网引用份额与最大竞品来源的对比：只说「可继续扩展」太空，客户要的是
-    // 「差在哪些内容上」。用类别里竞品网站的份额与目标官网份额对照，并点名
-    // 最大来源域名，把差距落到具体来源。
-    var compType = ((sources.types || []).filter(function (r) { return r[0] === "竞品网站"; })[0]) || null;
-    var ownShare = parseFloat(String(sources.official_share || "").replace("%", ""));
-    var compShare = compType ? parseFloat(String(compType[1]).replace("%", "")) : null;
-    var gapNote = "";
-    if (isFinite(ownShare) && isFinite(compShare) && compShare > 0) {
-      gapNote = "<strong>差距：</strong>竞品网站合计 " + esc(compType[1]) +
-        "，是本品官网的 " + (compShare / Math.max(ownShare, 0.1)).toFixed(1) + " 倍";
-      if (topDomain) {
-        gapNote += "；最大来源是 " + esc(topDomain[0]) + "（" + esc(topDomain[1]) + "）";
-      }
-      gapNote += "。";
-    }
-    setInsight("sourcesInsight",
-      "引用份额 " + esc(sources.official_share || "—") + "，引用率 " + esc(sources.official_citation_rate || "—") + "。",
-      [
-        topDomain ? "<strong>最大来源：</strong>" + esc(topDomain[0]) + "（" + esc(topDomain[2]) +
-          "，占 " + esc(topDomain[1]) + "）。" : "",
-        officialPages <= 2
-          ? "<strong>风险：</strong>官网可被引用的页面过少，事实定义权主要落在第三方。"
-          : gapNote
-      ].filter(Boolean));
-
   }
 
   function emptyRow(text) {
@@ -1358,7 +1312,7 @@
     renderShopping();
     renderDifficulty();
     renderRecords();
-    renderInsights();
+    renderDiagnosis();
     if (ENGINE) renderMultiFilters(); else renderTabs();
   }
 
@@ -1475,11 +1429,11 @@
     }
     function hide() { tip.hidden = true; }
     document.addEventListener("mouseover", function (e) {
-      var el = e.target.closest(".info[data-tip]");
+      var el = e.target.closest(".info[data-tip], .has-tip[data-tip]");
       if (el) show(el); else if (!e.target.closest(".float-tip")) hide();
     });
     document.addEventListener("focusin", function (e) {
-      var el = e.target.closest(".info[data-tip]");
+      var el = e.target.closest(".info[data-tip], .has-tip[data-tip]");
       if (el) show(el);
     });
     document.addEventListener("focusout", hide);
@@ -1716,13 +1670,23 @@
 
     var navLinks = Array.prototype.slice.call(document.querySelectorAll(".nav a"));
     var sections = navLinks.map(function (link) { return document.querySelector(link.getAttribute("href")); });
-    window.addEventListener("scroll", function () {
+    // 高亮判据：模块标题滚到吸顶区（顶栏 + 筛选条）下沿附近就算当前模块。原来写死 120px，
+    // 吸顶区约 250px，点导航跳过去的模块标题停在 ~260px，高亮会停在上一个模块（2026-11-25 修）。
+    // 滚到页面底部时，最后一个模块标题可能到不了判定线，直接高亮最后一个。
+    function updateNav() {
+      var bar = document.querySelector(".topbar");
+      var box = document.getElementById("sharedFilter");
+      var line = (bar ? bar.offsetHeight : 0) + (box ? box.offsetHeight : 0) + 40;
       var activeIndex = 0;
       sections.forEach(function (section, index) {
-        if (section && section.getBoundingClientRect().top <= 120) activeIndex = index;
+        if (section && section.getBoundingClientRect().top <= line) activeIndex = index;
       });
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) activeIndex = sections.length - 1;
       navLinks.forEach(function (link, index) { link.classList.toggle("active", index === activeIndex); });
-    }, { passive: true });
+    }
+    window.addEventListener("scroll", updateNav, { passive: true });
+    window.addEventListener("resize", updateNav);
+    updateNav();
   }
 
   function boot() {

@@ -821,7 +821,7 @@ def main() -> int:
     meta["sentiment_brands"] = brands
     basis_label = "Claim 信号" if claims else "判读句"
     meta["sentiment_note"] = (
-        "情感仅判读了报告中展示的 %d 个品牌；其余开放品牌未判读。"
+        "情感判读了 %d 个品牌；情感模块与可见度用同一品牌集，未判读的品牌显示 —。"
         "正向率 = 正向%s ÷（正向 + 负向%s），排除中性。"
         % (len(brands), basis_label, basis_label))
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
