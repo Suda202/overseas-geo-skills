@@ -29,6 +29,10 @@ import json
 import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
+from geo_presales_core.platforms import LABELS_ZH  # noqa: E402
 
 PARAMS = {
     "min_valid": 7,          # 有效回答少于此数只算预判（正式基线每格 7 次）
@@ -46,8 +50,7 @@ PARAMS = {
 }
 NAMED = {"evaluation", "sentiment", "competitor", "comparison", "verification", "validation", "trust",
          "transactional", "support", "accuracy"}
-PLATFORM_ZH = {"chatgpt": "ChatGPT", "gemini": "Gemini", "overview": "AI 概览", "aimode": "AI 模式",
-               "perplexity": "Perplexity", "copilot": "Copilot", "grok": "Grok", "alexa": "Alexa"}
+PLATFORM_ZH = dict(LABELS_ZH)  # 平台登记表在 geo-metrics core platforms.py
 
 
 def pct(x) -> str:

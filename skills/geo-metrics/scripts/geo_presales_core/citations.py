@@ -11,10 +11,9 @@ from .util import is_platform_internal, normalize_host, normalize_url
 from .util import strip_tracking_params as clean_url
 
 # 引用字段：逐平台不同。Grok 的 footnotes 是以 card id 为键的对象，不是数组
-CITATION_FIELD = {"overview": "source", "gemini": "citations",
-                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
-                  "copilot": "citations", "grok": "footnotes", "alexa": "references",
-                  "bingaimode": "sources"}
+from .platforms import CITATION_FIELDS
+
+CITATION_FIELD = dict(CITATION_FIELDS)  # 平台登记表 platforms.py 是唯一来源
 
 # Alexa 的 md_text 不带引用标记，引用位置只留在 raw_text 的 `{ref cite_<id>}`，按 id 对
 # references。id 偶有重复前缀（`cite_cite_dx9kveQ`），比对前剥掉。2026-10-21 实测：

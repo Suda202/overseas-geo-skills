@@ -49,7 +49,7 @@ Markdown 转换的处理顺序不能随意调换,引用 pill 必须在普通链�
   | 开关 | 什么时候关 | 关了以后不出的东西 |
   |---|---|---|
   | 商品卡 | 默认关（未传 `--shopping-cards 开`）；传了「开」但最宽切片里一张带目录的商品卡都没有也关 | 购物商品卡模块、导航「商品卡」、核心洞察的「商品卡提及率」、回答详情里的商品卡;HTML 里也不带 `details[].product_cards`、`facts.answers[].s` |
-  | 情感 | `meta.sentiment_claims_status` 不是 complete;或判读完了但最宽切片里所有展示品牌都没有正负信号 | 情感模块、导航「情感」、问题明细「正向情感占比」列、抽屉品牌对比的情感列、单次回答的「品牌情感」;HTML 里也不带 `details[].sentiment`、`facts.claims` |
+  | 情感 | `meta.sentiment_claims_status` 不是 complete;或判读完了但最宽切片里所有展示品牌都没有正负信号 | 情感模块、导航「情感」、问题明细「正向情感占比」列、抽屉品牌对比的情感列、单次回答的「品牌情感」;HTML 里也不带 `details[].sentiment`、`facts.claims`。售前诊断报告必出情感,流水线开跑前拦截缺 `--brands`/`--target` |
   | 难度 | report-data 里没有 `difficulty.topics`(没跑 `attach_difficulty.py`;售前默认不跑) | 「竞争与优化难度」模块、导航「难度」、问题明细「优化难度」列、问题详情的「难度判断」 |
   | 诊断 | report-data 里没有 `diagnosis`(没跑 `attach_diagnosis.py`);售前诊断报告由流水线阶段 5d 拦截,不会走到这一步 | 「诊断与行动」模块、导航「诊断」、核心洞察 / 可见度 / 引用 / 情感四张「诊断」卡;模板「结论」卡已于 2026-11-27 删除(只复述看板数字),没跑诊断时这几个模块不出结论卡 |
 

@@ -19,11 +19,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts"))
 from geo_presales_core.crawler import answer_body  # noqa: E402
 
-PLATFORM_LABELS = {"overview": "AIO", "gemini": "Gemini",
-                   "chatgpt": "ChatGPT", "perplexity": "Perplexity", "aimode": "AI Mode",
-                   "copilot": "Copilot", "grok": "Grok", "alexa": "Alexa"}
-# 与 details 的键保持同序，回填时才能对上
-PLATFORM_ORDER = ["overview", "gemini", "chatgpt", "perplexity", "aimode", "copilot", "grok", "alexa"]
+from geo_presales_core.platforms import ALL_PLATFORM_DIRS, LABELS  # noqa: E402
+
+PLATFORM_LABELS = LABELS
+# 与 details 的键保持同序，回填时才能对上；AIO、Gemini 在前是历史顺序，其余按登记表
+PLATFORM_ORDER = ["overview", "gemini"] + [d for d in ALL_PLATFORM_DIRS if d not in ("overview", "gemini")]
 
 
 def parse_args(argv=None):

@@ -180,7 +180,7 @@
 - `platforms` 是列顺序，取值来自 `meta.platforms`（不含「全部平台」）。
 - 每个 metric 是行数组，行对象字段：`name`（含 ★）、`target`（布尔，可选）、`vals`（数字数组，与 `platforms` 同序）。缺失值用 `null`。
 - `rank` 的 `vals` 是一位小数，`mention`/`share`/`sent`/`official` 是百分比数值。
-- 行集合与 `competition.mention` 一致（也就是 `slice.brand_display`，最多 5 行）。
+- 行集合与 `competition.mention` 一致（也就是 `slice.brand_display`，最多 5 行），但**行序按正向占比从大到小**（Suda 2026-11-27；无信号品牌按「—」排最后）。页面情感总览条与 `report-engine.js` 现算的 `sentiment.matrix` 用同一排序，所以 `check_engine_parity.js` 比对的行序也按正向占比，不按提及率。
 
 **sources**
 
@@ -239,3 +239,5 @@
 - `kpis.official_share`（引用份额）= 有效 Discovery 回答正文 pill 中指向目标品牌官网的次数 ÷ 同切片全部 pill 次数，分子分母都不去重；`sources.types`（来源类别）、`sources.domains`、`sources.pages`、`sources.official_pages` 的份额与它同分母、同样不去重。
 - `kpis.official_citation_rate`（官网引用率）= 正文至少有一个 pill 指向目标品牌官网的有效 Discovery 回答数 ÷ 有效 Discovery 回答数；`official_citation_counts` 以 `分子/分母` 给出，无回答时为 `—` 与 `0/0`。按回答计票，与 `official_share`（按次数）和 `linked_mention_rate`（分母是被提及的回答）都不同。只供统计与下游读取，`render_report.slim_for_html` 会剥掉，不进售前 HTML。
 - `kpis.linked_mention_rate`（带官网的提及率）= 目标品牌被提及的有效 Discovery 回答中，正文至少有一个 pill 指向其官网的回答数 ÷ 目标品牌被提及的有效 Discovery 回答数；`linked_mention_counts` 以 `分子/分母` 给出。未被提及时为 `—` 与 `0/0`。`competition_all[].linked_mention_rate` 是各对象按同一口径的小数值（无提及为 `null`）。它与 `official_share`（官网引用次数 ÷ 全部引用次数）分母不同、回答不同问题，不得互相换算。各平台给链接的方式不同，跨平台比较看平台切片，不拿「全部平台」切片的数去比单个平台。这三个字段只供统计与下游读取，`render_report.slim_for_html` 会把它们剥掉，不进售前 HTML。
+
+**竞品情感矩阵（主题 × 品牌，渲染层规则）**：列顺序与情感占比条一致，按各品牌在矩阵里累计的正向占比从大到小（2026-11-27）；所有品牌在该主题都无信号的主题行不展示（整行「—」没有信息量）。引擎的 `theme_matrix.themes` 仍是全量主题，收行在 `report.js` 的 `renderSentimentMatrix` 做。

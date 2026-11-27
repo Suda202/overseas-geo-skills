@@ -56,7 +56,6 @@ GATEWAY = bool(os.environ.get("SCRAPELESS_BASE_URL", "").strip())
 CREATE_PATH = "/api/v2/scraper/request"
 RESULT_PATH = "/api/v2/scraper/result/"
 DEFAULT_PLATFORMS = "chatgpt,gemini,aimode,overview"
-ALL_PLATFORMS = "chatgpt,perplexity,copilot,gemini,aimode,overview,grok,alexa,bingaimode"
 # 回答里回显题面的字段：Grok 叫 user_query，Alexa 叫 user_text，其余叫 prompt
 PROMPT_ECHO_KEYS = ("prompt", "user_query", "user_text")
 TRANSIENT_HTTP = {408, 429, 500, 502, 503, 504}
@@ -65,6 +64,9 @@ if str(CORE_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_DIR))
 from geo_presales_core.crawler import answer_validity  # noqa: E402
 from geo_presales_core.util import normalize_text  # noqa: E402
+from geo_presales_core.platforms import ALL_PLATFORM_DIRS  # noqa: E402
+
+ALL_PLATFORMS = ",".join(ALL_PLATFORM_DIRS)  # 平台登记表在 geo-metrics core platforms.py
 
 
 def _load_integrity():

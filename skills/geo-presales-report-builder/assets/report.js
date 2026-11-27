@@ -660,6 +660,18 @@
     return "rate-bad";
   }
 
+  // 情感品牌排序：按正向占比从大到小，无信号（「—」）排最后，同分按名字。
+  function sortSentimentBrands(brands, byBrand) {
+    function value(brand) {
+      var raw = String(((byBrand[brand] || {}).pos_rate) || "").replace("%", "");
+      var n = parseFloat(raw);
+      return Number.isFinite(n) ? n : -1;
+    }
+    return brands.slice().sort(function (a, b) {
+      return (value(b) - value(a)) || (a < b ? -1 : a > b ? 1 : 0);
+    });
+  }
+
   function renderSentimentOverview() {
     var slice = currentSlice();
     var byBrand = ((slice.sentiment || {}).by_brand) || {};
@@ -675,6 +687,8 @@
       return;
     }
     var target = META.brand || "";
+    // 情感条与情感矩阵的列都按正向占比从大到小排（Suda 2026-11-27），两处共用同一顺序。
+    brands = sortSentimentBrands(brands, byBrand);
     var items = brands.map(function (brand) {
       var cell = byBrand[brand] || {};
       var rateText = cell.pos_rate || "—";
@@ -738,7 +752,12 @@
       '" data-open-platform="' + esc(platform) + '">查看对应回答</button>';
   }
 
-  var PLATFORM_LABEL_WITH_DIR = { overview: "AIO", gemini: "Gemini", chatgpt: "ChatGPT", perplexity: "Perplexity", aimode: "AI Mode", copilot: "Copilot", grok: "Grok", alexa: "Alexa" };
+  // 目录名 → 展示名：从数据层带来的 META.platform_dirs（展示名 → 目录名）反查，平台表只在 geo-metrics core 维护
+  var PLATFORM_LABEL_WITH_DIR = (function () {
+    var out = {}, dirs = META.platform_dirs || {};
+    Object.keys(dirs).forEach(function (label) { out[dirs[label]] = label; });
+    return out;
+  })();
 
   function renderSentimentMatrix() {
     var slice = currentSlice();
@@ -749,11 +768,36 @@
       el.innerHTML = '<tbody><tr><td class="support-line">情感判读尚未接入</td></tr></tbody>';
       return;
     }
-    var themes = themeMatrix.themes;
     // 列与可见度共用同一品牌集；没判读的品牌整列显示「—」
-    var brands = (slice.brand_display && slice.brand_display.length)
-      ? slice.brand_display : themeMatrix.brands;
     var matrix = themeMatrix.matrix || {};
+    // 列顺序 = 情感占比的顺序：用主题矩阵各格累计正负信号算比例，与总览同一条排序规则
+    var rateByBrand = {};
+    Object.keys(matrix).forEach(function (theme) {
+      Object.keys(matrix[theme] || {}).forEach(function (brand) {
+        var cell = matrix[theme][brand] || {};
+        var pos = Number(cell.pos || 0), neg = Number(cell.neg || 0);
+        if (!rateByBrand[brand]) rateByBrand[brand] = { pos: 0, neg: 0 };
+        rateByBrand[brand].pos += pos;
+        rateByBrand[brand].neg += neg;
+      });
+    });
+    var matrixRates = {};
+    Object.keys(rateByBrand).forEach(function (brand) {
+      var v = rateByBrand[brand], total = v.pos + v.neg;
+      matrixRates[brand] = { pos_rate: total ? (100 * v.pos / total).toFixed(1) + "%" : "—" };
+    });
+    var brandSource = (slice.brand_display && slice.brand_display.length)
+      ? slice.brand_display : themeMatrix.brands;
+    var brands = sortSentimentBrands(brandSource, matrixRates);
+
+    // 整行都没有数据的主题不展示（Suda 2026-11-27：一行全是「—」没有信息量）
+    var themes = (themeMatrix.themes || []).filter(function (theme) {
+      var row = matrix[theme] || {};
+      return brands.some(function (brand) {
+        var cell = row[brand];
+        return cell && ((cell.pos || 0) + (cell.neg || 0)) > 0;
+      });
+    });
     var target = META.brand || "";
     var head = "<thead><tr><th>主题</th>" +
       brands.map(function (b) {

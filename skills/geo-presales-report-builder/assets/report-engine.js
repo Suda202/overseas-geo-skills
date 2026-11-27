@@ -404,12 +404,21 @@
         });
       }
       var pos = ts.positive_signals || 0, neg = ts.negative_signals || 0;
+      // 品牌情感占比表按正向占比从大到小（Suda 2026-11-27），与 attach_sentiment 同一规则、同一字段
+      function rateValue(v) { var n = parseFloat(String(v == null ? "" : v).replace("%", "")); return Number.isFinite(n) ? n : -1; }
+      var matrixRows = brands.filter(function (b) { return byBrand[b]; })
+        .sort(function (a, b) { return (rateValue(byBrand[b].pos_rate) - rateValue(byBrand[a].pos_rate)) || cmp(a, b); })
+        .map(function (b) {
+          return { brand: b, target: b === target,
+            values: [byBrand[b].pos_rate, String(byBrand[b].positive_signals), String(byBrand[b].negative_signals)] };
+        });
       return {
         metric_basis: "claim_signals",
         summary: { total: pos + neg, pos: pos, neu: 0, neg: neg, pos_rate: rateText(pos, neg),
           neg_rate: pos + neg ? rateText(neg, pos) : "—" },
         claims: { pos: groups("positive"), neg: groups("negative") },
         by_brand: byBrand,
+        matrix: { columns: ["正向率", "正向信号", "负向信号"], rows: matrixRows },
         theme_matrix: { themes: themes, brands: brands.slice(), matrix: matrix }
       };
     }

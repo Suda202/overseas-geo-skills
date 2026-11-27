@@ -66,6 +66,7 @@ from geo_presales_core.deterministic import prepare_answers  # noqa: E402
 import geo_presales_core.crawler as core_crawler  # noqa: E402
 import geo_presales_core.lexicon as core_lexicon  # noqa: E402
 import geo_presales_core.citations as core_citations  # noqa: E402
+import geo_presales_core.platforms as core_platforms  # noqa: E402
 from geo_presales_core.crawler import answer_validity
 from geo_presales_core.metrics import compute_metrics, question_object_stats, visibility_answers  # noqa: E402
 from geo_presales_core.shopping import SHOPPING_SCOPE_INTENTS, extract_product_cards, product_field_returned  # noqa: E402
@@ -94,18 +95,7 @@ RUN_ID = os.environ.get("GEO_PRESALES_RUN_ID", "")
 # platform 目录名 -> 平台显示名（渲染层 tab 顺序）
 # 平台展示名。只登记「目录名 → 展示名」的已知映射，平台清单本身从采集目录发现，
 # 不在这里写死要采哪几个平台；未知目录直接用它自己的目录名当展示名。
-KNOWN_PLATFORM_LABELS = {
-    "overview": "AIO",
-    "gemini": "Gemini",
-    "chatgpt": "ChatGPT",
-    "perplexity": "Perplexity",
-    "aimode": "AI Mode",
-    "copilot": "Copilot",
-    "grok": "Grok",
-    "alexa": "Alexa",
-    "doubao": "豆包",
-    "deepseek": "DeepSeek",
-}
+KNOWN_PLATFORM_LABELS = dict(core_platforms.LABELS)  # 平台登记表在 geo-metrics core platforms.py
 
 
 # 引用来源榜单默认条数（售前）；售后统计传 0 出全量。

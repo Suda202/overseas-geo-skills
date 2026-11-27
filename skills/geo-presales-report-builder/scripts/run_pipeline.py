@@ -15,7 +15,8 @@
         [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 
 采集目录不存在时停在阶段 -1,打印 collect_answers.py 的采集命令(付费,不代跑)。
-不带 --brands/--target 时跳过情感环节:报告不出情感模块,问题明细与抽屉也不出情感列。
+不带 --brands/--target 时售后基线跳过情感环节;售前诊断报告必带,缺了在开跑前暂停
+(确实不出加 --allow-missing-sentiment "<理由>")。
 商品卡默认不出:未传 --shopping-cards 开时,不出购物商品卡模块、核心洞察的商品卡提及率和回答详情里的
 商品卡;本次采集一张带目录的商品卡都没有时,写了开也不出(见 render-spec「模块显隐」)。
 翻译环节按 translation-batches 目录是否就绪自动接入,缺席不阻塞主链。
@@ -337,7 +338,7 @@ def main() -> int:
     parser.add_argument("--case", type=Path, required=True)
     parser.add_argument("--lexicon", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--brands", help="展示品牌(含目标),与词表标准名一致;缺省跳过情感环节")
+    parser.add_argument("--brands", help="展示品牌(含目标),与词表标准名一致;售前诊断报告必填,售后基线缺省跳过情感环节")
     parser.add_argument("--target", help="目标品牌标准名")
     parser.add_argument("--theme-keywords", type=Path,
                         help="主题关键词表 JSON;换品类必传,否则主题矩阵落空")
@@ -353,6 +354,8 @@ def main() -> int:
                         help="geo-gap-diagnosis difficulty.py 的输出目录或 difficulty.json;给了才出「竞争与优化难度」模块")
     parser.add_argument("--diagnosis", type=Path,
                         help="分析师写的 diagnosis.json;售前诊断报告必带,给了才出「诊断与行动」模块")
+    parser.add_argument("--allow-missing-sentiment", default="", metavar="理由",
+                        help="售前诊断报告确实不出情感模块时写理由放行")
     parser.add_argument("--allow-missing-diagnosis", default="", metavar="理由",
                         help="售前诊断报告确实不出「诊断与行动」时写理由放行")
     parser.add_argument("--allow-unjudged-domains", default="", metavar="理由",
@@ -373,6 +376,15 @@ def main() -> int:
 
     try:
         resolve_case(args)
+        if (case_report_kind(args.case) == "售前诊断" and not (args.brands and args.target)
+                and not args.allow_missing_sentiment and not args.dry_run):
+            raise Pause(
+                "售前诊断报告的「情感」是必做模块，缺 --brands/--target。"
+                "按展示品牌传 --brands \"目标,配置1,配置2,配置3\" --target <目标品牌标准名> 后重跑；"
+                "确实不出时加 --allow-missing-sentiment \"<理由>\"。")
+        if (case_report_kind(args.case) == "售前诊断" and not (args.brands and args.target)
+                and args.allow_missing_sentiment):
+            print(f"⚠ 售前诊断报告缺情感，已按 --allow-missing-sentiment 放行:{args.allow_missing_sentiment}")
         stage_collect(args)
         if not args.collect.exists():
             raise Pause(f"采集目录 {args.collect} 不存在(dry-run 到此为止)")

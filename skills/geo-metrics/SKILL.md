@@ -13,6 +13,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 |---|---|
 | 品牌识别：别名匹配、拉丁词边界、非拉丁文字跨品牌最长优先消解、区分大小写的写法 | `scripts/geo_presales_core/util.py` 的 `find_alias_spans`、`resolve_alias_spans`、`case_sensitive_for` |
 | 识别前的正文清洗：去引用标记、图片、链接网址、HTML，删 AI 反问用户的追问块，清空商品卡渠道列 | `scripts/de_cite_crawl.py` 的 `strip_citations`（传 `follow_up_form`）、`strip_follow_up_form`、`strip_choice_lists`、`blank_merchant_columns` |
+| 平台登记表：采集目录名、展示名（中英）、正文字段、引用字段，项目里唯一一份 | `scripts/geo_presales_core/platforms.py`；采集 `--platforms all`、报告展示名、翻译导出、复算、域名判读、词表挖掘、难度表都读它。新增平台只在这里加一行，再到 geo-monitoring 的 `references/platform-contract.json` 登记字段合同 |
 | 答案是否有效、商品卡抽取 | `scripts/geo_presales_core/crawler.py`、`shopping.py` |
 | 引用网址规范化：跟踪参数、平台站内域名、域名后缀表 | `util.py` 的 `normalize_url`、`strip_tracking_params`、`is_platform_internal`、`COMMON_MULTI_LABEL_SUFFIXES` |
 | 词表自检：同一域名挂两个品牌、域名标签是别家品牌名、域名写法不规范、疑似同一品牌拆成两条 | `scripts/audit_lexicon_domains.py`；报告生成前对 Case 产出的词表跑一遍；拆分检查 `split_suspects` 也随 `mine_brand_lexicon.py --check` 跑 |
@@ -68,7 +69,7 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 
 ## 改动后的回归
 
-- 单元测试：`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。core 的 `test_geo_presales.py` 随已退役的 report-editor 归档在 `90-历史归档/旧版与过程稿/退役skill/geo-presales-report-editor/scripts/tests/`，改动 core 指标时需要在那里手动跑。
+- 单元测试：`geo-presales-report-builder/tests`、`geo-metrics/tests`（情感、引用来源分类、域名自检、开放品牌官网推断）。core 的 `test_geo_presales.py` 随已退役的 report-editor 归档在 `90-历史归档/旧版与过程稿/退役skill/geo-presales-report-editor/scripts/tests/`，改动 core 指标时需要在那里手动跑：`cd` 到该目录后 `PYTHONPATH=<skills>/geo-metrics/scripts:.. python3 -m pytest -q test_geo_presales.py`（不带 PYTHONPATH 会 import 失败；2026-11-27 25 条通过）。
 - 端到端：改 `mine_brand_lexicon.py` 或 `audit_lexicon_domains.py` 的挖掘、分档、拆分规则后跑 `python3 evals/e2e_lexicon_recall.py`（12 条用例，造数据、不联网），报告写到 `reports/lexicon-recall-e2e.md`；用例开头列了它防的十种失败方式。
 - 端到端：用三份现有客户数据（一份售前报告、两份监测基线）跑售前报告数据层、校验、情感抽取、基线报告、试跑计数，输出与改前逐项比对。脚本见项目根 `.snapshots/geo-metrics-20261110/run_ref.sh` 与 `compare.py`，读数有变化必须逐条说明原因。
 
@@ -76,6 +77,6 @@ description: Owns every overseas GEO statistic rule and its single implementatio
 
 第二期（2026-11-10）已收进：逐品牌引用份额、逐题读数（`metrics.question_object_stats`）、引用抽取与计次（`citations.py`）、平台正文字段表（`crawler.ANSWER_FIELD`）、品牌词表读取（`lexicon.py`）、竞品站点名单（词表顶层 `competitor_site_domains`）；监测基线已不打统计补丁。
 
-2026-11-18 收进：引用域名补判的脚本与数据（原 geo-presales-report-builder 的 `assets/domain-*`、`category-taxonomy.json`、`brand_lexicon.*` 与 5 个脚本）、试跑品牌计数（原 geo-monitoring `trial_brand_count.py`）、题库与试跑目录读法（原 `changeability_domains.py` 里的 Resolver 等，现 `runs.py`）。仍留在原 skill、只调用 core 的：`changeability_domains.py`（可改变性是选词与监测的判断规则，不是指标）、`build_baseline_html.py` 与 `build_report_data.py`（报告组装）、`verify_report_data.py`、`audit_independent.py`（报告独立复算）。
+2026-11-18 收进：引用域名补判的脚本与数据（原 geo-presales-report-builder 的 `assets/domain-*`、`category-taxonomy.json`、`brand_lexicon.*` 与 5 个脚本）、试跑品牌计数（原 geo-monitoring `trial_brand_count.py`）、题库与试跑目录读法（原 `changeability_domains.py` 里的 Resolver 等，现 `runs.py`）。仍留在原 skill、只调用 core 的：`changeability_domains.py`（可改变性是选词与监测的判断规则，不是指标）、`build_report_data.py` 与 `prepare_baseline.py`（报告组装；`build_baseline_html.py` 2026-11-20 已删）、`verify_report_data.py`、`audit_independent.py`（报告独立复算）。
 
 刻意保留的第二份实现：`verify_report_data.py`（独立复算，用来抓数据层的错）和报告页 `report-engine.js`（浏览器里多选现算，靠 `check_engine_parity.js` 对账）。改口径时这两处要一起改。清单在项目根 `docs/exec-plans/active/geo-metrics-skill-progress.md`。

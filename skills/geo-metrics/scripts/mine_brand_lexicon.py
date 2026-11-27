@@ -93,7 +93,8 @@ import sys
 DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "..", "build", "brand_candidates.csv")
 
-PLATFORMS = ["overview", "gemini", "chatgpt", "perplexity", "aimode", "copilot", "grok", "alexa"]
+# 平台清单取 geo-metrics 平台登记表（下方 import 后赋值）
+PLATFORMS: list[str] = []
 
 
 def discover_regions(collect_dir: str) -> list[str]:
@@ -122,6 +123,8 @@ def discover_regions(collect_dir: str) -> list[str]:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I 不加脚本目录
 from de_cite_crawl import PRODUCT_VIEWER_NOISE  # noqa: E402
 from geo_presales_core.crawler import answer_body  # noqa: E402
+from geo_presales_core.platforms import ALL_PLATFORM_DIRS  # noqa: E402
+PLATFORMS[:] = ALL_PLATFORM_DIRS
 from geo_presales_core.lexicon import load_lexicon as core_load_lexicon  # noqa: E402
 from geo_presales_core.shopping import extract_product_cards  # noqa: E402
 from geo_presales_core.util import extract_urls, is_common_word, normalize_host, registrable_domain  # noqa: E402

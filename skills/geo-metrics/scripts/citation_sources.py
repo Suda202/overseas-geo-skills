@@ -48,7 +48,9 @@ from geo_presales_core.sources import (  # noqa: E402
 )
 from geo_presales_core.util import domain_matches, normalize_host, registrable_domain  # noqa: E402
 
-PLATFORMS = ("chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa")
+from geo_presales_core.platforms import ALL_PLATFORM_DIRS  # noqa: E402
+
+PLATFORMS = tuple(ALL_PLATFORM_DIRS)  # 平台登记表
 
 
 def load_questions(path: Path) -> list[dict]:

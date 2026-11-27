@@ -4686,11 +4686,11 @@
   "first_seen": "2026-11-16"
  },
  "iaapa.org": {
-  "category": "other",
-  "evidence": "IAAPA 景点行业协会（行业协会按其他）",
-  "confidence": "medium",
+  "category": "institutional",
+  "evidence": "国际游乐园及景点协会（IAAPA）官网，专业协会归机构网站；报告原文被误判为其他",
+  "confidence": "high",
   "source": "ai",
-  "verified_at": "2026-11-26"
+  "verified_at": "2026-11-27"
  },
  "ibkrguides.com": {
   "category": "other",

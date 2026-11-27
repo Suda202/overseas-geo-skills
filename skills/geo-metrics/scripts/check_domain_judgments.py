@@ -29,7 +29,9 @@ if str(CORE_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(CORE_SCRIPTS))
 from geo_presales_core.util import normalize_host  # noqa: E402
 
-PLATFORMS = ("chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa")
+from geo_presales_core.platforms import ALL_PLATFORM_DIRS  # noqa: E402
+
+PLATFORMS = tuple(ALL_PLATFORM_DIRS)  # 平台登记表
 
 
 def norm_host(url: str) -> str:

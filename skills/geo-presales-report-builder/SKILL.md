@@ -3,7 +3,7 @@ name: geo-presales-report-builder
 description: This skill should be used when generating a customer-facing overseas GEO HTML report — the presales diagnosis report or the after-sales trial / formal baseline report, which since 2026-11-20 are one template (single-file HTML, the Botslab G980H template; baseline inputs are prepared by scripts/prepare_baseline.py from multi-round collection directories) — directly from Scrapeless crawler collection data plus a Case record, covering visibility, shopping product cards, citations, sentiment and per-question detail with multi-select language / region / platform / intent type / topic / tag filtering; Query Fan-outs show a Chinese translation when `meta.fanout_zh` is present; the shopping and sentiment modules are hidden automatically when the data has none. Do not use it to define metric calibers or to write report conclusions by hand.
 metadata:
   author: Overseas GEO Project
-  version: "2.17.2"
+  version: "2.18.0"
 ---
 
 # 海外 GEO 售前诊断报告生成
@@ -51,7 +51,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
   [--regions US] [--platforms chatgpt,gemini,aimode,overview] [--dry-run]
 ```
 
-`--platforms` 默认售前四平台；`all` 采 Scrapeless 支持的全部 8 个（另含 perplexity、copilot、grok、alexa），下游报告与校验均已登记。各平台字段与已知数据缺口见 `geo-monitoring/references/layer-contract.md`。
+`--platforms` 默认售前四平台；`all` 采平台登记表里的全部平台（另含 perplexity、copilot、grok、alexa、bingaimode），下游报告与校验都读同一张表。平台登记表在 `geo-metrics/scripts/geo_presales_core/platforms.py`，新增平台只改那里。各平台字段与已知数据缺口见 `geo-monitoring/references/layer-contract.md`。
 
 采集目录还不存在时，脚本停在阶段 -1，并打印 `collect_answers.py` 的采集命令；付费采集不由驾驶脚本代跑。
 
@@ -216,7 +216,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 
 参与计算的品牌 = 目标品牌 + 全部配置竞品 + 开放品牌词表命中的品牌（单品类通常在几十到上百个）。声量份额与平均提及位置的分母都是这一整集，**不是只有展示的几个**。
 
-前端每个榜单**只展示本主题所属产品线的品牌**：本品和配置竞品必留，剩余名额按提及率从高到低补开放品牌，合计不超过 5 个（表单限 3 个竞品，正常是本品 + 3 竞品 + 1 个开放品牌；Suda 2026-11-27）。用 Case 的「竞品 N 主题」限定配置竞品只在哪些主题的切片里出现；未限定则所有主题都展示。全部主题切片与「类型:X」意图切片展示全部配置竞品。其余品牌仍进声量分母。**情感模块（正负向占比、竞品情感矩阵）与可见度共用同一品牌集**（`slice.brand_display`），没判读的品牌显示「—」。
+前端每个榜单**只展示本主题所属产品线的品牌**：本品和配置竞品必留，剩余名额按提及率从高到低补开放品牌，合计不超过 5 个（表单限 3 个竞品，正常是本品 + 3 竞品 + 1 个开放品牌；Suda 2026-11-27）。用 Case 的「竞品 N 主题」限定配置竞品只在哪些主题的切片里出现；未限定则所有主题都展示。全部主题切片与「类型:X」意图切片展示全部配置竞品。其余品牌仍进声量分母。**情感模块（正负向占比、竞品情感矩阵）与可见度共用同一品牌集**（`slice.brand_display`），没判读的品牌显示「—」；情感总览条的品牌顺序与 `sentiment.matrix.rows` 一样按正向占比从大到小（2026-11-27）。
 
 ### 空答案
 
@@ -242,7 +242,7 @@ python3 scripts/run_pipeline.py --collect <采集目录> --questions <题库.csv
 - **商品卡逐条核查**:客户会直接问「所有涉及商品卡的回答详情渲染都正常了吗」,交付前把含商品表的回答全部过一遍(中英文两版),不只抽查一条。
 - 报告里出现的每个数字都能在 `report-data.json` 里定位到：单选组合对应预算切片；多选组合由 `report-engine.js` 从 `facts` 现算，公式与切片同一套，`check_engine_parity.js` 退出码为 0 才算定位得到。前端不得另造指标。
 - `meta.questions` 每题必须带 `intent`(从题库 `diagnostic_intent` 映射的中文标签):明细表的情感列、切片过滤都靠它,缺失时明细正向情感列会整列显示「—」(Bewinch 实例)。
-- 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。商品卡默认不出（未传 `--shopping-cards 开`），或本次采集一张带目录的商品卡都没有时同样不出。
+- 情感没判读（`meta.sentiment_claims_status` 不是 complete）或判读完一条正负信号都没有：报告不出情感模块、问题明细的正向情感占比列和抽屉里的情感，不许用占位数字冒充。**售前诊断报告的情感必做**，流水线开跑前就会拦缺 `--brands`/`--target` 的情况。商品卡默认不出（未传 `--shopping-cards 开`），或本次采集一张带目录的商品卡都没有时同样不出。
 - 产物归档到 `10-售前诊断报告/评测数据/<品牌名>/` 对应任务目录，与可见度统计并列。
 
 ## 已知边界

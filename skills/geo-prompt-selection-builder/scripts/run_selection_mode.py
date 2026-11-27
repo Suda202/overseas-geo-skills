@@ -169,8 +169,17 @@ IGNORE = shutil.ignore_patterns(".snapshots", "__pycache__", ".pytest_cache", "*
                                 # lark-cli 在 skill 目录里落下的 Base 导出（客户数据），线上不需要
                                 "tbl*.ndjson", "tbl*.manifest.json", "tpl_*.manifest.json")
 DEFAULT_TIMEOUT = 120 * 60
-# 与 geo-monitoring/scripts/collect_answers.py 的 ALL_PLATFORMS 一致
-KNOWN_PLATFORMS = {"chatgpt", "perplexity", "copilot", "gemini", "aimode", "overview", "grok", "alexa"}
+# 平台清单取 geo-metrics 平台登记表（core platforms.py），与采集程序的 --platforms all 同一份
+def _known_platforms() -> set[str]:
+    import importlib.util as _ilu
+    path = Path(__file__).resolve().parents[2] / "geo-metrics" / "scripts" / "geo_presales_core" / "platforms.py"
+    spec = _ilu.spec_from_file_location("_geo_platforms", path)
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return set(mod.ALL_PLATFORM_DIRS)
+
+
+KNOWN_PLATFORMS = _known_platforms()
 
 TASK = """你在一个无人值守的流水线里，没有人会回答问题。遇到歧义按最合理的判断继续，把假设写进 `out/notes.md`。
 

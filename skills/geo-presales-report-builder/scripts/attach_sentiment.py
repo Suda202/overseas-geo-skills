@@ -36,19 +36,10 @@ from geo_presales_core.sentiment import (  # noqa: E402
     brand_signal_stats, claim_signals, norm_claim_text, positive_share)
 
 # 报告平台显示名 → 采集目录里的平台名
-PLATFORM_INTERNAL = {
-    "AIO": "overview",
-    "Google AI Overviews": "overview",
-    "Gemini": "gemini",
-    "ChatGPT": "chatgpt",
-    "Perplexity": "perplexity",
-    "AI Mode": "aimode",
-    "Google AI Mode": "aimode",
-    "Copilot": "copilot",
-    "Microsoft Copilot": "copilot",
-    "Grok": "grok",
-    "Alexa": "alexa",
-}
+from geo_presales_core.platforms import LABEL_TO_DIR as _LABEL_TO_DIR  # noqa: E402
+
+# 展示名 → 采集目录名，取 geo-metrics 平台登记表
+PLATFORM_INTERNAL = dict(_LABEL_TO_DIR)
 
 # 竞品情感矩阵的行（Theme）。Theme 从各品牌 claims 的 label 归一，
 # 取客户真正拿来横向比较的产品属性维度；匹配不到关键词的 label 归入「其他」，
@@ -320,6 +311,13 @@ def _answer_key_text(region, platform, question_id, repeat) -> str:
     return f"{region}|{platform}|{_qid_with_repeat(question_id, repeat)}"
 
 
+def _rate_value(value) -> float:
+    """「77.8%」→ 77.8；「—」/None → -1（排最后）。"""
+    try:
+        return float(str(value).rstrip("%"))
+    except (TypeError, ValueError):
+        return -1.0
+
 def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
                            target: str) -> dict | None:
     """按 Claim 层的 Claim 信号口径聚合（2026-09-20 设计定稿）。
@@ -431,6 +429,8 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
         "claims": {"pos": claim_groups("positive"), "neg": claim_groups("negative")},
         # 品牌情感占比表：与句级路径同结构（columns/rows），verify 要求存在；
         # 每条品牌的正负信号数取自同一份 per_brand_attr 聚合，保证与 summary 自洽。
+        # 2026-11-27 Suda：同一模块内按正向占比从大到小排（原来是可见度提及率顺序），
+        # 无信号品牌按「—」排最后；目标品牌带 ★。
         "matrix": {
             "columns": ["正向率", "正向信号", "负向信号"],
             "rows": [
@@ -438,7 +438,8 @@ def build_claims_sentiment(claims: list[dict], brands: list[str], predicate,
                  "values": [brand_stats[b]["pos_rate"],
                             str(brand_stats[b]["positive_signals"]),
                             str(brand_stats[b]["negative_signals"])]}
-                for b in brands if b in brand_stats
+                for b in sorted((b for b in brands if b in brand_stats),
+                                key=lambda b: (-_rate_value(brand_stats[b].get("pos_rate")), b))
             ],
         },
         "by_brand": brand_stats,

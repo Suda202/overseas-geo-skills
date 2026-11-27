@@ -52,17 +52,9 @@ REFERENCE_LINE = re.compile(r"^[ \t]*\[\d+\][ \t]*:.*$", re.M)
 # 各平台回答正文所在字段（task_result 下），所有统计与清洗脚本只读这一张表。overview 用 content；
 # AI Mode 用 result_text（result_md 混有 base64 图片与 HTML 块）；Grok 用 full_response（raw_response 带
 # <grok:render> 标签）；Alexa 用 md_text（raw_text 带 {ref cite_…} 标记）。未登记平台读 result_text。
-ANSWER_FIELD = {
-    "overview": "content",
-    "gemini": "result_text",
-    "chatgpt": "result_text",
-    "perplexity": "result_text",
-    "aimode": "result_text",
-    "copilot": "result_text",
-    "grok": "full_response",
-    "alexa": "md_text",
-    "bingaimode": "content_md",
-}
+from .platforms import ANSWER_FIELDS  # noqa: E402
+
+ANSWER_FIELD = dict(ANSWER_FIELDS)  # 平台登记表 platforms.py 是唯一来源
 DEFAULT_ANSWER_FIELD = "result_text"
 
 

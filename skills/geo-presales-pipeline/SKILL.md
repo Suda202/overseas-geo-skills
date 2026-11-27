@@ -3,7 +3,7 @@ name: geo-presales-pipeline
 description: This skill should be used when running the full overseas GEO presales flow end to end — from an evaluation Case through Prompt generation, Scrapeless answer collection, crawl integrity, sentiment and rendering, to the customer-facing single-file HTML diagnosis report — or when resuming that flow from any intermediate stage (question bank ready, collection directory ready). It orchestrates stage order and, at each pause point, invokes the dedicated skill (geo-prompt-selection-builder, geo-monitoring for collection and crawl integrity, geo-metrics for metrics and sentiment, geo-presales-report-builder) whose contract governs that stage. Do not use it to define or re-derive any metric caliber or collection rule.
 metadata:
   author: 海外 GEO 项目
-  version: "2.3.1"
+  version: "2.4.0"
 ---
 
 # 售前全链路编排：Case → 生词 → 采集 → HTML 报告
@@ -65,7 +65,7 @@ python3 scripts/run_pipeline.py \
 - `--case` 可以直接传 v8 题库 JSON，脚本会取其中的 `config.case_fields` 写成 `<输出目录>/case.json`。
 - 阶段 -1 会验收采集目录：没采齐时以退出码 3 暂停，并打印 `collect_answers.py` 的采集命令。驾驶脚本只检查、不代跑付费采集。
 - **退出码 3 = 暂停点**，会打印缺什么文件。按下表补齐后**重跑同一命令**续跑。暂停点产物（词表、claims、聚类映射、译文）重跑时不会被覆盖；要重做，先删掉对应文件。
-- 不带 `--brands`/`--target` 会跳过情感环节，报告不出情感模块（问题明细与抽屉也不出情感）。情感没卖给客户时就这样交付；卖了的必须跑完情感再交。商品卡默认不出，要出传 `--shopping-cards 开`，且采集里至少有一张带目录的商品卡；没有卡时写了开也不出。所有报告是同一个模板（Botslab G980H 预览），缺哪块数据就隐藏哪块，规则见 report-builder render-spec「模块显隐」。
+- **售前诊断报告的情感必做**：不带 `--brands`/`--target` 时，售前 case 在开跑前就暂停（`--allow-missing-sentiment "<理由>"` 才放行）；放行或售后基线缺省跳过情感，报告不出情感模块（问题明细与抽屉也不出情感）。商品卡默认不出，要出传 `--shopping-cards 开`，且采集里至少有一张带目录的商品卡；没有卡时写了开也不出。所有报告是同一个模板（Botslab G980H 预览），缺哪块数据就隐藏哪块，规则见 report-builder render-spec「模块显隐」。
 - `--lexicon` 必填：声量份额与提及率排名的分母必须是全部纳入品牌（目标品牌 + 3 个配置竞品 + 开放词表命中），否则算出来的数不成立。换品类时还要传 `--theme-keywords` 与 `--brand-suffixes`，否则主题矩阵落空，品牌名会带品类后缀。
 
 ## 暂停点指挥表
@@ -75,6 +75,7 @@ python3 scripts/run_pipeline.py \
 | 停在哪 | 请谁出场 | 干什么 |
 | --- | --- | --- |
 | 第 2 步选词 validator 或导出检查不通过 | `geo-prompt-selection-builder` | 按 errors 改题；新增事实交回 Case 提供方（线上表单或 Case 文件），不在题面扩张 |
+| 开跑缺 `--brands`/`--target`（售前诊断报告必做情感） | 用户补参数 | 按展示品牌传 `--brands "目标,配置1,配置2,配置3" --target <目标品牌标准名>` 后重跑；确实不出加 `--allow-missing-sentiment "<理由>"` |
 | 阶段 -1 采集未齐 | 用户确认调用量 | `--dry-run` 报数，确认后跑 `collect_answers.py` |
 | 阶段 0 采集校验退出码 2（阻断）或 1（警告） | `geo-monitoring`（references/crawl-integrity.md） | 按缺陷目录逐条定位到平台和文件，修采集或显式降级口径后续跑；不许带着缺陷算指标 |
 | 阶段 1 词表不存在 | 人工（Suda 或授权人） | 脚本已挖出候选 CSV，由人工冻结成 `brands[].name/aliases/type`。机器分不清品牌名和品类词，**这步不能自动化**；已有同品类冻结词表可直接复用。同时清点引用域名里的同品类厂商站补进词表（见 `geo-metrics` SKILL「品牌词表」），否则这些引用落「其他」 |
@@ -91,5 +92,6 @@ python3 scripts/run_pipeline.py \
 ## 完成与出口
 
 - 完成标准：HTML 渲染成功，`verify_report_data.py` 与 `check_engine_parity.js`（阶段 5b，页面多选计算引擎与预算切片对账）都通过，浏览器检查筛选（含多选组合）无空白、无变形。命令跑完不算完成。
+- 售前诊断报告必须有「情感」模块：缺 `--brands`/`--target` 时流水线在开跑前暂停，不算完成；确实不出要显式 `--allow-missing-sentiment "<理由>"`。
 - 售前诊断报告必须有「诊断与行动」模块：缺 `diagnosis.json` 时流水线停在阶段 5d，不算完成；确实不出要显式 `--allow-missing-diagnosis "<理由>"`。
 - 替换已交付报告，或修复抽取器后重跑 → 先读 report-builder 的《重跑与产物卫生》，隔离重跑，不许原地覆盖。

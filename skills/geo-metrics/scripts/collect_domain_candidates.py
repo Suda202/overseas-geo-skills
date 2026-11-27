@@ -21,16 +21,10 @@ from urllib.parse import urlsplit
 
 REPO_SCRIPTS = Path(__file__).resolve().parent
 
-CITATION_FIELD = {
-    "overview": "source",
-    "gemini": "citations",
-    "chatgpt": "content_references",
-    "perplexity": "web_results",
-    "aimode": "citations",
-    "copilot": "citations",
-    "grok": "footnotes",
-    "alexa": "references",
-}
+sys.path.insert(0, str(REPO_SCRIPTS))
+from geo_presales_core.platforms import CITATION_FIELDS  # noqa: E402
+
+CITATION_FIELD = dict(CITATION_FIELDS)  # 平台登记表
 PLATFORM_HOST_SUFFIXES = ("google.com", "gstatic.com", "googleusercontent.com")
 
 # Case 字段（飞书表头）→ 归一化用

@@ -52,16 +52,14 @@ import geo_presales_core.util as core_util  # noqa: E402
 import de_cite_crawl as de_cite  # noqa: E402  （geo-metrics/scripts，与 core 同目录）
 
 
-PLATFORM_DIR_BY_LABEL = {"AIO": "overview", "Gemini": "gemini",
-                         "ChatGPT": "chatgpt", "Perplexity": "perplexity", "AI Mode": "aimode",
-                         "Copilot": "copilot", "Grok": "grok", "Alexa": "alexa"}
+import geo_presales_core.platforms as core_platforms  # noqa: E402
+
+PLATFORM_DIR_BY_LABEL = dict(core_platforms.LABEL_TO_DIR)  # 旧产物没有 meta.platform_dirs 时回落
 # 回答正文与引用字段的已知映射。平台清单是发现出来的，未登记的平台回落到
 # 默认字段名（正文 result_text、无独立引用字段），不因新平台直接崩。
 # 正文字段表与数据层同一张（geo-metrics core crawler）：读哪段正文是数据布局，不是复算要独立的口径
 from geo_presales_core.crawler import ANSWER_FIELD, DEFAULT_ANSWER_FIELD  # noqa: E402
-CITATION_FIELD = {"overview": "source", "gemini": "citations",
-                  "chatgpt": "content_references", "perplexity": "web_results", "aimode": "citations",
-                  "copilot": "citations", "grok": "footnotes", "alexa": "references"}
+CITATION_FIELD = dict(core_platforms.CITATION_FIELDS)  # 字段布局取登记表，不属于要独立复算的口径
 # Alexa 正文（md_text）不带引用标记，引用位置在 raw_text 的 `{ref cite_<id>}`，按 id 对 references。
 # 与 build_report_data.ALEXA_REF_MARKER 同口径，刻意独立实现。
 ALEXA_REF = re.compile(r"\{ref\s+(?:cite_)+([A-Za-z0-9_-]+)\}")
