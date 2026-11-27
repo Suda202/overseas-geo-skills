@@ -1,3 +1,10 @@
+## 3.23.0（2026-11-27）发现主题下限从 10 道改为 5 道
+
+- 触发依据：Suda 2026-11-18（DynamicPeers 选词）定「一个 topic 至少 5 道，不是只要 5 道，主要看重要性」「也不是主力人群就得塞满 10 道」；2026-11-27 审阅 skill 时 Suda 确认改进正文和 validator（「改 1–4 项」）。
+- 改动：selection-rules.md 第 6 步硬要求 3、第 7 步题量、SKILL.md 第 6 步、output-contract.md W59、type-branches.md、client-facing-base.md、线上 runner 的题量说明、shared/prompt-generation-principles.md 都改成「至少 5 道，按每道题重要且有证据定」；不足 5 道的主题本期不开或并进相邻主题，不再用其他主题的题补足 10 道单元。validator `TOPIC_FLOOR` 10 → 5，W59 提示改写；check_skill_terms 把「至少 10 道」列为退役说法。
+- 回归：check_skill_terms、test_validate、verify_workflow、e2e_bundle（见下）。
+- 改前有快照。
+
 ## 3.22.2（2026-11-26）B2B 发现题问供应商
 
 - 触发依据：Zhiqinghe（抹茶粉 B2B）售前采集，ZQ-09、16、22、24 只写「哪些抹茶粉」，AI 按消费者答、列零售包装；ZQ-34、52 题面没写品类，AI 答成塑料件代工和通用合规服务商。改成「哪些抹茶供应商 + 批发 / bulk」后重采，6 道都改列 B2B 供应商（试跑读数证明产出错题，属改动协议第三类）。

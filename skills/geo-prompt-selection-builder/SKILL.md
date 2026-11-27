@@ -3,7 +3,7 @@ name: geo-prompt-selection-builder
 description: Build or maintain evidence-backed GEO prompt selection (选词) — confirm the business scope, run the research pre-run, collect demand signals, organize constraints (约束条件), target customers (目标客户) and use scenarios (使用场景), draw the prompt matrix (target customer × use scenario × intent type, 意图类型) with business priority per row, cluster Topics (the purchase intents we sell) with Topic priority, write Prompts (online runs Discovery only; locally the types of the goals the brand party picked), validate and export — as a Feishu client-confirmation Base, as 5-column upload rows, or both; later add or merge Prompts. Input is either the brand party's business scope or their brand intake (品牌资料: online form data or a file, normalized by scripts/normalize_case.py); scripts/run_selection_mode.py runs one brand intake × market unattended end to end. Use for presales Prompt generation (售前生词), the presales word-selection tool and monitoring-set maintenance; do not use for trial runs, baselines, collection or reports (geo-monitoring) — the brand party picks the formal set in the client Base — defining metric calibers, or written report conclusions.
 metadata:
   author: Overseas GEO Project
-  version: "3.22.1"
+  version: "3.23.0"
 ---
 
 # GEO Prompt Selection Builder（选词）
@@ -21,7 +21,7 @@ metadata:
 | 3 | 约束条件 | 收得宽、统一粒度；不判重要性；每条判品牌情况（有 / 没有 / 待确认，没有和待确认都不出题；每家都有、只分高低的条件填有，高低在相对竞品判），相对竞品只判公开硬事实；写题前确认硬条件 | 三张表共用的「约束条件」选项、约束条件表 |
 | 4 | 目标客户与使用场景 | 从业务范围「核心目标客户与购买场景」拆出来，按改不改变候选来拆并；只多看一条条件的挂成约束条件 | 矩阵行的目标客户列和场景列，品牌方确认后冻结 |
 | 5 | 提示词矩阵与业务优先级 | 一行 ＝ 产品线 × 市场 × 目标客户 × 使用场景 × 意图类型；只开成立的行；每个发现行和已开放类型的行判一次业务优先级，这是全流程唯一的档位判断；没开放的类型只登记 | 提示词矩阵表 |
-| 6 | 主题与主题优先级 | 主题 ＝ 值得独立监测的一组买家需求；先按候选类别初聚，再按竞争格局、评价标准、优化方向三问判断要不要按目标客户或使用场景拆；按主题售卖，每个发现主题至少 10 题；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
+| 6 | 主题与主题优先级 | 主题 ＝ 值得独立监测的一组买家需求；先按候选类别初聚，再按竞争格局、评价标准、优化方向三问判断要不要按目标客户或使用场景拆；按主题售卖，每个发现主题至少 5 道，题数按每道题重要且有证据定，不凑数；主题优先级取组内最高的业务优先级，不另判，同档按点名条目序号排 | 主题表、`config.tag_dimensions` |
 | 7 | 写题 | 在高、中档发现行和已开放目标的行上出题；按决策差异定题数，每条产品线 × 每个市场 30–60 道（超 60 报错，控制成本；主题个数不限）；问不出发现题的行改类型 | 提示词库、题库 JSON |
 | 8 | 校验与导出；试跑后回写 | validator 错误全改；提示（告警）看一遍，有道理的改，不用写处理记录；按场景导出。试跑和采集归 `geo-monitoring`，跑完回来改题、补竞品、定商品卡开关、复核主题；挑正式题在对客确认表上 | 题库 JSON、对客确认表和 / 或上传 CSV |
 

@@ -231,16 +231,16 @@ class ValidateAfterSalesSetTests(unittest.TestCase):
         data["config"]["slices"][1]["prompt_type"] = "Discovery"
         self.assertIn("slice M-002: priority must be", validate(data).stdout)
 
-    def test_topic_floor_is_ten_prompts_only(self) -> None:
-        # 3.0.0：W59 只剩「每发现主题至少 10 道」一个数，不再按 8 个不同决策签名告警
-        data = current_bank(10, "hypothesis")
+    def test_topic_floor_is_five_prompts_only(self) -> None:
+        # 3.23.0：W59 下限从 10 道改为 5 道（Suda 2026-11-18）
+        data = current_bank(5, "hypothesis")
         for i, row in enumerate(data["questions"]):
             text = f"Which cat litter box works best for setup number {i}?"
             row.update(user_question=text, monitoring_prompt=text, attribute_ref="", constraints=[])
         result = validate(data)
         self.assertNotIn("[W59]", result.stdout)
-        data["questions"] = data["questions"][:9]
-        self.assertIn("[W59] Topics below the default coverage target (topic_1: 9 KPI Prompts)", validate(data).stdout)
+        data["questions"] = data["questions"][:4]
+        self.assertIn("[W59] Topics below the default coverage target (topic_1: 4 KPI Prompts)", validate(data).stdout)
 
     def test_empty_topic_is_a_hint(self) -> None:
         # 3.18.0：空主题不影响读数，降成提示 W3

@@ -22,6 +22,13 @@ sys.path.insert(0, str(SKILL / "scripts"))
 
 from normalize_case import CASE_KEYS, normalize  # noqa: E402
 
+
+def _example(stem_local: str, stem_public: str) -> Path:
+    """本地叫 youku-b2c / tripbiz-b2b，公开仓库换成 b2c-example / b2b-example；哪个在用哪个。"""
+    d = Path(__file__).resolve().parents[1] / "references" / "input-examples"
+    local = d / f"{stem_local}.json"
+    return local if local.exists() else d / f"{stem_public}.json"
+
 EXAMPLES = SKILL / "references" / "input-examples"
 TEMPLATES = SKILL.parent / "shared" / "publish-templates"
 # 线上诊断表单的品牌资料字段（Suda 2026-11-13；国家/地区、语言、AI 平台走采集配置，不进 case）
@@ -63,7 +70,7 @@ for path in sorted(EXAMPLES.glob("*.json")) + sorted(TEMPLATES.glob("b2?-example
           result["normalized"]["competitor_selection"]["status"] == "client_input"
           and result["normalized"]["competitor_selection"]["selection_count"] == len(payload["case"]["竞品"]))
 
-base = load(EXAMPLES / "youku-b2c.json")
+base = load(_example("youku-b2c", "b2c-example"))
 
 
 def mutate(fn) -> dict:

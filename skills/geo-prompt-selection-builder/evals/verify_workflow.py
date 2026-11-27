@@ -394,7 +394,7 @@ def run_checks() -> list[dict]:
     selection_case("selection_competitor_without_goal_warns",
                    lambda b: b["config"]["business_goals"].update(selected=["发现型可见度"]), True)
 
-    # W59 size floor (10 Prompts since 2026-11-09; the 8-decision threshold dropped in 3.0.0): with its decision
+    # W59 size floor (5 Prompts since 3.23.0 / 2026-11-18; was 10): with its decision
     # removed and one Prompt dropped, the 5-Prompt Topic reports 4 KPI Prompts.
     def selection_thin_topic(b: dict) -> None:
         b["questions"] = [q for q in b["questions"] if q["question_id"] != "q5"]

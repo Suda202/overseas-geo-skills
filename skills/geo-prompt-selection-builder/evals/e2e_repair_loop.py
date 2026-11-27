@@ -33,12 +33,19 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parents[1]
 RUNNER = SKILL / "scripts" / "run_selection_mode.py"
 FIXTURE = SKILL / "evals" / "fixtures" / "online-sample-bank.json"
-CASE = SKILL / "references" / "input-examples" / "youku-b2c.json"
+CASE = _example("youku-b2c", "b2c-example")
 FIXTURE_COUNT = len(json.loads(FIXTURE.read_text(encoding="utf-8"))["questions"])
 
 FAKE_AGENT = '''
 import json, os
 from pathlib import Path
+
+
+def _example(stem_local: str, stem_public: str) -> Path:
+    """本地叫 youku-b2c / tripbiz-b2b，公开仓库换成 b2c-example / b2b-example；哪个在用哪个。"""
+    d = Path(__file__).resolve().parents[1] / "references" / "input-examples"
+    local = d / f"{stem_local}.json"
+    return local if local.exists() else d / f"{stem_public}.json"
 
 ws = Path(os.environ["WORKSPACE"])
 task = Path(os.environ["TASK_FILE"]).name

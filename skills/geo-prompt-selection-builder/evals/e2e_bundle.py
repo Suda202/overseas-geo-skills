@@ -29,7 +29,7 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 RUNNER = SKILL / "scripts" / "run_selection_mode.py"
-CASE_REL = Path("references/input-examples/youku-b2c.json")
+CASE_REL = _example("youku-b2c", "b2c-example").relative_to(SKILL)
 ROOT = Path(tempfile.mkdtemp(prefix="sel-bundle-e2e-"))
 rows: list[tuple[str, bool, str]] = []
 
@@ -44,6 +44,13 @@ def run(cmd: list, cwd: Path | None = None) -> subprocess.CompletedProcess:
 
 sys.path.insert(0, str(SKILL / "scripts"))
 import run_selection_mode as runner  # noqa: E402
+
+
+def _example(stem_local: str, stem_public: str) -> Path:
+    """本地叫 youku-b2c / tripbiz-b2b，公开仓库换成 b2c-example / b2b-example；哪个在用哪个。"""
+    d = Path(__file__).resolve().parents[1] / "references" / "input-examples"
+    local = d / f"{stem_local}.json"
+    return local if local.exists() else d / f"{stem_public}.json"
 
 expected = [f"{n}/{r}".rstrip("/") for n, r in runner.runtime_files()]
 

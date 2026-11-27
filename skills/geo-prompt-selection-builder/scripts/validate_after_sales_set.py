@@ -446,7 +446,7 @@ KPI_INTENTS = {"Discovery"}
 # 3.0.0 dropped the second threshold (8 distinct decision signatures): one number, 10. Other types have no floor
 # (3.13.0): their counts come from type-branches.md (one per competitor, per product line …), which a floor of 5
 # could never meet.
-TOPIC_FLOOR = 10
+TOPIC_FLOOR = 5  # 2026-11-18 Suda：每个发现主题至少 5 道，按重要性定，不凑 10 道
 # W47 / gate 47 (3.13.0): per product line × market, under 30 candidates is a coverage review (warning, never pad);
 # over 60 is an error — the cost cap (Suda 2026-11-12): trial runs bill per candidate. Topics are not capped
 # by count; within 60, ten-Prompt Topics fit six.
@@ -878,8 +878,8 @@ class BankValidator:
                                  "in order: (1) add missed buyer constraints, scenes, audiences or limits; (2) build compound "
                                  "conditions with real purchase meaning — never pad with synonyms, reordering or mechanical "
                                  "condition permutations; (3) check over-splitting — merge only adjacent Topics of the same "
-                                 "purchase decision with similar candidate solutions. Still short: never pad with repeats — the brand party may fill the "
-                                 "10-Prompt unit with Prompts from other Topics (mixed selection); record the decision.")
+                                 "purchase decision with similar candidate solutions. Still short: never pad with repeats — skip the Topic this round or merge it "
+                                 "into an adjacent one; record the decision.")
 
     def derive_topic_priority(self, topics: list[dict]) -> dict[str, str]:
         """主题优先级 is computed, not judged (2.62.0; 3.18.0 drops W46 and the hand-written field check): the highest

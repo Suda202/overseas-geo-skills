@@ -122,7 +122,7 @@ python3 -I scripts/validate_after_sales_set.py BANK.json
 | W52 | 有发现以外的题，`business_goals` 里却没有对应目标（交易、售后没有对应目标，写了就提示）；`business_goals` 没写或写错按只开发现读 |
 | W53 | 题没写 `slice_ref` |
 | W54 | 无条件的发现题：`attribute_ref` 留空且没有条件关键词（只在品牌方点名大词时写） |
-| W59 | 发现主题不够 10 道，处理顺序见 selection-rules.md → 6 硬要求 3；其他类型不设主题下限 |
+| W59 | 发现主题不够 5 道，处理顺序见 selection-rules.md → 6 硬要求 3；其他类型不设主题下限 |
 | W64 | 业务优先级为低的行挂了题（从低档补题属正常） |
 | W67 | 相对竞品为明显优势的约束条件没有题测，也没写 `no_carrier_reason` |
 | W67b | 约束条件的品牌情况依据、相对竞品依据为空 |
